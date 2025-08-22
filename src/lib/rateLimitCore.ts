@@ -1,0 +1,3 @@
+export interface RateLimitRecord { count: number; windowStart: number }
+export interface RateLimitResult { allowed: boolean; count: number; windowStart: number; resetAt: number }
+export function checkRateLimit(store: Map<string, RateLimitRecord>, key: string, now: number, windowMs: number, maxHits: number): RateLimitResult { const rec = store.get(key); if (!rec || now - rec.windowStart > windowMs) { const fresh: RateLimitRecord = { count: 1, windowStart: now }; store.set(key, fresh); return { allowed: true, count: 1, windowStart: now, resetAt: now + windowMs } } rec.count += 1; const allowed = rec.count <= maxHits; return { allowed, count: rec.count, windowStart: rec.windowStart, resetAt: rec.windowStart + windowMs } }
