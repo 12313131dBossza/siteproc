@@ -1,0 +1,53 @@
+/* SiteProc Design Tokens */
+:root {
+  /* Brand Colors */
+  --sp-color-primary: #1E3A8A;
+  --sp-color-primary-hover: #274cb5;
+  --sp-color-accent: #F97316;
+  --sp-color-accent-hover: #fb8b3b;
+  --sp-color-bg: #F8FAFC;
+  --sp-color-bg-alt: #FFFFFF;
+  --sp-color-border: #E2E8F0;
+  --sp-color-muted: #64748B;
+  --sp-color-danger: #DC2626;
+  --sp-color-success: #059669;
+  --sp-color-warning: #D97706;
+  --sp-shadow-card: 0 4px 12px -2px rgba(30,58,138,0.08), 0 2px 4px -1px rgba(0,0,0,0.06);
+
+  --sp-radius-sm:4px;
+  --sp-radius:12px;
+  --sp-radius-lg:16px;
+  --sp-radius-pill:9999px;
+
+  --sp-transition:120ms cubic-bezier(.4,0,.2,1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --sp-color-bg:#0F172A;
+    --sp-color-bg-alt:#1E293B;
+    --sp-color-border:#334155;
+    --sp-color-muted:#94A3B8;
+    --sp-shadow-card:0 4px 12px -2px rgba(0,0,0,0.5),0 2px 4px -1px rgba(0,0,0,0.4);
+  }
+}
+
+/* Utility classes (lightweight, can augment Tailwind) */
+.sp-card { background: var(--sp-color-bg-alt); border:1px solid var(--sp-color-border); border-radius:var(--sp-radius-lg); box-shadow:var(--sp-shadow-card); padding:1rem; }
+.sp-btn { display:inline-flex; align-items:center; gap:.5rem; font-weight:500; border-radius:var(--sp-radius-pill); padding:.625rem 1rem; font-size:.875rem; line-height:1.2; border:1px solid transparent; cursor:pointer; transition:var(--sp-transition); }
+.sp-btn-primary { background:var(--sp-color-primary); color:#fff; }
+.sp-btn-primary:hover { background:var(--sp-color-primary-hover); }
+.sp-btn-accent { background:var(--sp-color-accent); color:#fff; }
+.sp-btn-accent:hover { background:var(--sp-color-accent-hover); }
+.sp-btn-ghost { background:transparent; color:var(--sp-color-primary); }
+.sp-btn-ghost:hover { background:var(--sp-color-primary)/5; }
+.sp-badge { display:inline-flex; align-items:center; padding:0 .5rem; height:1.25rem; border-radius:var(--sp-radius-pill); font-size:.65rem; font-weight:600; letter-spacing:.5px; text-transform:uppercase; }
+.sp-badge-success { background:var(--sp-color-success); color:#fff; }
+.sp-badge-danger { background:var(--sp-color-danger); color:#fff; }
+
+/* Scrollbar subtle styling */
+* { scrollbar-width:thin; scrollbar-color: var(--sp-color-border) transparent; }
+*::-webkit-scrollbar { width:10px; height:10px; }
+*::-webkit-scrollbar-track { background:transparent; }
+*::-webkit-scrollbar-thumb { background:var(--sp-color-border); border-radius:20px; }
+*::-webkit-scrollbar-thumb:hover { background:var(--sp-color-muted); }
