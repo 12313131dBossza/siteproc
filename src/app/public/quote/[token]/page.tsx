@@ -1,21 +1,28 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
-export default function PublicQuoteSubmit({ params }: { params: { token: string } }) {
+export default function PublicQuoteSubmit({ params }: { params: Promise<{ token: string }> }) {
   const [total, setTotal] = useState('')
   const [lead, setLead] = useState('')
   const [terms, setTerms] = useState('')
   const [notes, setNotes] = useState('')
   const [msg, setMsg] = useState('')
   const [loading, setLoading] = useState(false)
+  const [token, setToken] = useState<string>('')
+
+  // Resolve params on mount
+  useEffect(() => {
+    params.then(p => setToken(p.token))
+  }, [params])
 
   async function submit() {
+    if (!token) return
     setMsg(''); setLoading(true)
     try {
       const num = parseFloat(total)
       if (!num || isNaN(num)) { setMsg('Enter total'); setLoading(false); return }
       const body = { total: num, lead_time: lead || undefined, terms: terms || undefined, notes: notes || undefined }
-      const res = await fetch(`/api/quotes/public/${params.token}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+      const res = await fetch(`/api/quotes/public/${token}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
       const data = await res.json().catch(()=>({}))
       if (res.ok) setMsg('Quote submitted. Thank you.')
       else setMsg(data?.error || 'Error submitting')

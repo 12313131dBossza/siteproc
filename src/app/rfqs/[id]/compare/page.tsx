@@ -2,18 +2,24 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-export default function CompareRFQ({ params }: { params: { id: string } }) {
+export default function CompareRFQ({ params }: { params: Promise<{ id: string }> }) {
   const [quotes, setQuotes] = useState<any[]>([])
   const [msg, setMsg] = useState('')
+  const [id, setId] = useState<string>('')
   const router = useRouter()
 
   useEffect(() => {
+    params.then(p => setId(p.id))
+  }, [params])
+
+  useEffect(() => {
+    if (!id) return
     ;(async () => {
-      const res = await fetch(`/api/quotes?rfq=${params.id}`)
+      const res = await fetch(`/api/quotes?rfq=${id}`)
       const data = await res.json().catch(() => [])
       setQuotes(Array.isArray(data) ? data : [])
     })()
-  }, [params.id])
+  }, [id])
 
   const select = async (id: string) => {
     setMsg('')

@@ -1,14 +1,21 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
-export default function ApproveCO({ params }: { params: { token: string } }) {
+export default function ApproveCO({ params }: { params: Promise<{ token: string }> }) {
   const [msg, setMsg] = useState('')
   const [loading, setLoading] = useState(false)
+  const [token, setToken] = useState<string>('')
+
+  // Resolve params on mount
+  useEffect(() => {
+    params.then(p => setToken(p.token))
+  }, [params])
 
   async function act(path: 'approve' | 'reject') {
+    if (!token) return
     setMsg(''); setLoading(true)
     try {
-      const res = await fetch(`/api/change-orders/public/${params.token}/${path}`, { method: 'POST' })
+      const res = await fetch(`/api/change-orders/public/${token}/${path}`, { method: 'POST' })
       const data = await res.json().catch(()=>({}))
       if (res.ok) setMsg(`Change order ${path}d.`)
       else setMsg(data?.error || 'Error')
