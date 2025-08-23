@@ -16,11 +16,26 @@ const styles = StyleSheet.create({
   td: { flex: 1 },
 })
 
+// Minimal shape we actually reference. (Keeps inference simple & avoids 'unknown'.)
+type PoRecord = {
+  id: string
+  po_number?: string | number | null
+  status?: string | null
+  supplier_id?: string | null
+  job_id?: string | null
+  quote_id?: string | null
+  rfq_id?: string | null
+  company_id?: string | null
+  total?: number | null
+  created_at?: string | null
+}
+
 export async function renderPOPdf(poId: string): Promise<Buffer> {
   const sb = supabaseService()
 
   // Load PO and related records (supplier, job, quote, rfq, company)
-  const { data: po } = await sb.from('pos').select('*').eq('id', poId).single()
+  const { data: poRaw } = await sb.from('pos').select('*').eq('id', poId).single()
+  const po = (poRaw as PoRecord) || null
   if (!po) {
     // Minimal fallback document when PO not found
     const fallback = (
@@ -73,8 +88,8 @@ export async function renderPOPdf(poId: string): Promise<Buffer> {
         <View style={styles.row}>
           <Text style={styles.h1}>Purchase Order</Text>
           <View>
-            <Text style={{ textAlign: 'right' }}>{po.po_number}</Text>
-            <Text style={{ textAlign: 'right' }}>{po.status}</Text>
+            <Text style={{ textAlign: 'right' }}>{po?.po_number ?? ''}</Text>
+            <Text style={{ textAlign: 'right' }}>{po?.status ?? ''}</Text>
           </View>
         </View>
 
@@ -85,7 +100,7 @@ export async function renderPOPdf(poId: string): Promise<Buffer> {
           </View>
           <View style={styles.col}>
             <Text style={styles.label}>PO Date</Text>
-            <Text style={styles.value}>{fmtDate(po.created_at)}</Text>
+            <Text style={styles.value}>{fmtDate(po?.created_at)}</Text>
           </View>
         </View>
 
@@ -110,7 +125,7 @@ export async function renderPOPdf(poId: string): Promise<Buffer> {
           </View>
           <View style={styles.col}>
             <Text style={styles.label}>Total</Text>
-            <Text style={styles.value}>{fmtMoney(po.total ?? quote?.total ?? null)}</Text>
+            <Text style={styles.value}>{fmtMoney(po?.total ?? quote?.total ?? null)}</Text>
           </View>
         </View>
 
