@@ -4,10 +4,11 @@ import { getIds } from '@/lib/api'
 
 export const runtime = 'nodejs'
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+// Use a "context" param (instead of destructuring in the signature) to satisfy Next.js type validation.
+export async function GET(req: NextRequest, context: { params: { id: string } }) {
   try {
-    const { companyId } = getIds(req)
-    const id = params.id
+  const { companyId } = getIds(req)
+  const id = context.params.id
     const sb = supabaseService()
     const { data: co, error } = await sb
       .from('change_orders')
