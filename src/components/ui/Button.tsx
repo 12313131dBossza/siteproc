@@ -1,5 +1,16 @@
 import React from 'react';
-import clsx from 'clsx';
+
+// Simple utility to join classNames (avoids external dep)
+function cn(...parts: (string | undefined | false | null | Record<string, boolean>)[]) {
+  return parts
+    .flatMap(p => {
+      if (!p) return [];
+      if (typeof p === 'string') return [p];
+      if (typeof p === 'object') return Object.entries(p).filter(([,v])=>v).map(([k])=>k);
+      return [];
+    })
+    .join(' ');
+}
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'accent' | 'ghost' | 'danger';
@@ -27,16 +38,16 @@ const variantMap: Record<string,string> = {
 export const Button: React.FC<ButtonProps> = ({ variant='primary', size='md', leftIcon, rightIcon, loading, children, className, ...rest }) => {
   return (
     <button
-      className={clsx(base, sizeMap[size], variantMap[variant], className)}
+      className={cn(base, sizeMap[size], variantMap[variant], className, 'relative')}
       {...rest}
       disabled={loading || rest.disabled}
     >
       {leftIcon && <span className="shrink-0">{leftIcon}</span>}
-      <span className={clsx({ 'opacity-0': loading })}>{children}</span>
+      <span className={cn({ 'opacity-0': !!loading })}>{children}</span>
       {rightIcon && <span className="shrink-0">{rightIcon}</span>}
       {loading && <span className="absolute h-4 w-4 animate-spin border-2 border-white/40 border-t-white rounded-full" />}
     </button>
-  )
+  );
 };
 
 export default Button;
