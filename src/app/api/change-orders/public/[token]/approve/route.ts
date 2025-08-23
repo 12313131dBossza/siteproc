@@ -10,10 +10,7 @@ export const runtime = 'nodejs'
 
 const MAX_JSON_BYTES = 4 * 1024
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: { token: string } }
-) {
+export async function POST(req: NextRequest, context: any) {
   try {
     if (req.headers.get('content-type') && req.headers.get('content-type') !== 'application/json') {
       return NextResponse.json({ error: 'Unsupported Content-Type' }, { status: 415 })
@@ -33,7 +30,7 @@ export async function POST(
       }
     }
 
-    const token = params.token
+  const token = context?.params?.token
     const sb = supabaseService()
   const { data: co } = await sb.from('change_orders').select('*').eq('public_token', token).single()
     if (!co) {
