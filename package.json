@@ -16,8 +16,7 @@
     "e2e:debug": "playwright test --debug",
     "e2e:edge": "set PW_CHANNEL=msedge&& playwright test",
     "e2e:chrome": "set PW_CHANNEL=chrome&& playwright test",
-    "playwright:install": "playwright install chromium",
-    "postinstall": "playwright install chromium"
+  "playwright:install": "playwright install chromium"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.3.0",

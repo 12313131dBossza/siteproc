@@ -1,3 +1,4 @@
+"use client";
 import React, { useMemo, useState } from 'react';
 
 export interface Column<T> { key: keyof T; header: string; sortable?: boolean; render?: (row: T) => React.ReactNode; }

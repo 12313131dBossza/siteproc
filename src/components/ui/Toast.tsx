@@ -1,3 +1,4 @@
+"use client";
 import React, { createContext, useCallback, useContext, useState } from 'react';
 
 interface ToastMsg { id: string; title: string; variant?: 'success'|'error'|'info'; }
