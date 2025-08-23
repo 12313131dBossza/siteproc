@@ -4,7 +4,11 @@ import { requireRole, hasRole, parseJson } from '@/lib/api'
 import { supplierUpdateSchema } from '@/lib/validation'
 import { audit } from '@/lib/audit'
 
-export async function GET(req: NextRequest, context: any) {
+export const runtime = 'nodejs'
+
+interface RouteContext { params: { id: string } }
+
+export async function GET(req: NextRequest, context: RouteContext) {
   const companyId = req.headers.get('x-company-id') || ''
   if (!companyId) return NextResponse.json({ error: 'Missing company' }, { status: 400 })
   const sb = supabaseService()
@@ -13,7 +17,7 @@ export async function GET(req: NextRequest, context: any) {
   return NextResponse.json(data)
 }
 
-export async function PATCH(req: NextRequest, context: any) {
+export async function PATCH(req: NextRequest, context: RouteContext) {
   const companyId = req.headers.get('x-company-id') || ''
   const actorId = req.headers.get('x-user-id') || undefined
   const role = req.headers.get('x-role') || ''
@@ -31,7 +35,7 @@ export async function PATCH(req: NextRequest, context: any) {
   return NextResponse.json({ ok: true })
 }
 
-export async function DELETE(req: NextRequest, context: any) {
+export async function DELETE(req: NextRequest, context: RouteContext) {
   const companyId = req.headers.get('x-company-id') || ''
   const actorId = req.headers.get('x-user-id') || undefined
   const role = req.headers.get('x-role') || ''

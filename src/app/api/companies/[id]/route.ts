@@ -2,14 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseService } from '@/lib/supabase'
 import { audit } from '@/lib/audit'
 
-export async function GET(req: NextRequest, context: any) {
+export const runtime = 'nodejs'
+
+interface RouteContext { params: { id: string } }
+
+export async function GET(_req: NextRequest, context: RouteContext) {
   const sb = supabaseService()
   const { data, error } = await sb.from('companies').select('*').eq('id', context?.params?.id).single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data)
 }
 
-export async function PATCH(req: NextRequest, context: any) {
+export async function PATCH(req: NextRequest, context: RouteContext) {
   const body = await req.json().catch(()=> ({}))
   const { name, currency, units } = body || {}
   const sb = supabaseService()
