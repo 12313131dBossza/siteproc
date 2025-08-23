@@ -1,48 +1,11 @@
-"use client";
-import { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Button } from '@/components/ui/Button';
-import { setMockRole } from '@/lib/useRoleGuard';
+import LoginForm from './LoginForm';
 
-export default function LoginPage(){
-  const [email,setEmail]=useState('');
-  const [password,setPassword]=useState('');
-  const [error,setError]=useState<string|null>(null);
-  const [loading,setLoading]=useState(false);
-  const router = useRouter();
-  const params = useSearchParams();
-  const next = params.get('next') || '/admin/dashboard';
+export const dynamic = 'force-dynamic';
 
-  function validate(){
-    if(!email.includes('@')) { setError('Enter a valid email'); return false; }
-    if(password.length < 4) { setError('Password too short'); return false; }
-    setError(null); return true;
-  }
-  function submit(e:React.FormEvent){
-    e.preventDefault();
-    if(!validate()) return;
-    setLoading(true);
-    setTimeout(()=>{ setMockRole('admin'); router.replace(next); },600);
-  }
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-[var(--sp-color-bg)] p-4">
-      <form onSubmit={submit} className="sp-card w-full max-w-sm space-y-5">
-        <div>
-          <h1 className="text-xl font-semibold mb-1">Sign in</h1>
-          <p className="text-xs text-[var(--sp-color-muted)]">Use any email/password (mock auth)</p>
-          {params.get('unauthorized') && <p className="text-xs text-[var(--sp-color-danger)] mt-2">Login required.</p>}
-        </div>
-        <div className="sp-field">
-          <label className="text-xs font-medium">Email</label>
-          <input value={email} onChange={e=>setEmail(e.target.value)} className="sp-input" type="email" />
-        </div>
-        <div className="sp-field">
-          <label className="text-xs font-medium">Password</label>
-          <input value={password} onChange={e=>setPassword(e.target.value)} className="sp-input" type="password" />
-        </div>
-        {error && <div className="sp-error">{error}</div>}
-        <Button type="submit" loading={loading} className="w-full">Login</Button>
-      </form>
-    </div>
-  );
+interface LoginPageProps { searchParams?: Record<string, string | string[] | undefined>; }
+
+export default function LoginPage({ searchParams }: LoginPageProps) {
+  const nextParam = (searchParams?.next && Array.isArray(searchParams.next) ? searchParams.next[0] : searchParams?.next) || '/admin/dashboard';
+  const unauthorized = !!(searchParams?.unauthorized);
+  return <LoginForm next={nextParam} unauthorized={unauthorized} />;
 }
