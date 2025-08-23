@@ -5,11 +5,11 @@ import { getIds } from '@/lib/api'
 export const runtime = 'nodejs'
 
 // Use the Web Request type for the first arg (per Next.js route handler spec) and cast when calling helpers.
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, context: any) {
   try {
   const nextReq = request as unknown as NextRequest
   const { companyId } = getIds(nextReq)
-  const id = params.id
+  const id = context?.params?.id
     const sb = supabaseService()
     const { data: co, error } = await sb
       .from('change_orders')
