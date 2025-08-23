@@ -11,6 +11,16 @@ export function getIds(req: Request) {
 const ROLE_ORDER = ['foreman','bookkeeper','admin','owner'] as const
 type Role = typeof ROLE_ORDER[number]
 
+// Returns true if role meets minimum, false otherwise (never throws now).
+export function hasRole(role: string | undefined, minimum: Role): boolean {
+  const idx = ROLE_ORDER.indexOf(minimum)
+  if (!role) return false
+  const actualIdx = ROLE_ORDER.indexOf(role as Role)
+  if (actualIdx === -1) return false
+  return actualIdx >= idx
+}
+
+// Backwards-compatible helper name; now returns boolean (no throw).
 export function requireRole(role: string | undefined, minimum: Role) {
   const idx = ROLE_ORDER.indexOf(minimum)
   if (!role) throw new Response('Auth required', { status: 401 })
