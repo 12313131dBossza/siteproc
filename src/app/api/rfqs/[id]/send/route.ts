@@ -6,13 +6,10 @@ import { sendEmail, getFromAddress } from '@/lib/email'
 
 export const runtime = 'nodejs'
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(req: NextRequest, context: any) {
   const { companyId, actorId, role } = getIds(req)
   requireRole(role, 'admin')
-  const rfqId = params.id
+  const rfqId = context?.params?.id
   const sb = supabaseService()
 
   const { data: rfq, error } = await sb.from('rfqs').select('*').eq('id', rfqId).eq('company_id', companyId).single()

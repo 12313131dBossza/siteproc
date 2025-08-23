@@ -9,13 +9,10 @@ import { broadcastPoUpdated, broadcastJobPo } from '@/lib/realtime'
 
 export const runtime = 'nodejs'
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(req: NextRequest, context: any) {
   const { companyId, actorId, role } = getIds(req)
   requireRole(role, 'admin')
-  const quoteId = params.id
+  const quoteId = context?.params?.id
   const sb = supabaseService()
 
   const { data: quote } = await sb.from('quotes').select('*').eq('id', quoteId).single()

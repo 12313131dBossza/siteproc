@@ -5,11 +5,11 @@ import { broadcastPoUpdated } from '@/lib/realtime'
 
 export const runtime = 'nodejs'
 
-export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(_req: NextRequest, context: any) {
   try {
   const { companyId, role } = getIds(_req)
   requireRole(role, 'admin')
-    const id = params.id
+    const id = context?.params?.id
     const sb = supabaseService()
     const { data: po } = await sb.from('pos').select('id,status').eq('company_id', companyId).eq('id', id).single()
     if (!po) return NextResponse.json({ error: 'Not found' }, { status: 404 })

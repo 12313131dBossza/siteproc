@@ -10,10 +10,10 @@ export const runtime = 'nodejs'
 
 // Original parse replaced by shared util in uploadValidate.ts
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, context: any) {
   try {
     const { companyId } = getIds(req)
-    const id = params.id
+    const id = context?.params?.id
     const { receipt_data_url } = await req.json().catch(()=>({})) as any
     if (!receipt_data_url) return NextResponse.json({ error: 'receipt_data_url required' }, { status: 400 })
     const sb = supabaseService()

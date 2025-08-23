@@ -6,10 +6,10 @@ import { EVENTS } from '@/lib/constants'
 
 export const runtime = 'nodejs'
 
-export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(_req: NextRequest, context: any) {
   try {
     const { companyId } = getIds(_req)
-    const id = params.id
+    const id = context?.params?.id
     const sb = supabaseService()
   const { data: delivery } = await sb.from('deliveries').select('id,status,job_id').eq('company_id', companyId).eq('id', id).single()
     if (!delivery) return NextResponse.json({ error: 'Not found' }, { status: 404 })

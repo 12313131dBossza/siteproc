@@ -10,10 +10,7 @@ export const runtime = 'nodejs'
 
 const MAX_JSON_BYTES = 10 * 1024 // 10 KB safety cap
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: { token: string } }
-) {
+export async function POST(req: NextRequest, context: any) {
   // Public submission. Rate-limiting note: add IP-based limit in edge later.
   try {
     if (req.headers.get('content-type')?.split(';')[0].trim() !== 'application/json') {
@@ -32,7 +29,7 @@ export async function POST(
     }
     const parsed = quoteSubmitSchema.parse(raw)
 
-    const token = params.token
+    const token = context?.params?.token
     const sb = supabaseService()
   const { data: rfq } = await sb.from('rfqs').select('*').eq('public_token', token).single()
     if (!rfq) {

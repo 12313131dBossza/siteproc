@@ -25,10 +25,10 @@ async function uploadDataUrl(path: string, dataUrl: string) {
   return uploadPrivateSigned(path, buf, finalMime)
 }
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, context: any) {
   try {
     const { companyId } = getIds(req)
-    const id = params.id
+    const id = context?.params?.id
     const sb = supabaseService()
     const { data: delivery } = await sb.from('deliveries').select('id,job_id').eq('company_id', companyId).eq('id', id).single()
     if (!delivery) return NextResponse.json({ error: 'Not found' }, { status: 404 })

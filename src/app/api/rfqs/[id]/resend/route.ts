@@ -7,11 +7,11 @@ import { config as appCfg } from '@/lib/config'
 
 export const runtime = 'nodejs'
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, context: any) {
   try {
     const { companyId, actorId, role } = getIds(req)
     requireRole(role, 'admin')
-    const rfqId = params.id
+    const rfqId = context?.params?.id
     const sb = supabaseService()
     const { data: rfq, error } = await sb.from('rfqs').select('*').eq('id', rfqId).eq('company_id', companyId).single()
     if (error || !rfq) return NextResponse.json({ error: 'RFQ not found' }, { status: 404 })

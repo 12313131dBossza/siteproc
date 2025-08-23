@@ -7,12 +7,9 @@ import { billsCsv, expensesCsv } from '@/lib/qb'
 
 export const runtime = 'nodejs'
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(req: NextRequest, context: any) {
   const { companyId } = getIds(req)
-  const jobId = params.id
+  const jobId = context?.params?.id
   const format = (new URL(req.url).searchParams.get('format') || 'csv') as 'csv' | 'pdf' | 'json'
   const type = (new URL(req.url).searchParams.get('type') || 'expenses') as 'expenses' | 'bills'
 

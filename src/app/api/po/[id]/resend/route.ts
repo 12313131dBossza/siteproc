@@ -6,11 +6,11 @@ import { audit } from '@/lib/audit'
 
 export const runtime = 'nodejs'
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, context: any) {
   try {
     const { companyId, actorId, role } = getIds(req)
     requireRole(role, 'admin')
-    const id = params.id
+    const id = context?.params?.id
     const sb = supabaseService()
     const { data: po, error } = await sb.from('pos').select('*').eq('id', id).eq('company_id', companyId).single()
     if (error || !po) return NextResponse.json({ error: 'PO not found' }, { status: 404 })
