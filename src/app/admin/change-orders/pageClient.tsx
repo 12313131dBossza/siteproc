@@ -1,20 +1,17 @@
 "use client";
-import React from 'react';
 import DataTable from '@/components/ui/DataTable';
-import { changeOrders } from '@/lib/mockData';
 import { Button } from '@/components/ui/Button';
-
-export default function ChangeOrdersPageClient(){
+export interface ChangeOrderRow { id:string; status:string; cost_delta:number|null; created_at:string }
+export default function ChangeOrdersPageClient({ rows }: { rows: ChangeOrderRow[] }){
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between"><h1 className="text-xl font-semibold">Change Orders</h1><Button onClick={()=>location.href='/admin/change-orders/new'}>New Request</Button></div>
+    <div className='space-y-6'>
+      <div className='flex items-center justify-between'><h1 className='text-xl font-semibold'>Change Orders</h1><Button href='/admin/change-orders/new'>New Request</Button></div>
       <DataTable columns={[
-        { key:'id', header:'ID' },
-        { key:'project', header:'Project' },
-        { key:'status', header:'Status' },
-        { key:'amountDelta', header:'Amount Δ' },
-        { key:'submitted', header:'Submitted' }
-      ]} rows={changeOrders as any} onRowClick={(r:any)=>location.href='/admin/change-orders/'+r.id} />
+        { key:'id', header:'ID', sortable:true },
+        { key:'status', header:'Status', sortable:true },
+        { key:'cost_delta', header:'Amount Δ', sortable:true },
+        { key:'created_at', header:'Submitted', sortable:true }
+      ] as any} rows={rows as any} emptyMessage='No change orders.' onRowClick={(r:any)=>location.href='/admin/change-orders/'+r.id} />
     </div>
   );
 }

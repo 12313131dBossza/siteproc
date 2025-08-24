@@ -11,21 +11,14 @@ export default async function AdminDashboardPage(){
   };
   try {
     const supabase = await sbServer();
-    // Jobs -> active projects (no status column yet, so count all)
-    const { data: jobs, error: jobsErr } = await supabase.from('jobs').select('id');
-    if(!jobsErr && jobs) data.stats.activeProjects = jobs.length;
-
-    // Quotes with status submitted => treat as pending bids
-    const { data: quotes, error: quotesErr } = await supabase.from('quotes').select('id,status').eq('status','submitted');
-    if(!quotesErr && quotes) data.stats.pendingBids = quotes.length;
-
-    // Deliveries not delivered
-    const { data: dels, error: delsErr } = await supabase.from('deliveries').select('id,status').not('status','eq','delivered');
-    if(!delsErr && dels) data.stats.openDeliveries = dels.length;
-
-    // POs not complete => unpaid invoices proxy (until dedicated invoices table)
-    const { data: pos, error: posErr } = await supabase.from('pos').select('id,status').neq('status','complete');
-    if(!posErr && pos) data.stats.unpaidInvoices = pos.length;
+    // Aggregated stats view
+    const { data: statsView } = await supabase.from('dashboard_stats').select('*').single();
+    if(statsView){
+      data.stats.activeProjects = statsView.active_projects;
+      data.stats.pendingBids = statsView.pending_bids;
+      data.stats.openDeliveries = statsView.open_deliveries;
+      data.stats.unpaidInvoices = statsView.unpaid_invoices;
+    }
 
     // Recent activity from events table (latest 10)
     const { data: events, error: eventsErr } = await supabase
@@ -33,6 +26,7 @@ export default async function AdminDashboardPage(){
       .select('id, entity, verb, actor_id, created_at')
       .order('created_at',{ ascending:false })
       .limit(10);
+    let dels: any[] | null = null;
     if(!eventsErr && events){
       data.recentActivity = events.map(e=>({
         time: new Date(e.created_at).toLocaleString(),
@@ -45,11 +39,13 @@ export default async function AdminDashboardPage(){
     // Open Items: combine pending change orders + undelivered deliveries (limit few each)
     const openItems: any[] = [];
     const { data: coPending } = await supabase.from('change_orders').select('id, job_id, status, created_at').eq('status','pending').limit(5);
+    const { data: delsData } = await supabase.from('deliveries').select('id,status').not('status','eq','delivered').limit(5);
+    dels = delsData || [];
     if(coPending){
       openItems.push(...coPending.map(c=>({ type:'Change Order', project: c.job_id?.slice(0,6), due: '-', status: c.status, action:'Review' })));
     }
     if(dels){
-      openItems.push(...dels.slice(0,5).map(d=>({ type:'Delivery', project: d.id.slice(0,6), due: '-', status: d.status, action:'Check In' })));
+      openItems.push(...dels.map(d=>({ type:'Delivery', project: d.id.slice(0,6), due: '-', status: d.status, action:'Check In' })));
     }
     data.openItems = openItems;
   } catch(e:any){
