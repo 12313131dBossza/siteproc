@@ -27,9 +27,12 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
   }
   const raw = await parseJson(req, supplierUpdateSchema)
   const parsed = supplierUpdateSchema.safeParse(raw)
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.message }, { status: 400 })
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.message }, { status: 400 })
+  }
+  const updateFields: { name?: string; email?: string; phone?: string; notes?: string } = parsed.data
   const sb = supabaseService()
-  const { error } = await sb.from('suppliers').update(parsed.data).eq('company_id', companyId).eq('id', context?.params?.id)
+  const { error } = await (sb as any).from('suppliers').update(updateFields).eq('company_id', companyId).eq('id', context?.params?.id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   try { await audit(companyId, actorId || null, 'supplier', context?.params?.id, 'update', parsed.data) } catch {}
   return NextResponse.json({ ok: true })
