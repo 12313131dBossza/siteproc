@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseService } from '@/lib/supabase'
 import { getIds, parseJson, requireRole } from '@/lib/api'
 import { expenseCreateSchema } from '@/lib/validation'
-import { broadcastExpenseUpdated, broadcast } from '@/lib/realtime'
+import { broadcastExpenseUpdated, broadcast, broadcastDashboardUpdated } from '@/lib/realtime'
 import { EVENTS } from '@/lib/constants'
 
 export const runtime = 'nodejs'
@@ -13,8 +13,9 @@ export async function POST(req: NextRequest) {
   requireRole(role, 'bookkeeper')
   const payload = await parseJson(req, expenseCreateSchema)
     const sb = supabaseService()
-  const { data, error } = await sb
-      .from('expenses')
+    type InsertedExpense = { id: string; job_id: string }
+    const { data, error } = await sb
+      .from('expenses' as any)
       .insert({
         company_id: companyId,
         job_id: payload.job_id,
@@ -23,14 +24,15 @@ export async function POST(req: NextRequest) {
         amount: payload.amount,
         spent_at: payload.spent_at,
         memo: payload.memo || null,
-      })
+      } as any)
       .select('id,job_id')
-      .single()
+      .single<InsertedExpense>()
     if (error || !data) return NextResponse.json({ error: error?.message || 'create failed' }, { status: 500 })
     // granular expense channel + aggregated job channel
     await Promise.all([
-  broadcastExpenseUpdated(data.id as string, ['create']),
-  broadcast(`job:${data.job_id}`, EVENTS.JOB_EXPENSE_UPDATED, { kind: 'expense', job_id: data.job_id, expense_id: data.id, at: new Date().toISOString() }),
+      broadcastExpenseUpdated(data.id as string, ['create']),
+      broadcast(`job:${data.job_id}`, EVENTS.JOB_EXPENSE_UPDATED, { kind: 'expense', job_id: data.job_id, expense_id: data.id, at: new Date().toISOString() }),
+      broadcastDashboardUpdated(companyId || 'demo')
     ])
     return NextResponse.json({ id: data.id })
   } catch (e: any) {
