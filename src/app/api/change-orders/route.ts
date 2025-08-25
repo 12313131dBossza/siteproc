@@ -3,6 +3,7 @@ import { supabaseService } from '@/lib/supabase'
 import { audit } from '@/lib/audit'
 import { appBaseUrl, getIds, parseJson, requireRole } from '@/lib/api'
 import { changeOrderCreateSchema } from '@/lib/validation'
+import { broadcastDashboardUpdated } from '@/lib/realtime'
 import { sendEmail, getFromAddress } from '@/lib/email'
 
 export const runtime = 'nodejs'
@@ -14,9 +15,9 @@ export async function POST(req: NextRequest) {
   const sb = supabaseService()
   const token = crypto.randomUUID()
 
-  const { data: co, error } = await sb
-    .from('change_orders')
-    .insert({
+    const { data: co, error } = await (sb as any)
+      .from('change_orders')
+      .insert({
       company_id: companyId,
       job_id: payload.job_id,
       description: payload.description,
@@ -39,6 +40,7 @@ export async function POST(req: NextRequest) {
 
   await audit(companyId, actorId || null, 'change_order', co.id as string, 'create', { approver_email: payload.approver_email })
 
+  try { await broadcastDashboardUpdated(companyId) } catch {}
   return NextResponse.json({ id: co.id, public_token: token })
 }
 

@@ -1,11 +1,13 @@
+import { uploadPrivateSigned } from '@/lib/storage'
+import { EVENTS } from '@/lib/constants'
+
+// Reintroduced imports (file was previously corrupted during patching)
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseService } from '@/lib/supabase'
 import { audit } from '@/lib/audit'
 import { getIds, parseJson, requireRole } from '@/lib/api'
 import { deliveryCreateSchema } from '@/lib/validation'
-import { broadcastDeliveryUpdated, broadcast, broadcastPoUpdated } from '@/lib/realtime'
-import { uploadPrivateSigned } from '@/lib/storage'
-import { EVENTS } from '@/lib/constants'
+import { broadcastDeliveryUpdated, broadcast, broadcastPoUpdated, broadcastDashboardUpdated } from '@/lib/realtime'
 
 export const runtime = 'nodejs'
 
@@ -14,7 +16,6 @@ async function uploadDataUrl(sb: ReturnType<typeof supabaseService>, path: strin
   if (!match) throw new Error('Bad data URL')
   const base64 = match[2]
   const bytes = Buffer.from(base64, 'base64')
-  // Store in private bucket and return signed URL
   const url = await uploadPrivateSigned(path, bytes, match[1])
   return url
 }
@@ -25,7 +26,7 @@ export async function POST(req: NextRequest) {
   const payload = await parseJson(req, deliveryCreateSchema)
   const sb = supabaseService()
 
-  const { data: delivery, error } = await sb
+  const { data: delivery, error } = await (sb as any)
     .from('deliveries')
     .insert({
       company_id: companyId,
@@ -36,7 +37,6 @@ export async function POST(req: NextRequest) {
     })
     .select('*')
     .single()
-
   if (error || !delivery) return NextResponse.json({ error: error?.message || 'create failed' }, { status: 500 })
 
   const items = payload.items.map((it: any) => ({
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     sku: it.sku,
     partial: !!it.partial,
   }))
-  const { error: itemsErr } = await sb.from('delivery_items').insert(items)
+  const { error: itemsErr } = await (sb as any).from('delivery_items').insert(items as any)
   if (itemsErr) return NextResponse.json({ error: itemsErr.message }, { status: 500 })
 
   const photoUrls: string[] = []
@@ -58,51 +58,50 @@ export async function POST(req: NextRequest) {
   }
   if (payload.signature_data_url) {
     const sig = await uploadDataUrl(sb, `deliveries/${delivery.id}/signature.png`, payload.signature_data_url)
-    await sb.from('deliveries').update({ signature_url: sig }).eq('id', delivery.id as string)
+    await (sb as any).from('deliveries').update({ signature_url: sig } as any).eq('id', delivery.id as string)
   }
-
   for (const url of photoUrls) {
-    await sb.from('photos').insert({ company_id: companyId, job_id: payload.job_id, entity: 'delivery', entity_id: delivery.id, url })
+    await (sb as any).from('photos').insert({ company_id: companyId, job_id: payload.job_id, entity: 'delivery', entity_id: delivery.id, url } as any)
   }
 
   await audit(companyId as string, actorId || null, 'delivery', delivery.id as string, 'create', { items: items.length, photos: photoUrls.length })
   await Promise.all([
     broadcastDeliveryUpdated(delivery.id as string, ['create']),
-  broadcast(`job:${payload.job_id}`, EVENTS.JOB_DELIVERY_UPDATED, { kind: 'delivery', job_id: payload.job_id, delivery_id: delivery.id as string, at: new Date().toISOString() }),
+    broadcast(`job:${payload.job_id}`, EVENTS.JOB_DELIVERY_UPDATED, { kind: 'delivery', job_id: payload.job_id, delivery_id: delivery.id as string, at: new Date().toISOString() }),
+    broadcastDashboardUpdated(companyId)
   ])
 
-  // PO status & backorder handling
   if (payload.po_id) {
     try {
       const sb2 = sb
-      const { data: po } = await sb2.from('pos').select('id,rfq_id,status').eq('id', payload.po_id as string).eq('company_id', companyId).single()
+      const { data: po } = await (sb2 as any).from('pos').select('id,rfq_id,status').eq('id', payload.po_id as string).eq('company_id', companyId).single()
       if (po && po.rfq_id) {
-        const { data: orderedItems } = await sb2.from('rfq_items').select('qty').eq('company_id', companyId).eq('rfq_id', po.rfq_id as string)
-        const orderedTotal = (orderedItems || []).reduce((s, r: any) => s + Number(r.qty || 0), 0)
-        const { data: allDelivs } = await sb2.from('deliveries').select('id,notes').eq('company_id', companyId).eq('po_id', payload.po_id as string)
-        const deliveryIds = (allDelivs || []).map(d => d.id)
+        const { data: orderedItems } = await (sb2 as any).from('rfq_items').select('qty').eq('company_id', companyId).eq('rfq_id', po.rfq_id as string)
+  const orderedTotal = (orderedItems || []).reduce((s: number, r: any) => s + Number(r.qty || 0), 0)
+        const { data: allDelivs } = await (sb2 as any).from('deliveries').select('id,notes').eq('company_id', companyId).eq('po_id', payload.po_id as string)
+        const deliveryIds = (allDelivs || []).map((d: any) => d.id)
         let deliveredTotal = 0
         if (deliveryIds.length) {
-          const { data: allItems } = await sb2.from('delivery_items').select('qty,delivery_id').in('delivery_id', deliveryIds as any)
-          deliveredTotal = (allItems || []).reduce((s, r: any) => s + Number(r.qty || 0), 0)
+          const { data: allItems } = await (sb2 as any).from('delivery_items').select('qty,delivery_id').in('delivery_id', deliveryIds as any)
+          deliveredTotal = (allItems || []).reduce((s: number, r: any) => s + Number(r.qty || 0), 0)
         }
         if (orderedTotal > 0) {
           if (deliveredTotal >= orderedTotal) {
             if (po.status !== 'complete') {
-              await sb2.from('pos').update({ status: 'complete', updated_at: new Date().toISOString() }).eq('id', po.id as string)
+              await (sb2 as any).from('pos').update({ status: 'complete', updated_at: new Date().toISOString() } as any).eq('id', po.id as string)
               await broadcastPoUpdated(po.id as string, ['status'])
               await audit(companyId as string, actorId || null, 'po', po.id as string, 'status_auto_complete', { delivered_total: deliveredTotal, ordered_total: orderedTotal })
             }
             for (const d of (allDelivs || [])) {
               if (d.notes && typeof d.notes === 'string' && d.notes.startsWith('Backorder')) {
-                await sb2.from('deliveries').update({ status: 'delivered', updated_at: new Date().toISOString() }).eq('id', d.id as string)
+                await (sb2 as any).from('deliveries').update({ status: 'delivered', updated_at: new Date().toISOString() } as any).eq('id', d.id as string)
               }
             }
           } else {
             const remaining = orderedTotal - deliveredTotal
-            const existingBackorder = (allDelivs || []).find(d => d.notes && typeof d.notes === 'string' && d.notes.startsWith('Backorder'))
+            const existingBackorder = (allDelivs || []).find((d: any) => d.notes && typeof d.notes === 'string' && d.notes.startsWith('Backorder'))
             if (!existingBackorder) {
-              const { data: backorder, error: boErr } = await sb2.from('deliveries').insert({
+              const { data: backorder, error: boErr } = await (sb2 as any).from('deliveries').insert({
                 company_id: companyId,
                 job_id: payload.job_id,
                 po_id: payload.po_id,
@@ -110,7 +109,7 @@ export async function POST(req: NextRequest) {
                 notes: `Backorder remaining ${remaining}`,
               }).select('id').single()
               if (!boErr && backorder) {
-                await sb2.from('delivery_items').insert({
+                await (sb2 as any).from('delivery_items').insert({
                   company_id: companyId,
                   delivery_id: backorder.id,
                   description: 'Backorder',
@@ -123,7 +122,7 @@ export async function POST(req: NextRequest) {
             } else {
               const note = `Backorder remaining ${remaining}`
               if (existingBackorder.notes !== note) {
-                await sb2.from('deliveries').update({ notes: note, updated_at: new Date().toISOString() }).eq('id', existingBackorder.id as string)
+                await (sb2 as any).from('deliveries').update({ notes: note, updated_at: new Date().toISOString() } as any).eq('id', existingBackorder.id as string)
               }
             }
           }

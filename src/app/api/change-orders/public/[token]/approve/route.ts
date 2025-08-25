@@ -4,7 +4,7 @@ import { audit } from '@/lib/audit'
 import { getFromAddress, sendEmail } from '@/lib/email'
 import { verifyPublicSignature } from '@/lib/tokens'
 import { config } from '@/lib/config'
-import { broadcastJobChangeOrder } from '@/lib/realtime'
+import { broadcastJobChangeOrder, broadcastDashboardUpdated } from '@/lib/realtime'
 
 export const runtime = 'nodejs'
 
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest, context: any) {
 
   const token = context?.params?.token
     const sb = supabaseService()
-  const { data: co } = await sb.from('change_orders').select('*').eq('public_token', token).single()
+  const { data: co } = await (sb as any).from('change_orders').select('*').eq('public_token', token).single()
     if (!co) {
       const r = NextResponse.json({ error: 'Invalid link' }, { status: 404 })
       r.headers.set('X-Token-Attempt', '1')
@@ -44,10 +44,10 @@ export async function POST(req: NextRequest, context: any) {
     const approverEmail = co.approver_email as string | null
     const costDelta = co.cost_delta as any
 
-  const { error } = await sb.from('change_orders').update({ status: 'approved', approved_at: new Date().toISOString() }).eq('id', coId)
+  const { error } = await (sb as any).from('change_orders').update({ status: 'approved', approved_at: new Date().toISOString() } as any).eq('id', coId)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     if (config.coOneTime) {
-      await sb.from('change_orders').update({ public_token_used_at: new Date().toISOString() }).eq('id', coId)
+  await (sb as any).from('change_orders').update({ public_token_used_at: new Date().toISOString() } as any).eq('id', coId)
     }
 
   try { await audit(companyId, null, 'change_order', coId, 'approve', { cost_delta: costDelta }, { ip: req.headers.get('x-forwarded-for'), userAgent: req.headers.get('user-agent') }) } catch {}
@@ -63,7 +63,8 @@ export async function POST(req: NextRequest, context: any) {
     } catch {}
 
     // Broadcast job change order event (best effort)
-    if (co.job_id) { try { await broadcastJobChangeOrder(co.job_id as string, coId, 'approved') } catch {} }
+  if (co.job_id) { try { await broadcastJobChangeOrder(co.job_id as string, coId, 'approved') } catch {} }
+  try { await broadcastDashboardUpdated(companyId) } catch {}
 
   const res = NextResponse.json({ ok: true })
   res.headers.set('X-Public-IP', req.headers.get('x-forwarded-for') || 'local')

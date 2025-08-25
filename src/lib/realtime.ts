@@ -38,6 +38,11 @@ export async function broadcastDashboardUpdated(companyId: string | 'demo') {
   await broadcast(`dashboard:company-${key}`, EVENTS.DASHBOARD_UPDATED, { company_id: key, at: new Date().toISOString() })
 }
 
+// Canonical channel name helpers (company scoped)
+export function dashboardChannel(companyId: string) {
+  return `dashboard:company-${companyId}`
+}
+
 // Job aggregate updates ----------------------------------------------------
 export async function broadcastJobPo(jobId: string, poId: string) {
   await broadcast(`job:${jobId}`, EVENTS.JOB_PO_UPDATED, { kind: 'po', job_id: jobId, po_id: poId, at: new Date().toISOString() })

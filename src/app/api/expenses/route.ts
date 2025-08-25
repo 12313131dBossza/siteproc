@@ -36,6 +36,13 @@ export async function POST(req: NextRequest) {
     ])
     return NextResponse.json({ id: data.id })
   } catch (e: any) {
+    // Surface validation errors if parseJson threw a Response with JSON body
+    if (e instanceof Response) {
+      try {
+        const txt = await e.text()
+        return NextResponse.json({ error: txt || 'Bad Request' }, { status: (e as any).status || 400 })
+      } catch {}
+    }
     return NextResponse.json({ error: e?.message || 'failed' }, { status: 400 })
   }
 }
