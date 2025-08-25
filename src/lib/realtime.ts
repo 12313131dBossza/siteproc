@@ -32,6 +32,12 @@ export async function broadcastExpenseUpdated(id: string, fields?: string[]) {
   await broadcast(`expense:${id}`, EVENTS.EXPENSE_UPDATED, { id, fields: fields || [], at: new Date().toISOString() })
 }
 
+// Dashboard aggregate invalidation
+export async function broadcastDashboardUpdated(companyId: string | 'demo') {
+  const key = companyId === 'demo' ? 'demo' : companyId
+  await broadcast(`dashboard:company-${key}`, EVENTS.DASHBOARD_UPDATED, { company_id: key, at: new Date().toISOString() })
+}
+
 // Job aggregate updates ----------------------------------------------------
 export async function broadcastJobPo(jobId: string, poId: string) {
   await broadcast(`job:${jobId}`, EVENTS.JOB_PO_UPDATED, { kind: 'po', job_id: jobId, po_id: poId, at: new Date().toISOString() })

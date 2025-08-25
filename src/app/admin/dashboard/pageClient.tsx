@@ -1,5 +1,8 @@
 "use client";
 import { Button } from '@/components/ui/Button';
+import { useEffect, useState, useCallback } from 'react';
+import { supabaseAnon } from '@/lib/supabase';
+import { EVENTS } from '@/lib/constants';
 import { StatCard } from '@/components/ui/StatCard';
 import { Card } from '@/components/ui/Card';
 import DataTable from '@/components/ui/DataTable';
@@ -11,6 +14,29 @@ export interface DashboardData {
 }
 
 export default function DashboardPageClient({ data }: { data: DashboardData }){
+  const [live, setLive] = useState<DashboardData>(data)
+
+  const refetch = useCallback(async () => {
+    try {
+      const res = await fetch('/api/dashboard', { cache: 'no-store' })
+      if (!res.ok) return
+      const j = await res.json()
+      setLive(d => ({
+        ...d,
+        stats: j.stats,
+        recentActivity: j.recentActivity,
+      }))
+    } catch {}
+  }, [])
+
+  useEffect(() => {
+    // demo company only for now
+    const ch = supabaseAnon().channel('dashboard:company-demo')
+      .on('broadcast', { event: EVENTS.DASHBOARD_UPDATED }, () => { refetch() })
+      .subscribe()
+    return () => { try { ch.unsubscribe() } catch {} }
+  }, [refetch])
+
   return (
     <div className="space-y-10">
       <div className="flex flex-wrap gap-6 items-start">
@@ -26,10 +52,10 @@ export default function DashboardPageClient({ data }: { data: DashboardData }){
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-        <StatCard label="Active Projects" value={data.stats.activeProjects} />
-        <StatCard label="Pending Bids" value={data.stats.pendingBids} />
-        <StatCard label="Open Deliveries" value={data.stats.openDeliveries} />
-        <StatCard label="Unpaid Invoices" value={data.stats.unpaidInvoices} />
+  <StatCard label="Active Projects" value={live.stats.activeProjects} />
+  <StatCard label="Pending Bids" value={live.stats.pendingBids} />
+  <StatCard label="Open Deliveries" value={live.stats.openDeliveries} />
+  <StatCard label="Unpaid Invoices" value={live.stats.unpaidInvoices} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -39,7 +65,7 @@ export default function DashboardPageClient({ data }: { data: DashboardData }){
             { key:'entity', header:'Entity' },
             { key:'action', header:'Action' },
             { key:'by', header:'By' }
-          ]} rows={data.recentActivity as any} emptyMessage='No recent events.' />
+          ]} rows={live.recentActivity as any} emptyMessage='No recent events.' />
         </Card>
         <Card title="Open Items">
           <DataTable columns={[
@@ -48,7 +74,7 @@ export default function DashboardPageClient({ data }: { data: DashboardData }){
             { key:'due', header:'Due' },
             { key:'status', header:'Status' },
             { key:'action', header:'Action', render:(r:any)=> <Button size='sm' variant='accent'>{r.action}</Button> }
-          ]} rows={data.openItems as any} emptyMessage='No open items.' />
+          ]} rows={live.openItems as any} emptyMessage='No open items.' />
         </Card>
       </div>
     </div>

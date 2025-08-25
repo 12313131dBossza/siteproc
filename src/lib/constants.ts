@@ -2,6 +2,7 @@ export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]
 
 export const EVENTS = {
   PO_UPDATED: 'po-updated',
+  DASHBOARD_UPDATED: 'dashboard-updated',
   JOB_EXPENSE_UPDATED: 'job-expense-updated',
   JOB_DELIVERY_UPDATED: 'job-delivery-updated',
   JOB_COST_CODE_UPDATED: 'job-cost-code-updated',
