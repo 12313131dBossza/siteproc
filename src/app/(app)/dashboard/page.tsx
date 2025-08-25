@@ -1,5 +1,6 @@
 import { supabaseService } from '@/lib/supabase'
 import { AdminHome, PMHome, PurchaserHome, FieldHome, BookkeeperHome } from './DashboardHomes'
+import { cookies } from 'next/headers'
 
 export const runtime = 'nodejs'
 
@@ -17,8 +18,8 @@ function mapRole(r: string | null | undefined): 'admin'|'pm'|'purchaser'|'field'
 async function fetchRole(): Promise<string | null> {
   try {
     const sb = supabaseService()
-    const { data } = await sb.from('profiles').select('role').limit(1)
-    if (Array.isArray(data) && data.length) return data[0].role as string
+  const { data } = await (sb as any).from('profiles').select('role').limit(1)
+  if (Array.isArray(data) && data.length) return (data as any)[0].role as string
   } catch {}
   return null
 }
@@ -26,6 +27,7 @@ async function fetchRole(): Promise<string | null> {
 export default async function DashboardPage() {
   const rawRole = await fetchRole()
   const role = mapRole(rawRole)
+  const companyId = process.env.NEXT_PUBLIC_COMPANY_ID || ''
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
@@ -34,11 +36,11 @@ export default async function DashboardPage() {
           <span className="text-xs px-2 py-1 rounded bg-neutral-800 border border-neutral-700">DEV MODE</span>
         )}
       </div>
-      {role === 'admin' && <AdminHome />}
-      {role === 'pm' && <PMHome />}
-      {role === 'purchaser' && <PurchaserHome />}
-      {role === 'field' && <FieldHome />}
-      {role === 'bookkeeper' && <BookkeeperHome />}
+  {role === 'admin' && <AdminHome companyId={companyId} />}
+  {role === 'pm' && <PMHome companyId={companyId} />}
+  {role === 'purchaser' && <PurchaserHome companyId={companyId} />}
+  {role === 'field' && <FieldHome companyId={companyId} />}
+  {role === 'bookkeeper' && <BookkeeperHome companyId={companyId} />}
     </div>
   )
 }

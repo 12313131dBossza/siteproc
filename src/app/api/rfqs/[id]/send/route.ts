@@ -3,6 +3,7 @@ import { supabaseService } from '@/lib/supabase'
 import { audit } from '@/lib/audit'
 import { appBaseUrl, getIds, requireRole } from '@/lib/api'
 import { sendEmail, getFromAddress } from '@/lib/email'
+import { broadcastDashboardUpdated } from '@/lib/realtime'
 
 export const runtime = 'nodejs'
 
@@ -12,10 +13,10 @@ export async function POST(req: NextRequest, context: any) {
   const rfqId = context?.params?.id
   const sb = supabaseService()
 
-  const { data: rfq, error } = await sb.from('rfqs').select('*').eq('id', rfqId).eq('company_id', companyId).single()
+  const { data: rfq, error } = await (sb as any).from('rfqs').select('*').eq('id', rfqId).eq('company_id', companyId).single()
   if (error || !rfq) return NextResponse.json({ error: 'RFQ not found' }, { status: 404 })
 
-  const { data: suppliers } = await sb.from('suppliers').select('id,name,email').eq('company_id', companyId)
+  const { data: suppliers } = await (sb as any).from('suppliers').select('id,name,email').eq('company_id', companyId)
   const publicUrl = `${appBaseUrl()}/api/quotes/public/${rfq.public_token}`
 
   const emails = (suppliers || []).filter((s: any) => !!s.email)
@@ -30,7 +31,8 @@ export async function POST(req: NextRequest, context: any) {
 
   await sendEmail(messages as any)
 
-  await sb.from('rfqs').update({ status: 'sent' }).eq('id', rfqId)
+  await (sb as any).from('rfqs').update({ status: 'sent' } as any).eq('id', rfqId)
+  try { await broadcastDashboardUpdated(companyId) } catch {}
   await audit(companyId, actorId || null, 'rfq', rfqId, 'send', { recipient_count: emails.length })
 
   return NextResponse.json({ ok: true, recipients: emails.length })

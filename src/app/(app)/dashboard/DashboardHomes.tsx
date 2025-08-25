@@ -1,5 +1,6 @@
 "use client"
-import React, { useState } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
+import useDashboardRealtime from '@/lib/useDashboardRealtime'
 
 export function Metric({ label, value, loading }: { label: string; value: string | number | null | undefined; loading?: boolean }) {
   return (
@@ -70,9 +71,12 @@ export function DevToolsPanel() {
   )
 }
 
-export function AdminHome() {
+export function AdminHome({ companyId }: { companyId?: string }) {
+  const [tick, setTick] = useState(0)
+  const refetch = useCallback(() => setTick(t => t+1), [])
+  useDashboardRealtime(companyId || (typeof window!=='undefined' ? localStorage.getItem('company_id') || undefined : undefined), refetch)
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-refresh={tick}>
       <div className="grid gap-4 sm:grid-cols-3">
         <Metric label="Active Jobs" value={0} />
         <Metric label="Users" value={0} />
@@ -83,9 +87,12 @@ export function AdminHome() {
   )
 }
 
-export function PMHome() {
+export function PMHome({ companyId }: { companyId?: string }) {
+  const [tick, setTick] = useState(0)
+  const refetch = useCallback(() => setTick(t => t+1), [])
+  useDashboardRealtime(companyId || (typeof window!=='undefined' ? localStorage.getItem('company_id') || undefined : undefined), refetch)
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-refresh={tick}>
       <div className="grid gap-4 sm:grid-cols-3">
         <Metric label="RFQs Awaiting Quotes" value={0} />
         <Metric label="Deliveries Today" value={0} />
@@ -96,9 +103,12 @@ export function PMHome() {
   )
 }
 
-export function PurchaserHome() {
+export function PurchaserHome({ companyId }: { companyId?: string }) {
+  const [tick, setTick] = useState(0)
+  const refetch = useCallback(() => setTick(t => t+1), [])
+  useDashboardRealtime(companyId || (typeof window!=='undefined' ? localStorage.getItem('company_id') || undefined : undefined), refetch)
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-refresh={tick}>
       <div className="grid gap-4 sm:grid-cols-3">
         <Metric label="RFQs To Send" value={0} />
         <Metric label="Quotes To Compare" value={0} />
@@ -109,9 +119,12 @@ export function PurchaserHome() {
   )
 }
 
-export function FieldHome() {
+export function FieldHome({ companyId }: { companyId?: string }) {
+  const [tick, setTick] = useState(0)
+  const refetch = useCallback(() => setTick(t => t+1), [])
+  useDashboardRealtime(companyId || (typeof window!=='undefined' ? localStorage.getItem('company_id') || undefined : undefined), refetch)
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-refresh={tick}>
       <div className="grid gap-4 sm:grid-cols-3">
         <BigAction label="Delivery check-in" href="/deliveries/new" icon={<span>🚚</span>} />
         <BigAction label="New expense" href="/expenses/new" icon={<span>💸</span>} />
@@ -122,9 +135,12 @@ export function FieldHome() {
   )
 }
 
-export function BookkeeperHome() {
+export function BookkeeperHome({ companyId }: { companyId?: string }) {
+  const [tick, setTick] = useState(0)
+  const refetch = useCallback(() => setTick(t => t+1), [])
+  useDashboardRealtime(companyId || (typeof window!=='undefined' ? localStorage.getItem('company_id') || undefined : undefined), refetch)
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-refresh={tick}>
       <div className="grid gap-4 sm:grid-cols-3">
         <Metric label="Unexported Expenses" value={0} />
         <Metric label="Unexported POs" value={0} />
