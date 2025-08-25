@@ -9,7 +9,7 @@ export const runtime = 'nodejs'
 
 export async function POST(req: NextRequest) {
   try {
-  const { companyId, role } = getIds(req)
+  const { companyId, role, actorId } = getIds(req)
   requireRole(role, 'bookkeeper')
   const payload = await parseJson(req, expenseCreateSchema)
     const sb = supabaseService()
@@ -29,11 +29,12 @@ export async function POST(req: NextRequest) {
       .single<InsertedExpense>()
     if (error || !data) return NextResponse.json({ error: error?.message || 'create failed' }, { status: 500 })
     // granular expense channel + aggregated job channel
-    await Promise.all([
+  await Promise.all([
       broadcastExpenseUpdated(data.id as string, ['create']),
       broadcast(`job:${data.job_id}`, EVENTS.JOB_EXPENSE_UPDATED, { kind: 'expense', job_id: data.job_id, expense_id: data.id, at: new Date().toISOString() }),
       broadcastDashboardUpdated(companyId || 'demo')
     ])
+  try { (await import('@/lib/audit')).audit(companyId, actorId || null, 'expense', data.id as string, 'create', { amount: payload.amount }) } catch {}
     return NextResponse.json({ id: data.id })
   } catch (e: any) {
     // Surface validation errors if parseJson threw a Response with JSON body
