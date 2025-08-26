@@ -30,7 +30,7 @@ export default function LoginForm({ unauthorized }: Props) {
       if (signErr) { setError(signErr.message || 'Login failed'); setLoading(false); return; }
       // Fetch profile to decide destination
       const me = await fetch('/api/me', { cache: 'no-store' }).then(r=>r.ok?r.json():null).catch(()=>null);
-      const dest = me?.companyId ? '/admin/dashboard' : '/onboarding';
+  const dest = me?.companyId ? '/dashboard' : '/onboarding';
       router.replace(dest);
       router.refresh();
     } catch (err: any) {

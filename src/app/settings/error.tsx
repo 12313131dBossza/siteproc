@@ -8,7 +8,7 @@ export default function SettingsError({ error, reset }: { error: any; reset: () 
       <p className="text-sm text-neutral-400 break-all">{error?.message || 'Unknown error'}</p>
       <div className="flex gap-3">
         <button onClick={reset} className="px-3 py-2 rounded bg-blue-600 text-xs">Try again</button>
-        <Link href="/admin/dashboard" className="px-3 py-2 rounded bg-neutral-800 text-xs">Back to Dashboard</Link>
+  <Link href="/dashboard" className="px-3 py-2 rounded bg-neutral-800 text-xs">Back to Dashboard</Link>
       </div>
     </div>
   )

@@ -21,7 +21,7 @@ export async function requireAdmin(options?: { redirectOnFail?: boolean }): Prom
   const { data: profile } = await supabase.from('profiles').select('id,company_id,role').eq('id', user.id).single()
   if (!profile?.company_id) return { ok:false, reason:'no_company' }
   if (profile.role !== 'admin') {
-    if (options?.redirectOnFail) redirect('/admin/dashboard')
+  if (options?.redirectOnFail) redirect('/dashboard')
     return { ok:false, reason:'forbidden', userId: user.id, companyId: profile.company_id, role: profile.role }
   }
   return { ok:true, userId: user.id, companyId: profile.company_id, role: profile.role }

@@ -5,7 +5,7 @@ import LoginForm from './LoginForm'
 
 export default async function LoginPage() {
   const session = await getSessionProfile()
-  if (session.user && session.companyId) redirect('/admin/dashboard')
+  if (session.user && session.companyId) redirect('/dashboard')
   if (session.user && !session.companyId) redirect('/onboarding')
   return <LoginForm />
 }

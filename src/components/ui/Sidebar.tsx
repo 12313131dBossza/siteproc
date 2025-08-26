@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const navItems = [
-  { href: '/admin/dashboard', label: 'Dashboard' },
+  { href: '/dashboard', label: 'Dashboard' },
   { href: '/admin/projects', label: 'Projects' },
   { href: '/admin/deliveries', label: 'Deliveries' },
   { href: '/admin/expenses', label: 'Expenses' },
@@ -25,7 +25,7 @@ export function Sidebar() {
       <nav className="flex-1 overflow-y-auto py-4">
         <ul className="space-y-1 px-3">
           {navItems.map(item => {
-            const active = pathname === item.href || (item.href !== '/admin/dashboard' && pathname?.startsWith(item.href));
+            const active = pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href));
             return (
               <li key={item.href}>
                 <Link href={item.href} className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition ${active ? 'bg-[var(--sp-color-primary)] text-white shadow-sm' : 'text-[var(--sp-color-muted)] hover:bg-[var(--sp-color-primary)]/10 hover:text-[var(--sp-color-primary)]'}`}>
