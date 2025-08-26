@@ -5,9 +5,10 @@ import { EVENTS } from '@/lib/constants'
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseService } from '@/lib/supabase'
 import { audit } from '@/lib/audit'
-import { getIds, parseJson, requireRole } from '@/lib/api'
+import { parseJson } from '@/lib/api'
 import { deliveryCreateSchema } from '@/lib/validation'
 import { broadcastDeliveryUpdated, broadcast, broadcastPoUpdated, broadcastDashboardUpdated } from '@/lib/realtime'
+import { getSessionProfile, enforceRole } from '@/lib/auth'
 
 export const runtime = 'nodejs'
 
@@ -21,15 +22,18 @@ async function uploadDataUrl(sb: ReturnType<typeof supabaseService>, path: strin
 }
 
 export async function POST(req: NextRequest) {
-  const { companyId, actorId, role } = getIds(req)
-  requireRole(role, 'foreman')
+  const session = await getSessionProfile()
+  if (!session.user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
+  if (!session.companyId) return NextResponse.json({ error: 'no_company' }, { status: 400 })
+  // 'foreman' legacy role mapped to 'viewer' minimum permission for creation; adjust if stricter needed
+  enforceRole('viewer', session)
   const payload = await parseJson(req, deliveryCreateSchema)
   const sb = supabaseService()
 
   const { data: delivery, error } = await (sb as any)
     .from('deliveries')
     .insert({
-      company_id: companyId,
+  company_id: session.companyId,
       job_id: payload.job_id,
       po_id: payload.po_id ?? null,
       notes: payload.notes ?? null,
@@ -40,7 +44,7 @@ export async function POST(req: NextRequest) {
   if (error || !delivery) return NextResponse.json({ error: error?.message || 'create failed' }, { status: 500 })
 
   const items = payload.items.map((it: any) => ({
-    company_id: companyId,
+  company_id: session.companyId,
     delivery_id: delivery.id,
     description: it.description,
     qty: it.qty,
@@ -61,24 +65,24 @@ export async function POST(req: NextRequest) {
     await (sb as any).from('deliveries').update({ signature_url: sig } as any).eq('id', delivery.id as string)
   }
   for (const url of photoUrls) {
-    await (sb as any).from('photos').insert({ company_id: companyId, job_id: payload.job_id, entity: 'delivery', entity_id: delivery.id, url } as any)
+    await (sb as any).from('photos').insert({ company_id: session.companyId, job_id: payload.job_id, entity: 'delivery', entity_id: delivery.id, url } as any)
   }
 
-  await audit(companyId as string, actorId || null, 'delivery', delivery.id as string, 'create', { items: items.length, photos: photoUrls.length })
+  await audit(session.companyId as string, session.user.id, 'delivery', delivery.id as string, 'create', { items: items.length, photos: photoUrls.length })
   await Promise.all([
     broadcastDeliveryUpdated(delivery.id as string, ['create']),
     broadcast(`job:${payload.job_id}`, EVENTS.JOB_DELIVERY_UPDATED, { kind: 'delivery', job_id: payload.job_id, delivery_id: delivery.id as string, at: new Date().toISOString() }),
-    broadcastDashboardUpdated(companyId)
+    broadcastDashboardUpdated(session.companyId!)
   ])
 
   if (payload.po_id) {
     try {
       const sb2 = sb
-      const { data: po } = await (sb2 as any).from('pos').select('id,rfq_id,status').eq('id', payload.po_id as string).eq('company_id', companyId).single()
+      const { data: po } = await (sb2 as any).from('pos').select('id,rfq_id,status').eq('id', payload.po_id as string).eq('company_id', session.companyId).single()
       if (po && po.rfq_id) {
-        const { data: orderedItems } = await (sb2 as any).from('rfq_items').select('qty').eq('company_id', companyId).eq('rfq_id', po.rfq_id as string)
+        const { data: orderedItems } = await (sb2 as any).from('rfq_items').select('qty').eq('company_id', session.companyId).eq('rfq_id', po.rfq_id as string)
   const orderedTotal = (orderedItems || []).reduce((s: number, r: any) => s + Number(r.qty || 0), 0)
-        const { data: allDelivs } = await (sb2 as any).from('deliveries').select('id,notes').eq('company_id', companyId).eq('po_id', payload.po_id as string)
+        const { data: allDelivs } = await (sb2 as any).from('deliveries').select('id,notes').eq('company_id', session.companyId).eq('po_id', payload.po_id as string)
         const deliveryIds = (allDelivs || []).map((d: any) => d.id)
         let deliveredTotal = 0
         if (deliveryIds.length) {
@@ -90,7 +94,7 @@ export async function POST(req: NextRequest) {
             if (po.status !== 'complete') {
               await (sb2 as any).from('pos').update({ status: 'complete', updated_at: new Date().toISOString() } as any).eq('id', po.id as string)
               await broadcastPoUpdated(po.id as string, ['status'])
-              await audit(companyId as string, actorId || null, 'po', po.id as string, 'status_auto_complete', { delivered_total: deliveredTotal, ordered_total: orderedTotal })
+              await audit(session.companyId as string, session.user.id, 'po', po.id as string, 'status_auto_complete', { delivered_total: deliveredTotal, ordered_total: orderedTotal })
             }
             for (const d of (allDelivs || [])) {
               if (d.notes && typeof d.notes === 'string' && d.notes.startsWith('Backorder')) {
@@ -102,7 +106,7 @@ export async function POST(req: NextRequest) {
             const existingBackorder = (allDelivs || []).find((d: any) => d.notes && typeof d.notes === 'string' && d.notes.startsWith('Backorder'))
             if (!existingBackorder) {
               const { data: backorder, error: boErr } = await (sb2 as any).from('deliveries').insert({
-                company_id: companyId,
+                company_id: session.companyId,
                 job_id: payload.job_id,
                 po_id: payload.po_id,
                 status: 'pending',
@@ -110,13 +114,13 @@ export async function POST(req: NextRequest) {
               }).select('id').single()
               if (!boErr && backorder) {
                 await (sb2 as any).from('delivery_items').insert({
-                  company_id: companyId,
+                  company_id: session.companyId,
                   delivery_id: backorder.id,
                   description: 'Backorder',
                   qty: remaining,
                   partial: true,
                 } as any)
-                await audit(companyId as string, actorId || null, 'delivery', backorder.id as string, 'backorder_create', { remaining })
+                await audit(session.companyId as string, session.user.id, 'delivery', backorder.id as string, 'backorder_create', { remaining })
                 await broadcast(`job:${payload.job_id}`, EVENTS.JOB_DELIVERY_UPDATED, { kind: 'delivery', job_id: payload.job_id, delivery_id: backorder.id as string, at: new Date().toISOString() })
               }
             } else {
@@ -138,7 +142,9 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
-    const { companyId } = getIds(req)
+  const session = await getSessionProfile()
+  if (!session.user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
+  if (!session.companyId) return NextResponse.json({ error: 'no_company' }, { status: 400 })
     const url = new URL(req.url)
     const jobId = url.searchParams.get('job_id')
     if (!jobId) return NextResponse.json({ error: 'job_id required' }, { status: 400 })
@@ -148,7 +154,7 @@ export async function GET(req: NextRequest) {
     let q = sb
       .from('deliveries')
       .select('id,job_id,po_id,status,delivered_at,created_at')
-      .eq('company_id', companyId)
+  .eq('company_id', session.companyId)
       .eq('job_id', jobId)
       .order('created_at', { ascending: false })
       .limit(limit + 1)

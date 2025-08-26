@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseService } from '@/lib/supabase'
-import { getIds } from '@/lib/api'
+import { getSessionProfile } from '@/lib/auth'
 
 export const runtime = 'nodejs'
 
@@ -8,7 +8,10 @@ export const runtime = 'nodejs'
 export async function GET(request: Request, context: any) {
   try {
   const nextReq = request as unknown as NextRequest
-  const { companyId } = getIds(nextReq)
+  const session = await getSessionProfile()
+  if (!session.user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
+  if (!session.companyId) return NextResponse.json({ error: 'no_company' }, { status: 400 })
+  const companyId = session.companyId
   const id = context?.params?.id
     const sb = supabaseService()
     const { data: co, error } = await sb

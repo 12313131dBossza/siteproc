@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseService } from '@/lib/supabase'
-import { getIds, parseJson } from '@/lib/api'
+import { parseJson } from '@/lib/api'
+import { getSessionProfile } from '@/lib/auth'
 import { costCodeCreateSchema } from '@/lib/validation'
 import { broadcast } from '@/lib/realtime'
 import { EVENTS } from '@/lib/constants'
@@ -9,26 +10,32 @@ export const runtime = 'nodejs'
 
 export async function POST(req: NextRequest) {
   try {
-    const { companyId } = getIds(req)
+  const session = await getSessionProfile()
+  if (!session.user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
+  if (!session.companyId) return NextResponse.json({ error: 'no_company' }, { status: 400 })
+  const companyId = session.companyId
     const body = await parseJson(req, costCodeCreateSchema)
     const sb = supabaseService()
-    const { data, error } = await sb
+    const { data, error } = await (sb as any)
       .from('cost_codes')
-      .insert({ company_id: companyId, job_id: body.job_id || null, code: body.code, description: body.description || null })
+      .insert({ company_id: companyId, job_id: body.job_id || null, code: body.code, description: body.description || null } as any)
       .select('id,job_id')
       .single()
     if (error || !data) return NextResponse.json({ error: error?.message || 'create failed' }, { status: 500 })
-    if (data.job_id) {
-  await broadcast(`job:${data.job_id}`, EVENTS.JOB_COST_CODE_UPDATED, { kind: 'cost_code', job_id: data.job_id, cost_code_id: data.id, at: new Date().toISOString() })
+    if ((data as any).job_id) {
+      await broadcast(`job:${(data as any).job_id}`, EVENTS.JOB_COST_CODE_UPDATED, { kind: 'cost_code', job_id: (data as any).job_id, cost_code_id: (data as any).id, at: new Date().toISOString() })
     }
-    return NextResponse.json({ id: data.id })
+    return NextResponse.json({ id: (data as any).id })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'failed' }, { status: 400 })
   }
 }
 
 export async function GET(req: NextRequest) {
-  const { companyId } = getIds(req)
+  const session = await getSessionProfile()
+  if (!session.user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
+  if (!session.companyId) return NextResponse.json({ error: 'no_company' }, { status: 400 })
+  const companyId = session.companyId
   const url = new URL(req.url)
   const jobId = url.searchParams.get('job_id')
   const limit = Math.min(Number(url.searchParams.get('limit') || 100), 300)

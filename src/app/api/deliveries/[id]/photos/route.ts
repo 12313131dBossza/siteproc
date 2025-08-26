@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseService } from '@/lib/supabase'
-import { getIds } from '@/lib/api'
+import { getSessionProfile } from '@/lib/auth'
 import { broadcastDeliveryUpdated, broadcast } from '@/lib/realtime'
 import { uploadPrivateSigned } from '@/lib/storage'
 import { parseDataUrl, validateImageBytes } from '@/lib/uploadValidate'
@@ -27,10 +27,13 @@ async function uploadDataUrl(path: string, dataUrl: string) {
 
 export async function POST(req: NextRequest, context: any) {
   try {
-    const { companyId } = getIds(req)
+  const session = await getSessionProfile()
+  if (!session.user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
+  if (!session.companyId) return NextResponse.json({ error: 'no_company' }, { status: 400 })
+  const companyId = session.companyId
     const id = context?.params?.id
     const sb = supabaseService()
-    const { data: delivery } = await sb.from('deliveries').select('id,job_id').eq('company_id', companyId).eq('id', id).single()
+  const { data: delivery } = await (sb as any).from('deliveries').select('id,job_id').eq('company_id', companyId).eq('id', id).single()
     if (!delivery) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
     const raw = await req.json().catch(() => null)
@@ -40,13 +43,13 @@ export async function POST(req: NextRequest, context: any) {
     if (Array.isArray(body.photo_data_urls)) {
       for (let i = 0; i < body.photo_data_urls.length; i++) {
         const url = await uploadDataUrl(`deliveries/${id}/extra_${Date.now()}_${i}.jpg`, body.photo_data_urls[i])
-        await sb.from('photos').insert({ company_id: companyId, job_id: delivery.job_id, entity: 'delivery', entity_id: id, url })
+  await (sb as any).from('photos').insert({ company_id: companyId, job_id: (delivery as any).job_id, entity: 'delivery', entity_id: id, url } as any)
         added.photos++
       }
     }
     if (body.signature_data_url) {
       const url = await uploadDataUrl(`deliveries/${id}/signature.png`, body.signature_data_url)
-      await sb.from('deliveries').update({ signature_url: url, signer_name: 'Signed' }).eq('id', id)
+  await (sb as any).from('deliveries').update({ signature_url: url, signer_name: 'Signed' } as any).eq('id', id)
       added.signature = true
     }
     const fields: string[] = []
@@ -54,7 +57,7 @@ export async function POST(req: NextRequest, context: any) {
     if (added.signature) fields.push('signature')
     await Promise.all([
       broadcastDeliveryUpdated(id, fields.length ? fields : ['media']),
-      broadcast(`job:${delivery.job_id}`, EVENTS.JOB_DELIVERY_UPDATED, { job_id: delivery.job_id, delivery_id: id, at: new Date().toISOString(), photos_added: added.photos, signature: added.signature }),
+  broadcast(`job:${(delivery as any).job_id}`, EVENTS.JOB_DELIVERY_UPDATED, { job_id: (delivery as any).job_id, delivery_id: id, at: new Date().toISOString(), photos_added: added.photos, signature: added.signature }),
     ])
     return NextResponse.json({ ok: true, ...added })
   } catch (e: any) {

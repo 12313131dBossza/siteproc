@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getIds, requireRole } from '@/lib/api'
+import { getSessionProfile, enforceRole } from '@/lib/auth'
 import { supabaseService } from '@/lib/supabase'
 import { sendEmail } from '@/lib/email'
 import { audit } from '@/lib/audit'
@@ -10,8 +10,10 @@ export const runtime = 'nodejs'
 
 export async function POST(req: NextRequest, context: any) {
   try {
-    const { companyId, actorId, role } = getIds(req)
-    requireRole(role, 'admin')
+  const session = await getSessionProfile()
+  try { enforceRole('manager', session) } catch (e: any) { return e as any }
+  const companyId = session.companyId as string
+  const actorId = session.user?.id
     const rfqId = context?.params?.id
     const sb = supabaseService()
   const { data: rfq, error } = await (sb as any).from('rfqs').select('*').eq('id', rfqId).eq('company_id', companyId).single()

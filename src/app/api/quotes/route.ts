@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseService } from '@/lib/supabase'
-import { getIds } from '@/lib/api'
+import { getSessionProfile } from '@/lib/auth'
 
 export const runtime = 'nodejs'
 
 export async function GET(req: NextRequest) {
-  const { companyId } = getIds(req)
+  const session = await getSessionProfile()
+  if (!session.user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
+  if (!session.companyId) return NextResponse.json({ error: 'no_company' }, { status: 400 })
+  const companyId = session.companyId
   const rfqId = new URL(req.url).searchParams.get('rfq')
   if (!rfqId) return NextResponse.json({ error: 'rfq required' }, { status: 400 })
   const sb = supabaseService()

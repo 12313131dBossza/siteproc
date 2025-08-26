@@ -1,22 +1,30 @@
 "use client";
-import DataTable from '@/components/ui/DataTable';
-import { useMemo } from 'react';
-import { Button } from '@/components/ui/Button';
-export type PaymentRow = { id:string; project_id:string|null; amount:number|null; due:string|null; status:string };
-export default function PageClient({ rows }: { rows: PaymentRow[] }){
-  const columns = useMemo(()=>[
-    { key:'id', header:'ID', sortable:true },
-    { key:'amount', header:'Amount', sortable:true },
-    { key:'due', header:'Due', sortable:true },
-    { key:'status', header:'Status', sortable:true }
-  ],[]);
+import { useCompanyId } from '@/lib/useCompanyId'
+import { usePaginatedRealtime } from '@/lib/paginationRealtime'
+
+interface PaymentStub { id: string; amount?: number | null; created_at?: string | null }
+
+export default function PaymentsPageClient() {
+  const companyId = useCompanyId()
+  const { items, nextCursor, loadMore, loading } = usePaginatedRealtime<PaymentStub>({
+    table: 'payments', companyId,
+    id: r=>r.id,
+    fetchPage: async ({ companyId, limit, cursor }) => {
+      const u = new URL(`/api/payments?limit=${limit}`, window.location.origin)
+      if (cursor) u.searchParams.set('cursor', cursor)
+      const res = await fetch(u.toString(), { headers: { 'x-company-id': companyId } })
+      const js = await res.json().catch(()=>({ items: [] }))
+      return { items: Array.isArray(js.items)?js.items:[], nextCursor: js.nextCursor||null }
+    }
+  })
   return (
-    <div className='space-y-6'>
-      <div className='flex items-center justify-between'>
-        <h1 className='text-xl font-semibold'>Payments</h1>
-        <Button href='/admin/payments/new'>New Payment</Button>
+    <div className="space-y-4">
+      <h1 className="text-xl font-semibold">Payments (Stub)</h1>
+      <p className="text-xs text-neutral-500">Schema pending. Realtime channel wired for future adoption.</p>
+      <div className="border border-neutral-700 rounded divide-y divide-neutral-700 text-sm">
+        {items.length ? items.map(p => <div key={p.id} className="p-2">{p.id}</div>) : <div className="p-2 text-neutral-500 text-xs">No payments.</div>}
       </div>
-      <DataTable columns={columns as any} rows={rows as any} emptyMessage='No payments yet.' />
+      {nextCursor && <button disabled={loading} onClick={()=>loadMore()} className="text-xs px-3 py-1 border rounded">Load more…</button>}
     </div>
-  );
+  )
 }

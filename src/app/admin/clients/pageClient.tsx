@@ -1,22 +1,30 @@
 "use client";
-import DataTable from '@/components/ui/DataTable';
-import { useMemo } from 'react';
-import { Button } from '@/components/ui/Button';
-export type ClientRow = { id:string; name:string; contact:string|null; email:string|null; projects:number|null };
-export default function PageClient({ rows }: { rows: ClientRow[] }){
-  const columns = useMemo(()=>[
-    { key:'name', header:'Name', sortable:true },
-    { key:'contact', header:'Contact' },
-    { key:'email', header:'Email' },
-    { key:'projects', header:'Projects' }
-  ],[]);
+import { useCompanyId } from '@/lib/useCompanyId'
+import { usePaginatedRealtime } from '@/lib/paginationRealtime'
+
+interface ClientStub { id: string; name?: string | null; created_at?: string | null }
+
+export default function ClientsPageClient() {
+  const companyId = useCompanyId()
+  const { items, nextCursor, loadMore, loading } = usePaginatedRealtime<ClientStub>({
+    table: 'clients', companyId,
+    id: r=>r.id,
+    fetchPage: async ({ companyId, limit, cursor }) => {
+      const u = new URL(`/api/clients?limit=${limit}`, window.location.origin)
+      if (cursor) u.searchParams.set('cursor', cursor)
+      const res = await fetch(u.toString(), { headers: { 'x-company-id': companyId } })
+      const js = await res.json().catch(()=>({ items: [] }))
+      return { items: Array.isArray(js.items)?js.items:[], nextCursor: js.nextCursor||null }
+    }
+  })
   return (
-    <div className='space-y-6'>
-      <div className='flex items-center justify-between'>
-        <h1 className='text-xl font-semibold'>Clients</h1>
-        <Button href='/admin/clients/new'>New Client</Button>
+    <div className="space-y-4">
+      <h1 className="text-xl font-semibold">Clients (Stub)</h1>
+      <p className="text-xs text-neutral-500">Schema pending. Realtime channel wired for future adoption.</p>
+      <div className="border border-neutral-700 rounded divide-y divide-neutral-700 text-sm">
+        {items.length ? items.map(c => <div key={c.id} className="p-2">{c.name || c.id}</div>) : <div className="p-2 text-neutral-500 text-xs">No clients.</div>}
       </div>
-      <DataTable columns={columns as any} rows={rows as any} emptyMessage='No clients yet.' onRowClick={(r:any)=>location.href='/admin/clients/'+r.id} />
+      {nextCursor && <button disabled={loading} onClick={()=>loadMore()} className="text-xs px-3 py-1 border rounded">Load more…</button>}
     </div>
-  );
+  )
 }

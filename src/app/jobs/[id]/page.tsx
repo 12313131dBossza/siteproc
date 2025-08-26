@@ -2,25 +2,14 @@
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react'
 import { useParams } from 'next/navigation'
 import { useJobRealtime } from '@/lib/useJobRealtime'
+import { usePaginatedRealtime } from '@/lib/paginationRealtime'
+import { useCompanyId } from '@/lib/useCompanyId'
 
 export default function JobDashboard() {
   const routeParams = useParams<{ id: string }>()
   const [type, setType] = useState<'expenses'|'bills'>('expenses')
-  const [expenses, setExpenses] = useState<any[]>([])
-  const [deliveries, setDeliveries] = useState<any[]>([])
-  const [costCodes, setCostCodes] = useState<any[]>([])
-  const [costCodesCursor, setCostCodesCursor] = useState<string | null>(null)
-  const [expensesCursor, setExpensesCursor] = useState<string | null>(null)
-  const [deliveriesCursor, setDeliveriesCursor] = useState<string | null>(null)
-  const [creatingExpense, setCreatingExpense] = useState(false)
-  const [newExpenseAmount, setNewExpenseAmount] = useState('')
-  const [newExpenseMemo, setNewExpenseMemo] = useState('')
-  const [creatingDelivery, setCreatingDelivery] = useState(false)
-  const [deliveryItemDesc, setDeliveryItemDesc] = useState('')
-  const [deliveryItemQty, setDeliveryItemQty] = useState('1')
-  const [creatingCostCode, setCreatingCostCode] = useState(false)
-  const [newCostCodeCode, setNewCostCodeCode] = useState('')
-  const [newCostCodeDesc, setNewCostCodeDesc] = useState('')
+  const companyId = useCompanyId() || undefined
+  // Creation state removed in realtime refactor
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string>('')
   const [companyIdInput, setCompanyIdInput] = useState<string>('')
@@ -29,8 +18,8 @@ export default function JobDashboard() {
   const [toasts, setToasts] = useState<{ id: number; msg: string }[]>([])
   const [rtStatus, setRtStatus] = useState<'idle'|'connecting'|'connected'|'error'>('idle')
 
-  const companyId = (typeof window !== 'undefined' ? (localStorage.getItem('company_id') || '') : '') || process.env.NEXT_PUBLIC_COMPANY_ID || '00000000-0000-0000-0000-000000000000'
-  useEffect(() => { setCompanyIdInput(companyId) }, [companyId])
+  const legacyCompanyId = (typeof window !== 'undefined' ? (localStorage.getItem('company_id') || '') : '') || process.env.NEXT_PUBLIC_COMPANY_ID || '00000000-0000-0000-0000-000000000000'
+  useEffect(() => { setCompanyIdInput(legacyCompanyId) }, [legacyCompanyId])
 
   const jobId = routeParams?.id
   const debounceRef = useRef<number | null>(null)
@@ -42,101 +31,59 @@ export default function JobDashboard() {
     setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 4000)
   }
 
-  const doFetch = useCallback(async () => {
-    if (!jobId) return
-    setLoading(true)
-    setError('')
-    try {
-      const [expRes, delRes, ccRes] = await Promise.all([
-        fetch(`/api/expenses?job_id=${jobId}&limit=50`, { headers: { 'x-company-id': companyId } }),
-        fetch(`/api/deliveries?job_id=${jobId}&limit=50`, { headers: { 'x-company-id': companyId } }),
-  fetch(`/api/cost-codes?job_id=${jobId}&limit=50`, { headers: { 'x-company-id': companyId } }),
-      ])
-      const [expJson, delJson, ccJson] = await Promise.all([
-        expRes.json().catch(()=>({ items: [] })),
-        delRes.json().catch(()=>({ items: [] })),
-        ccRes.json().catch(()=>({ items: [] })),
-      ])
-      if (!expRes.ok) throw new Error(expJson?.error || 'Failed expenses')
-      if (!delRes.ok) throw new Error(delJson?.error || 'Failed deliveries')
-      if (!ccRes.ok) throw new Error(ccJson?.error || 'Failed cost codes')
-      const norm = (d:any) => Array.isArray(d) ? d : (Array.isArray(d?.items) ? d.items : [])
-  setExpenses(norm(expJson))
-  setDeliveries(norm(delJson))
-  setCostCodes(norm(ccJson))
-  setExpensesCursor(expJson.nextCursor || null)
-  setDeliveriesCursor(delJson.nextCursor || null)
-  setCostCodesCursor(ccJson.nextCursor || null)
-    } catch(e:any) {
-      setError(e.message || 'Failed to load')
-    } finally {
-      setLoading(false)
+  // Paginated realtime hooks
+  const { items: expenses, loadMore: loadMoreExpenses, nextCursor: expensesCursor, loading: loadingExpenses } = usePaginatedRealtime<any>({
+    table: 'expenses', companyId,
+    id: r=>r.id,
+    filter: r=> r.job_id === jobId,
+    fetchPage: async ({ companyId, limit, cursor }) => {
+      const u = new URL(`/api/expenses?job_id=${jobId}&limit=${limit}`, window.location.origin)
+      if (cursor) u.searchParams.set('cursor', cursor)
+      const res = await fetch(u.toString(), { headers: { 'x-company-id': companyId } })
+      const js = await res.json().catch(()=>({ items: [] }))
+      return { items: Array.isArray(js.items)?js.items:[], nextCursor: js.nextCursor||null }
     }
-  }, [jobId, companyId])
+  })
+  const { items: deliveries, loadMore: loadMoreDeliveries, nextCursor: deliveriesCursor, loading: loadingDeliveries } = usePaginatedRealtime<any>({
+    table: 'deliveries', companyId,
+    id: r=>r.id,
+    filter: r=> r.job_id === jobId,
+    fetchPage: async ({ companyId, limit, cursor }) => {
+      const u = new URL(`/api/deliveries?job_id=${jobId}&limit=${limit}`, window.location.origin)
+      if (cursor) u.searchParams.set('cursor', cursor)
+      const res = await fetch(u.toString(), { headers: { 'x-company-id': companyId } })
+      const js = await res.json().catch(()=>({ items: [] }))
+      return { items: Array.isArray(js.items)?js.items:[], nextCursor: js.nextCursor||null }
+    }
+  })
+  const { items: costCodes, loadMore: loadMoreCostCodes, nextCursor: costCodesCursor, loading: loadingCostCodes } = usePaginatedRealtime<any>({
+    table: 'cost_codes', companyId,
+    id: r=>r.id,
+    filter: r=> r.job_id === jobId,
+    fetchPage: async ({ companyId, limit, cursor }) => {
+      const u = new URL(`/api/cost-codes?job_id=${jobId}&limit=${limit}`, window.location.origin)
+      if (cursor) u.searchParams.set('cursor', cursor)
+      const res = await fetch(u.toString(), { headers: { 'x-company-id': companyId } })
+      const js = await res.json().catch(()=>({ items: [] }))
+      return { items: Array.isArray(js.items)?js.items:[], nextCursor: js.nextCursor||null }
+    }
+  })
 
   // Debounced refetch wrapper used by realtime handlers
-  const scheduleFetch = useCallback(() => {
-    if (debounceRef.current) window.clearTimeout(debounceRef.current)
-    debounceRef.current = window.setTimeout(() => { doFetch() }, 250)
-  }, [doFetch])
+  const scheduleFetch = useCallback(() => {}, [])
 
-  useEffect(() => { doFetch() }, [doFetch])
+  useEffect(() => { setLoading(loadingExpenses || loadingDeliveries || loadingCostCodes) }, [loadingExpenses, loadingDeliveries, loadingCostCodes])
 
   useJobRealtime(jobId, {
-    onExpense: (p) => {
-      if (!p?.expense_id) { scheduleFetch(); return }
-      fetch(`/api/expenses/${p.expense_id}`, { headers: { 'x-company-id': companyId } })
-        .then(r => r.ok ? r.json() : null)
-        .then(row => {
-          if (!row) return scheduleFetch()
-          setExpenses(prev => {
-            const idx = prev.findIndex(e => e.id === row.id)
-            if (idx === -1) return [row, ...prev]
-            const copy = [...prev]
-            copy[idx] = { ...copy[idx], ...row }
-            return copy
-          })
-          pushToast('Expense updated')
-        })
-    },
-    onDelivery: (p) => {
-      if (!p?.delivery_id) { scheduleFetch(); return }
-      fetch(`/api/deliveries/${p.delivery_id}`, { headers: { 'x-company-id': companyId } })
-        .then(r => r.ok ? r.json() : null)
-        .then(row => {
-          if (!row) return scheduleFetch()
-          setDeliveries(prev => {
-            const idx = prev.findIndex(d => d.id === row.id)
-            if (idx === -1) return [row, ...prev]
-            const copy = [...prev]
-            copy[idx] = { ...copy[idx], ...row }
-            return copy
-          })
-          pushToast('Delivery updated')
-        })
-    },
-    onCostCode: (p) => {
-      if (!p?.cost_code_id) { scheduleFetch(); return }
-      fetch(`/api/cost-codes/${p.cost_code_id}`, { headers: { 'x-company-id': companyId } })
-        .then(r => r.ok ? r.json() : null)
-        .then(row => {
-          if (!row) return scheduleFetch()
-          setCostCodes(prev => {
-            const idx = prev.findIndex(c => c.id === row.id)
-            if (idx === -1) return [...prev, row]
-            const copy = [...prev]
-            copy[idx] = { ...copy[idx], ...row }
-            return copy
-          })
-          pushToast('Cost code updated')
-        })
-    },
+  onExpense: () => { pushToast('Expense updated') },
+  onDelivery: () => { pushToast('Delivery updated') },
+  onCostCode: () => { pushToast('Cost code updated') },
   onStatus: (s) => setRtStatus(s),
   })
 
   const exportCsv = async () => {
     if (!jobId) return
-    const res = await fetch(`/api/jobs/${jobId}/report?format=csv&type=${type}`, { headers: { 'x-company-id': companyId } })
+  const res = await fetch(`/api/jobs/${jobId}/report?format=csv&type=${type}`, { headers: { 'x-company-id': companyId || '' } })
     const blob = await res.blob()
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -192,115 +139,10 @@ export default function JobDashboard() {
     })
   }, [deliveries, dateFrom, dateTo])
 
-  async function loadMoreExpenses() {
-    if (!expensesCursor) return
-    const res = await fetch(`/api/expenses?job_id=${jobId}&limit=50&cursor=${encodeURIComponent(expensesCursor)}`, { headers: { 'x-company-id': companyId } })
-    const json = await res.json().catch(()=>({ items: [] }))
-    if (res.ok) {
-      const items = Array.isArray(json?.items) ? json.items : []
-      setExpenses(prev => [...prev, ...items])
-      setExpensesCursor(json.nextCursor || null)
-    }
-  }
-  async function loadMoreDeliveries() {
-    if (!deliveriesCursor) return
-    const res = await fetch(`/api/deliveries?job_id=${jobId}&limit=50&cursor=${encodeURIComponent(deliveriesCursor)}`, { headers: { 'x-company-id': companyId } })
-    const json = await res.json().catch(()=>({ items: [] }))
-    if (res.ok) {
-      const items = Array.isArray(json?.items) ? json.items : []
-      setDeliveries(prev => [...prev, ...items])
-      setDeliveriesCursor(json.nextCursor || null)
-    }
-  }
+  const handleLoadMoreExpenses = () => { if (expensesCursor) loadMoreExpenses() }
+  const handleLoadMoreDeliveries = () => { if (deliveriesCursor) loadMoreDeliveries() }
 
-  async function createExpenseOptimistic() {
-    if (!jobId) return
-    const amt = parseFloat(newExpenseAmount)
-    if (!amt || isNaN(amt)) return
-    const tempId = 'temp-' + Date.now()
-    const optimistic = { id: tempId, job_id: jobId, amount: amt, memo: newExpenseMemo, spent_at: new Date().toISOString() }
-    setCreatingExpense(true)
-    setExpenses(prev => [optimistic, ...prev])
-    try {
-      const res = await fetch('/api/expenses', { method: 'POST', headers: { 'content-type': 'application/json', 'x-company-id': companyId }, body: JSON.stringify({ job_id: jobId, amount: amt, spent_at: new Date().toISOString(), memo: newExpenseMemo }) })
-      if (res.ok) {
-        const js = await res.json()
-        setExpenses(prev => prev.map(e => e.id === tempId ? { ...e, id: js.id } : e))
-        setNewExpenseAmount(''); setNewExpenseMemo('')
-        pushToast('Expense created')
-      } else {
-        setExpenses(prev => prev.filter(e => e.id !== tempId))
-        pushToast('Create failed')
-      }
-    } catch {
-      setExpenses(prev => prev.filter(e => e.id !== tempId))
-      pushToast('Create failed')
-    } finally {
-      setCreatingExpense(false)
-    }
-  }
-
-  async function createDeliveryOptimistic() {
-    if (!jobId) return
-    const desc = deliveryItemDesc.trim()
-    const qty = parseFloat(deliveryItemQty) || 1
-    if (!desc) return
-    const tempId = 'temp-deliv-' + Date.now()
-    const optimistic = { id: tempId, job_id: jobId, status: 'pending', created_at: new Date().toISOString() }
-    setCreatingDelivery(true)
-    setDeliveries(prev => [optimistic, ...prev])
-    try {
-      const res = await fetch('/api/deliveries', { method: 'POST', headers: { 'content-type': 'application/json', 'x-company-id': companyId }, body: JSON.stringify({ job_id: jobId, items: [{ description: desc, qty }], notes: null }) })
-      if (res.ok) {
-        const js = await res.json()
-        setDeliveries(prev => prev.map(d => d.id === tempId ? { ...d, id: js.id, status: 'created' } : d))
-        setDeliveryItemDesc(''); setDeliveryItemQty('1')
-        pushToast('Delivery created')
-      } else {
-        setDeliveries(prev => prev.filter(d => d.id !== tempId))
-        pushToast('Delivery failed')
-      }
-    } catch {
-      setDeliveries(prev => prev.filter(d => d.id !== tempId))
-      pushToast('Delivery failed')
-    } finally {
-      setCreatingDelivery(false)
-    }
-  }
-
-  async function createCostCodeOptimistic() {
-    const code = newCostCodeCode.trim(); if (!code) return
-    const tempId = 'temp-cc-' + Date.now()
-    const optimistic = { id: tempId, code, description: newCostCodeDesc }
-    setCreatingCostCode(true)
-    setCostCodes(prev => [...prev, optimistic])
-    try {
-  const res = await fetch('/api/cost-codes', { method: 'POST', headers: { 'content-type': 'application/json', 'x-company-id': companyId }, body: JSON.stringify({ code, description: newCostCodeDesc, job_id: jobId }) })
-      if (res.ok) {
-        const js = await res.json()
-        setCostCodes(prev => prev.map(c => c.id === tempId ? { ...c, id: js.id } : c))
-        setNewCostCodeCode(''); setNewCostCodeDesc('')
-        pushToast('Cost code created')
-      } else {
-        setCostCodes(prev => prev.filter(c => c.id !== tempId))
-        pushToast('Cost code failed')
-      }
-    } catch {
-      setCostCodes(prev => prev.filter(c => c.id !== tempId))
-      pushToast('Cost code failed')
-    } finally { setCreatingCostCode(false) }
-  }
-
-  async function loadMoreCostCodes() {
-    if (!costCodesCursor) return
-    const res = await fetch(`/api/cost-codes?job_id=${jobId}&limit=50&cursor=${encodeURIComponent(costCodesCursor)}`, { headers: { 'x-company-id': companyId } })
-    const json = await res.json().catch(()=>({ items: [] }))
-    if (res.ok) {
-      const items = Array.isArray(json?.items) ? json.items : []
-      setCostCodes(prev => [...prev, ...items])
-      setCostCodesCursor(json.nextCursor || null)
-    }
-  }
+  const handleLoadMoreCostCodes = () => { if (costCodesCursor) loadMoreCostCodes() }
 
   return (
     <div className="p-4 space-y-3">
@@ -323,36 +165,7 @@ export default function JobDashboard() {
         </div>
         <Kpis expenses={expenses} deliveries={deliveries} />
       </div>
-      <div className="flex gap-2 items-end flex-wrap">
-        <div className="space-y-1">
-          <label className="block text-xs uppercase tracking-wide text-neutral-400">New Expense Amount</label>
-          <input value={newExpenseAmount} onChange={e=>setNewExpenseAmount(e.target.value)} type="number" className="px-2 py-1 text-sm bg-neutral-900 border border-neutral-700 rounded w-40" />
-        </div>
-        <div className="space-y-1">
-          <label className="block text-xs uppercase tracking-wide text-neutral-400">Memo</label>
-          <input value={newExpenseMemo} onChange={e=>setNewExpenseMemo(e.target.value)} className="px-2 py-1 text-sm bg-neutral-900 border border-neutral-700 rounded w-60" />
-        </div>
-        <button disabled={creatingExpense} onClick={createExpenseOptimistic} className="mt-5 px-3 py-1 text-sm bg-neutral-800 border border-neutral-600 rounded disabled:opacity-50">Add Expense</button>
-      </div>
-      <div className="flex gap-4 flex-wrap items-end">
-        <div className="space-y-1">
-          <label className="block text-xs uppercase tracking-wide text-neutral-400">New Delivery Item</label>
-          <input value={deliveryItemDesc} onChange={e=>setDeliveryItemDesc(e.target.value)} className="px-2 py-1 text-sm bg-neutral-900 border border-neutral-700 rounded w-64" placeholder="Description" />
-        </div>
-        <div className="space-y-1">
-          <label className="block text-xs uppercase tracking-wide text-neutral-400">Qty</label>
-          <input value={deliveryItemQty} onChange={e=>setDeliveryItemQty(e.target.value)} type="number" className="px-2 py-1 text-sm bg-neutral-900 border border-neutral-700 rounded w-24" />
-        </div>
-        <button disabled={creatingDelivery} onClick={createDeliveryOptimistic} className="mt-5 px-3 py-1 text-sm bg-neutral-800 border border-neutral-600 rounded disabled:opacity-50">Add Delivery</button>
-        <div className="space-y-1 ml-6">
-          <label className="block text-xs uppercase tracking-wide text-neutral-400">New Cost Code</label>
-          <div className="flex gap-2">
-            <input value={newCostCodeCode} onChange={e=>setNewCostCodeCode(e.target.value)} className="px-2 py-1 text-sm bg-neutral-900 border border-neutral-700 rounded w-32" placeholder="Code" />
-            <input value={newCostCodeDesc} onChange={e=>setNewCostCodeDesc(e.target.value)} className="px-2 py-1 text-sm bg-neutral-900 border border-neutral-700 rounded w-56" placeholder="Description" />
-            <button disabled={creatingCostCode} onClick={createCostCodeOptimistic} className="px-3 py-1 text-sm bg-neutral-800 border border-neutral-600 rounded disabled:opacity-50">Add</button>
-          </div>
-        </div>
-      </div>
+  {/* Creation forms removed in lean realtime refactor */}
       {error && <p className="text-sm text-red-500">{error}</p>}
   <p className="text-sm text-gray-500">Realtime: Updates apply automatically when expenses, deliveries, or cost codes change.</p>
       <div className="grid lg:grid-cols-3 gap-6">

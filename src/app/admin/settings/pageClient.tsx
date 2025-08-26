@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
 
 export default function SettingsPageClient(){
+  // NOTE: Settings is intentionally static (mock data only) so realtime not applied.
   const [tab,setTab]=useState<'org'|'users'|'notifications'|'audit'>('org');
   const { push } = useToast();
   return (

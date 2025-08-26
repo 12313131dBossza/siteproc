@@ -1,23 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseService } from '@/lib/supabase'
-import { getIds, parseJson, requireRole } from '@/lib/api'
+import { parseJson } from '@/lib/api'
 import { expenseCreateSchema } from '@/lib/validation'
 import { broadcastExpenseUpdated, broadcast, broadcastDashboardUpdated } from '@/lib/realtime'
 import { EVENTS } from '@/lib/constants'
+import { getSessionProfile, enforceRole } from '@/lib/auth'
 
 export const runtime = 'nodejs'
 
 export async function POST(req: NextRequest) {
   try {
-  const { companyId, role, actorId } = getIds(req)
-  requireRole(role, 'bookkeeper')
+  const session = await getSessionProfile()
+  if (!session.user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
+  if (!session.companyId) return NextResponse.json({ error: 'no_company' }, { status: 400 })
+  enforceRole('bookkeeper', session)
   const payload = await parseJson(req, expenseCreateSchema)
     const sb = supabaseService()
     type InsertedExpense = { id: string; job_id: string }
     const { data, error } = await sb
       .from('expenses' as any)
       .insert({
-        company_id: companyId,
+  company_id: session.companyId,
         job_id: payload.job_id,
         supplier_id: payload.supplier_id || null,
         cost_code_id: payload.cost_code_id || null,
@@ -32,9 +35,9 @@ export async function POST(req: NextRequest) {
   await Promise.all([
       broadcastExpenseUpdated(data.id as string, ['create']),
       broadcast(`job:${data.job_id}`, EVENTS.JOB_EXPENSE_UPDATED, { kind: 'expense', job_id: data.job_id, expense_id: data.id, at: new Date().toISOString() }),
-      broadcastDashboardUpdated(companyId || 'demo')
+    broadcastDashboardUpdated(session.companyId || 'demo')
     ])
-  try { (await import('@/lib/audit')).audit(companyId, actorId || null, 'expense', data.id as string, 'create', { amount: payload.amount }) } catch {}
+  try { (await import('@/lib/audit')).audit(session.companyId!, session.user.id, 'expense', data.id as string, 'create', { amount: payload.amount }) } catch {}
     return NextResponse.json({ id: data.id })
   } catch (e: any) {
     // Surface validation errors if parseJson threw a Response with JSON body
@@ -49,7 +52,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const { companyId, role } = getIds(req)
+  const session = await getSessionProfile()
+  if (!session.user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
+  if (!session.companyId) return NextResponse.json({ error: 'no_company' }, { status: 400 })
   const url = new URL(req.url)
   const jobId = url.searchParams.get('job_id')
   const limit = Math.min(Number(url.searchParams.get('limit') || 50), 200)
@@ -58,12 +63,12 @@ export async function GET(req: NextRequest) {
   let q = sb
     .from('expenses')
     .select('*')
-    .eq('company_id', companyId)
+    .eq('company_id', session.companyId)
     .order('created_at', { ascending: false })
     .limit(limit + 1)
   if (jobId) q = (q as any).eq('job_id', jobId)
   // If no jobId, restrict to bookkeeper role
-  if (!jobId && role !== 'bookkeeper') {
+  if (!jobId && session.role !== 'bookkeeper') {
     return NextResponse.json({ error: 'job_id required' }, { status: 400 })
   }
   if (cursor) q = (q as any).lt('created_at', cursor)

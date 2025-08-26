@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseService } from '@/lib/supabase'
-import { getIds } from '@/lib/api'
+import { getSessionProfile } from '@/lib/auth'
 import { broadcastExpenseUpdated } from '@/lib/realtime'
 import { uploadPrivateSigned } from '@/lib/storage'
 import { parseDataUrl, validateImageBytes } from '@/lib/uploadValidate'
@@ -12,7 +12,10 @@ export const runtime = 'nodejs'
 
 export async function POST(req: NextRequest, context: any) {
   try {
-    const { companyId } = getIds(req)
+  const session = await getSessionProfile()
+  if (!session.user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
+  if (!session.companyId) return NextResponse.json({ error: 'no_company' }, { status: 400 })
+  const companyId = session.companyId
     const id = context?.params?.id
     const { receipt_data_url } = await req.json().catch(()=>({})) as any
     if (!receipt_data_url) return NextResponse.json({ error: 'receipt_data_url required' }, { status: 400 })
@@ -25,7 +28,7 @@ export async function POST(req: NextRequest, context: any) {
   const finalMime = v.detectedType || mime
   const ext = finalMime.split('/')[1] || 'bin'
   const url = await uploadPrivateSigned(`expenses/${id}/receipt.${ext}`, buf, finalMime)
-  const { error } = await sb.from('expenses').update({ receipt_url: url }).eq('id', id)
+  const { error } = await (sb as any).from('expenses').update({ receipt_url: url } as any).eq('id', id)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   await broadcastExpenseUpdated(id, ['receipt'])
   return NextResponse.json({ ok: true, url })

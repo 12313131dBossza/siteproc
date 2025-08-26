@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseService } from '@/lib/supabase'
 import { audit } from '@/lib/audit'
-import { appBaseUrl, getIds, parseJson, requireRole } from '@/lib/api'
+import { appBaseUrl, parseJson } from '@/lib/api'
+import { getSessionProfile, enforceRole } from '@/lib/auth'
 import { changeOrderCreateSchema } from '@/lib/validation'
 import { broadcastDashboardUpdated } from '@/lib/realtime'
 import { sendEmail, getFromAddress } from '@/lib/email'
@@ -9,8 +10,10 @@ import { sendEmail, getFromAddress } from '@/lib/email'
 export const runtime = 'nodejs'
 
 export async function POST(req: NextRequest) {
-  const { companyId, actorId, role } = getIds(req)
-  requireRole(role, 'foreman')
+  const session = await getSessionProfile()
+  try { enforceRole('viewer', session) } catch (e: any) { return e as any }
+  const companyId = session.companyId as string
+  const actorId = session.user?.id
   const payload = await parseJson(req, changeOrderCreateSchema)
   const sb = supabaseService()
   const token = crypto.randomUUID()
@@ -46,7 +49,10 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
-    const { companyId } = getIds(req)
+  const session = await getSessionProfile()
+  if (!session.user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
+  if (!session.companyId) return NextResponse.json({ error: 'no_company' }, { status: 400 })
+  const companyId = session.companyId
     const url = new URL(req.url)
     const jobId = url.searchParams.get('job_id')
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '100', 10), 300)

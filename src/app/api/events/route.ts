@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseService } from '@/lib/supabase'
-import { getIds, requireRole } from '@/lib/api'
+import { getSessionProfile, enforceRole } from '@/lib/auth'
 
 export const runtime = 'nodejs'
 
 export async function GET(req: NextRequest) {
   try {
-    const { companyId, role } = getIds(req)
-    requireRole(role, 'bookkeeper')
+  const session = await getSessionProfile()
+  try { enforceRole('bookkeeper', session) } catch (e: any) { return e as any }
+  const companyId = session.companyId as string
     const url = new URL(req.url)
     const entity = url.searchParams.get('entity')
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '100', 10), 500)

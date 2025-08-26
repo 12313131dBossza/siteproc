@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseService } from '@/lib/supabase'
-import { getIds, requireRole } from '@/lib/api'
+import { getSessionProfile, enforceRole } from '@/lib/auth'
 import { broadcastPoUpdated, broadcastDashboardUpdated } from '@/lib/realtime'
 
 export const runtime = 'nodejs'
 
 export async function POST(_req: NextRequest, context: any) {
   try {
-  const { companyId, role } = getIds(_req)
-  requireRole(role, 'admin')
+  const session = await getSessionProfile()
+  try { enforceRole('manager', session) } catch (e: any) { return e as any }
+  const companyId = session.companyId as string
     const id = context?.params?.id
     const sb = supabaseService()
   const { data: po } = await (sb as any).from('pos').select('id,status').eq('company_id', companyId).eq('id', id).single()

@@ -55,6 +55,66 @@ Broadcast events use a short-lived channel pattern. Server code calls helpers in
 
 Client hooks (`usePoRealtime`, `useJobRealtime`) subscribe to `po:{id}` or `job:{jobId}` and react to events defined in `src/lib/constants.ts`.
 
+### Realtime Architecture & Channel Migration
+
+We are migrating from legacy table channels of the form:
+
+```
+table-<table>-company-<company_id>
+```
+
+to a normalized colon format:
+
+```
+table:<table>:company:<company_id>
+```
+
+During the transition, the pagination realtime hook subscribes to BOTH patterns to maintain backward compatibility (`src/lib/paginationRealtime.ts`). Once all producers emit only the new form we can remove the legacy subscription.
+
+Dashboard aggregate channel currently emits only:
+```
+dashboard:company-<company_id>
+```
+Planned new form:
+```
+dashboard:company:<company_id>
+```
+Emission helpers live in `src/lib/realtime.ts` (see `broadcastDashboardUpdated`). Future dual-emission will be added before dropping the old pattern.
+
+### Paginated Realtime Lists
+
+`usePaginatedRealtime` (introduced during migration) combines cursor pagination + realtime merges. Pattern:
+
+1. Initial fetch via REST list endpoint (e.g. `/api/jobs/list?limit=25`).
+2. Hook subscribes to table channel(s) for inserts/updates within the company scope.
+3. Incoming rows are merged if id exists, or prepended when newer than current head.
+4. `loadMore()` appends the next page using opaque base64 cursor `created_at|id` (descending order ensures stable window).
+
+Server list endpoints encode a cursor as:
+```
+Buffer.from(`${created_at}|${id}`).toString('base64')
+```
+and decode by splitting on the pipe. Each endpoint returns:
+```
+{ items: T[]; nextCursor: string | null }
+```
+
+### Single Record Endpoints
+Added canonical `/api/<entity>/:id` endpoints for jobs, bids(quotes), deliveries (expanded with items & photos), purchase orders, and change orders. These power detail views and allow deterministic cache hydration.
+
+### Broadcast Coverage
+See `docs/broadcast-coverage.md` for a matrix of mutation routes and their realtime invalidations. Missing broadcasts (jobs create, clients, payments) are tracked there with TODO items.
+
+### Supabase Types Placeholder
+`src/types/supabase.ts` holds minimal row interfaces until generated types are wired in. Once available, replace casts in new list/single endpoints and remove the placeholder.
+
+### Next Steps (Realtime)
+1. Dual-emission for dashboard channel (`dashboard:company:<id>` + legacy).
+2. Implement job creation endpoint + dashboard broadcast if KPI needs it.
+3. Add clients/payments schema + broadcasts.
+4. Drop legacy table channel subscriptions after monitoring period.
+5. Replace placeholder Supabase types with generated definitions.
+
 ## Testing
  Discriminated realtime job events with payload.kind: 'expense' | 'delivery' | 'cost_code'
  Persistent nonce + rate limit storage (tables: nonce_replay, rate_limits, token_attempts)

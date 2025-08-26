@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseService } from '@/lib/supabase'
-import { getIds } from '@/lib/api'
+import { getSessionProfile } from '@/lib/auth'
 
 // Cursor encoded as base64 of `${created_at}|${id}` descending order
 function encodeCursor(created_at: string, id: string) {
@@ -19,7 +19,10 @@ function decodeCursor(cur: string | null) {
 export const runtime = 'nodejs'
 
 export async function GET(req: NextRequest) {
-  const { companyId } = getIds(req)
+  const session = await getSessionProfile()
+  if (!session.user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
+  if (!session.companyId) return NextResponse.json({ error: 'no_company' }, { status: 400 })
+  const companyId = session.companyId
   const url = new URL(req.url)
   const limitRaw = parseInt(url.searchParams.get('limit') || '20', 10)
   const limit = Math.min(Math.max(limitRaw, 1), 50)
@@ -39,11 +42,11 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  const items = data || []
+  const items = (data || []) as any[]
   let nextCursor: string | null = null
   if (items.length > limit) {
-    const last = items[limit - 1]
-    nextCursor = encodeCursor(last.created_at as string, last.id as string)
+    const last: any = items[limit - 1]
+    nextCursor = encodeCursor(String(last.created_at), String(last.id))
   }
   return NextResponse.json({ items: items.slice(0, limit), nextCursor })
 }

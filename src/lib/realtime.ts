@@ -1,5 +1,6 @@
 import { supabaseService } from './supabase'
 import { EVENTS } from './constants'
+import { dashboardChannels } from './channels'
 
 // Broadcast a realtime event on a channel and immediately dispose the channel.
 // Works server-side using the service role key.
@@ -35,7 +36,13 @@ export async function broadcastExpenseUpdated(id: string, fields?: string[]) {
 // Dashboard aggregate invalidation
 export async function broadcastDashboardUpdated(companyId: string | 'demo') {
   const key = companyId === 'demo' ? 'demo' : companyId
-  await broadcast(`dashboard:company-${key}`, EVENTS.DASHBOARD_UPDATED, { company_id: key, at: new Date().toISOString() })
+  // Dual emission (legacy + new) during migration.
+  const chans = new Set<string>([
+    `dashboard:company-${key}`,
+    ...dashboardChannels(String(key))
+  ])
+  const payload = { company_id: key, at: new Date().toISOString() }
+  await Promise.all(Array.from(chans).map(ch => broadcast(ch, EVENTS.DASHBOARD_UPDATED, payload)))
 }
 
 // Canonical channel name helpers (company scoped)

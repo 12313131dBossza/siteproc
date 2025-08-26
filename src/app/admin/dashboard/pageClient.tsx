@@ -2,7 +2,9 @@
 import { Button } from '@/components/ui/Button';
 import { useEffect, useState, useCallback } from 'react';
 import { supabaseAnon } from '@/lib/supabase';
+import useCompanyId from '@/lib/useCompanyId';
 import { EVENTS } from '@/lib/constants';
+import { dashboardChannels } from '@/lib/channels';
 import { StatCard } from '@/components/ui/StatCard';
 import { Card } from '@/components/ui/Card';
 import DataTable from '@/components/ui/DataTable';
@@ -15,6 +17,7 @@ export interface DashboardData {
 
 export default function DashboardPageClient({ data }: { data: DashboardData }){
   const [live, setLive] = useState<DashboardData>(data)
+  const companyId = useCompanyId()
 
   const refetch = useCallback(async () => {
     try {
@@ -30,12 +33,13 @@ export default function DashboardPageClient({ data }: { data: DashboardData }){
   }, [])
 
   useEffect(() => {
-    // demo company only for now
-    const ch = supabaseAnon().channel('dashboard:company-demo')
+    if (!companyId) return
+    const names = dashboardChannels(companyId)
+    const subs = names.map(n => supabaseAnon().channel(n)
       .on('broadcast', { event: EVENTS.DASHBOARD_UPDATED }, () => { refetch() })
-      .subscribe()
-    return () => { try { ch.unsubscribe() } catch {} }
-  }, [refetch])
+      .subscribe())
+    return () => { for (const s of subs) { try { s.unsubscribe() } catch {} } }
+  }, [companyId, refetch])
 
   return (
     <div className="space-y-10">

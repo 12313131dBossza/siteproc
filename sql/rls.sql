@@ -4,7 +4,11 @@ returns uuid
 language sql
 stable
 as $$
-  select coalesce(nullif(current_setting('request.jwt.claims', true), '')::jsonb->>'company_id', null)::uuid;
+  -- Prefer explicit JWT claim; fallback to profiles lookup by auth.uid()
+  select coalesce(
+    nullif(current_setting('request.jwt.claims', true), '')::jsonb->>'company_id',
+    (select company_id::text from public.profiles where id = auth.uid())
+  )::uuid;
 $$;
 
 -- Helper functions to map public tokens via header x-public-token
@@ -27,6 +31,7 @@ $$;
 -- Enable RLS on all tables
 alter table public.companies enable row level security;
 alter table public.users enable row level security;
+alter table public.profiles enable row level security;
 alter table public.jobs enable row level security;
 alter table public.cost_codes enable row level security;
 alter table public.suppliers enable row level security;
@@ -50,6 +55,21 @@ create policy companies_rls on public.companies
 drop policy if exists users_rls on public.users;
 create policy users_rls on public.users
   for all using (company_id = public.auth_company_id()) with check (company_id = public.auth_company_id());
+
+-- Profiles RLS
+drop policy if exists profiles_select on public.profiles;
+drop policy if exists profiles_modify on public.profiles;
+create policy profiles_select on public.profiles
+  for select using (
+    id = auth.uid() or company_id = public.auth_company_id()
+  );
+create policy profiles_modify on public.profiles
+  for insert with check (id = auth.uid())
+  using (id = auth.uid());
+-- Allow user to update their own profile (role changes managed server-side with service key)
+drop policy if exists profiles_update_self on public.profiles;
+create policy profiles_update_self on public.profiles
+  for update using (id = auth.uid()) with check (id = auth.uid());
 
 drop policy if exists jobs_rls on public.jobs;
 create policy jobs_rls on public.jobs
@@ -77,7 +97,7 @@ create policy quotes_rls on public.quotes
 
 drop policy if exists po_sequences_rls on public.po_sequences;
 create policy po_sequences_rls on public.po_sequences
-  for all using (true) with check (true);
+  for all using (company_id = public.auth_company_id()) with check (company_id = public.auth_company_id());
 
 drop policy if exists pos_rls on public.pos;
 create policy pos_rls on public.pos

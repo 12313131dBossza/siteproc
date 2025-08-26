@@ -1,15 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseService } from '@/lib/supabase'
-import { getIds } from '@/lib/api'
+import { getSessionProfile } from '@/lib/auth'
 import { renderPOPdf } from 'pdf/po'
 import { uploadPublic } from '@/lib/storage'
-import { broadcastPoUpdated } from '@/lib/realtime'
+import { broadcastPoUpdated, broadcastDashboardUpdated } from '@/lib/realtime'
 
 export const runtime = 'nodejs'
 
 export async function POST(req: NextRequest, context: any) {
   try {
-    const { companyId } = getIds(req)
+  const session = await getSessionProfile()
+  if (!session.user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
+  if (!session.companyId) return NextResponse.json({ error: 'no_company' }, { status: 400 })
+  const companyId = session.companyId
     const id = context?.params?.id
     const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
     if (!uuidRe.test(String(id))) {
@@ -29,9 +32,10 @@ export async function POST(req: NextRequest, context: any) {
     // Render and upload PDF
     const pdfBuf = await renderPOPdf(id)
     const url = await uploadPublic(`pos/${id}.pdf`, pdfBuf, 'application/pdf')
-    await sb.from('pos').update({ pdf_url: url }).eq('id', id)
+  await (sb as any).from('pos').update({ pdf_url: url } as any).eq('id', id)
   // Notify listeners
   await broadcastPoUpdated(id, ['pdf_url'])
+  try { await broadcastDashboardUpdated(companyId) } catch {}
 
     return NextResponse.json({ url })
   } catch (e: any) {

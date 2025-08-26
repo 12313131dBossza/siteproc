@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseService } from '@/lib/supabase'
-import { getIds } from '@/lib/api'
+import { getSessionProfile } from '@/lib/auth'
 
 export const runtime = 'nodejs'
 
 export async function GET(_req: NextRequest, context: any) {
   try {
-    const { companyId } = getIds(_req)
+  const session = await getSessionProfile()
+  if (!session.user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
+  if (!session.companyId) return NextResponse.json({ error: 'no_company' }, { status: 400 })
+  const companyId = session.companyId
     const id = context?.params?.id
     const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
     if (!uuidRe.test(String(id))) {
@@ -28,8 +31,9 @@ export async function GET(_req: NextRequest, context: any) {
       sb.from('photos').select('id,url').eq('company_id', companyId).eq('entity', 'delivery').eq('entity_id', id),
     ])
 
+    const base: any = delivery || {}
     const body = {
-      ...delivery,
+      ...base,
       items: (itemsRes.data as any[]) || [],
       photos: (photosRes.data as any[]) || [],
     }
