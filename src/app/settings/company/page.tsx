@@ -43,7 +43,17 @@ async function updateCompany(formData: FormData) {
   'use server'
   const name = (formData.get('name') as string || '').trim()
   if (!name || name.length < 2 || name.length > 64) return
-  await fetch(process.env.NEXT_PUBLIC_SITE_URL + '/api/settings/company', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) })
+  // Use relative URL to avoid dependency on NEXT_PUBLIC_SITE_URL in production server action.
+  try {
+    await fetch(process.env.NEXT_PUBLIC_SITE_URL ? process.env.NEXT_PUBLIC_SITE_URL + '/api/settings/company' : 'http://localhost:3000/api/settings/company', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+      // next: { revalidate: 0 } // optional: ensure fresh
+    })
+  } catch (e) {
+    console.error('[settings/company] server action fetch failed', e)
+  }
 }
 
 // Client status component
