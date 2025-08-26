@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { getSessionProfile, getSupabaseServer } from '@/lib/auth'
+import { getSessionProfile } from '@/lib/auth'
+import { createClient } from '@supabase/supabase-js'
 
 export async function POST(req: Request) {
   const session = await getSessionProfile()
@@ -8,12 +9,16 @@ export async function POST(req: Request) {
   const body = await req.json().catch(()=>({}))
   const name = (body.name||'').trim()
   if (!name) return NextResponse.json({ error: 'name_required' }, { status: 400 })
-  const supabase = getSupabaseServer()
-  const { data: company, error: cErr } = await supabase.from('companies').insert({ name }).select('id').single()
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE
+  if (!url || !serviceKey) return NextResponse.json({ error: 'server_misconfigured' }, { status: 500 })
+  // Service role client (bypasses RLS for provisioning)
+  const supabaseService = createClient(url, serviceKey, { auth: { persistSession: false } })
+  const { data: company, error: cErr } = await supabaseService.from('companies').insert({ name }).select('id').single()
   if (cErr) return NextResponse.json({ error: cErr.message }, { status: 500 })
-  const { error: pErr } = await supabase.from('profiles').upsert({ id: session.user.id, company_id: company.id, role: 'admin' })
+  const { error: pErr } = await supabaseService.from('profiles').update({ company_id: company.id, role: 'admin' }).eq('id', session.user.id)
   if (pErr) return NextResponse.json({ error: pErr.message }, { status: 500 })
-  return NextResponse.json({ companyId: company.id })
+  return NextResponse.json({ ok: true })
 }
 
 export async function GET() {

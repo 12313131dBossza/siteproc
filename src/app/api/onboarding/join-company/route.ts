@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { getSessionProfile, getSupabaseServer } from '@/lib/auth'
+import { getSessionProfile } from '@/lib/auth'
+import { createClient } from '@supabase/supabase-js'
 
 export async function POST(req: Request) {
   const session = await getSessionProfile()
@@ -8,12 +9,15 @@ export async function POST(req: Request) {
   const body = await req.json().catch(()=>({}))
   const companyId = (body.companyId||'').trim()
   if (!companyId) return NextResponse.json({ error: 'companyId_required' }, { status: 400 })
-  const supabase = getSupabaseServer()
-  const { data: company } = await supabase.from('companies').select('id').eq('id', companyId).single()
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE
+  if (!url || !serviceKey) return NextResponse.json({ error: 'server_misconfigured' }, { status: 500 })
+  const supabaseService = createClient(url, serviceKey, { auth: { persistSession: false } })
+  const { data: company } = await supabaseService.from('companies').select('id').eq('id', companyId).single()
   if (!company) return NextResponse.json({ error: 'not_found' }, { status: 404 })
-  const { error } = await supabase.from('profiles').upsert({ id: session.user.id, company_id: company.id, role: 'viewer' })
+  const { error } = await supabaseService.from('profiles').update({ company_id: company.id, role: 'viewer' }).eq('id', session.user.id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ companyId })
+  return NextResponse.json({ ok: true })
 }
 
 export async function GET() {
