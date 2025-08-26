@@ -59,13 +59,13 @@ export async function middleware(req: Request) {
     const sb = supabaseService()
     const { data } = await (sb.from('rate_limits').select('*').eq('key', key).single() as any)
     if (!data || now - new Date(data.window_start).getTime() > WINDOW_MS) {
-      await sb.from('rate_limits').upsert({ key, window_start: new Date(now).toISOString(), count: 1 })
+  await (sb.from('rate_limits') as any).upsert({ key, window_start: new Date(now).toISOString(), count: 1 })
       count = 1
     } else {
       count = (data.count as number) + 1
       windowStart = new Date(data.window_start).getTime()
       if (count > MAX_HITS) exceeded = true
-      else await sb.from('rate_limits').update({ count }).eq('key', key)
+  else await (sb.from('rate_limits') as any).update({ count }).eq('key', key)
     }
   } catch {
     const rec = memHits.get(key)
@@ -114,12 +114,12 @@ export async function middleware(req: Request) {
       const sb = supabaseService()
       const { data } = await sb.from('token_attempts').select('*').eq('token', token).single() as any
       if (!data || now2 - new Date(data.first_attempt_at as any).getTime() > appConfig.tokenLockMs) {
-        await sb.from('token_attempts').upsert({ token, count: 1, first_attempt_at: new Date(now2).toISOString(), locked_until: null })
+  await (sb.from('token_attempts') as any).upsert({ token, count: 1, first_attempt_at: new Date(now2).toISOString(), locked_until: null })
       } else {
         const newCount = (data.count as number) + 1
         let locked_until: string | null = null
         if (newCount >= appConfig.tokenMaxAttempts) locked_until = new Date(now2 + appConfig.tokenLockMs).toISOString()
-        await sb.from('token_attempts').update({ count: newCount, locked_until }).eq('token', token)
+  await (sb.from('token_attempts') as any).update({ count: newCount, locked_until }).eq('token', token)
         if (locked_until) log({ level: 'warn', event: 'token_locked', token, count: newCount })
       }
     } catch {
@@ -141,6 +141,4 @@ export async function middleware(req: Request) {
   return res
 }
 
-export const config = {
-  matcher: ['/api/quotes/public/:path*', '/api/change-orders/public/:path*'],
-}
+export const config = { matcher: ['/((?!onboarding|api|_next|static|favicon.ico).*)'] }

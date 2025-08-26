@@ -26,8 +26,8 @@ export default function OnboardingClient() {
       if (!res.ok) {
         setErrorCreate(data.error || 'Failed to create company')
       } else {
-        router.replace('/admin/dashboard')
-        router.refresh()
+  router.replace('/dashboard')
+  router.refresh()
       }
     } catch (err: any) {
       setErrorCreate(err.message || 'Network error')
@@ -50,8 +50,8 @@ export default function OnboardingClient() {
       })
       const data = await res.json().catch(()=>({}))
       if (res.ok && data?.ok) {
-        router.replace('/admin/dashboard')
-        router.refresh()
+  router.replace('/dashboard')
+  router.refresh()
         return
       }
       const code = data?.error
