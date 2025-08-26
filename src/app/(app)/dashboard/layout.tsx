@@ -6,6 +6,8 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { supabaseService } from '@/lib/supabase'
 import React from 'react'
+import DashboardShellClient from './DashboardShellClient'
+import AccountDropdown from '@/components/AccountDropdown'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   noStore()
@@ -29,5 +31,20 @@ export default async function DashboardLayout({ children }: { children: React.Re
       redirect('/onboarding')
     }
   }
-  return <>{children}</>
+  // Fetch minimal company name for header (service role to avoid RLS edge cases)
+  let companyName = ''
+  try {
+    const svc = supabaseService()
+    const { data: c } = await (svc as any).from('companies').select('name').eq('id', profile.company_id).single()
+    companyName = c?.name || ''
+  } catch {}
+  return (
+    <html lang="en">
+      <body className="antialiased bg-[var(--sp-color-bg)] text-[var(--sp-color-foreground,inherit)]">
+        <DashboardShellClient topRight={<AccountDropdown userEmail={user.email||''} role={profile.role||''} companyName={companyName} companyId={profile.company_id||''} />}> 
+          {children}
+        </DashboardShellClient>
+      </body>
+    </html>
+  )
 }
