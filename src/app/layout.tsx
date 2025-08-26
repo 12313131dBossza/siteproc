@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Link from 'next/link'
-import { Suspense, ReactNode } from 'react'
+import { Suspense } from 'react'
+import { ToastProvider } from '@/components/ui/Toast'
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -22,13 +23,12 @@ export const metadata: Metadata = {
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: ReactNode;
+  children: React.ReactNode;
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <ToastProvider>
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#000000" />
         <nav className="w-full p-3 flex justify-between items-center border-b border-black/10 dark:border-white/10">
@@ -50,6 +50,7 @@ export default function RootLayout({
             if (!el) return; if (n > 0) { el.textContent = 'Sync pending ('+n+')'; el.classList.remove('hidden'); } else { el.classList.add('hidden'); }
           });
         ` }} />
+        </ToastProvider>
       </body>
     </html>
   );
