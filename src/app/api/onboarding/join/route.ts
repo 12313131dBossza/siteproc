@@ -16,6 +16,7 @@ export async function POST(req: Request) {
     const parse = Body.safeParse(json)
     if (!parse.success) return NextResponse.json({ error: 'invalid_body' }, { status: 400 })
 
+    // Get authenticated user (anon client only for auth context)
     const cookieStore = cookies() as any
     const anon = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
       cookies: { get(name: string){ return cookieStore.get(name)?.value } }
@@ -23,60 +24,54 @@ export async function POST(req: Request) {
     const { data: { user }, error: userErr } = await anon.auth.getUser()
     if (userErr || !user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
 
+    // Service-role client for all data operations
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE
     if (!url || !serviceKey) return NextResponse.json({ error: 'server_misconfigured' }, { status: 500 })
     const admin = createClient(url, serviceKey, { auth: { persistSession: false } })
 
-    // Read BEFORE state
-    const { data: before } = await admin.from('profiles').select('company_id').eq('id', user.id).single()
-
-    // Ensure profile row exists (idempotent) if not found
-    if (!before) {
-      const { error: upsertErr } = await admin.from('profiles').upsert({ id: user.id }).eq('id', user.id)
-      if (upsertErr) {
-        log('error','profile_upsert_failed',{ err: upsertErr.message })
-        return NextResponse.json({ error: 'profile_upsert_failed' }, { status: 500 })
-      }
+    // Optional BEFORE state (for logging only)
+    let before: { company_id: string | null, role: string | null } | null = null
+    {
+      const { data, error } = await admin.from('profiles').select('company_id, role').eq('id', user.id).maybeSingle?.() as any
+      if (!error) before = data
     }
 
-    // Company exists?
+    // Validate company exists
     const { data: company, error: compErr } = await admin.from('companies').select('id').eq('id', parse.data.companyId).single()
     if (compErr || !company) return NextResponse.json({ error: 'not_found' }, { status: 404 })
 
-    // Attempt update with returning row; retry once if mismatch
-    const attemptUpdate = async () => {
-      const { data: updated, error: updErr } = await admin
-        .from('profiles')
-        .update({ company_id: company.id, role: 'member' })
-        .eq('id', user.id)
-        .select('company_id')
-        .single()
-      return { updated, updErr }
-    }
-    let { updated, updErr } = await attemptUpdate()
-    if (updErr) {
-      const msg = updErr.message || ''
-      if (msg.includes('cannot_remove_last_admin')) {
+    // Single UPSERT (insert if missing, update if exists) assigning company + default role.
+    // Using onConflict id ensures we don't create duplicates; returning row for verification.
+    const { data: upserted, error: upsertErr } = await admin
+      .from('profiles')
+      .upsert({ id: user.id, company_id: company.id, role: 'member' }, { onConflict: 'id' })
+      .select('company_id')
+      .single()
+
+    if (upsertErr) {
+      const msg = upsertErr.message || ''
+      if (/cannot_remove_last_admin|last\s+admin/i.test(msg)) {
+        log('warn','blocked_last_admin',{ user: user.id, company: company.id, err: msg })
         return NextResponse.json({ error: 'cannot_remove_last_admin' }, { status: 400 })
       }
       log('error','update_failed',{ err: msg })
       return NextResponse.json({ error: 'update_failed' }, { status: 500 })
     }
-    if (updated?.company_id !== company.id) {
-      // Brief backoff then re-select
+
+    // Verify state (handles rare replication lag)
+    if (upserted?.company_id !== company.id) {
       await new Promise(r=>setTimeout(r,100))
       const { data: reread } = await admin.from('profiles').select('company_id').eq('id', user.id).single()
-      console.log('[api/onboarding/join]', { uid: user.id, before: before?.company_id, after: reread?.company_id, target: company.id, phase:'retry' })
       if (reread?.company_id !== company.id) {
         log('error','post_verify_mismatch',{ expected: company.id, actual: reread?.company_id })
         return NextResponse.json({ error: 'update_failed' }, { status: 500 })
       }
-      updated = reread
+      log('info','joined_retry',{ user: user.id, company: company.id, before: before?.company_id })
     } else {
-      console.log('[api/onboarding/join]', { uid: user.id, before: before?.company_id, after: updated?.company_id, target: company.id, phase:'initial' })
+      log('info','joined',{ user: user.id, company: company.id, before: before?.company_id })
     }
-    log('info','joined',{ user: user.id, company: company.id })
+
     return NextResponse.json({ ok: true })
   } catch (e: any) {
     log('error','unhandled',{ err: e?.message })
