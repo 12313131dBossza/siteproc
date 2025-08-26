@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react'
+import React, { ReactNode, createContext, useContext } from 'react'
 import { redirect } from 'next/navigation'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
@@ -45,8 +45,8 @@ export default async function SettingsLayout({ children }: { children: ReactNode
 }
 
 // Simple context provider
-const Ctx = React.createContext<any>(null)
+const Ctx = createContext<any>(null)
 function SettingsContextProvider({ value, children }: { value: any; children: ReactNode }) {
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }
-export function useSettingsContext() { return React.useContext(Ctx) }
+export function useSettingsContext() { return useContext(Ctx) }
