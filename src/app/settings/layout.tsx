@@ -1,7 +1,8 @@
-import { createContext, useContext, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { redirect } from 'next/navigation'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { SettingsContextProvider } from '../../components/SettingsContext'
 
 async function fetchContext() {
   const cookieStore = cookies() as any
@@ -44,9 +45,4 @@ export default async function SettingsLayout({ children }: { children: ReactNode
   )
 }
 
-// Simple context provider
-const Ctx = createContext<any>(null)
-function SettingsContextProvider({ value, children }: { value: any; children: ReactNode }) {
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>
-}
-export function useSettingsContext() { return useContext(Ctx) }
+// Context provider moved to client component in components/SettingsContext.tsx
