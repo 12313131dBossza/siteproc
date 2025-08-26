@@ -1,4 +1,4 @@
-import React from 'react'
+import { createContext, useContext, type ReactNode } from 'react'
 import { redirect } from 'next/navigation'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
@@ -20,7 +20,7 @@ async function fetchContext() {
   return { userEmail: user.email || '', role: profile?.role || '', companyName: company?.name || '', companyId: company?.id || '', fullName: profile?.full_name || '' }
 }
 
-export default async function SettingsLayout({ children }: { children: React.ReactNode }) {
+export default async function SettingsLayout({ children }: { children: ReactNode }) {
   const ctx = await fetchContext()
   return (
     <div className="p-6 space-y-8">
@@ -45,8 +45,8 @@ export default async function SettingsLayout({ children }: { children: React.Rea
 }
 
 // Simple context provider
-const Ctx = React.createContext<any>(null)
-function SettingsContextProvider({ value, children }: { value: any; children: React.ReactNode }) {
+const Ctx = createContext<any>(null)
+function SettingsContextProvider({ value, children }: { value: any; children: ReactNode }) {
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }
-export function useSettingsContext() { return React.useContext(Ctx) }
+export function useSettingsContext() { return useContext(Ctx) }
