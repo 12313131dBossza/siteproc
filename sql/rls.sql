@@ -71,6 +71,63 @@ drop policy if exists profiles_update_self on public.profiles;
 create policy profiles_update_self on public.profiles
   for update using (id = auth.uid()) with check (id = auth.uid());
 
+-- Additional role management hardening
+-- Ensure role is constrained to allowed set
+alter table public.profiles
+  alter column role type text using role::text;
+-- (Optional) add a check constraint if not existing
+alter table public.profiles drop constraint if exists profiles_role_check;
+alter table public.profiles add constraint profiles_role_check check (role in ('admin','manager','member','viewer'));
+
+-- Prevent demoting/removing the last admin in a company
+create or replace function public.prevent_last_admin_loss()
+returns trigger
+language plpgsql
+as $$
+declare
+  remaining_admins int;
+begin
+  if TG_OP = 'UPDATE' then
+    if OLD.role = 'admin' and NEW.role <> 'admin' then
+      select count(*) into remaining_admins from public.profiles where company_id = OLD.company_id and role = 'admin' and id <> OLD.id;
+      if remaining_admins = 0 then
+        raise exception 'cannot_remove_last_admin';
+      end if;
+    end if;
+  elsif TG_OP = 'DELETE' then
+    if OLD.role = 'admin' then
+      select count(*) into remaining_admins from public.profiles where company_id = OLD.company_id and role = 'admin' and id <> OLD.id;
+      if remaining_admins = 0 then
+        raise exception 'cannot_remove_last_admin';
+      end if;
+    end if;
+  end if;
+  return NEW;
+end;
+$$;
+
+drop trigger if exists trg_prevent_last_admin_loss on public.profiles;
+create trigger trg_prevent_last_admin_loss
+before update or delete on public.profiles
+for each row execute function public.prevent_last_admin_loss();
+
+-- Broader read access within same company
+drop policy if exists profiles_read_same_company on public.profiles;
+create policy profiles_read_same_company on public.profiles
+  for select using (company_id = public.auth_company_id());
+
+-- Admin-only role updates within same company
+drop policy if exists profiles_admin_update_roles on public.profiles;
+create policy profiles_admin_update_roles on public.profiles
+  for update using (
+    company_id = public.auth_company_id() and exists (
+      select 1 from public.profiles p2
+      where p2.id = auth.uid() and p2.company_id = public.profiles.company_id and p2.role = 'admin'
+    )
+  ) with check (
+    company_id = public.auth_company_id()
+  );
+
 drop policy if exists jobs_rls on public.jobs;
 create policy jobs_rls on public.jobs
   for all using (company_id = public.auth_company_id()) with check (company_id = public.auth_company_id());
