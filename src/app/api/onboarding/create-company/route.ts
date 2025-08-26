@@ -24,7 +24,7 @@ export async function POST(req: Request) {
   const service = createClient(url, serviceKey, { auth: { persistSession: false } })
 
   // Ensure profile row exists first (idempotent)
-  const { error: upsertErr } = await service.from('profiles').upsert({ id: user.id, email: user.email || null }).eq('id', user.id)
+  const { error: upsertErr } = await service.from('profiles').upsert({ id: user.id }).eq('id', user.id)
   if (upsertErr) return NextResponse.json({ error: upsertErr.message }, { status: 500 })
 
   // Insert company
