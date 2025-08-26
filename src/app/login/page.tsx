@@ -6,6 +6,6 @@ import LoginForm from './LoginForm'
 export default async function LoginPage() {
   const session = await getSessionProfile()
   if (session.user && session.companyId) redirect('/dashboard')
-  if (session.user && !session.companyId) redirect('/onboarding')
+  // Removed onboarding redirect; single guard lives in /dashboard layout
   return <LoginForm />
 }

@@ -11,7 +11,7 @@ export default async function AdminDashboardPage(){
   noStore();
   const session = await getSessionProfile();
   if(!session.user) redirect('/login');
-  if(!session.companyId) redirect('/onboarding');
+  // Removed onboarding redirect; single guard lives in /dashboard layout
   let data: DashboardData = {
     stats: { activeProjects:0, pendingBids:0, openDeliveries:0, unpaidInvoices:0 },
     recentActivity: [],

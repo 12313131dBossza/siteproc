@@ -57,13 +57,13 @@ export async function POST(req: Request) {
 
     // Read AFTER state to confirm
     const { data: after } = await admin.from('profiles').select('company_id').eq('id', user.id).single()
-    console.log('[join] uid', user.id, 'before', before?.company_id, 'after', after?.company_id)
-    if (after?.company_id === company.id) {
-      log('info','joined',{ user: user.id, company: company.id })
-      return NextResponse.json({ ok: true })
+    console.log('[api/onboarding/join]', { uid: user.id, before: before?.company_id, after: after?.company_id, target: company.id })
+    if (after?.company_id !== company.id) {
+      log('error','post_verify_mismatch',{ expected: company.id, actual: after?.company_id })
+      return NextResponse.json({ error: 'update_failed' }, { status: 500 })
     }
-    log('error','post_verify_mismatch',{ expected: company.id, actual: after?.company_id })
-    return NextResponse.json({ error: 'update_failed' }, { status: 500 })
+    log('info','joined',{ user: user.id, company: company.id })
+    return NextResponse.json({ ok: true })
   } catch (e: any) {
     log('error','unhandled',{ err: e?.message })
     return NextResponse.json({ error: 'unhandled' }, { status: 500 })

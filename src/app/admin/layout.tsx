@@ -12,7 +12,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   noStore();
   const session = await getSessionProfile();
   if (!session.user) redirect('/login');
-  if (!session.companyId) redirect('/onboarding');
+  // Removed onboarding redirect; single guard lives in /dashboard layout
   const supabase = getSupabaseServer();
   const { data: company } = await supabase.from('companies').select('name,id').eq('id', session.companyId).single();
   return (
