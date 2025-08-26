@@ -1,13 +1,13 @@
-import React from 'react';
+import React, { ReactNode } from 'react';
 
 interface StatCardProps {
   label: string;
   value: string | number;
   delta?: { value: string; direction: 'up' | 'down' };
-  icon?: React.ReactNode;
+  icon?: ReactNode;
 }
 
-export const StatCard: React.FC<StatCardProps> = ({ label, value, delta, icon }) => {
+export function StatCard({ label, value, delta, icon }: StatCardProps) {
   return (
     <div className="sp-card flex items-center gap-4">
       {icon && <div className="w-10 h-10 rounded-xl bg-[var(--sp-color-primary)]/10 flex items-center justify-center text-[var(--sp-color-primary)]">{icon}</div>}
@@ -22,6 +22,6 @@ export const StatCard: React.FC<StatCardProps> = ({ label, value, delta, icon })
       </div>
     </div>
   );
-};
+}
 
 export default StatCard;

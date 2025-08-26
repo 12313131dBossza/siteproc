@@ -1,11 +1,11 @@
 "use client";
-import React, { createContext, useCallback, useContext, useState } from 'react';
+import React, { createContext, useCallback, useContext, useState, ReactNode } from 'react';
 
 interface ToastMsg { id: string; title: string; variant?: 'success'|'error'|'info'; }
 interface ToastCtx { push: (t: Omit<ToastMsg,'id'>)=>void; }
 const ToastContext = createContext<ToastCtx | null>(null);
 
-export const ToastProvider: React.FC<{ children: React.ReactNode; }> = ({ children }) => {
+export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastMsg[]>([]);
   const push = useCallback((t: Omit<ToastMsg,'id'>) => {
     const id = Math.random().toString(36).slice(2);

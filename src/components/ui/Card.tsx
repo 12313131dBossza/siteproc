@@ -1,13 +1,14 @@
-import React from 'react';
+import React, { ReactNode } from 'react';
 
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   title?: string;
-  actions?: React.ReactNode;
-  footer?: React.ReactNode;
+  actions?: ReactNode;
+  footer?: ReactNode;
   padded?: boolean;
+  children?: ReactNode;
 }
 
-export const Card: React.FC<CardProps> = ({ title, actions, footer, padded=true, children, className='', ...rest }) => {
+export function Card({ title, actions, footer, padded=true, children, className='', ...rest }: CardProps) {
   return (
     <div className={`sp-card flex flex-col ${className}`} {...rest}>
       {(title || actions) && (
@@ -20,6 +21,6 @@ export const Card: React.FC<CardProps> = ({ title, actions, footer, padded=true,
       {footer && <div className="mt-4 pt-3 border-t border-[var(--sp-color-border)] text-xs text-[var(--sp-color-muted)]">{footer}</div>}
     </div>
   );
-};
+}
 
 export default Card;

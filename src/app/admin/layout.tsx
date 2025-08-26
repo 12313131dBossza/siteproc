@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { ReactNode } from 'react';
 import '../globals.css';
 import AdminShellClient from './AdminShellClient';
 import { getSessionProfile, getSupabaseServer } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import AccountDropdown from '../../components/AccountDropdown';
 
-export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({ children }: { children: ReactNode }) {
   const session = await getSessionProfile();
   if (!session.user) redirect('/login');
   if (!session.companyId) redirect('/onboarding');

@@ -1,8 +1,8 @@
 "use client";
-import React, { useEffect } from 'react';
+import React, { useEffect, ReactNode } from 'react';
 
-interface ModalProps { open: boolean; onClose: () => void; title?: string; children: React.ReactNode; footer?: React.ReactNode; }
-export const Modal: React.FC<ModalProps> = ({ open, onClose, title, children, footer }) => {
+interface ModalProps { open: boolean; onClose: () => void; title?: string; children: ReactNode; footer?: ReactNode; }
+export function Modal({ open, onClose, title, children, footer }: ModalProps) {
   useEffect(() => {
     function handler(e: KeyboardEvent) { if (e.key === 'Escape') onClose(); }
     if (open) window.addEventListener('keydown', handler);
@@ -19,6 +19,6 @@ export const Modal: React.FC<ModalProps> = ({ open, onClose, title, children, fo
       </div>
     </div>
   );
-};
+}
 
 export default Modal;

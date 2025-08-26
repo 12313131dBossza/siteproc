@@ -1,8 +1,8 @@
 "use client";
-import React from 'react';
+import { ReactElement } from 'react';
 
 interface StepperProps { steps: string[]; current: number; }
-export const Stepper: React.FC<StepperProps> = ({ steps, current }) => {
+export function Stepper({ steps, current }: StepperProps): ReactElement {
   return (
     <div className="sp-stepper" role="list">
       {steps.map((s, i) => {
@@ -16,6 +16,6 @@ export const Stepper: React.FC<StepperProps> = ({ steps, current }) => {
       })}
     </div>
   );
-};
+}
 
 export default Stepper;

@@ -1,11 +1,11 @@
 "use client";
-import React from 'react';
+import React, { ReactNode } from 'react';
 import { Sidebar } from '@/components/ui/Sidebar';
 import { TopNav } from '@/components/ui/TopNav';
 import { ToastProvider } from '@/components/ui/Toast';
 import { useRoleGuard } from '@/lib/useRoleGuard';
 
-export default function AdminShellClient({ children, topRight }: { children: React.ReactNode; topRight?: React.ReactNode }) {
+export default function AdminShellClient({ children, topRight }: { children: ReactNode; topRight?: ReactNode }) {
   useRoleGuard('admin');
   return (
     <ToastProvider>

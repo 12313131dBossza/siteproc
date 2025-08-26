@@ -17,7 +17,7 @@ const navItems = [
   { href: '/admin/settings', label: 'Settings' }
 ];
 
-export const Sidebar: React.FC = () => {
+export function Sidebar() {
   const pathname = usePathname();
   return (
     <aside className="hidden lg:flex flex-col w-60 shrink-0 bg-[var(--sp-color-bg-alt)] border-r border-[var(--sp-color-border)] min-h-screen">
@@ -39,6 +39,6 @@ export const Sidebar: React.FC = () => {
       <div className="p-4 border-t border-[var(--sp-color-border)] text-xs text-[var(--sp-color-muted)]">© {new Date().getFullYear()} SiteProc</div>
     </aside>
   );
-};
+}
 
 export default Sidebar;

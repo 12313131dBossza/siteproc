@@ -1,5 +1,5 @@
 "use client";
-import React from 'react';
+import React, { ReactNode } from 'react';
 import Link from 'next/link';
 
 // Simple utility to join classNames (avoids external dep)
@@ -17,11 +17,11 @@ function cn(...parts: (string | undefined | false | null | Record<string, boolea
 interface BaseProps {
   variant?: 'primary' | 'accent' | 'ghost' | 'danger';
   size?: 'sm' | 'md' | 'lg';
-  leftIcon?: React.ReactNode;
-  rightIcon?: React.ReactNode;
+  leftIcon?: ReactNode;
+  rightIcon?: ReactNode;
   loading?: boolean;
   className?: string;
-  children?: React.ReactNode;
+  children?: ReactNode;
 }
 
 type ButtonAsButton = BaseProps & React.ButtonHTMLAttributes<HTMLButtonElement> & { href?: undefined };
@@ -43,7 +43,7 @@ const variantMap: Record<string,string> = {
   danger: 'bg-[var(--sp-color-danger)] text-white hover:bg-[var(--sp-color-danger)]/90 focus-visible:ring-[var(--sp-color-danger)]'
 };
 
-export const Button: React.FC<ButtonProps> = (props) => {
+export function Button(props: ButtonProps) {
   const { variant='primary', size='md', leftIcon, rightIcon, loading, children, className, href, ...rest } = props as any;
   const inner = (
     <span className="inline-flex items-center gap-2 relative">
@@ -66,6 +66,6 @@ export const Button: React.FC<ButtonProps> = (props) => {
       {inner}
     </button>
   );
-};
+}
 
 export default Button;

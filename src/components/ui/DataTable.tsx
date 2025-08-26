@@ -1,7 +1,7 @@
 "use client";
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, ReactNode } from 'react';
 
-export interface Column<T> { key: keyof T; header: string; sortable?: boolean; render?: (row: T) => React.ReactNode; }
+export interface Column<T> { key: keyof T; header: string; sortable?: boolean; render?: (row: T) => ReactNode; }
 interface DataTableProps<T extends Record<string, any>> { columns: Column<T>[]; rows: T[]; loading?: boolean; emptyMessage?: string; onRowClick?: (row: T)=>void; }
 
 export function DataTable<T extends Record<string, any>>({ columns, rows, loading, emptyMessage='No data', onRowClick }: DataTableProps<T>) {

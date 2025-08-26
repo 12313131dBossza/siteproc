@@ -1,13 +1,13 @@
-import { redirect } from 'next/navigation'
-import { getSessionProfile, getSupabaseServer } from '@/lib/auth'
+import { getSessionProfile } from '@/lib/auth'
+import AdminOnly from '@/components/AdminOnly'
 
 export const dynamic = 'force-dynamic'
 
 export default async function InvitePage() {
   const session = await getSessionProfile()
-  if (!session.user) redirect('/login')
-  if (!session.companyId) redirect('/onboarding')
-  if (session.role !== 'admin') redirect('/admin/dashboard')
+  if (!session.user) return null
+  if (!session.companyId) return <div className="text-sm text-neutral-400">Company required.</div>
+  if (session.role !== 'admin') return <AdminOnly />
   const companyId = session.companyId
   const inviteUrl = `${process.env.NEXT_PUBLIC_SITE_URL || ''}/onboarding?c=${companyId}`
   return (
