@@ -2,6 +2,7 @@ import AdminOnly from '@/components/AdminOnly'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { requireAdmin } from '@/lib/auth/requireAdmin'
+import CompanyForm from './companyForm'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,38 +26,4 @@ export default async function CompanySettingsPage() {
   return <CompanyForm initialName={company.name} />
 }
 
-// Client form component
-function CompanyForm({ initialName }: { initialName: string }) {
-  return (
-    <form action={updateCompany} className="max-w-md space-y-4">
-      <div>
-        <label className="text-xs font-medium">Company Name</label>
-        <input name="name" defaultValue={initialName} required minLength={2} maxLength={64} className="sp-input w-full mt-1" />
-      </div>
-      <SubmitArea />
-    </form>
-  )
-}
-
-// Use a server action wrapper to call fetch since Next 13+; fallback to client fetch if actions disabled
-async function updateCompany(formData: FormData) {
-  'use server'
-  const name = (formData.get('name') as string || '').trim()
-  if (!name || name.length < 2 || name.length > 64) return
-  // Use relative URL to avoid dependency on NEXT_PUBLIC_SITE_URL in production server action.
-  try {
-    await fetch(process.env.NEXT_PUBLIC_SITE_URL ? process.env.NEXT_PUBLIC_SITE_URL + '/api/settings/company' : 'http://localhost:3000/api/settings/company', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name }),
-      // next: { revalidate: 0 } // optional: ensure fresh
-    })
-  } catch (e) {
-    console.error('[settings/company] server action fetch failed', e)
-  }
-}
-
-// Client status component
-function SubmitArea() {
-  return <button type="submit" className="px-4 py-2 rounded bg-blue-600 text-xs">Save</button>
-}
+// Form moved to client component companyForm.tsx
