@@ -1,7 +1,9 @@
 "use client";
 import { useState } from 'react'
+import { useToast } from '@/components/ui/Toast'
 
 export default function CompanyForm({ initialName }: { initialName: string }) {
+  const { push } = useToast()
   const [name,setName]=useState(initialName)
   const [status,setStatus]=useState<'idle'|'saving'|'saved'|'invalid_name'|'error'>('idle')
   const [error,setError]=useState<string>('')
@@ -13,9 +15,15 @@ export default function CompanyForm({ initialName }: { initialName: string }) {
       const data = await res.json().catch(()=>({}))
       if(!res.ok || !data || !data.ok){
         if(data.error === 'invalid_name') { setStatus('invalid_name'); return }
-        setStatus('error'); setError(data.error || 'Save failed'); return
+        setStatus('error');
+        const msg = data.error || 'Save failed'
+        setError(msg)
+        push({ title: `Company update failed: ${msg}`, variant: 'error' })
+        return
       }
-      setStatus('saved'); setTimeout(()=> setStatus('idle'), 2000)
+      setStatus('saved');
+      push({ title: 'Company name updated', variant: 'success' })
+      setTimeout(()=> setStatus('idle'), 2500)
     } catch(err:any){ setStatus('error'); setError(err.message||'Error') }
   }
   const disabled = status==='saving'
@@ -28,7 +36,7 @@ export default function CompanyForm({ initialName }: { initialName: string }) {
       </div>
       <div className="flex items-center gap-3">
         <button disabled={disabled} className="px-4 py-2 rounded bg-blue-600 text-xs disabled:opacity-50">{status==='saving'?'Saving...':'Save'}</button>
-        {status==='saved' && <span className="text-xs text-green-500">Saved</span>}
+  {status==='saved' && <span className="text-xs text-green-500">Company name updated</span>}
         {status==='error' && <span className="text-xs text-red-500">{error}</span>}
       </div>
     </form>
