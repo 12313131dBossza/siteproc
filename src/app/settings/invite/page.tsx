@@ -1,39 +1,38 @@
-import { getSessionProfile } from '@/lib/auth'
+import { redirect } from 'next/navigation'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 import AdminOnly from '@/components/AdminOnly'
+import InviteLink from '@/components/settings/InviteLink'
 
 export const dynamic = 'force-dynamic'
 
+async function getSessionAndProfile() {
+  const cookieStore = cookies() as any
+  const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, { cookies: { get(n:string){ return cookieStore.get(n)?.value } } })
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+  const { data: profile } = await supabase.from('profiles').select('company_id,role').eq('id', user.id).single()
+  return { user, role: profile?.role || null, companyId: profile?.company_id || null }
+}
+
 export default async function InvitePage() {
-  const session = await getSessionProfile()
-  if (!session.user) return null
-  if (!session.companyId) return <div className="text-sm text-neutral-400">Company required.</div>
-  if (session.role !== 'admin') return <AdminOnly />
-  const companyId = session.companyId
-  const inviteUrl = `${process.env.NEXT_PUBLIC_SITE_URL || ''}/onboarding?c=${companyId}`
-  return (
-    <div className="max-w-xl space-y-6">
-      <h1 className="text-xl font-semibold">Invite Teammates</h1>
-      <p className="text-sm text-neutral-400">Share this link with teammates so they can join your company.</p>
-      <div className="space-y-2">
-        <label className="text-xs font-medium">Invite Link</label>
-        <div className="flex gap-2">
-          <input readOnly value={inviteUrl} className="sp-input flex-1" />
-          <button
-            onClick={() => navigator.clipboard.writeText(inviteUrl)}
-            className="px-3 py-2 rounded bg-blue-600 text-white text-xs"
-          >Copy</button>
+  try {
+    const { user, role, companyId } = await getSessionAndProfile()
+    if (!companyId) return <div className="text-sm text-neutral-400">You have not joined a company.</div>
+    if (role !== 'admin') return <AdminOnly />
+    return (
+      <div className="max-w-xl space-y-6">
+        <h1 className="text-xl font-semibold">Invite Teammates</h1>
+        <p className="text-sm text-neutral-400">Share this link with teammates so they can join your company.</p>
+        <InviteLink companyId={companyId} />
+        <div className="space-y-3">
+          <h2 className="font-medium">Send Email Invites (placeholder)</h2>
+          <p className="text-[11px] text-neutral-500">Email sending not yet implemented.</p>
         </div>
-        <p className="text-[10px] text-neutral-500">Valid while your account remains active.</p>
+        <div className="mt-8 text-xs text-neutral-500">Company ID: {companyId}</div>
       </div>
-      <div className="space-y-3">
-        <h2 className="font-medium">Send Email Invites (placeholder)</h2>
-        <form className="flex gap-2" onSubmit={(e)=>e.preventDefault()}>
-          <input placeholder="email@example.com" className="sp-input flex-1" />
-          <button className="px-3 py-2 rounded bg-neutral-700 text-xs" disabled>Send</button>
-        </form>
-        <p className="text-[11px] text-neutral-500">Email sending not yet implemented.</p>
-      </div>
-      <div className="mt-8 text-xs text-neutral-500">Company ID: {companyId}</div>
-    </div>
-  )
+    )
+  } catch (e:any) {
+    return <div className="p-4 text-sm text-red-400 bg-neutral-900 rounded">Failed to load invite page: {e?.message||'Unknown error'}</div>
+  }
 }
