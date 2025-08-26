@@ -1,11 +1,15 @@
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 import React from 'react';
 import '../globals.css';
 import AdminShellClient from './AdminShellClient';
 import { getSessionProfile, getSupabaseServer } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import AccountDropdown from '../../components/AccountDropdown';
+import { unstable_noStore as noStore } from 'next/cache';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  noStore();
   const session = await getSessionProfile();
   if (!session.user) redirect('/login');
   if (!session.companyId) redirect('/onboarding');

@@ -1,4 +1,6 @@
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+import { unstable_noStore as noStore } from 'next/cache';
 import RoleGate from '@/components/RoleGate';
 import DashboardPageClient, { DashboardData } from './pageClient';
 import { sbServer } from '@/lib/supabase-server';
@@ -6,6 +8,7 @@ import { getSessionProfile } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 
 export default async function AdminDashboardPage(){
+  noStore();
   const session = await getSessionProfile();
   if(!session.user) redirect('/login');
   if(!session.companyId) redirect('/onboarding');

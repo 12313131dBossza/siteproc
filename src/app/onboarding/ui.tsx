@@ -42,18 +42,23 @@ export default function OnboardingClient() {
     setErrorJoin(null)
     setJoining(true)
     try {
-      const res = await fetch('/api/onboarding/join-company', {
+      const res = await fetch('/api/onboarding/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ companyId: joinId.trim() })
+        body: JSON.stringify({ companyId: joinId.trim() }),
+        cache: 'no-store'
       })
       const data = await res.json().catch(()=>({}))
-      if (!res.ok) {
-        setErrorJoin(data.error || 'Failed to join company')
-      } else {
+      if (res.ok && data?.ok) {
         router.replace('/admin/dashboard')
         router.refresh()
+        return
       }
+      const code = data?.error
+      if (code === 'not_found') setErrorJoin('Company not found')
+      else if (code === 'cannot_remove_last_admin') setErrorJoin('You are the last admin of your current company. Assign another admin before leaving.')
+      else if (code === 'invalid_body') setErrorJoin('Invalid company id')
+      else setErrorJoin(code || 'Failed to join company')
     } catch (err: any) {
       setErrorJoin(err.message || 'Network error')
     } finally {
