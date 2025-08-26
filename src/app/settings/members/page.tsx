@@ -1,7 +1,7 @@
-import AdminOnly from '@/components/AdminOnly'
-import { requireAdmin } from '@/lib/auth/requireAdmin'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
+import { unstable_noStore as noStore } from 'next/cache'
 import RoleSelect from '@/components/settings/RoleSelect'
 import RemoveMemberButton from '@/components/settings/RemoveMemberButton'
 
@@ -16,13 +16,18 @@ async function fetchMembers(companyId: string) {
 }
 
 export default async function MembersPage() {
-  const res = await requireAdmin({ redirectOnFail: false })
-  if (!res.ok) {
-    if (res.reason === 'unauthenticated') return null
-    if (res.reason === 'no_company') return <div className="text-sm text-neutral-400">No company found.</div>
-    return <AdminOnly />
+  noStore()
+  const cookieStore = cookies() as any
+  const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, { cookies: { get(n:string){ return cookieStore.get(n)?.value } } })
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+  const { data: profile } = await supabase.from('profiles').select('company_id,role').eq('id', user.id).single()
+  console.log('[settings/members]', { uid: user.id, cid: profile?.company_id, role: profile?.role })
+  if (!profile?.company_id) redirect('/onboarding')
+  if (!(profile?.role === 'admin' || profile?.role === 'manager')) {
+    return <div className="text-sm text-neutral-500">Members are visible to managers or admins.</div>
   }
-  const members = await fetchMembers(res.companyId!)
+  const members = await fetchMembers(profile.company_id)
   return (
     <div className="space-y-6 max-w-3xl">
       <h1 className="text-xl font-semibold">Members</h1>
@@ -40,8 +45,8 @@ export default async function MembersPage() {
             <tr key={m.id} className="bg-neutral-900 hover:bg-neutral-800">
               <td className="p-2">{m.full_name || '—'}</td>
               <td className="p-2 font-mono text-[11px] text-neutral-400">{m.id}</td>
-              <td className="p-2"><RoleSelect userId={m.id} initialRole={m.role} self={m.id===res.userId} /></td>
-              <td className="p-2"><RemoveMemberButton userId={m.id} disabled={m.id===res.userId} /></td>
+              <td className="p-2"><RoleSelect userId={m.id} initialRole={m.role} self={m.id===user.id} /></td>
+              <td className="p-2"><RemoveMemberButton userId={m.id} disabled={m.id===user.id} /></td>
             </tr>
           ))}
         </tbody>

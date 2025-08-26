@@ -45,7 +45,7 @@ export async function POST(req: Request) {
     if (compErr || !company) return NextResponse.json({ error: 'not_found' }, { status: 404 })
 
     // Attempt update: set company_id; default new members to viewer role if role null
-    const { error: updErr } = await admin.from('profiles').update({ company_id: company.id, role: 'viewer' }).eq('id', user.id)
+  const { error: updErr } = await admin.from('profiles').update({ company_id: company.id, role: 'member' }).eq('id', user.id)
     if (updErr) {
       const msg = updErr.message || ''
       if (msg.includes('cannot_remove_last_admin')) {
