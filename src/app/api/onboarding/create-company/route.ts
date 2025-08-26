@@ -15,3 +15,7 @@ export async function POST(req: Request) {
   if (pErr) return NextResponse.json({ error: pErr.message }, { status: 500 })
   return NextResponse.json({ companyId: company.id })
 }
+
+export async function GET() {
+  return NextResponse.json({ error: 'method_not_allowed' }, { status: 405 })
+}

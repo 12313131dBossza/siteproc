@@ -2,8 +2,13 @@ export const dynamic = 'force-dynamic';
 import RoleGate from '@/components/RoleGate';
 import DashboardPageClient, { DashboardData } from './pageClient';
 import { sbServer } from '@/lib/supabase-server';
+import { getSessionProfile } from '@/lib/auth';
+import { redirect } from 'next/navigation';
 
 export default async function AdminDashboardPage(){
+  const session = await getSessionProfile();
+  if(!session.user) redirect('/login');
+  if(!session.companyId) redirect('/onboarding');
   let data: DashboardData = {
     stats: { activeProjects:0, pendingBids:0, openDeliveries:0, unpaidInvoices:0 },
     recentActivity: [],
