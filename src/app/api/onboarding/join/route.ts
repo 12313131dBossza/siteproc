@@ -44,8 +44,17 @@ export async function POST(req: Request) {
     const { data: company, error: compErr } = await admin.from('companies').select('id').eq('id', parse.data.companyId).single()
     if (compErr || !company) return NextResponse.json({ error: 'not_found' }, { status: 404 })
 
-    // Attempt update: set company_id; default new members to viewer role if role null
-  const { error: updErr } = await admin.from('profiles').update({ company_id: company.id, role: 'member' }).eq('id', user.id)
+    // Attempt update with returning row; retry once if mismatch
+    const attemptUpdate = async () => {
+      const { data: updated, error: updErr } = await admin
+        .from('profiles')
+        .update({ company_id: company.id, role: 'member' })
+        .eq('id', user.id)
+        .select('company_id')
+        .single()
+      return { updated, updErr }
+    }
+    let { updated, updErr } = await attemptUpdate()
     if (updErr) {
       const msg = updErr.message || ''
       if (msg.includes('cannot_remove_last_admin')) {
@@ -54,13 +63,18 @@ export async function POST(req: Request) {
       log('error','update_failed',{ err: msg })
       return NextResponse.json({ error: 'update_failed' }, { status: 500 })
     }
-
-    // Read AFTER state to confirm
-    const { data: after } = await admin.from('profiles').select('company_id').eq('id', user.id).single()
-    console.log('[api/onboarding/join]', { uid: user.id, before: before?.company_id, after: after?.company_id, target: company.id })
-    if (after?.company_id !== company.id) {
-      log('error','post_verify_mismatch',{ expected: company.id, actual: after?.company_id })
-      return NextResponse.json({ error: 'update_failed' }, { status: 500 })
+    if (updated?.company_id !== company.id) {
+      // Brief backoff then re-select
+      await new Promise(r=>setTimeout(r,100))
+      const { data: reread } = await admin.from('profiles').select('company_id').eq('id', user.id).single()
+      console.log('[api/onboarding/join]', { uid: user.id, before: before?.company_id, after: reread?.company_id, target: company.id, phase:'retry' })
+      if (reread?.company_id !== company.id) {
+        log('error','post_verify_mismatch',{ expected: company.id, actual: reread?.company_id })
+        return NextResponse.json({ error: 'update_failed' }, { status: 500 })
+      }
+      updated = reread
+    } else {
+      console.log('[api/onboarding/join]', { uid: user.id, before: before?.company_id, after: updated?.company_id, target: company.id, phase:'initial' })
     }
     log('info','joined',{ user: user.id, company: company.id })
     return NextResponse.json({ ok: true })

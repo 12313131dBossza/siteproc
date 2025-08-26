@@ -58,7 +58,8 @@ export default function OnboardingClient() {
       if (code === 'not_found') setErrorJoin('Company not found')
       else if (code === 'cannot_remove_last_admin') setErrorJoin('You are the last admin of your current company. Assign another admin before leaving.')
       else if (code === 'invalid_body') setErrorJoin('Invalid company id')
-      else setErrorJoin(code || 'Failed to join company')
+  else if (code === 'update_failed') setErrorJoin('Join failed, please retry in a moment.')
+  else setErrorJoin(code || 'Failed to join company')
     } catch (err: any) {
       setErrorJoin(err.message || 'Network error')
     } finally {
