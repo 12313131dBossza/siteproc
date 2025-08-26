@@ -2,13 +2,15 @@ import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
-import { getSessionProfile } from '@/lib/auth'
+import { requireAdmin } from '@/lib/auth/requireAdmin'
 
 export async function POST(req: Request) {
-  const session = await getSessionProfile()
-  if (!session.user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
-  if (!session.companyId) return NextResponse.json({ error: 'no_company' }, { status: 400 })
-  if (session.role !== 'admin') return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+  const res = await requireAdmin({ redirectOnFail: false })
+  if (!res.ok) {
+    if (res.reason === 'unauthenticated') return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
+    if (res.reason === 'no_company') return NextResponse.json({ error: 'no_company' }, { status: 400 })
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+  }
 
   const body = await req.json().catch(()=>({}))
   const name = (body.name||'').trim()
@@ -19,7 +21,7 @@ export async function POST(req: Request) {
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE
   if (!url || !serviceKey) return NextResponse.json({ error: 'server_misconfigured' }, { status: 500 })
   const service = createClient(url, serviceKey, { auth: { persistSession: false } })
-  const { error: updateErr } = await service.from('companies').update({ name }).eq('id', session.companyId)
+  const { error: updateErr } = await service.from('companies').update({ name }).eq('id', res.companyId)
   if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }
