@@ -1,5 +1,5 @@
 "use client"
-import React, { useState, useCallback, useEffect, ReactNode } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import useDashboardRealtime from '@/lib/useDashboardRealtime'
 
 export function Metric({ label, value, loading }: { label: string; value: string | number | null | undefined; loading?: boolean }) {
@@ -11,7 +11,7 @@ export function Metric({ label, value, loading }: { label: string; value: string
   )
 }
 
-export function BigAction({ label, href, icon }: { label: string; href: string; icon?: ReactNode }) {
+export function BigAction({ label, href, icon }: { label: string; href: string; icon?: React.ReactNode }) {
   return (
     <a href={href} className="block">
       <div className="flex flex-col items-center justify-center gap-2 w-full h-28 rounded-lg border bg-gradient-to-br from-neutral-900 to-neutral-800 hover:from-neutral-800 hover:to-neutral-700 border-neutral-700 transition cursor-pointer text-center p-4">

@@ -1,4 +1,3 @@
-import type { ReactElement } from 'react'
-// Minimal type declaration for the client component.
-declare function OnboardingClient(): ReactElement
-export default OnboardingClient
+// Minimal type declaration for the client component without relying on the React namespace.
+declare function OnboardingClient(): JSX.Element;
+export default OnboardingClient;

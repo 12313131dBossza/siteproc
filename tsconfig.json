@@ -19,11 +19,10 @@
         "name": "next"
       }
     ],
-  "paths": {
+    "paths": {
       "@/*": ["./src/*"],
       "pdf/*": ["./pdf/*"]
-  },
-  "types": ["react", "react-dom", "node"]
+    }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
   "exclude": ["node_modules"]
