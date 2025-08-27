@@ -6,6 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+  "typecheck": "tsc --noEmit",
+  "postinstall": "ts-node --transpile-only scripts/postinstall.ts || node --loader ts-node/esm scripts/postinstall.ts",
     "lint": "eslint",
     "test": "vitest run --coverage tests",
     "analyze:accessibility": "npx lighthouse http://localhost:3000 --only-categories=accessibility --quiet --chrome-flags='--headless=new' || true",
@@ -48,7 +50,8 @@
     "eslint-config-next": "15.5.0",
     "playwright": "^1.55.0",
     "tailwindcss": "^4",
-    "typescript": "^5",
+  "typescript": "^5",
+  "ts-node": "^10.9.2",
     "vitest": "^3.2.4",
     "workbox-window": "^7.3.0"
   }
