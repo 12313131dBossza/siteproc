@@ -1,12 +1,11 @@
 "use client";
 import { useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { useToast } from '@/components/ui/Toast';
+import { toast } from 'sonner';
 
 export default function LoginPage(){
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
-  const { push } = useToast();
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_BASE_URL || 'http://localhost:3000';
@@ -15,14 +14,13 @@ export default function LoginPage(){
   async function submit(e: React.FormEvent){
     e.preventDefault();
     const em = email.trim();
-    if(!em){ push({ title:'Enter an email', variant:'error' }); return; }
+  if(!em){ toast.error('Enter an email'); return; }
     setLoading(true);
     try {
   const { error } = await supabase.auth.signInWithOtp({ email: em, options: { emailRedirectTo: `${appUrl}/auth/callback` } });
-      if (error) push({ title: error.message, variant:'error' });
-      else push({ title:'Magic link sent (check inbox)', variant:'success' });
+  if (error) toast.error(error.message); else toast.success('Magic link sent (check inbox)');
     } catch (err: any){
-      push({ title: err.message || 'Unexpected error', variant:'error' });
+  toast.error(err.message || 'Unexpected error');
     } finally { setLoading(false); }
   }
 

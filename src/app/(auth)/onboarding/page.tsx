@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { useToast } from '@/components/ui/Toast';
+import { toast } from 'sonner';
 
 interface Profile { company_id: string | null }
 
@@ -10,7 +10,6 @@ export default function OnboardingPage(){
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
   const router = useRouter();
-  const { push } = useToast();
   const sb = createClient(url, anon, { auth: { persistSession: true } });
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -33,24 +32,24 @@ export default function OnboardingPage(){
   async function createCompany(e: React.FormEvent){
     e.preventDefault();
     const name = companyName.trim();
-    if(!name){ push({ title:'Enter a company name', variant:'error' }); return; }
+  if(!name){ toast.error('Enter a company name'); return; }
     setCreating(true);
     try {
       const res = await fetch('/api/onboarding/create-company', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ name }) });
-      if(res.ok){ push({ title:'Company created', variant:'success' }); router.push('/dashboard'); }
-      else { const j = await res.json().catch(()=>({})); push({ title: j.error || 'Create failed', variant:'error' }); }
+  if(res.ok){ toast.success('Company created'); router.push('/dashboard'); }
+  else { const j = await res.json().catch(()=>({})); toast.error(j.error || 'Create failed'); }
     } finally { setCreating(false); }
   }
 
   async function joinCompany(e: React.FormEvent){
     e.preventDefault();
     const cid = joinCompanyId.trim();
-    if(!cid){ push({ title:'Enter invite/company ID', variant:'error' }); return; }
+  if(!cid){ toast.error('Enter invite/company ID'); return; }
     setJoining(true);
     try {
       const res = await fetch('/api/onboarding/join', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ companyId: cid }) });
-      if(res.ok){ push({ title:'Joined company', variant:'success' }); router.push('/dashboard'); }
-      else { const j = await res.json().catch(()=>({})); push({ title: j.error || 'Join failed', variant:'error' }); }
+  if(res.ok){ toast.success('Joined company'); router.push('/dashboard'); }
+  else { const j = await res.json().catch(()=>({})); toast.error(j.error || 'Join failed'); }
     } finally { setJoining(false); }
   }
 

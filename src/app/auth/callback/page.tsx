@@ -2,14 +2,13 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useToast } from '@/components/ui/Toast';
+import { toast } from 'sonner';
 
 export default function AuthCallbackPage(){
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
   const router = useRouter();
   const params = useSearchParams();
-  const { push } = useToast();
   const supabase = createClient(url, anon, { auth: { persistSession: true } });
   const [status, setStatus] = useState<'exchanging'|'verifying'|'redirecting'|'error'>('exchanging');
 
@@ -26,7 +25,7 @@ export default function AuthCallbackPage(){
       setStatus('redirecting');
       router.replace('/dashboard');
     } catch(e:any){
-      push({ title: e?.message || 'Auth failed', variant:'error' });
+  toast.error(e?.message || 'Auth failed');
       setStatus('error');
     }
   })()},[]); // eslint-disable-line
