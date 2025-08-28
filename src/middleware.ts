@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { config as appConfig } from '@/lib/config'
 import crypto from 'crypto'
 import { supabaseService } from '@/lib/supabase'
+import { createServerClient } from '@supabase/ssr'
 
 // Simple structured logger (stdout JSON)
 function log(obj: Record<string, any>) {
@@ -17,7 +18,22 @@ const MAX_HITS = Number(process.env.RATE_LIMIT_MAX || 20)
 
 export async function middleware(req: Request) {
   const url = new URL(req.url)
-  const isPublic = url.pathname.startsWith('/api/quotes/public/') || url.pathname.startsWith('/api/change-orders/public/')
+  const path = url.pathname
+
+  // Auth redirect logic (basic):
+  if (!path.startsWith('/api') && !path.startsWith('/_next') && path !== '/favicon.ico') {
+    const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, { cookies: { get() { return undefined } } })
+    const { data: { session } } = await supabase.auth.getSession()
+    const isAuthed = !!session
+    if (path.startsWith('/dashboard') && !isAuthed) {
+      return NextResponse.redirect(new URL('/login', req.url))
+    }
+    if (path === '/login' && isAuthed) {
+      return NextResponse.redirect(new URL('/dashboard', req.url))
+    }
+  }
+
+  const isPublic = path.startsWith('/api/quotes/public/') || path.startsWith('/api/change-orders/public/')
   if (!isPublic) return NextResponse.next()
 
   // CORS allowlist for public endpoints
