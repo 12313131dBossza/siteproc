@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Link from 'next/link'
-import { Suspense } from 'react'
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,10 +32,8 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`} suppressHydrationWarning={true}>
         <nav className="w-full p-3 flex justify-between items-center border-b border-black/10 dark:border-white/10">
           <Link href="/" className="font-semibold">siteproc</Link>
-          <Suspense>
-            {/* Offline badge placeholder injected by client component */}
-            <span id="offline-badge" className="text-sm bg-yellow-200 text-yellow-900 px-2 py-1 rounded hidden"/>
-          </Suspense>
+          {/* Offline badge placeholder injected by client component */}
+          <span id="offline-badge" className="text-sm bg-yellow-200 text-yellow-900 px-2 py-1 rounded hidden"/>
         </nav>
         {children}
         <script dangerouslySetInnerHTML={{ __html: `
