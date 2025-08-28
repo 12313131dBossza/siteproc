@@ -3,9 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Link from 'next/link'
 import { Suspense } from 'react'
-import dynamic from 'next/dynamic'
-// Dynamic import to avoid SSR mismatch or stale module issues with client-only toast provider
-const ToastProvider = dynamic(() => import('@/components/providers/ToastProvider'), { ssr: false })
+import ClientToaster from '@/app/toaster-client'
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,7 +28,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-  <ToastProvider />
+  <ClientToaster />
   <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#000000" />
         <nav className="w-full p-3 flex justify-between items-center border-b border-black/10 dark:border-white/10">
