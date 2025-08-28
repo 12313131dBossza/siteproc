@@ -3,7 +3,9 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Link from 'next/link'
 import { Suspense } from 'react'
-import ToastProvider from '@/components/providers/ToastProvider'
+import dynamic from 'next/dynamic'
+// Dynamic import to avoid SSR mismatch or stale module issues with client-only toast provider
+const ToastProvider = dynamic(() => import('@/components/providers/ToastProvider'), { ssr: false })
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
