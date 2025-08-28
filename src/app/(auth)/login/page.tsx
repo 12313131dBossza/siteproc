@@ -9,7 +9,7 @@ export default function LoginPage(){
   const { push } = useToast();
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-  const baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_BASE_URL || 'http://localhost:3000';
   const supabase = createClient(supabaseUrl, anon, { auth: { persistSession: true } });
 
   async function submit(e: React.FormEvent){
@@ -18,7 +18,7 @@ export default function LoginPage(){
     if(!em){ push({ title:'Enter an email', variant:'error' }); return; }
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOtp({ email: em, options: { emailRedirectTo: baseUrl } });
+  const { error } = await supabase.auth.signInWithOtp({ email: em, options: { emailRedirectTo: `${appUrl}/auth/callback` } });
       if (error) push({ title: error.message, variant:'error' });
       else push({ title:'Magic link sent (check inbox)', variant:'success' });
     } catch (err: any){

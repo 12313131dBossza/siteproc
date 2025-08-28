@@ -16,25 +16,42 @@ const memAttempts = new Map<string, { count: number; ts: number; lockedUntil?: n
 const WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS || 60_000)
 const MAX_HITS = Number(process.env.RATE_LIMIT_MAX || 20)
 
-export async function middleware(req: Request) {
-  const url = new URL(req.url)
-  const path = url.pathname
+export async function middleware(req: any) {
+  const response = NextResponse.next();
+  const url = new URL(req.url);
+  const path = url.pathname;
 
-  // Auth redirect logic (basic):
-  if (!path.startsWith('/api') && !path.startsWith('/_next') && path !== '/favicon.ico') {
-    const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, { cookies: { get() { return undefined } } })
-    const { data: { session } } = await supabase.auth.getSession()
-    const isAuthed = !!session
-    if (path.startsWith('/dashboard') && !isAuthed) {
-      return NextResponse.redirect(new URL('/login', req.url))
-    }
-    if (path === '/login' && isAuthed) {
-      return NextResponse.redirect(new URL('/dashboard', req.url))
-    }
+  const PUBLIC_PATHS = ['/login','/auth/callback'];
+  const isPublicPath = PUBLIC_PATHS.includes(path) || path.startsWith('/api') || path.startsWith('/_next') || path === '/favicon.ico';
+
+  // Supabase client with cookie passthrough
+  let session: any = null;
+  try {
+    const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+      cookies: {
+        get: (name: string) => req.cookies.get(name)?.value,
+  set: (name: string, value: string, options: any) => { try { req.cookies.set(name, value); (response as any).cookies.set({ name, value, ...options }); } catch {} },
+  remove: (name: string, options: any) => { try { req.cookies.delete(name); (response as any).cookies.set({ name, value: '', ...options }); } catch {} }
+      }
+    });
+    const { data } = await supabase.auth.getSession();
+    session = data.session;
+  } catch {}
+
+  const isAuthed = !!session;
+  if (path.startsWith('/dashboard') && !isAuthed) {
+    return NextResponse.redirect(new URL('/login', req.url));
+  }
+  if (path === '/login' && isAuthed) {
+    return NextResponse.redirect(new URL('/dashboard', req.url));
   }
 
+  // Continue processing for non-public paths needing rate limiting below
+  const isRateLimitedPublic = path.startsWith('/api/quotes/public/') || path.startsWith('/api/change-orders/public/');
+  if (!isRateLimitedPublic) return response;
+
   const isPublic = path.startsWith('/api/quotes/public/') || path.startsWith('/api/change-orders/public/')
-  if (!isPublic) return NextResponse.next()
+  if (!isRateLimitedPublic) return response
 
   // CORS allowlist for public endpoints
   const origin = req.headers.get('origin')
@@ -98,7 +115,7 @@ export async function middleware(req: Request) {
     return new NextResponse('Too Many Requests', { status: 429, headers: { 'Retry-After': String(Math.ceil(WINDOW_MS/1000)) } })
   }
   if (count === 1) {
-    const res = NextResponse.next()
+  const res = response
     if (origin) res.headers.set('Access-Control-Allow-Origin', origin)
     res.headers.set('Vary', 'Origin')
     if (appConfig.cspEnforce) {
