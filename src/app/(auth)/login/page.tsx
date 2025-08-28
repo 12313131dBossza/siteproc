@@ -5,7 +5,12 @@ import { toast } from 'sonner';
 import dynamic from 'next/dynamic';
 const ClientToaster = dynamic(() => import('@/components/providers/ClientToaster'), { ssr: false });
 
-export default function LoginPage() {
+type PageProps = {
+  params?: Record<string, string>;
+  searchParams?: Record<string, string | string[] | undefined>;
+};
+
+export default function LoginPage(_props: PageProps) {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!

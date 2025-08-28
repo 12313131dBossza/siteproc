@@ -10,6 +10,8 @@ const securityHeaders = [
   { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self)' },
 ]
 
+import path from 'node:path'
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
@@ -41,6 +43,18 @@ const nextConfig: NextConfig = {
         ],
       },
     ]
+  },
+  webpack: (config) => {
+    const shim = path.resolve(process.cwd(), 'src/components/ui/Toast.tsx')
+    config.resolve = config.resolve || {}
+    config.resolve.alias = {
+      ...(config.resolve.alias || {}),
+      '@/components/ui/Toast': shim,
+      '@/components/ui/toast': shim,
+      '@/components/ui/use-toast': shim,
+      '@/components/ui/toaster': path.resolve(process.cwd(), 'src/components/ui/toaster.tsx'),
+    }
+    return config
   },
   // Sentry / monitoring integration placeholder:
   // If using @sentry/nextjs, wrap export with withSentryConfig in a separate sentry.next.config.mjs.
