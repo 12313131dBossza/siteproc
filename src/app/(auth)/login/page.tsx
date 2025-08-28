@@ -1,9 +1,9 @@
-'use client'
+'use client';
 import { useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
-import dynamic from 'next/dynamic'
-const ClientToaster = dynamic(() => import('@/components/providers/ClientToaster'), { ssr: false })
-import { toast } from 'sonner'
+import { toast } from 'sonner';
+import dynamic from 'next/dynamic';
+const ClientToaster = dynamic(() => import('@/components/providers/ClientToaster'), { ssr: false });
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')

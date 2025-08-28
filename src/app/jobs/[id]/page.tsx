@@ -4,6 +4,7 @@ import { useParams } from 'next/navigation'
 import { useJobRealtime } from '@/lib/useJobRealtime'
 import { usePaginatedRealtime } from '@/lib/paginationRealtime'
 import { useCompanyId } from '@/lib/useCompanyId'
+import { toast } from 'sonner'
 
 export default function JobDashboard() {
   const routeParams = useParams<{ id: string }>()
@@ -15,7 +16,6 @@ export default function JobDashboard() {
   const [companyIdInput, setCompanyIdInput] = useState<string>('')
   const [dateFrom, setDateFrom] = useState<string>('')
   const [dateTo, setDateTo] = useState<string>('')
-  const [toasts, setToasts] = useState<{ id: number; msg: string }[]>([])
   const [rtStatus, setRtStatus] = useState<'idle'|'connecting'|'connected'|'error'>('idle')
 
   const legacyCompanyId = (typeof window !== 'undefined' ? (localStorage.getItem('company_id') || '') : '') || process.env.NEXT_PUBLIC_COMPANY_ID || '00000000-0000-0000-0000-000000000000'
@@ -23,14 +23,6 @@ export default function JobDashboard() {
 
   const jobId = routeParams?.id
   const debounceRef = useRef<number | null>(null)
-  const toastIdRef = useRef(0)
-
-  function pushToast(msg: string) {
-    const id = ++toastIdRef.current
-    setToasts(t => [...t, { id, msg }])
-    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 4000)
-  }
-
   // Paginated realtime hooks
   const { items: expenses, loadMore: loadMoreExpenses, nextCursor: expensesCursor, loading: loadingExpenses } = usePaginatedRealtime<any>({
     table: 'expenses', companyId,
@@ -75,9 +67,9 @@ export default function JobDashboard() {
   useEffect(() => { setLoading(loadingExpenses || loadingDeliveries || loadingCostCodes) }, [loadingExpenses, loadingDeliveries, loadingCostCodes])
 
   useJobRealtime(jobId, {
-  onExpense: () => { pushToast('Expense updated') },
-  onDelivery: () => { pushToast('Delivery updated') },
-  onCostCode: () => { pushToast('Cost code updated') },
+  onExpense: () => { toast.success('Expense updated') },
+  onDelivery: () => { toast.success('Delivery updated') },
+  onCostCode: () => { toast.success('Cost code updated') },
   onStatus: (s) => setRtStatus(s),
   })
 
@@ -228,11 +220,6 @@ export default function JobDashboard() {
             </div>
           ) : <div className="text-xs text-neutral-500">No deliveries.</div>}
         </div>
-      </div>
-      <div className="fixed bottom-4 right-4 space-y-2 z-50">
-        {toasts.map(t => (
-          <div key={t.id} className="bg-neutral-900 border border-neutral-700 text-xs px-3 py-2 rounded shadow">{t.msg}</div>
-        ))}
       </div>
     </div>
   )
