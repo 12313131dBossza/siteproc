@@ -13,19 +13,38 @@ export default function AuthCallbackPage(){
   const [status, setStatus] = useState<'exchanging'|'verifying'|'redirecting'|'error'>('exchanging');
 
   useEffect(()=>{(async()=>{
-    const code = params.get('code');
     try {
+      const code = params.get('code');
+      // 1. Handle code query param (PKCE / OTP link)
       if(code){
         const { error } = await supabase.auth.exchangeCodeForSession(code);
         if(error) throw error;
       } else {
-        setStatus('verifying');
-        await supabase.auth.getSession();
+        // 2. Handle hash tokens (#access_token=...&refresh_token=...)
+        if(typeof window !== 'undefined' && window.location.hash){
+          const hash = window.location.hash.substring(1); // remove '#'
+          const hashParams = new URLSearchParams(hash);
+            const access_token = hashParams.get('access_token');
+            const refresh_token = hashParams.get('refresh_token');
+            if(access_token && refresh_token){
+              const { error } = await supabase.auth.setSession({ access_token, refresh_token });
+              if(error) throw error;
+              // strip hash for cleanliness
+              try { window.history.replaceState({}, '', window.location.pathname + window.location.search); } catch {}
+            } else {
+              setStatus('verifying');
+              await supabase.auth.getSession();
+            }
+        } else {
+          setStatus('verifying');
+          await supabase.auth.getSession();
+        }
       }
       setStatus('redirecting');
       router.replace('/dashboard');
     } catch(e:any){
-  toast.error(e?.message || 'Auth failed');
+      toast.error(e?.message || 'Auth failed');
+      router.replace('/login?error=auth_failed');
       setStatus('error');
     }
   })()},[]); // eslint-disable-line
