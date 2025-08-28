@@ -3,7 +3,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Link from 'next/link'
 import { Suspense } from 'react'
-import ClientToaster from '@/app/toaster-client'
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,7 +27,6 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-  <ClientToaster />
   <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#000000" />
         <nav className="w-full p-3 flex justify-between items-center border-b border-black/10 dark:border-white/10">

@@ -1,6 +1,8 @@
 "use client";
 import { useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import dynamic from 'next/dynamic';
+const ClientToaster = dynamic(() => import('@/components/providers/ClientToaster'), { ssr: false });
 import { toast } from 'sonner';
 
 export default function LoginPage(){
@@ -25,6 +27,7 @@ export default function LoginPage(){
   }
 
   return <div className="p-8 max-w-md mx-auto space-y-6">
+    <ClientToaster />
     <h1 className="text-2xl font-semibold">Login</h1>
     <form onSubmit={submit} className="space-y-4">
       <label className="block space-y-1">
