@@ -3,13 +3,12 @@ import React, { useState } from 'react';
 import { Stepper } from '@/components/ui/Stepper';
 import { Button } from '@/components/ui/Button';
 import { deliverySchema } from '@/lib/forms';
-import { useToast } from '@/components/ui/Toast';
+import { toast } from 'sonner';
 
 export default function NewDeliveryPage(){
   const [step,setStep]=useState(0);
   const [form,setForm]=useState({ project:'', eta:'', carrier:'' });
   const [errors,setErrors]=useState<Record<string,string>>({});
-  const { push } = useToast();
 
   function validateCurrent(): boolean {
     let partial: any = {};
@@ -27,7 +26,7 @@ export default function NewDeliveryPage(){
   }
   function next(){ if(validateCurrent()) setStep(s=>Math.min(3,s+1)); }
   function prev(){ setStep(s=>Math.max(0,s-1)); }
-  function submit(){ const safe = deliverySchema.safeParse(form); if(!safe.success){ validateCurrent(); return; } push({ title:'Delivery created (mock)', variant:'success' }); location.href='/admin/deliveries'; }
+  function submit(){ const safe = deliverySchema.safeParse(form); if(!safe.success){ validateCurrent(); return; } toast.success('Delivery created (mock)'); location.href='/admin/deliveries'; }
 
   return (
     <div className="space-y-8 max-w-xl">

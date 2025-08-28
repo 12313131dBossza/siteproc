@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/Button';
-import { useToast } from '@/components/ui/Toast';
+import { toast } from 'sonner';
 
 // NOTE: This page was previously a mock. It now calls the real /api/expenses endpoint.
 // Required headers: x-company-id and x-role (bookkeeper or higher). We pull company / role
@@ -13,12 +13,11 @@ export default function NewExpense(){
   const [date,setDate]=useState(""); // YYYY-MM-DD
   const [memo,setMemo]=useState("");
   const [loading,setLoading]=useState(false);
-  const { push } = useToast();
 
   async function submit(e:React.FormEvent){
     e.preventDefault();
     if(!jobId || !amount || !date){
-      push({ title:"Fill all required fields", variant:"error" });
+  toast.error("Fill all required fields");
       return;
     }
     setLoading(true);
@@ -32,12 +31,12 @@ export default function NewExpense(){
       });
       const data = await res.json().catch(()=>({}));
       if(res.ok){
-        push({ title:'Expense created', variant:'success' });
+  toast.success('Expense created');
         setAmount(''); setMemo('');
         // Redirect back to list so server component refetches fresh DB rows.
         setTimeout(()=>{ location.href='/admin/expenses'; }, 350);
       } else {
-        push({ title:data?.error || 'Create failed', variant:'error' });
+  toast.error(data?.error || 'Create failed');
       }
     } finally { setLoading(false); }
   }

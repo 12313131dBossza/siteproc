@@ -1,9 +1,8 @@
 "use client";
 import { useState } from 'react'
-import { useToast } from '@/components/ui/Toast'
+import { toast } from 'sonner'
 
 export default function CompanyForm({ initialName }: { initialName: string }) {
-  const { push } = useToast()
   const [name,setName]=useState(initialName)
   const [status,setStatus]=useState<'idle'|'saving'|'saved'|'invalid_name'|'error'>('idle')
   const [error,setError]=useState<string>('')
@@ -18,11 +17,11 @@ export default function CompanyForm({ initialName }: { initialName: string }) {
         setStatus('error');
         const msg = data.error || 'Save failed'
         setError(msg)
-        push({ title: `Company update failed: ${msg}`, variant: 'error' })
+  toast.error(`Company update failed: ${msg}`)
         return
       }
       setStatus('saved');
-      push({ title: 'Company name updated', variant: 'success' })
+  toast.success('Company name updated')
       setTimeout(()=> setStatus('idle'), 2500)
     } catch(err:any){ setStatus('error'); setError(err.message||'Error') }
   }
