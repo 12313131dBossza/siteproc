@@ -26,9 +26,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-  <link rel="manifest" href="/manifest.json" />
+      <head>
+        <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#000000" />
+      </head>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`} suppressHydrationWarning={true}>
         <nav className="w-full p-3 flex justify-between items-center border-b border-black/10 dark:border-white/10">
           <Link href="/" className="font-semibold">siteproc</Link>
           <Suspense>
