@@ -1,6 +1,6 @@
 "use client";
+export const dynamic = "force-dynamic";
 import { useState } from 'react'
-import { toast } from 'sonner'
 
 export default function CompanyForm({ initialName }: { initialName: string }) {
   const [name,setName]=useState(initialName)
@@ -17,11 +17,11 @@ export default function CompanyForm({ initialName }: { initialName: string }) {
         setStatus('error');
         const msg = data.error || 'Save failed'
         setError(msg)
-  toast.error(`Company update failed: ${msg}`)
+  // TODO: handle error UI
         return
       }
       setStatus('saved');
-  toast.success('Company name updated')
+  // TODO: handle success UI
       setTimeout(()=> setStatus('idle'), 2500)
     } catch(err:any){ setStatus('error'); setError(err.message||'Error') }
   }

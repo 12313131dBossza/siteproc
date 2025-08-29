@@ -45,15 +45,7 @@ const nextConfig: NextConfig = {
     ]
   },
   webpack: (config) => {
-    const shim = path.resolve(process.cwd(), 'src/components/ui/Toast.tsx')
-    config.resolve = config.resolve || {}
-    config.resolve.alias = {
-      ...(config.resolve.alias || {}),
-      '@/components/ui/Toast': shim,
-      '@/components/ui/toast': shim,
-      '@/components/ui/use-toast': shim,
-      '@/components/ui/toaster': path.resolve(process.cwd(), 'src/components/ui/toaster.tsx'),
-    }
+  // Removed toast-related aliases
     return config
   },
   // Sentry / monitoring integration placeholder:

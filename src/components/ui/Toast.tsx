@@ -1,14 +1,16 @@
 'use client'
-import { toast as sonnerToast } from 'sonner'
 
 export function useToast() {
-	return { toast: sonnerToast }
+  // never throw; just log if someone calls it
+  return { toast: console.log };
 }
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
-	return <>{children}</>
+  // no provider logic; just render children
+  return <>{children}</>;
 }
 
 export default function ToasterShim() {
-	return null
+  // render nothing
+  return null;
 }

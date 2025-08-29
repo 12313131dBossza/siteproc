@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Stepper } from '@/components/ui/Stepper';
 import { Button } from '@/components/ui/Button';
 import { deliverySchema } from '@/lib/forms';
-import { toast } from 'sonner';
+// ...existing code...
 
 export default function NewDeliveryPage(){
   const [step,setStep]=useState(0);
@@ -26,7 +26,7 @@ export default function NewDeliveryPage(){
   }
   function next(){ if(validateCurrent()) setStep(s=>Math.min(3,s+1)); }
   function prev(){ setStep(s=>Math.max(0,s-1)); }
-  function submit(){ const safe = deliverySchema.safeParse(form); if(!safe.success){ validateCurrent(); return; } toast.success('Delivery created (mock)'); location.href='/admin/deliveries'; }
+  function submit(){ const safe = deliverySchema.safeParse(form); if(!safe.success){ validateCurrent(); return; } /* TODO: handle success UI */ location.href='/admin/deliveries'; }
 
   return (
     <div className="space-y-8 max-w-xl">

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { config as appConfig } from '@/lib/config'
 import crypto from 'crypto'
 import { supabaseService } from '@/lib/supabase'
-import { createServerClient } from '@supabase/ssr'
+import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
 
 // Simple structured logger (stdout JSON)
 function log(obj: Record<string, any>) {
@@ -27,16 +27,12 @@ export async function middleware(req: any) {
   // Supabase client with cookie passthrough
   let session: any = null;
   try {
-    const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
-      cookies: {
-        get: (name: string) => req.cookies.get(name)?.value,
-  set: (name: string, value: string, options: any) => { try { req.cookies.set(name, value); (response as any).cookies.set({ name, value, ...options }); } catch {} },
-  remove: (name: string, options: any) => { try { req.cookies.delete(name); (response as any).cookies.set({ name, value: '', ...options }); } catch {} }
-      }
-    });
+    const supabase = createMiddlewareClient({ req, res: response });
     const { data } = await supabase.auth.getSession();
     session = data.session;
-  } catch {}
+  } catch (err) {
+    console.log('[middleware] Auth check failed:', err);
+  }
 
   const isAuthed = !!session;
   if (path.startsWith('/dashboard') && !isAuthed) {

@@ -13,10 +13,15 @@ for (const k of required) {
 }
 
 if (missing.length) {
-  console.error('\n[postinstall] Missing required environment variables:')
-  for (const m of missing) console.error(' - ' + m)
-  console.error('\nCreate a .env.local based on .env.example before installing or running the project.\n')
-  process.exit(1)
+  console.warn('\n[postinstall] Missing required environment variables:')
+  for (const m of missing) console.warn(' - ' + m)
+  console.warn('\nCreate a .env.local based on .env.example before running the project.')
+  if (process.env.CI === 'true') {
+    console.error('[postinstall] Failing build in CI due to missing env vars.')
+    process.exit(1)
+  } else {
+    console.warn('[postinstall] Continuing (non-CI).')
+  }
 } else {
   console.log('[postinstall] All required environment variables present.')
 }

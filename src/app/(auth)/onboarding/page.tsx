@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
+// ...existing code...
 
 interface Profile { company_id: string | null }
 
@@ -32,24 +32,24 @@ export default function OnboardingPage(){
   async function createCompany(e: React.FormEvent){
     e.preventDefault();
     const name = companyName.trim();
-  if(!name){ toast.error('Enter a company name'); return; }
+  if(!name){ /* TODO: handle error UI */ return; }
     setCreating(true);
     try {
       const res = await fetch('/api/onboarding/create-company', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ name }) });
-  if(res.ok){ toast.success('Company created'); router.push('/dashboard'); }
-  else { const j = await res.json().catch(()=>({})); toast.error(j.error || 'Create failed'); }
+  if(res.ok){ /* TODO: handle success UI */ router.push('/dashboard'); }
+  else { const j = await res.json().catch(()=>({})); /* TODO: handle error UI */ }
     } finally { setCreating(false); }
   }
 
   async function joinCompany(e: React.FormEvent){
     e.preventDefault();
     const cid = joinCompanyId.trim();
-  if(!cid){ toast.error('Enter invite/company ID'); return; }
+  if(!cid){ /* TODO: handle error UI */ return; }
     setJoining(true);
     try {
       const res = await fetch('/api/onboarding/join', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ companyId: cid }) });
-  if(res.ok){ toast.success('Joined company'); router.push('/dashboard'); }
-  else { const j = await res.json().catch(()=>({})); toast.error(j.error || 'Join failed'); }
+  if(res.ok){ /* TODO: handle success UI */ router.push('/dashboard'); }
+  else { const j = await res.json().catch(()=>({})); /* TODO: handle error UI */ }
     } finally { setJoining(false); }
   }
 

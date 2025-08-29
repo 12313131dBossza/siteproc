@@ -1,0 +1,3 @@
+// This file has been disabled - DELETE IT
+// Using page.tsx for hybrid callback flow instead
+export const dynamic = 'force-dynamic';

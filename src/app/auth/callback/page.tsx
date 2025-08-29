@@ -1,56 +1,80 @@
-"use client";
+'use client';
+
 import { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { toast } from 'sonner';
 
-export default function AuthCallbackPage(){
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+export default function CallbackPage() {
+  const [status, setStatus] = useState('Signing you in...');
   const router = useRouter();
-  const params = useSearchParams();
-  const supabase = createClient(url, anon, { auth: { persistSession: true } });
-  const [status, setStatus] = useState<'exchanging'|'verifying'|'redirecting'|'error'>('exchanging');
+  const searchParams = useSearchParams();
 
-  useEffect(()=>{(async()=>{
-    try {
-      const code = params.get('code');
-      // 1. Handle code query param (PKCE / OTP link)
-      if(code){
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
-        if(error) throw error;
-      } else {
-        // 2. Handle hash tokens (#access_token=...&refresh_token=...)
-        if(typeof window !== 'undefined' && window.location.hash){
-          const hash = window.location.hash.substring(1); // remove '#'
-          const hashParams = new URLSearchParams(hash);
-            const access_token = hashParams.get('access_token');
-            const refresh_token = hashParams.get('refresh_token');
-            if(access_token && refresh_token){
-              const { error } = await supabase.auth.setSession({ access_token, refresh_token });
-              if(error) throw error;
-              // strip hash for cleanliness
-              try { window.history.replaceState({}, '', window.location.pathname + window.location.search); } catch {}
-            } else {
-              setStatus('verifying');
-              await supabase.auth.getSession();
-            }
+  useEffect(() => {
+    const handleCallback = async () => {
+      try {
+        const code = searchParams.get('code');
+        
+        if (code) {
+          // PKCE flow: exchange code for session
+          console.log('[callback] Using PKCE code flow');
+          const response = await fetch('/api/auth/exchange-code', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code }),
+          });
+
+          if (response.ok) {
+            console.log('[callback] PKCE exchange successful');
+            router.replace('/dashboard');
+          } else {
+            console.error('[callback] PKCE exchange failed');
+            router.replace('/login?e=callback');
+          }
         } else {
-          setStatus('verifying');
-          await supabase.auth.getSession();
-        }
-      }
-      setStatus('redirecting');
-      router.replace('/dashboard');
-    } catch(e:any){
-      toast.error(e?.message || 'Auth failed');
-      router.replace('/login?error=auth_failed');
-      setStatus('error');
-    }
-  })()},[]); // eslint-disable-line
+          // Hash-based flow: extract tokens from URL fragment
+          const hash = window.location.hash.substring(1);
+          const params = new URLSearchParams(hash);
+          const accessToken = params.get('access_token');
+          const refreshToken = params.get('refresh_token');
 
-  return <div className="p-8 max-w-md mx-auto space-y-4">
-    <h1 className="text-xl font-semibold">Signing you in...</h1>
-    <p className="text-sm text-neutral-500">Status: {status}</p>
-  </div>;
+          if (accessToken && refreshToken) {
+            console.log('[callback] Using hash token flow');
+            const response = await fetch('/api/auth/set-session', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                access_token: accessToken,
+                refresh_token: refreshToken,
+              }),
+            });
+
+            if (response.ok) {
+              console.log('[callback] Session set successfully');
+              router.replace('/dashboard');
+            } else {
+              console.error('[callback] Session set failed');
+              router.replace('/login?e=callback');
+            }
+          } else {
+            console.error('[callback] No code or tokens found');
+            router.replace('/login?e=nocode');
+          }
+        }
+      } catch (error) {
+        console.error('[callback] Exception:', error);
+        setStatus('Authentication failed');
+        setTimeout(() => router.replace('/login?e=callback'), 2000);
+      }
+    };
+
+    handleCallback();
+  }, [router, searchParams]);
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">{status}</p>
+      </div>
+    </div>
+  );
 }

@@ -1,10 +1,10 @@
 "use client";
 import React from 'react';
 import { Button } from '@/components/ui/Button';
-import { toast } from 'sonner';
+// ...existing code...
 
 export default function NewProjectPageClient(){
-  function submit(e: React.FormEvent){ e.preventDefault(); toast.success('Project created (mock)'); location.href='/admin/projects'; }
+  function submit(e: React.FormEvent){ e.preventDefault(); /* TODO: handle success UI */ location.href='/admin/projects'; }
   return (
     <form onSubmit={submit} className="space-y-5 max-w-xl">
       <h1 className="text-xl font-semibold">New Project</h1>

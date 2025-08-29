@@ -1,6 +1,6 @@
 "use client";
 import { useState } from 'react'
-import { toast } from 'sonner'
+// ...existing code...
 import { useRouter } from 'next/navigation'
 
 const OPTIONS = ['admin','manager','member','viewer'] as const
@@ -17,12 +17,12 @@ export default function RoleSelect({ userId, initialRole, self }: { userId: stri
       const res = await fetch('/api/admin/users/role', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ userId, role: newRole }) })
       const data = await res.json().catch(()=>({}))
       if(!res.ok || !data.ok){
-        setRole(initialRole)
-        const code = data.error || 'update_failed'
-        const msg = code === 'invalid_role' ? 'Invalid role' : code === 'cannot_remove_last_admin' ? 'At least one admin required' : code === 'forbidden' ? 'Not allowed' : 'Role update failed'
-  toast.error(msg)
+  setRole(initialRole)
+  const code = data.error || 'update_failed'
+  const msg = code === 'invalid_role' ? 'Invalid role' : code === 'cannot_remove_last_admin' ? 'At least one admin required' : code === 'forbidden' ? 'Not allowed' : 'Role update failed'
+  // TODO: handle error UI
       } else {
-  toast.success('Role updated')
+  // TODO: handle success UI
         router.refresh()
       }
     } finally {

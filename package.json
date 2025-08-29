@@ -21,6 +21,7 @@
     "playwright:install": "playwright install chromium"
   },
   "dependencies": {
+  "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@react-pdf/renderer": "^4.3.0",
     "@sendgrid/mail": "^8.1.5",
     "@sentry/nextjs": "^8.26.0",
