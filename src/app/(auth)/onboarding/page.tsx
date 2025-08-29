@@ -7,27 +7,40 @@ import { useRouter } from 'next/navigation';
 interface Profile { company_id: string | null }
 
 export default function OnboardingPage(){
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
   const router = useRouter();
-  const sb = createClient(url, anon, { auth: { persistSession: true } });
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [companyName, setCompanyName] = useState('');
   const [joinCompanyId, setJoinCompanyId] = useState('');
   const [creating, setCreating] = useState(false);
   const [joining, setJoining] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  useEffect(()=>{(async()=>{
-    const { data: { user } } = await sb.auth.getUser();
-    if(!user){ router.replace('/login'); return; }
-    const { data, error } = await sb.from('profiles').select('company_id').eq('id', user.id).single();
-    if(!error && data){
-      setProfile(data as Profile);
-      if(data.company_id){ router.replace('/dashboard'); return; }
-    }
-    setLoading(false);
-  })()},[]); // eslint-disable-line
+  // Only create Supabase client after component mounts
+  const sb = mounted ? createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { auth: { persistSession: true } }
+  ) : null;
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(()=>{
+    if (!mounted || !sb) return;
+    
+    (async()=>{
+      const { data: { user } } = await sb.auth.getUser();
+      if(!user){ router.replace('/login'); return; }
+      const { data, error } = await sb.from('profiles').select('company_id').eq('id', user.id).single();
+      if(!error && data){
+        setProfile(data as Profile);
+        if(data.company_id){ router.replace('/dashboard'); return; }
+      }
+      setLoading(false);
+    })()
+  },[mounted, sb, router]); // eslint-disable-line
 
   async function createCompany(e: React.FormEvent){
     e.preventDefault();
