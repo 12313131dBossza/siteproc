@@ -12,22 +12,29 @@ function CallbackContent() {
     const handleCallback = async () => {
       try {
         const code = searchParams.get('code');
+        console.log('[callback] Search params:', Object.fromEntries(searchParams.entries()));
+        console.log('[callback] Current URL:', window.location.href);
+        console.log('[callback] Hash:', window.location.hash);
         
         if (code) {
           // PKCE flow: exchange code for session
-          console.log('[callback] Using PKCE code flow');
+          console.log('[callback] Using PKCE code flow with code:', code);
           const response = await fetch('/api/auth/exchange-code', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ code }),
           });
 
+          const responseData = await response.text();
+          console.log('[callback] Exchange response:', response.status, responseData);
+
           if (response.ok) {
             console.log('[callback] PKCE exchange successful');
             router.replace('/dashboard');
           } else {
-            console.error('[callback] PKCE exchange failed');
-            router.replace('/login?e=callback');
+            console.error('[callback] PKCE exchange failed:', responseData);
+            setStatus(`Authentication failed: ${responseData}`);
+            setTimeout(() => router.replace('/login?e=callback'), 3000);
           }
         } else {
           // Hash-based flow: extract tokens from URL fragment
@@ -35,6 +42,8 @@ function CallbackContent() {
           const params = new URLSearchParams(hash);
           const accessToken = params.get('access_token');
           const refreshToken = params.get('refresh_token');
+          
+          console.log('[callback] Hash params:', Object.fromEntries(params.entries()));
 
           if (accessToken && refreshToken) {
             console.log('[callback] Using hash token flow');
@@ -47,22 +56,27 @@ function CallbackContent() {
               }),
             });
 
+            const responseData = await response.text();
+            console.log('[callback] Set session response:', response.status, responseData);
+
             if (response.ok) {
               console.log('[callback] Session set successfully');
               router.replace('/dashboard');
             } else {
-              console.error('[callback] Session set failed');
-              router.replace('/login?e=callback');
+              console.error('[callback] Session set failed:', responseData);
+              setStatus(`Session failed: ${responseData}`);
+              setTimeout(() => router.replace('/login?e=callback'), 3000);
             }
           } else {
             console.error('[callback] No code or tokens found');
-            router.replace('/login?e=nocode');
+            setStatus('No authentication data found');
+            setTimeout(() => router.replace('/login?e=nocode'), 3000);
           }
         }
       } catch (error) {
         console.error('[callback] Exception:', error);
-        setStatus('Authentication failed');
-        setTimeout(() => router.replace('/login?e=callback'), 2000);
+        setStatus(`Authentication failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        setTimeout(() => router.replace('/login?e=callback'), 3000);
       }
     };
 
