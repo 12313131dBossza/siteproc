@@ -213,3 +213,5 @@ Before first real deployment, complete these items:
   - Ensure no secrets live in client bundle (inspect `.next/static` output for patterns like `SUPABASE_SERVICE_KEY`).
 
 After completing all above, tag release (e.g. `v1.0.0`) and deploy.
+#   F o r c e   r e d e p l o y   f o r   s t a b l e   d o m a i n  
+ 
