@@ -21,7 +21,12 @@ export default function LoginPage() {
     setMessage('');
 
     try {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+      // Safely get app URL with fallback
+      let appUrl = process.env.NEXT_PUBLIC_APP_URL;
+      if (!appUrl || appUrl.includes('vercel/') || !appUrl.startsWith('http')) {
+        appUrl = typeof window !== 'undefined' ? window.location.origin : 'https://siteproc-8wdzkuxol-123s-projects-c0b14341.vercel.app';
+      }
+      
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
