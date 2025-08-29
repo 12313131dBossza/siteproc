@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 
 const isDevelopment = process.env.NODE_ENV === 'development';
@@ -9,23 +9,32 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [mounted, setMounted] = useState(false);
 
-  const supabase = createBrowserClient(
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Only create supabase client after component mounts
+  const supabase = mounted ? createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  ) : null;
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!mounted || !supabase) {
+      setMessage('Loading...');
+      return;
+    }
+    
     setLoading(true);
     setMessage('');
 
     try {
-      // Safely get app URL with fallback
-      let appUrl = process.env.NEXT_PUBLIC_APP_URL;
-      if (!appUrl || appUrl.includes('vercel/') || !appUrl.startsWith('http')) {
-        appUrl = typeof window !== 'undefined' ? window.location.origin : 'https://siteproc-8wdzkuxol-123s-projects-c0b14341.vercel.app';
-      }
+      // Get app URL safely for client-side only
+      const appUrl = window.location.origin;
       
       const { error } = await supabase.auth.signInWithOtp({
         email,
@@ -74,10 +83,10 @@ export default function LoginPage() {
           <div>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !mounted}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
             >
-              {loading ? 'Sending...' : 'Send magic link'}
+              {!mounted ? 'Loading...' : loading ? 'Sending...' : 'Send magic link'}
             </button>
           </div>
 
