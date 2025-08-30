@@ -1,4 +1,144 @@
+# SiteProc - Construction Management Platform
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+
+## Authentication System
+
+SiteProc uses Supabase Magic Link authentication with comprehensive user profile management and session persistence.
+
+### Features
+- ✅ Magic link email authentication
+- ✅ User profile creation with RLS (Row Level Security)
+- ✅ Session persistence across page reloads
+- ✅ Automatic redirectTo preservation
+- ✅ Secure logout with session cleanup
+- ✅ Protected route middleware
+- ✅ User greeting with profile data
+
+### Database Setup
+
+Run the following SQL migration in your Supabase SQL editor to set up user profiles:
+
+```sql
+-- Apply the profiles migration
+-- Location: supabase/migrations/20250830_profiles_and_rls.sql
+
+-- Create profiles table
+CREATE TABLE IF NOT EXISTS public.profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  full_name TEXT,
+  avatar_url TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable RLS on profiles table
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+-- Create policies for profiles table
+CREATE POLICY "Users can view own profile" ON public.profiles
+  FOR SELECT USING (auth.uid() = id);
+
+CREATE POLICY "Users can update own profile" ON public.profiles
+  FOR UPDATE USING (auth.uid() = id);
+
+CREATE POLICY "Users can insert own profile" ON public.profiles
+  FOR INSERT WITH CHECK (auth.uid() = id);
+
+-- Auto-create profile trigger (see full migration file for details)
+```
+
+### Authentication Flow
+
+1. **Login**: User enters email at `/login`
+2. **Magic Link**: Supabase sends email with authentication link
+3. **Callback**: `/auth/callback` processes the magic link and creates user session
+4. **Profile Creation**: System automatically creates user profile in `profiles` table
+5. **Dashboard Redirect**: User lands on `/dashboard` with personalized greeting
+6. **Session Persistence**: Middleware ensures authenticated state across requests
+
+### RedirectTo Functionality
+
+The system preserves the original destination when redirecting unauthenticated users:
+
+```
+User tries to access: /dashboard
+↓
+Middleware redirects to: /login?redirectTo=%2Fdashboard
+↓
+After successful auth: User lands back on /dashboard
+```
+
+### Logout Process
+
+1. Call `supabase.auth.signOut()` to clear server-side session
+2. Clear any client-side state/cache
+3. Redirect to `/login` page
+4. Session cookies are invalidated
+
+### Protected Routes
+
+The following routes require authentication (configured in `src/middleware.ts`):
+- `/dashboard`
+- `/jobs`
+- `/suppliers` 
+- `/settings`
+- `/admin`
+
+Unauthenticated users are automatically redirected to `/login` with `redirectTo` parameter.
+
+### Development vs Production
+
+**Development Mode:**
+- Auto-login button available for quick testing
+- Environment: `NODE_ENV=development`
+
+**Production Mode:**
+- Full magic link flow required
+- Auto-login disabled
+- Environment: `NODE_ENV=production`
+
+## Testing
+
+### Playwright Authentication Tests
+
+Run the authentication smoke tests:
+
+```bash
+# Run all auth tests
+npm run e2e -- auth.smoke.spec.ts
+
+# Run with browser visible (dev mode)
+npm run e2e:headed -- auth.smoke.spec.ts
+
+# Run specific test
+npx playwright test auth.smoke.spec.ts --grep "complete auth flow"
+```
+
+**Test Coverage:**
+- ✅ Login → Dashboard → Logout flow
+- ✅ RedirectTo parameter preservation
+- ✅ Session persistence across page reloads
+- ✅ Protected route access control
+- ✅ User greeting display
+
+**Test File:** `e2e/auth.smoke.spec.ts`
+
+### Running Tests
+
+```bash
+# Unit tests
+npm test
+
+# E2E tests
+npm run e2e
+
+# E2E with browser visible
+npm run e2e:headed
+
+# Specific test file
+npm run e2e -- auth.smoke.spec.ts
+```
 
 ## Getting Started
 

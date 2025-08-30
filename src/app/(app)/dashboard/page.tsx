@@ -3,9 +3,36 @@ export const revalidate = 0
 import { unstable_noStore as noStore } from 'next/cache'
 import { supabaseService } from '@/lib/supabase'
 import { AdminHome, PMHome, PurchaserHome, FieldHome, BookkeeperHome } from './DashboardHomes'
+import { createServerSupabaseClient, getUserProfile } from '@/lib/profiles'
 import { cookies } from 'next/headers'
 
 export const runtime = 'nodejs'
+
+async function fetchUserData(): Promise<{ user: any; profile: any; role: string | null }> {
+  try {
+    const supabase = createServerSupabaseClient()
+    
+    // Get current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    if (userError || !user) {
+      console.error('Error fetching user:', userError)
+      return { user: null, profile: null, role: null }
+    }
+
+    // Get user profile
+    const profile = await getUserProfile(user.id)
+    
+    // Get role from profiles or fallback
+    const sb = supabaseService()
+    const { data: roleData } = await (sb as any).from('profiles').select('role').eq('id', user.id).single()
+    const role = roleData?.role || null
+
+    return { user, profile, role }
+  } catch (err) {
+    console.error('Error in fetchUserData:', err)
+    return { user: null, profile: null, role: null }
+  }
+}
 
 function mapRole(r: string | null | undefined): 'admin'|'pm'|'purchaser'|'field'|'bookkeeper' {
   if (!r) return 'field'
@@ -18,29 +45,42 @@ function mapRole(r: string | null | undefined): 'admin'|'pm'|'purchaser'|'field'
   return 'field'
 }
 
-async function fetchRole(): Promise<string | null> {
-  try {
-    const sb = supabaseService()
-  const { data } = await (sb as any).from('profiles').select('role').limit(1)
-  if (Array.isArray(data) && data.length) return (data as any)[0].role as string
-  } catch {}
-  return null
-}
-
 export default async function DashboardPage() {
   noStore()
-  const rawRole = await fetchRole()
+  
+  const { user, profile, role: rawRole } = await fetchUserData()
+  
+  // If no user, this shouldn't happen due to middleware, but handle gracefully
+  if (!user) {
+    return (
+      <div className="p-6">
+        <div className="text-center">
+          <p className="text-neutral-400">Unable to load user data. Please try refreshing.</p>
+        </div>
+      </div>
+    )
+  }
+
   const role = mapRole(rawRole)
   const companyId = process.env.NEXT_PUBLIC_COMPANY_ID || ''
   const isAdminLike = role === 'admin' || role === 'pm' || role === 'purchaser'
+  
+  // Generate greeting
+  const displayName = profile?.full_name || user.email || 'User'
+  const greeting = `Welcome, ${displayName}`
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <h1 className="text-xl font-semibold">Dashboard</h1>
+        <div>
+          <h1 className="text-xl font-semibold">Dashboard</h1>
+          <p className="text-sm text-neutral-400 mt-1">{greeting}</p>
+        </div>
         {process.env.NEXT_PUBLIC_DEV_TOOLS === 'true' && (
           <span className="text-xs px-2 py-1 rounded bg-neutral-800 border border-neutral-700">DEV MODE</span>
         )}
       </div>
+      
       {isAdminLike ? (
         <>
           {role === 'admin' && <AdminHome companyId={companyId} />}

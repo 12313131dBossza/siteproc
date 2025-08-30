@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { useSearchParams } from 'next/navigation';
 
 const isDevelopment = process.env.NODE_ENV === 'development';
 
@@ -10,6 +11,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [mounted, setMounted] = useState(false);
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     setMounted(true);
@@ -36,11 +38,18 @@ export default function LoginPage() {
       // Get app URL safely for client-side only
       const appUrl = window.location.origin;
       
+      // Preserve redirectTo parameter
+      const redirectTo = searchParams.get('redirectTo');
+      let callbackUrl = `${appUrl}/auth/callback`;
+      if (redirectTo) {
+        callbackUrl += `?redirectTo=${encodeURIComponent(redirectTo)}`;
+      }
+      
       // Use PKCE flow with explicit configuration
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${appUrl}/auth/callback`,
+          emailRedirectTo: callbackUrl,
           shouldCreateUser: true,
         },
       });

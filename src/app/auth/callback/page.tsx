@@ -2,6 +2,8 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { upsertUserProfile } from '@/lib/profiles';
+import { createClient } from '@/lib/profiles';
 
 function CallbackContent() {
   const [status, setStatus] = useState('Signing you in...');
@@ -48,8 +50,29 @@ function CallbackContent() {
 
           if (response.ok) {
             console.log('[callback] Session set successfully');
+            
+            // Get the current user and ensure profile exists
+            try {
+              const supabase = createClient();
+              const { data: { user } } = await supabase.auth.getUser();
+              
+              if (user) {
+                console.log('[callback] Upserting user profile');
+                await upsertUserProfile(user);
+              }
+            } catch (profileError) {
+              console.error('[callback] Profile upsert error:', profileError);
+              // Don't fail the whole flow if profile creation fails
+            }
+            
             setStatus('Login successful! Redirecting...');
-            router.replace('/dashboard');
+            
+            // Check for redirectTo parameter
+            const redirectTo = searchParams.get('redirectTo');
+            const destination = redirectTo ? decodeURIComponent(redirectTo) : '/dashboard';
+            
+            console.log('[callback] Redirecting to:', destination);
+            router.replace(destination);
           } else {
             console.error('[callback] Session set failed:', responseData);
             setStatus(`Session failed: ${responseData}`);
@@ -74,7 +97,13 @@ function CallbackContent() {
             if (response.ok) {
               console.log('[callback] PKCE exchange successful');
               setStatus('Login successful! Redirecting...');
-              router.replace('/dashboard');
+              
+              // Check for redirectTo parameter
+              const redirectTo = searchParams.get('redirectTo');
+              const destination = redirectTo ? decodeURIComponent(redirectTo) : '/dashboard';
+              
+              console.log('[callback] Redirecting to:', destination);
+              router.replace(destination);
             } else {
               console.error('[callback] PKCE exchange failed:', responseData);
               

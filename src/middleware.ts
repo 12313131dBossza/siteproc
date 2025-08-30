@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
 import { config as appConfig } from '@/lib/config'
 import crypto from 'crypto'
 import { supabaseService } from '@/lib/supabase'
@@ -15,8 +17,53 @@ const memAttempts = new Map<string, { count: number; ts: number; lockedUntil?: n
 const WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS || 60_000)
 const MAX_HITS = Number(process.env.RATE_LIMIT_MAX || 20)
 
-export async function middleware(req: Request) {
+// Protected routes that require authentication
+const protectedRoutes = ['/dashboard', '/jobs', '/suppliers', '/settings', '/admin']
+
+export async function middleware(req: NextRequest) {
   const url = new URL(req.url)
+  
+  // Handle authentication for protected routes
+  const isProtectedRoute = protectedRoutes.some(route => url.pathname.startsWith(route))
+  
+  if (isProtectedRoute) {
+    // Create Supabase client to check authentication
+    const response = NextResponse.next()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return req.cookies.getAll()
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              req.cookies.set(name, value)
+              response.cookies.set(name, value, options)
+            })
+          },
+        },
+      }
+    )
+
+    // Check if user is authenticated
+    const { data: { user }, error } = await supabase.auth.getUser()
+    
+    if (error || !user) {
+      // User is not authenticated, redirect to login with redirectTo
+      const redirectTo = encodeURIComponent(url.pathname + url.search)
+      const loginUrl = new URL('/login', url.origin)
+      loginUrl.searchParams.set('redirectTo', redirectTo)
+      
+      log({ level: 'info', event: 'auth_redirect', originalPath: url.pathname, redirectTo })
+      return NextResponse.redirect(loginUrl)
+    }
+
+    return response
+  }
+
+  // Handle public endpoints with rate limiting
   const isPublic = url.pathname.startsWith('/api/quotes/public/') || url.pathname.startsWith('/api/change-orders/public/')
   if (!isPublic) return NextResponse.next()
 
