@@ -25,16 +25,24 @@ function CallbackContent() {
             body: JSON.stringify({ code }),
           });
 
-          const responseData = await response.text();
+          const responseData = await response.json();
           console.log('[callback] Exchange response:', response.status, responseData);
 
           if (response.ok) {
             console.log('[callback] PKCE exchange successful');
+            setStatus('Login successful! Redirecting...');
             router.replace('/dashboard');
           } else {
             console.error('[callback] PKCE exchange failed:', responseData);
-            setStatus(`Authentication failed: ${responseData}`);
-            setTimeout(() => router.replace('/login?e=callback'), 3000);
+            
+            // Handle PKCE challenge error specifically
+            if (responseData.shouldRedirect) {
+              setStatus('Session expired. Redirecting to login...');
+              setTimeout(() => router.replace('/login'), 2000);
+            } else {
+              setStatus(`Authentication failed: ${responseData.error || 'Unknown error'}`);
+              setTimeout(() => router.replace('/login?e=callback'), 3000);
+            }
           }
         } else {
           // Hash-based flow: extract tokens from URL fragment
