@@ -5,6 +5,7 @@ import { supabaseService } from '@/lib/supabase'
 import { AdminHome, PMHome, PurchaserHome, FieldHome, BookkeeperHome } from './DashboardHomes'
 import { createServerSupabaseClient, getUserProfile } from '@/lib/profiles-server'
 import { cookies } from 'next/headers'
+import LogoutButton from '@/components/LogoutButton'
 
 export const runtime = 'nodejs'
 
@@ -76,9 +77,12 @@ export default async function DashboardPage() {
           <h1 className="text-xl font-semibold">Dashboard</h1>
           <p className="text-sm text-neutral-400 mt-1">{greeting}</p>
         </div>
-        {process.env.NEXT_PUBLIC_DEV_TOOLS === 'true' && (
-          <span className="text-xs px-2 py-1 rounded bg-neutral-800 border border-neutral-700">DEV MODE</span>
-        )}
+        <div className="flex items-center gap-3">
+          <LogoutButton />
+          {process.env.NEXT_PUBLIC_DEV_TOOLS === 'true' && (
+            <span className="text-xs px-2 py-1 rounded bg-neutral-800 border border-neutral-700">DEV MODE</span>
+          )}
+        </div>
       </div>
       
       {isAdminLike ? (
