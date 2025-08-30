@@ -11,69 +11,73 @@ function CallbackContent() {
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        const code = searchParams.get('code');
         console.log('[callback] Search params:', Object.fromEntries(searchParams.entries()));
         console.log('[callback] Current URL:', window.location.href);
         console.log('[callback] Hash:', window.location.hash);
         
-        if (code) {
-          // PKCE flow: exchange code for session
-          console.log('[callback] Using PKCE code flow with code:', code);
-          const response = await fetch('/api/auth/exchange-code', {
+        // Check for hash-based tokens first (more reliable)
+        const hash = window.location.hash.substring(1);
+        const hashParams = new URLSearchParams(hash);
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
+        
+        if (accessToken && refreshToken) {
+          // Hash-based flow: extract tokens from URL fragment
+          console.log('[callback] Using hash token flow');
+          console.log('[callback] Hash params:', Object.fromEntries(hashParams.entries()));
+
+          const response = await fetch('/api/auth/set-session', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code }),
+            body: JSON.stringify({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            }),
           });
 
-          const responseData = await response.json();
-          console.log('[callback] Exchange response:', response.status, responseData);
+          const responseData = await response.text();
+          console.log('[callback] Set session response:', response.status, responseData);
 
           if (response.ok) {
-            console.log('[callback] PKCE exchange successful');
+            console.log('[callback] Session set successfully');
             setStatus('Login successful! Redirecting...');
             router.replace('/dashboard');
           } else {
-            console.error('[callback] PKCE exchange failed:', responseData);
-            
-            // Handle PKCE challenge error specifically
-            if (responseData.shouldRedirect) {
-              setStatus('Session expired. Redirecting to login...');
-              setTimeout(() => router.replace('/login'), 2000);
-            } else {
-              setStatus(`Authentication failed: ${responseData.error || 'Unknown error'}`);
-              setTimeout(() => router.replace('/login?e=callback'), 3000);
-            }
+            console.error('[callback] Session set failed:', responseData);
+            setStatus(`Session failed: ${responseData}`);
+            setTimeout(() => router.replace('/login?e=session'), 3000);
           }
         } else {
-          // Hash-based flow: extract tokens from URL fragment
-          const hash = window.location.hash.substring(1);
-          const params = new URLSearchParams(hash);
-          const accessToken = params.get('access_token');
-          const refreshToken = params.get('refresh_token');
+          // Fallback to PKCE flow if no hash tokens
+          const code = searchParams.get('code');
           
-          console.log('[callback] Hash params:', Object.fromEntries(params.entries()));
-
-          if (accessToken && refreshToken) {
-            console.log('[callback] Using hash token flow');
-            const response = await fetch('/api/auth/set-session', {
+          if (code) {
+            // PKCE flow: exchange code for session
+            console.log('[callback] Using PKCE code flow with code:', code);
+            const response = await fetch('/api/auth/exchange-code', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                access_token: accessToken,
-                refresh_token: refreshToken,
-              }),
+              body: JSON.stringify({ code }),
             });
 
-            const responseData = await response.text();
-            console.log('[callback] Set session response:', response.status, responseData);
+            const responseData = await response.json();
+            console.log('[callback] Exchange response:', response.status, responseData);
 
             if (response.ok) {
-              console.log('[callback] Session set successfully');
+              console.log('[callback] PKCE exchange successful');
+              setStatus('Login successful! Redirecting...');
               router.replace('/dashboard');
             } else {
-              console.error('[callback] Session set failed:', responseData);
-              setStatus(`Session failed: ${responseData}`);
-              setTimeout(() => router.replace('/login?e=callback'), 3000);
+              console.error('[callback] PKCE exchange failed:', responseData);
+              
+              // Handle PKCE challenge error specifically
+              if (responseData.shouldRedirect) {
+                setStatus('Session expired. Redirecting to login...');
+                setTimeout(() => router.replace('/login'), 2000);
+              } else {
+                setStatus(`Authentication failed: ${responseData.error || 'Unknown error'}`);
+                setTimeout(() => router.replace('/login?e=callback'), 3000);
+              }
             }
           } else {
             console.error('[callback] No code or tokens found');

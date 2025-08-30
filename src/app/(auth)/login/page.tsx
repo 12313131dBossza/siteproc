@@ -36,10 +36,13 @@ export default function LoginPage() {
       // Get app URL safely for client-side only
       const appUrl = window.location.origin;
       
+      // Use a simpler magic link flow without PKCE
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
           emailRedirectTo: `${appUrl}/auth/callback`,
+          // Disable PKCE to use simpler token-based flow
+          shouldCreateUser: true,
         },
       });
 
