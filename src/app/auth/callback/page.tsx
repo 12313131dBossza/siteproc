@@ -2,8 +2,7 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { upsertUserProfile } from '@/lib/profiles';
-import { createClient } from '@/lib/profiles';
+import { upsertUserProfile, createClient } from '@/lib/profiles';
 
 function CallbackContent() {
   const [status, setStatus] = useState('Signing you in...');

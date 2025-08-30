@@ -3,14 +3,14 @@ export const revalidate = 0
 import { unstable_noStore as noStore } from 'next/cache'
 import { supabaseService } from '@/lib/supabase'
 import { AdminHome, PMHome, PurchaserHome, FieldHome, BookkeeperHome } from './DashboardHomes'
-import { createServerSupabaseClient, getUserProfile } from '@/lib/profiles'
+import { createServerSupabaseClient, getUserProfile } from '@/lib/profiles-server'
 import { cookies } from 'next/headers'
 
 export const runtime = 'nodejs'
 
 async function fetchUserData(): Promise<{ user: any; profile: any; role: string | null }> {
   try {
-    const supabase = createServerSupabaseClient()
+    const supabase = await createServerSupabaseClient()
     
     // Get current user
     const { data: { user }, error: userError } = await supabase.auth.getUser()
