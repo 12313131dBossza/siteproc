@@ -215,4 +215,5 @@ Before first real deployment, complete these items:
 After completing all above, tag release (e.g. `v1.0.0`) and deploy.
 #   F o r c e   r e d e p l o y   f o r   s t a b l e   d o m a i n  
  #   T r i g g e r   r e d e p l o y   w i t h   p r o p e r   e n v i r o n m e n t   v a r i a b l e s  
+ #   R e d e p l o y   w i t h   c o r r e c t e d   e n v i r o n m e n t   v a r i a b l e   U R L s  
  
