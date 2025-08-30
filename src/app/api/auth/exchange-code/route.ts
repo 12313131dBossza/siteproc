@@ -7,6 +7,12 @@ export const runtime = 'nodejs';
 
 export async function POST(req: Request) {
   try {
+    console.log('[exchange-code] Starting code exchange');
+    console.log('[exchange-code] Environment check:', {
+      url: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'SET' : 'MISSING',
+      key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'SET' : 'MISSING'
+    });
+    
     const { code } = await req.json();
     
     console.log('[exchange-code] Exchanging PKCE code for session');
@@ -17,6 +23,7 @@ export async function POST(req: Request) {
     }
 
     const supabase = createRouteHandlerClient({ cookies });
+    console.log('[exchange-code] Supabase client created');
     
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
