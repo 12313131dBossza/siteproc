@@ -17,7 +17,8 @@ create table if not exists public.products (
 alter table public.products enable row level security;
 
 -- Create order status enum
-create type if not exists public.order_status as enum ('pending','approved','rejected');
+drop type if exists public.order_status;
+create type public.order_status as enum ('pending','approved','rejected');
 
 -- Create orders table
 create table if not exists public.orders (
