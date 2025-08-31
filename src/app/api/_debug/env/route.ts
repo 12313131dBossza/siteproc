@@ -20,7 +20,7 @@ export async function GET() {
   const cookieStore = cookies() as any
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   const masked = maskUrl(url)
   let userData: any = null
   let profile_user: any = null

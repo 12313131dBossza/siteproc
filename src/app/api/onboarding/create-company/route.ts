@@ -19,7 +19,7 @@ export async function POST(req: Request) {
   if (!name) return NextResponse.json({ error: 'name_required' }, { status: 400 })
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !serviceKey) return NextResponse.json({ error: 'server_misconfigured' }, { status: 500 })
   const service = createClient(url, serviceKey, { auth: { persistSession: false } })
 

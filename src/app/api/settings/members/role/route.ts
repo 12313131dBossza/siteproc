@@ -20,7 +20,7 @@ export async function POST(req: Request) {
   if (userId === user.id && role !== 'admin') return NextResponse.json({ error: 'cannot_change_own_role' }, { status: 400 })
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !serviceKey) return NextResponse.json({ error: 'server_misconfigured' }, { status: 500 })
   const service = createClient(url, serviceKey, { auth: { persistSession: false } })
   const { error: err } = await service.from('profiles').update({ role }).eq('id', userId).eq('company_id', profile.company_id)

@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     }
 
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
     if (!url || !serviceKey) return NextResponse.json({ error: 'update_failed' }, { status: 500 })
     const service = createClient(url, serviceKey, { auth: { persistSession: false } })
     const { error: updErr } = await service.from('profiles').update({ role }).eq('id', userId).eq('company_id', me.company_id)

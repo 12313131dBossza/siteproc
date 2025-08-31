@@ -26,8 +26,11 @@ export async function POST(req: Request) {
 
     // Service-role client for all data operations
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE
-    if (!url || !serviceKey) return NextResponse.json({ error: 'server_misconfigured' }, { status: 500 })
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!url || !serviceKey) {
+      log('error', 'env_missing', { hasUrl: !!url, hasServiceKey: !!serviceKey })
+      return NextResponse.json({ error: 'server_misconfigured' }, { status: 500 })
+    }
     const admin = createClient(url, serviceKey, { auth: { persistSession: false } })
 
     // Optional BEFORE state (for logging only)
@@ -51,12 +54,23 @@ export async function POST(req: Request) {
 
     if (upsertErr) {
       const msg = upsertErr.message || ''
+      log('error','upsert_failed',{ 
+        user: user.id, 
+        company: company.id, 
+        errorCode: upsertErr.code,
+        errorMessage: msg,
+        errorDetails: upsertErr.details,
+        errorHint: upsertErr.hint 
+      })
       if (/cannot_remove_last_admin|last\s+admin/i.test(msg)) {
         log('warn','blocked_last_admin',{ user: user.id, company: company.id, err: msg })
         return NextResponse.json({ error: 'cannot_remove_last_admin' }, { status: 400 })
       }
-      log('error','update_failed',{ err: msg })
-      return NextResponse.json({ error: 'update_failed' }, { status: 500 })
+      return NextResponse.json({ 
+        error: 'update_failed', 
+        details: msg,
+        code: upsertErr.code 
+      }, { status: 500 })
     }
 
     // Verify state (handles rare replication lag)

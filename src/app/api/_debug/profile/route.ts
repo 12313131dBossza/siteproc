@@ -10,7 +10,7 @@ export async function GET() {
   const cookieStore = cookies() as any
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE!
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
   const userClient = createServerClient(url, anonKey, { cookies: { get(name:string){ return cookieStore.get(name)?.value } } })
   const { data: { user } } = await userClient.auth.getUser()
   let profile_user: any = null

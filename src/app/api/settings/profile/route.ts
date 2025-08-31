@@ -12,7 +12,7 @@ export async function POST(req: Request) {
   let fullName = (body.fullName||'').trim()
   if (fullName.length > 80) fullName = fullName.slice(0,80)
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !serviceKey) return NextResponse.json({ error: 'server_misconfigured' }, { status: 500 })
   const service = createClient(url, serviceKey, { auth: { persistSession: false } })
   const { error: updateErr } = await service.from('profiles').update({ full_name: fullName || null }).eq('id', user.id)
