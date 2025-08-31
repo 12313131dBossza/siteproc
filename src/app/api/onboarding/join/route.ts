@@ -14,24 +14,55 @@ export async function POST(req: Request) {
   try {
     const json = await req.json().catch(()=> ({}))
     const parse = Body.safeParse(json)
-    if (!parse.success) return NextResponse.json({ error: 'invalid_body' }, { status: 400 })
+    if (!parse.success) {
+      log('error', 'invalid_body', { received: json })
+      return NextResponse.json({ error: 'invalid_body' }, { status: 400 })
+    }
 
     // Get authenticated user (anon client only for auth context)
-    const cookieStore = cookies() as any
+    const cookieStore = await cookies()
     const anon = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
-      cookies: { get(name: string){ return cookieStore.get(name)?.value } }
+      cookies: { 
+        get(name: string) { 
+          return cookieStore.get(name)?.value 
+        },
+        set() {},
+        remove() {}
+      }
     })
     const { data: { user }, error: userErr } = await anon.auth.getUser()
-    if (userErr || !user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
+    if (userErr || !user) {
+      log('error', 'auth_failed', { userErr: userErr?.message })
+      return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
+    }
 
     // Service-role client for all data operations
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    
+    log('info', 'env_check', { 
+      hasUrl: !!url, 
+      hasServiceKey: !!serviceKey,
+      urlPrefix: url?.substring(0, 30) + '...',
+      serviceKeyPrefix: serviceKey?.substring(0, 20) + '...'
+    })
+    
     if (!url || !serviceKey) {
-      log('error', 'env_missing', { hasUrl: !!url, hasServiceKey: !!serviceKey })
-      return NextResponse.json({ error: 'server_misconfigured' }, { status: 500 })
+      log('error', 'env_missing', { 
+        hasUrl: !!url, 
+        hasServiceKey: !!serviceKey,
+        NODE_ENV: process.env.NODE_ENV
+      })
+      return NextResponse.json({ 
+        error: 'server_misconfigured',
+        details: `Missing: ${!url ? 'SUPABASE_URL' : ''} ${!serviceKey ? 'SERVICE_KEY' : ''}`.trim()
+      }, { status: 500 })
     }
-    const admin = createClient(url, serviceKey, { auth: { persistSession: false } })
+    
+    const admin = createClient(url, serviceKey, { 
+      auth: { persistSession: false },
+      global: { headers: { 'x-application-name': 'siteproc-api' } }
+    })
 
     // Optional BEFORE state (for logging only)
     let before: { company_id: string | null, role: string | null } | null = null
@@ -42,7 +73,17 @@ export async function POST(req: Request) {
 
     // Validate company exists
     const { data: company, error: compErr } = await admin.from('companies').select('id').eq('id', parse.data.companyId).single()
-    if (compErr || !company) return NextResponse.json({ error: 'not_found' }, { status: 404 })
+    if (compErr || !company) {
+      log('error', 'company_not_found', { 
+        companyId: parse.data.companyId, 
+        error: compErr?.message,
+        code: compErr?.code
+      })
+      return NextResponse.json({ 
+        error: 'not_found', 
+        details: compErr?.message || 'Company not found'
+      }, { status: 404 })
+    }
 
     // Single UPSERT (insert if missing, update if exists) assigning company + default role.
     // Using onConflict id ensures we don't create duplicates; returning row for verification.
