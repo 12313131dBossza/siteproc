@@ -85,17 +85,26 @@ export async function POST(req: Request) {
         error: compErr?.message,
         code: compErr?.code
       })
+      
+      // Check if any companies exist at all for debugging
+      const { data: allCompanies } = await admin.from('companies').select('id, name').limit(5)
+      log('info', 'available_companies', { companies: allCompanies })
+      
       return NextResponse.json({ 
         error: 'not_found', 
-        details: compErr?.message || 'Company not found'
+        details: compErr?.message || 'Company not found',
+        availableCompanies: allCompanies?.map(c => c.id) || []
       }, { status: 404 })
-    }
-
-    // Single UPSERT (insert if missing, update if exists) assigning company + default role.
+    }    // Single UPSERT (insert if missing, update if exists) assigning company + default role.
     // Using onConflict id ensures we don't create duplicates; returning row for verification.
     const { data: upserted, error: upsertErr } = await admin
       .from('profiles')
-      .upsert({ id: user.id, company_id: company.id, role: 'member' }, { onConflict: 'id' })
+      .upsert({ 
+        id: user.id, 
+        email: user.email,
+        company_id: company.id, 
+        role: 'member' 
+      }, { onConflict: 'id' })
       .select('company_id')
       .single()
 
@@ -109,6 +118,11 @@ export async function POST(req: Request) {
         errorDetails: upsertErr.details,
         errorHint: upsertErr.hint 
       })
+      
+      // Check current profile state for debugging
+      const { data: currentProfile } = await admin.from('profiles').select('*').eq('id', user.id).single()
+      log('info', 'current_profile_state', { profile: currentProfile })
+      
       if (/cannot_remove_last_admin|last\s+admin/i.test(msg)) {
         log('warn','blocked_last_admin',{ user: user.id, company: company.id, err: msg })
         return NextResponse.json({ error: 'cannot_remove_last_admin' }, { status: 400 })
@@ -116,7 +130,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ 
         error: 'update_failed', 
         details: msg,
-        code: upsertErr.code 
+        code: upsertErr.code,
+        currentProfile: currentProfile
       }, { status: 500 })
     }
 
