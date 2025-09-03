@@ -8,6 +8,7 @@ import { ModernModal } from '@/components/ui/ModernModal';
 import { FormField } from '@/components/forms/FormField';
 import { createClient } from '@/lib/supabase-client';
 import { toast } from 'sonner';
+import Link from 'next/link';
 
 interface Product {
   id: string;
@@ -51,8 +52,6 @@ export default function TokoPage() {
   
   // Modal states
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
-  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   
   // Form states
@@ -64,10 +63,6 @@ export default function TokoPage() {
     price: '',
     stock: '',
     unit: 'pcs'
-  });
-  const [orderForm, setOrderForm] = useState({
-    qty: '',
-    note: ''
   });
 
   const supabase = createClient();
@@ -83,14 +78,18 @@ export default function TokoPage() {
       setLoading(true);
       
       // Get user profile
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user }, error: authErr } = await supabase.auth.getUser();
+      if (authErr) {
+        console.error('[toko] auth error', authErr.message);
+      }
       if (user) {
-        const { data: profile } = await supabase
+        const { data: profile, error: profErr } = await supabase
           .from('profiles')
           .select('id, role')
           .eq('id', user.id)
-          .single();
-        setUserProfile(profile);
+          .maybeSingle();
+        if (profErr) console.warn('[toko] profile fetch error', profErr.message);
+        setUserProfile(profile || { id: user.id, role: 'member' });
       }
 
       // Fetch products with suppliers
@@ -101,8 +100,13 @@ export default function TokoPage() {
           supplier:suppliers(name)
         `)
         .order('created_at', { ascending: false });
-
-      if (productsError) throw productsError;
+      if (productsError) {
+        console.error('[toko] products fetch error', productsError.message, productsError.code);
+        if (productsError.code === '42P01') {
+          toast.error('Products table missing. Run toko-schema.sql in Supabase.');
+        }
+        throw productsError;
+      }
       setProducts(productsData || []);
 
       // Fetch suppliers for dropdown
@@ -122,7 +126,10 @@ export default function TokoPage() {
           `)
           .order('created_at', { ascending: false });
 
-        const { data: ordersData } = await ordersQuery;
+        const { data: ordersData, error: ordersErr } = await ordersQuery;
+        if (ordersErr) {
+          console.warn('[toko] orders fetch error', ordersErr.message, ordersErr.code);
+        }
         setOrders(ordersData || []);
       }
 
@@ -192,37 +199,6 @@ export default function TokoPage() {
     } catch (error: any) {
       console.error('Error saving product:', error);
       toast.error('Failed to save product');
-    }
-  };
-
-  // Handle order submission
-  const handleOrderSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedProduct || !userProfile) return;
-
-    try {
-      const orderData = {
-        product_id: selectedProduct.id,
-        user_id: userProfile.id,
-        qty: parseInt(orderForm.qty),
-        note: orderForm.note || null,
-        status: 'pending' as const
-      };
-
-      const { error } = await supabase
-        .from('orders')
-        .insert([orderData]);
-
-      if (error) throw error;
-
-      toast.success('Order request submitted successfully');
-      setIsOrderModalOpen(false);
-      setSelectedProduct(null);
-      setOrderForm({ qty: '', note: '' });
-      fetchData();
-    } catch (error: any) {
-      console.error('Error creating order:', error);
-      toast.error('Failed to create order');
     }
   };
 
@@ -423,16 +399,16 @@ export default function TokoPage() {
                   </div>
                   
                   <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        setSelectedProduct(product);
-                        setIsOrderModalOpen(true);
+                    <Link
+                      href={`/orders/new?productId=${product.id}`}
+                      className="flex-1 rounded-xl bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-center"
+                      style={{ 
+                        pointerEvents: product.stock === 0 ? 'none' : 'auto',
+                        opacity: product.stock === 0 ? 0.5 : 1 
                       }}
-                      disabled={product.stock === 0}
-                      className="flex-1 rounded-xl bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Request Order
-                    </button>
+                    </Link>
                     
                     {isAdmin && (
                       <>
@@ -584,7 +560,6 @@ export default function TokoPage() {
               label="Price"
               id="price"
               type="number"
-              step="0.01"
               value={productForm.price}
               onChange={(value) => setProductForm(prev => ({ ...prev, price: value }))}
               placeholder="0.00"
@@ -634,67 +609,6 @@ export default function TokoPage() {
               className="flex-1 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
             >
               {editingProduct ? 'Update Product' : 'Add Product'}
-            </button>
-          </div>
-        </form>
-      </ModernModal>
-
-      {/* Request Order Modal */}
-      <ModernModal
-        isOpen={isOrderModalOpen}
-        onClose={() => {
-          setIsOrderModalOpen(false);
-          setSelectedProduct(null);
-          setOrderForm({ qty: '', note: '' });
-        }}
-        title={`Request Order - ${selectedProduct?.name}`}
-      >
-        <form onSubmit={handleOrderSubmit} className="space-y-4">
-          {selectedProduct && (
-            <div className="rounded-xl bg-zinc-50 p-3 text-sm">
-              <div className="font-medium">{selectedProduct.name}</div>
-              <div className="text-zinc-600">Price: ${selectedProduct.price.toFixed(2)} per {selectedProduct.unit}</div>
-              <div className="text-zinc-600">Available: {selectedProduct.stock} {selectedProduct.unit}</div>
-            </div>
-          )}
-          
-          <FormField
-            label="Quantity"
-            id="qty"
-            type="number"
-            min="1"
-            max={selectedProduct?.stock}
-            value={orderForm.qty}
-            onChange={(value) => setOrderForm(prev => ({ ...prev, qty: value }))}
-            placeholder="1"
-            required
-          />
-          
-          <FormField
-            label="Note (Optional)"
-            id="note"
-            type="textarea"
-            value={orderForm.note}
-            onChange={(value) => setOrderForm(prev => ({ ...prev, note: value }))}
-            placeholder="Any special requirements or notes..."
-          />
-          
-          <div className="flex gap-2 pt-4">
-            <button
-              type="button"
-              onClick={() => {
-                setIsOrderModalOpen(false);
-                setSelectedProduct(null);
-              }}
-              className="flex-1 rounded-xl border border-zinc-200 px-4 py-2 text-sm font-medium hover:bg-zinc-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="flex-1 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-            >
-              Submit Request
             </button>
           </div>
         </form>
