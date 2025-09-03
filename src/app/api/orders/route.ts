@@ -59,18 +59,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create the order (simplified - no profiles dependency)
+    // Create the order (simplified - with flexible column names)
     console.log('Orders POST: Creating order');
     const orderData = {
       product_id,
       qty: parseFloat(qty),
       notes: notes || null,
-      created_by: user.id,
+      user_id: user.id,  // Try user_id first (from old toko schema)
       status: 'pending'
     };
     console.log('Orders POST: Order data:', orderData);
 
-    const { data: order, error: insertError } = await supabase
+    let { data: order, error: insertError } = await supabase
       .from('orders')
       .insert([orderData])
       .select(`
@@ -78,6 +78,30 @@ export async function POST(request: NextRequest) {
         product:products(id, name, sku, price, unit)
       `)
       .single();
+
+    // If user_id column doesn't work, try created_by
+    if (insertError && insertError.message.includes('user_id')) {
+      console.log('Orders POST: Retrying with created_by column');
+      const orderDataAlt = {
+        product_id,
+        qty: parseFloat(qty),
+        notes: notes || null,
+        created_by: user.id,
+        status: 'pending'
+      };
+      
+      const result = await supabase
+        .from('orders')
+        .insert([orderDataAlt])
+        .select(`
+          *,
+          product:products(id, name, sku, price, unit)
+        `)
+        .single();
+      
+      order = result.data;
+      insertError = result.error;
+    }
 
     console.log('Orders POST: Insert result:', { order, insertError: insertError?.message });
 
@@ -137,7 +161,12 @@ export async function GET(request: NextRequest) {
 
     // Apply RLS - users only see their orders, admins see all
     if (!isAdmin) {
-      query = query.eq('created_by', user.id);
+      // Try both possible column names for user filtering
+      try {
+        query = query.eq('created_by', user.id);
+      } catch (e) {
+        query = query.eq('user_id', user.id);
+      }
     }
 
     // Apply filters
