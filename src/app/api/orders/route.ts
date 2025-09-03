@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     const orderData = {
       product_id,
       qty: parseFloat(qty),
-      notes: notes || null,
+      note: notes || null,  // Try 'note' first (from old toko schema)
       user_id: user.id,  // Try user_id first (from old toko schema)
       status: 'pending'
     };
@@ -79,13 +79,37 @@ export async function POST(request: NextRequest) {
       `)
       .single();
 
+    // If note column doesn't work, try notes (plural)
+    if (insertError && insertError.message.includes('note')) {
+      console.log('Orders POST: Retrying with notes column');
+      const orderDataAlt = {
+        product_id,
+        qty: parseFloat(qty),
+        notes: notes || null,  // Try 'notes' plural
+        user_id: user.id,
+        status: 'pending'
+      };
+      
+      const result = await supabase
+        .from('orders')
+        .insert([orderDataAlt])
+        .select(`
+          *,
+          product:products(id, name, sku, price, unit)
+        `)
+        .single();
+      
+      order = result.data;
+      insertError = result.error;
+    }
+
     // If user_id column doesn't work, try created_by
     if (insertError && insertError.message.includes('user_id')) {
       console.log('Orders POST: Retrying with created_by column');
       const orderDataAlt = {
         product_id,
         qty: parseFloat(qty),
-        notes: notes || null,
+        note: notes || null,
         created_by: user.id,
         status: 'pending'
       };
