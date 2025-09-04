@@ -266,7 +266,7 @@ export default function TokoPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Toko - Product Catalog">
+      <PageHeader title="Toko - Product Catalog" showBackButton={true} backHref="/dashboard">
         {isAdmin && (
           <button
             onClick={() => setIsProductModalOpen(true)}

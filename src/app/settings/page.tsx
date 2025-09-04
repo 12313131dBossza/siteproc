@@ -1,17 +1,20 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { PageHeader } from '@/components/ui/Layout';
 
 const TABS = ['company','users','suppliers','cost-codes'] as const
 export default function SettingsPage() {
   const [tab, setTab] = useState<typeof TABS[number]>('company')
   return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-xl font-semibold">Settings</h1>
-      <div className="flex gap-2 flex-wrap">{TABS.map(t => <button key={t} onClick={()=>setTab(t)} className={`px-3 py-1 rounded border text-sm ${tab===t?'bg-black text-white':'bg-neutral-200 dark:bg-neutral-800'}`}>{t}</button>)}</div>
-      {tab === 'company' && <CompanyTab />}
-      {tab === 'users' && <UsersTab />}
-      {tab === 'suppliers' && <SuppliersTab />}
-      {tab === 'cost-codes' && <CostCodesTab />}
+    <div className="space-y-6">
+      <PageHeader title="Settings" showBackButton={true} backHref="/dashboard" />
+      <div className="p-6 space-y-6">
+        <div className="flex gap-2 flex-wrap">{TABS.map(t => <button key={t} onClick={()=>setTab(t)} className={`px-3 py-1 rounded border text-sm ${tab===t?'bg-black text-white':'bg-neutral-200 dark:bg-neutral-800'}`}>{t}</button>)}</div>
+        {tab === 'company' && <CompanyTab />}
+        {tab === 'users' && <UsersTab />}
+        {tab === 'suppliers' && <SuppliersTab />}
+        {tab === 'cost-codes' && <CostCodesTab />}
+      </div>
     </div>
   )
 }

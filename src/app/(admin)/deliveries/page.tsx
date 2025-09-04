@@ -109,7 +109,7 @@ export default function DeliveriesPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Deliveries">
+      <PageHeader title="Deliveries" showBackButton={true} backHref="/dashboard">
         <button
           onClick={() => setIsModalOpen(true)}
           className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
