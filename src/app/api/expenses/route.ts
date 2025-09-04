@@ -32,68 +32,50 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get user profile to determine role
-    let userRole = 'member'; // default
+    // Get user profile to determine company
+    let companyId = null;
+    
     try {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role')
+        .select('company_id')
         .eq('id', user.id)
         .single();
       
-      if (profile?.role) {
-        userRole = profile.role;
+      if (profile?.company_id) {
+        companyId = profile.company_id;
       }
     } catch (error) {
-      console.log('Expenses POST: Profile fetch failed, using default role');
+      console.log('Expenses POST: Profile fetch failed');
     }
 
-    // Create the expense - try different column combinations for compatibility
-    console.log('Expenses POST: Creating expense');
+    if (!companyId) {
+      console.log('Expenses POST: No company_id found for user');
+      return NextResponse.json(
+        { error: 'User not associated with a company' },
+        { status: 400 }
+      );
+    }
+
+    // Create the expense using current schema
+    console.log('Expenses POST: Creating expense for company:', companyId);
     
-    // Try all possible combinations of column names
-    const columnVariations = [
-      { userCol: 'user_id', noteCol: 'notes' },        // Standard schema
-      { userCol: 'user_id', noteCol: 'note' },         // Alternative
-      { userCol: 'created_by', noteCol: 'notes' },     // New schema
-      { userCol: 'created_by', noteCol: 'note' }       // Alternative new
-    ];
+    const expenseData = {
+      company_id: companyId,
+      amount: parseFloat(amount),
+      spent_at: new Date().toISOString().split('T')[0], // Today's date
+      memo: `${vendor} - ${category}: ${notes || 'No additional notes'}`,
+      receipt_url: receipt_url || null,
+      created_at: new Date().toISOString()
+    };
+    
+    console.log('Expenses POST: Inserting expense data:', expenseData);
 
-    let expense = null;
-    let insertError = null;
-
-    for (const { userCol, noteCol } of columnVariations) {
-      const expenseData = {
-        vendor,
-        category,
-        amount: parseFloat(amount),
-        [noteCol]: notes || null,
-        [userCol]: user.id,
-        status: 'pending', // All expenses start as pending
-        receipt_url: receipt_url || null,
-        created_at: new Date().toISOString()
-      };
-      
-      console.log(`Expenses POST: Trying ${userCol}/${noteCol} combination:`, expenseData);
-
-      const result = await supabase
-        .from('expenses')
-        .insert([expenseData])
-        .select('*')
-        .single();
-
-      if (!result.error) {
-        expense = result.data;
-        insertError = null;
-        console.log(`Expenses POST: Success with ${userCol}/${noteCol}`);
-        break;
-      } else {
-        insertError = result.error;
-        console.log(`Expenses POST: Failed with ${userCol}/${noteCol}:`, result.error.message);
-      }
-    }
-
-    console.log('Expenses POST: Insert result:', { expense, insertError: insertError?.message });
+    const { data: expense, error: insertError } = await supabase
+      .from('expenses')
+      .insert([expenseData])
+      .select('*')
+      .single();
 
     if (insertError) {
       console.error('Expense creation error:', insertError);
@@ -104,7 +86,20 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('Expenses POST: Success');
-    return NextResponse.json(expense, { status: 201 });
+    
+    // Return in expected format
+    const transformedExpense = {
+      id: expense.id,
+      vendor: vendor,
+      category: category,
+      amount: expense.amount,
+      status: 'approved', // Current schema treats all as approved
+      created_at: expense.created_at,
+      notes: notes,
+      receipt_url: expense.receipt_url
+    };
+    
+    return NextResponse.json(transformedExpense, { status: 201 });
 
   } catch (error) {
     console.error('Expenses API error:', error);
@@ -129,118 +124,89 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user profile to check role (with fallback)
+    // Get user profile to check company
     console.log('Expenses GET: Checking user profile');
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, company_id')
       .eq('id', user.id)
       .single();
 
     console.log('Expenses GET: Profile check result:', { profile, profileError: profileError?.message });
 
-    // Determine role and permissions
-    const isAdmin = profile?.role === 'admin' || profile?.role === 'owner' || profile?.role === 'bookkeeper';
     const userRole = profile?.role || 'member';
-    console.log('Expenses GET: User role:', userRole, 'isAdmin:', isAdmin);
+    const companyId = profile?.company_id;
+    
+    if (!companyId) {
+      console.log('Expenses GET: No company_id found for user');
+      return NextResponse.json(
+        { error: 'User not associated with a company' },
+        { status: 400 }
+      );
+    }
 
     // Parse query parameters
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status');
     const search = searchParams.get('search');
-    const showAll = searchParams.get('showAll') === 'true'; // Admin can see all expenses
 
-    console.log('Expenses GET: Query parameters:', { status, search, showAll });
+    console.log('Expenses GET: Query parameters:', { search });
 
-    // Try different query approaches based on schema
-    let expenses = null;
-    let queryError = null;
-
-    // First attempt: Try with created_by column
-    console.log('Expenses GET: Trying with created_by column');
+    // Query expenses from current schema
     let query = supabase
       .from('expenses')
       .select('*')
+      .eq('company_id', companyId)
       .order('created_at', { ascending: false });
 
-    // Apply user filtering based on role and permissions
-    if (!isAdmin || !showAll) {
-      // Non-admins or when not showing all: only see their own expenses
-      query = query.eq('created_by', user.id);
-    } else if (isAdmin && showAll) {
-      // Admins when showAll=true: see all expenses in company
-      // For now, we'll show all expenses. In a real system, you'd filter by company_id
-      console.log('Expenses GET: Admin viewing all expenses');
+    // Apply search filter on memo field
+    if (search) {
+      query = query.ilike('memo', `%${search}%`);
     }
 
-    // Apply status filter
-    if (status && ['pending', 'approved', 'rejected'].includes(status)) {
-      query = query.eq('status', status);
-    }
-
-    const result1 = await query;
+    const { data: expenses, error: queryError } = await query;
     
-    if (!result1.error) {
-      expenses = result1.data;
-      console.log('Expenses GET: Success with created_by column, found:', expenses?.length || 0);
-    } else {
-      console.log('Expenses GET: Failed with created_by:', result1.error.message);
-      queryError = result1.error;
-
-      // Second attempt: Try with user_id column
-      console.log('Expenses GET: Trying with user_id column');
-      let query2 = supabase
-        .from('expenses')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      // Apply user filtering based on role and permissions
-      if (!isAdmin || !showAll) {
-        query2 = query2.eq('user_id', user.id);
-      }
-
-      // Apply status filter
-      if (status && ['pending', 'approved', 'rejected'].includes(status)) {
-        query2 = query2.eq('status', status);
-      }
-
-      const result2 = await query2;
-      
-      if (!result2.error) {
-        expenses = result2.data;
-        console.log('Expenses GET: Success with user_id column, found:', expenses?.length || 0);
-      } else {
-        console.log('Expenses GET: Failed with user_id:', result2.error.message);
-        queryError = result2.error;
-      }
-    }
-
-    if (!expenses && queryError) {
-      console.error('Expenses GET: All query attempts failed:', queryError);
+    if (queryError) {
+      console.error('Expenses GET: Query failed:', queryError);
       return NextResponse.json(
         { error: `Failed to fetch expenses: ${queryError.message}` },
         { status: 500 }
       );
     }
 
-    // Apply search filter in JavaScript if needed
-    let filteredExpenses = expenses || [];
-    if (search && filteredExpenses.length > 0) {
-      console.log('Expenses GET: Applying search filter:', search);
-      filteredExpenses = filteredExpenses.filter(expense => 
-        expense.vendor?.toLowerCase().includes(search.toLowerCase()) ||
-        expense.category?.toLowerCase().includes(search.toLowerCase()) ||
-        expense.notes?.toLowerCase().includes(search.toLowerCase()) ||
-        expense.note?.toLowerCase().includes(search.toLowerCase())
-      );
-      console.log('Expenses GET: After search filter:', filteredExpenses.length);
-    }
+    console.log('Expenses GET: Success, found:', expenses?.length || 0);
 
-    console.log('Expenses GET: Success, returning', filteredExpenses.length, 'expenses');
+    // Transform the data from current schema to expected format
+    const transformedExpenses = (expenses || []).map((expense: any) => {
+      // Parse memo field to extract vendor and category
+      const memo = expense.memo || '';
+      const parts = memo.split(' - ');
+      const vendor = parts[0] || 'Unknown Vendor';
+      
+      let category = 'other';
+      const categoryPart = parts[1]?.toLowerCase() || '';
+      if (categoryPart.includes('labor')) category = 'labor';
+      else if (categoryPart.includes('materials')) category = 'materials';
+      else if (categoryPart.includes('rentals')) category = 'rentals';
+      
+      const notes = memo.split(': ')[1] || memo || '';
+
+      return {
+        id: expense.id,
+        vendor: vendor,
+        category: category,
+        amount: expense.amount,
+        status: 'approved', // Current schema doesn't have approval workflow
+        created_at: expense.created_at,
+        notes: notes,
+        receipt_url: expense.receipt_url
+      };
+    });
+
+    console.log('Expenses GET: Transformed expenses:', transformedExpenses.length);
+
     return NextResponse.json({
-      expenses: filteredExpenses,
-      userRole,
-      isAdmin
+      expenses: transformedExpenses,
+      userRole
     });
 
   } catch (error) {
