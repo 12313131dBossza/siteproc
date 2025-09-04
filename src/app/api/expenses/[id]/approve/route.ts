@@ -1,4 +1,5 @@
 import { sbServer } from '@/lib/supabase-server';
+import { createServiceClient } from '@/lib/supabase-service';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
@@ -32,11 +33,11 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       );
     }
 
-    // Get user profile to check permissions
+    // Get user profile to check permissions and company
     console.log('Expense Approval: Checking user permissions');
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, company_id')
       .eq('id', user.id)
       .single();
 
@@ -52,69 +53,59 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       );
     }
 
-    // Update expense status - try different column combinations
+    if (!profile?.company_id) {
+      return NextResponse.json(
+        { error: 'User not associated with a company' },
+        { status: 400 }
+      );
+    }
+
+    // Use service client to bypass RLS
+    const serviceClient = createServiceClient();
+
+    // Check if expense exists and belongs to user's company
+    const { data: expense, error: expenseError } = await serviceClient
+      .from('expenses')
+      .select('*')
+      .eq('id', expenseId)
+      .eq('company_id', profile.company_id)
+      .single();
+
+    if (expenseError || !expense) {
+      return NextResponse.json(
+        { error: 'Expense not found or access denied' },
+        { status: 404 }
+      );
+    }
+
+    // Check if expense is pending
+    if (expense.status && expense.status !== 'pending') {
+      return NextResponse.json(
+        { error: `Expense is already ${expense.status} and cannot be modified` },
+        { status: 400 }
+      );
+    }
+
+    // Update expense using service client
     console.log('Expense Approval: Updating expense status');
     
-    const columnVariations = [
-      { reviewerCol: 'approved_by', noteCol: 'approval_notes', dateCol: 'approved_at' },
-      { reviewerCol: 'reviewed_by', noteCol: 'review_notes', dateCol: 'reviewed_at' },
-      { reviewerCol: 'decided_by', noteCol: 'decision_notes', dateCol: 'decided_at' }
-    ];
+    const newStatus = action === 'approve' ? 'approved' : 'rejected';
+    const updateData = {
+      status: newStatus,
+      approved_by: user.id,
+      approved_at: new Date().toISOString(),
+      approval_notes: notes || null,
+      updated_at: new Date().toISOString()
+    };
 
-    let updatedExpense = null;
-    let updateError = null;
+    const { data: updatedExpense, error: updateError } = await serviceClient
+      .from('expenses')
+      .update(updateData)
+      .eq('id', expenseId)
+      .select('*')
+      .single();
 
-    for (const { reviewerCol, noteCol, dateCol } of columnVariations) {
-      const updateData = {
-        status: action === 'approve' ? 'approved' : 'rejected',
-        [reviewerCol]: user.id,
-        [dateCol]: new Date().toISOString(),
-        [noteCol]: notes || null
-      };
-      
-      console.log(`Expense Approval: Trying ${reviewerCol}/${noteCol}/${dateCol} combination:`, updateData);
-
-      const result = await supabase
-        .from('expenses')
-        .update(updateData)
-        .eq('id', expenseId)
-        .select('*')
-        .single();
-
-      if (!result.error) {
-        updatedExpense = result.data;
-        updateError = null;
-        console.log(`Expense Approval: Success with ${reviewerCol}/${noteCol}/${dateCol}`);
-        break;
-      } else {
-        updateError = result.error;
-        console.log(`Expense Approval: Failed with ${reviewerCol}/${noteCol}/${dateCol}:`, result.error.message);
-      }
-    }
-
-    // Fallback: try simple status update
-    if (!updatedExpense && updateError) {
-      console.log('Expense Approval: Trying simple status update');
-      const result = await supabase
-        .from('expenses')
-        .update({
-          status: action === 'approve' ? 'approved' : 'rejected'
-        })
-        .eq('id', expenseId)
-        .select('*')
-        .single();
-
-      if (!result.error) {
-        updatedExpense = result.data;
-        updateError = null;
-        console.log('Expense Approval: Success with simple status update');
-      } else {
-        updateError = result.error;
-        console.log('Expense Approval: Failed with simple status update:', result.error.message);
-      }
-    }
-
-    console.log('Expense Approval: Update result:', { updatedExpense, updateError: updateError?.message });
+    console.log('Expense Approval: Update result:', { updatedExpense: updatedExpense?.id, updateError: updateError?.message });
 
     if (updateError || !updatedExpense) {
       console.error('Expense approval error:', updateError);
@@ -124,10 +115,41 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       );
     }
 
+    // Log the approval action in events table (if it exists)
+    try {
+      await serviceClient
+        .from('events')
+        .insert([{
+          company_id: profile.company_id,
+          actor_id: user.id,
+          entity: 'expense',
+          entity_id: expenseId,
+          verb: `${action}_expense`,
+          payload: {
+            expense_id: expenseId,
+            action: action,
+            notes: notes,
+            amount: expense.amount,
+            original_status: expense.status || 'pending',
+            new_status: newStatus
+          }
+        }]);
+    } catch (eventError) {
+      console.log('Expense Approval: Event logging failed (non-critical):', eventError);
+    }
+
     console.log(`Expense Approval: Success - expense ${action}d`);
     return NextResponse.json({
       message: `Expense ${action}d successfully`,
-      expense: updatedExpense
+      expense: {
+        ...updatedExpense,
+        // Parse memo for frontend compatibility
+        vendor: updatedExpense.memo?.split(' - ')[0] || 'Unknown Vendor',
+        category: updatedExpense.memo?.includes('labor') ? 'labor' : 
+                 updatedExpense.memo?.includes('materials') ? 'materials' :
+                 updatedExpense.memo?.includes('rentals') ? 'rentals' : 'other',
+        notes: updatedExpense.memo?.split(': ')[1] || updatedExpense.memo || ''
+      }
     });
 
   } catch (error) {
