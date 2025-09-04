@@ -75,13 +75,25 @@ export default function OrderDetailPage() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        // Simplified - assume admin role if authenticated (since no profiles table)
-        setUserProfile({ id: user.id, role: 'admin' });
+        // Try to get profile with fallback handling (same as main orders page)
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('id, role')
+            .eq('id', user.id)
+            .single();
+          
+          setUserProfile(profile || { id: user.id, role: 'member' });
+        } catch (error) {
+          // If profiles table doesn't exist or user has no profile, default to member
+          console.log('Profile fetch failed, defaulting to member role:', error);
+          setUserProfile({ id: user.id, role: 'member' });
+        }
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
-      // Still set as admin to allow functionality
-      setUserProfile({ id: 'unknown', role: 'admin' });
+      // Default to member role, not admin
+      setUserProfile({ id: 'unknown', role: 'member' });
     }
   };
 

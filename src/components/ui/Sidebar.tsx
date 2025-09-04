@@ -7,6 +7,7 @@ const navItems = [
   { href: '/deliveries', label: 'Deliveries' },
   { href: '/expenses', label: 'Expenses' },
   { href: '/change-orders', label: 'Change Orders' },
+  { href: '/orders', label: 'Orders' },
   { href: '/toko', label: 'Toko - Products' },
   { href: '/users', label: 'Users & Roles' },
   { href: '/activity', label: 'Activity Log' },

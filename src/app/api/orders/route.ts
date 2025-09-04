@@ -59,72 +59,49 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create the order (simplified - with flexible column names)
+    // Create the order - try different column combinations
     console.log('Orders POST: Creating order');
-    const orderData = {
-      product_id,
-      qty: parseFloat(qty),
-      note: notes || null,  // Try 'note' first (from old toko schema)
-      user_id: user.id,  // Try user_id first (from old toko schema)
-      status: 'pending'
-    };
-    console.log('Orders POST: Order data:', orderData);
+    
+    // Try all possible combinations of column names
+    const columnVariations = [
+      { userCol: 'user_id', noteCol: 'note' },      // Toko schema
+      { userCol: 'user_id', noteCol: 'notes' },     // Alternative
+      { userCol: 'created_by', noteCol: 'note' },   // New schema
+      { userCol: 'created_by', noteCol: 'notes' }   // Alternative new
+    ];
 
-    let { data: order, error: insertError } = await supabase
-      .from('orders')
-      .insert([orderData])
-      .select(`
-        *,
-        product:products(id, name, sku, price, unit)
-      `)
-      .single();
+    let order = null;
+    let insertError = null;
 
-    // If note column doesn't work, try notes (plural)
-    if (insertError && insertError.message.includes('note')) {
-      console.log('Orders POST: Retrying with notes column');
-      const orderDataAlt = {
+    for (const { userCol, noteCol } of columnVariations) {
+      const orderData = {
         product_id,
         qty: parseFloat(qty),
-        notes: notes || null,  // Try 'notes' plural
-        user_id: user.id,
+        [noteCol]: notes || null,
+        [userCol]: user.id,
         status: 'pending'
       };
       
+      console.log(`Orders POST: Trying ${userCol}/${noteCol} combination:`, orderData);
+
       const result = await supabase
         .from('orders')
-        .insert([orderDataAlt])
+        .insert([orderData])
         .select(`
           *,
           product:products(id, name, sku, price, unit)
         `)
         .single();
-      
-      order = result.data;
-      insertError = result.error;
-    }
 
-    // If user_id column doesn't work, try created_by
-    if (insertError && insertError.message.includes('user_id')) {
-      console.log('Orders POST: Retrying with created_by column');
-      const orderDataAlt = {
-        product_id,
-        qty: parseFloat(qty),
-        note: notes || null,
-        created_by: user.id,
-        status: 'pending'
-      };
-      
-      const result = await supabase
-        .from('orders')
-        .insert([orderDataAlt])
-        .select(`
-          *,
-          product:products(id, name, sku, price, unit)
-        `)
-        .single();
-      
-      order = result.data;
-      insertError = result.error;
+      if (!result.error) {
+        order = result.data;
+        insertError = null;
+        console.log(`Orders POST: Success with ${userCol}/${noteCol}`);
+        break;
+      } else {
+        insertError = result.error;
+        console.log(`Orders POST: Failed with ${userCol}/${noteCol}:`, result.error.message);
+      }
     }
 
     console.log('Orders POST: Insert result:', { order, insertError: insertError?.message });
@@ -151,30 +128,45 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('Orders GET: Starting request processing');
     const supabase = await sbServer();
     
     // Check authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser();
+    console.log('Orders GET: Auth check result:', { user: user?.id, authError: authError?.message });
+    
     if (authError || !user) {
+      console.log('Orders GET: Authentication failed');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Get user profile to check role (with fallback)
-    const { data: profile } = await supabase
+    console.log('Orders GET: Checking user profile');
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('role')
       .eq('id', user.id)
       .single();
 
-    // If no profiles table, assume user can see all orders for now
-    const isAdmin = profile?.role === 'admin' || profile?.role === 'owner' || !profile;
+    console.log('Orders GET: Profile check result:', { profile, profileError: profileError?.message });
+
+    // If no profiles table or error, assume user can see all orders for now
+    const isAdmin = profile?.role === 'admin' || profile?.role === 'owner' || !profile || profileError;
+    console.log('Orders GET: User is admin:', isAdmin);
 
     // Parse query parameters
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const search = searchParams.get('search');
 
-    // Build query - simplified without profiles join
+    console.log('Orders GET: Query parameters:', { status, search });
+
+    // Try different query approaches based on schema
+    let orders = null;
+    let queryError = null;
+
+    // First attempt: Try with created_by column
+    console.log('Orders GET: Trying with created_by column');
     let query = supabase
       .from('orders')
       .select(`
@@ -183,42 +175,83 @@ export async function GET(request: NextRequest) {
       `)
       .order('created_at', { ascending: false });
 
-    // Apply RLS - users only see their orders, admins see all
+    // Apply user filtering if not admin
     if (!isAdmin) {
-      // Try both possible column names for user filtering
-      try {
-        query = query.eq('created_by', user.id);
-      } catch (e) {
-        query = query.eq('user_id', user.id);
-      }
+      query = query.eq('created_by', user.id);
     }
 
-    // Apply filters
+    // Apply status filter
     if (status && ['pending', 'approved', 'rejected'].includes(status)) {
       query = query.eq('status', status);
     }
 
-    if (search) {
-      // Search by product name (join filter)
-      query = query.ilike('product.name', `%${search}%`);
+    const result1 = await query;
+    
+    if (!result1.error) {
+      orders = result1.data;
+      console.log('Orders GET: Success with created_by column, found:', orders?.length || 0);
+    } else {
+      console.log('Orders GET: Failed with created_by:', result1.error.message);
+      queryError = result1.error;
+
+      // Second attempt: Try with user_id column
+      console.log('Orders GET: Trying with user_id column');
+      let query2 = supabase
+        .from('orders')
+        .select(`
+          *,
+          product:products(id, name, sku, price, unit)
+        `)
+        .order('created_at', { ascending: false });
+
+      // Apply user filtering if not admin
+      if (!isAdmin) {
+        query2 = query2.eq('user_id', user.id);
+      }
+
+      // Apply status filter
+      if (status && ['pending', 'approved', 'rejected'].includes(status)) {
+        query2 = query2.eq('status', status);
+      }
+
+      const result2 = await query2;
+      
+      if (!result2.error) {
+        orders = result2.data;
+        console.log('Orders GET: Success with user_id column, found:', orders?.length || 0);
+      } else {
+        console.log('Orders GET: Failed with user_id:', result2.error.message);
+        queryError = result2.error;
+      }
     }
 
-    const { data: orders, error } = await query;
-
-    if (error) {
-      console.error('Orders fetch error:', error);
+    if (!orders && queryError) {
+      console.error('Orders GET: All query attempts failed:', queryError);
       return NextResponse.json(
-        { error: 'Failed to fetch orders' },
+        { error: `Failed to fetch orders: ${queryError.message}` },
         { status: 500 }
       );
     }
 
-    return NextResponse.json(orders || []);
+    // Apply search filter in JavaScript if needed
+    let filteredOrders = orders || [];
+    if (search && filteredOrders.length > 0) {
+      console.log('Orders GET: Applying search filter:', search);
+      filteredOrders = filteredOrders.filter(order => 
+        order.product?.name?.toLowerCase().includes(search.toLowerCase()) ||
+        order.notes?.toLowerCase().includes(search.toLowerCase()) ||
+        order.note?.toLowerCase().includes(search.toLowerCase())
+      );
+      console.log('Orders GET: After search filter:', filteredOrders.length);
+    }
+
+    console.log('Orders GET: Success, returning', filteredOrders.length, 'orders');
+    return NextResponse.json(filteredOrders);
 
   } catch (error) {
     console.error('Orders GET API error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: `Internal server error: ${error instanceof Error ? error.message : 'Unknown error'}` },
       { status: 500 }
     );
   }

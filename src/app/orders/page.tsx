@@ -67,12 +67,20 @@ export default function OrdersPage() {
       }
       
       if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('id, role')
-          .eq('id', user.id)
-          .single();
-        setUserProfile(profile || { id: user.id, role: 'member' });
+        // Try to get profile with fallback handling
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('id, role')
+            .eq('id', user.id)
+            .single();
+          
+          setUserProfile(profile || { id: user.id, role: 'member' });
+        } catch (error) {
+          // If profiles table doesn't exist or user has no profile, default to member
+          console.log('Profile fetch failed, defaulting to member role:', error);
+          setUserProfile({ id: user.id, role: 'member' });
+        }
       }
 
       // Build query parameters
