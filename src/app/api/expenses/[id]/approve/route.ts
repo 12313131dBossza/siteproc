@@ -1,5 +1,6 @@
 import { sbServer } from '@/lib/supabase-server';
 import { createServiceClient } from '@/lib/supabase-service';
+import { sendExpenseNotifications } from '@/lib/notifications';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
@@ -139,6 +140,16 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     }
 
     console.log(`Expense Approval: Success - expense ${action}d`);
+    
+    // Send email notification for expense status change
+    try {
+      await sendExpenseNotifications(expenseId, action === 'approve' ? 'approved' : 'rejected', 'Admin');
+      console.log('Expense approval notification sent successfully');
+    } catch (emailError) {
+      console.error('Failed to send expense approval notification:', emailError);
+      // Don't fail the request if email fails
+    }
+    
     return NextResponse.json({
       message: `Expense ${action}d successfully`,
       expense: {

@@ -9,8 +9,8 @@ ALTER TABLE public.expenses ADD COLUMN IF NOT EXISTS approved_at timestamptz;
 ALTER TABLE public.expenses ADD COLUMN IF NOT EXISTS approval_notes text;
 ALTER TABLE public.expenses ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
 
--- Step 2: Add check constraint for status
-ALTER TABLE public.expenses ADD CONSTRAINT IF NOT EXISTS expenses_status_check CHECK (status IN ('pending', 'approved', 'rejected'));
+-- Step 2: Add check constraint for status (fixed syntax)
+ALTER TABLE public.expenses ADD CONSTRAINT expenses_status_check CHECK (status IN ('pending', 'approved', 'rejected'));
 
 -- Step 3: Add indexes
 CREATE INDEX IF NOT EXISTS expenses_user_id_idx ON public.expenses(user_id);

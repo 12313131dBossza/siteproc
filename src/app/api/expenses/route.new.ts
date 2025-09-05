@@ -1,6 +1,4 @@
 import { sbServer } from '@/lib/supabase-server';
-import { createServiceClient } from '@/lib/supabase-service';
-import { sendExpenseNotifications } from '@/lib/notifications';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
@@ -34,22 +32,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get user profile to determine role and company
+    // Get user profile to determine company
     let companyId = null;
-    let userRole = 'viewer';
     
     try {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('company_id, role')
+        .select('company_id')
         .eq('id', user.id)
         .single();
       
       if (profile?.company_id) {
         companyId = profile.company_id;
-      }
-      if (profile?.role) {
-        userRole = profile.role;
       }
     } catch (error) {
       console.log('Expenses POST: Profile fetch failed');
@@ -63,41 +57,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check permissions - viewers cannot create expenses
-    if (userRole === 'viewer') {
-      return NextResponse.json(
-        { error: 'Insufficient permissions. Viewers cannot create expenses.' },
-        { status: 403 }
-      );
-    }
-
-    // Create the expense using service client to bypass RLS
+    // Create the expense using current schema
     console.log('Expenses POST: Creating expense for company:', companyId);
-    
-    const serviceClient = createServiceClient();
-    
-    // Determine initial status based on role
-    const initialStatus = (userRole === 'admin' || userRole === 'owner' || userRole === 'bookkeeper') 
-      ? 'approved'  // Admins can create pre-approved expenses
-      : 'pending';  // Members create pending expenses
     
     const expenseData = {
       company_id: companyId,
-      user_id: user.id,
       amount: parseFloat(amount),
-      spent_at: new Date().toISOString().split('T')[0],
+      spent_at: new Date().toISOString().split('T')[0], // Today's date
       memo: `${vendor} - ${category}: ${notes || 'No additional notes'}`,
       receipt_url: receipt_url || null,
-      status: initialStatus,
-      approved_by: initialStatus === 'approved' ? user.id : null,
-      approved_at: initialStatus === 'approved' ? new Date().toISOString() : null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      created_at: new Date().toISOString()
     };
     
     console.log('Expenses POST: Inserting expense data:', expenseData);
 
-    const { data: expense, error: insertError } = await serviceClient
+    const { data: expense, error: insertError } = await supabase
       .from('expenses')
       .insert([expenseData])
       .select('*')
@@ -113,39 +87,19 @@ export async function POST(request: NextRequest) {
 
     console.log('Expenses POST: Success');
     
-    // Send email notification for new expense
-    try {
-      await sendExpenseNotifications(expense.id, 'created');
-      console.log('Expense notification sent successfully');
-    } catch (emailError) {
-      console.error('Failed to send expense notification:', emailError);
-      // Don't fail the request if email fails
-    }
-    
-    // Return in expected format with proper status
+    // Return in expected format
     const transformedExpense = {
       id: expense.id,
       vendor: vendor,
       category: category,
       amount: expense.amount,
-      status: expense.status,
+      status: 'approved', // Current schema treats all as approved
       created_at: expense.created_at,
       notes: notes,
-      receipt_url: expense.receipt_url,
-      user_id: expense.user_id,
-      approved_by: expense.approved_by,
-      approved_at: expense.approved_at
+      receipt_url: expense.receipt_url
     };
     
-    const statusMessage = initialStatus === 'approved' 
-      ? 'Expense created and automatically approved!'
-      : 'Expense submitted for approval!';
-    
-    console.log('Expenses POST: Success with status:', initialStatus);
-    return NextResponse.json({
-      ...transformedExpense,
-      message: statusMessage
-    }, { status: 201 });
+    return NextResponse.json(transformedExpense, { status: 201 });
 
   } catch (error) {
     console.error('Expenses API error:', error);
@@ -170,7 +124,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user profile to check role and company
+    // Get user profile to check company
     console.log('Expenses GET: Checking user profile');
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
@@ -180,9 +134,8 @@ export async function GET(request: NextRequest) {
 
     console.log('Expenses GET: Profile check result:', { profile, profileError: profileError?.message });
 
-    const userRole = profile?.role || 'viewer';
+    const userRole = profile?.role || 'member';
     const companyId = profile?.company_id;
-    const isAdmin = userRole === 'admin' || userRole === 'owner' || userRole === 'bookkeeper';
     
     if (!companyId) {
       console.log('Expenses GET: No company_id found for user');
@@ -195,35 +148,15 @@ export async function GET(request: NextRequest) {
     // Parse query parameters
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search');
-    const status = searchParams.get('status');
-    const showAll = searchParams.get('showAll') === 'true';
 
-    console.log('Expenses GET: Query parameters:', { search, status, showAll, userRole });
+    console.log('Expenses GET: Query parameters:', { search });
 
-    // Query expenses using service client to bypass RLS
-    console.log('Expenses GET: Querying expenses with service client');
-    const serviceClient = createServiceClient();
-    
-    let query = serviceClient
+    // Query expenses from current schema
+    let query = supabase
       .from('expenses')
       .select('*')
       .eq('company_id', companyId)
       .order('created_at', { ascending: false });
-
-    // Apply role-based filtering
-    if (userRole === 'viewer') {
-      // Viewers can only see approved expenses
-      query = query.eq('status', 'approved');
-    } else if (userRole === 'member' && !isAdmin && !showAll) {
-      // Members can only see their own expenses (unless admin viewing all)
-      query = query.eq('user_id', user.id);
-    }
-    // Admins can see all expenses in their company (no additional filter)
-
-    // Apply status filter if provided
-    if (status && ['pending', 'approved', 'rejected'].includes(status)) {
-      query = query.eq('status', status);
-    }
 
     // Apply search filter on memo field
     if (search) {
@@ -242,7 +175,7 @@ export async function GET(request: NextRequest) {
 
     console.log('Expenses GET: Success, found:', expenses?.length || 0);
 
-    // Transform the data to expected format
+    // Transform the data from current schema to expected format
     const transformedExpenses = (expenses || []).map((expense: any) => {
       // Parse memo field to extract vendor and category
       const memo = expense.memo || '';
@@ -262,14 +195,10 @@ export async function GET(request: NextRequest) {
         vendor: vendor,
         category: category,
         amount: expense.amount,
-        status: expense.status || 'approved', // Default to approved for backward compatibility
+        status: 'approved', // Current schema doesn't have approval workflow
         created_at: expense.created_at,
         notes: notes,
-        receipt_url: expense.receipt_url,
-        user_id: expense.user_id,
-        approved_by: expense.approved_by,
-        approved_at: expense.approved_at,
-        approval_notes: expense.approval_notes
+        receipt_url: expense.receipt_url
       };
     });
 
@@ -277,8 +206,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       expenses: transformedExpenses,
-      userRole,
-      isAdmin
+      userRole
     });
 
   } catch (error) {
