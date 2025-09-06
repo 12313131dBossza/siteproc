@@ -1,7 +1,7 @@
 import { sendEmail } from './email';
 import { sbServer } from './supabase-server';
 
-// Email notification functions for expenses and orders
+// Email notification functions for expenses, orders, and deliveries
 
 export async function sendExpenseNotifications(
   expenseId: string,
@@ -352,6 +352,201 @@ function createOrderEmailHtml({
           text-decoration: none;
           font-weight: 500;
         ">View Orders</a>
+      </div>
+
+      <div style="color: #64748b; font-size: 12px; text-align: center; margin-top: 32px;">
+        This is an automated message from SiteProc. Please do not reply to this email.
+      </div>
+    </div>
+  `;
+}
+
+// Delivery notification functions
+export async function sendDeliveryNotifications(
+  deliveryId: string,
+  action: 'created' | 'order_completed'
+) {
+  try {
+    const supabase = await sbServer();
+    
+    // Get delivery details with order and user info
+    const { data: delivery, error } = await supabase
+      .from('deliveries')
+      .select(`
+        *,
+        orders(
+          id,
+          status,
+          total_amount,
+          supplier_name,
+          created_by,
+          profiles!created_by(role, full_name)
+        ),
+        products(name, sku, unit),
+        creator:created_by(email),
+        profiles!created_by(role, full_name)
+      `)
+      .eq('id', deliveryId)
+      .single();
+
+    if (error || !delivery) {
+      console.error('Failed to fetch delivery for notification:', error);
+      return;
+    }
+
+    const notifications = [];
+
+    if (action === 'created') {
+      // Notify all admins when delivery is recorded
+      const { data: adminProfiles } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('role', ['admin', 'owner', 'bookkeeper'])
+        .eq('company_id', delivery.company_id);
+
+      if (adminProfiles) {
+        for (const adminProfile of adminProfiles) {
+          const { data: adminUser } = await supabase.auth.admin.getUserById(adminProfile.id);
+          if (adminUser?.user?.email) {
+            notifications.push({
+              to: adminUser.user.email,
+              subject: `New Delivery Recorded - Order #${delivery.order_id.slice(-8)}`,
+              html: createDeliveryEmailHtml({
+                action: 'created',
+                delivery,
+                recipientName: adminProfile.full_name || 'Admin',
+                actionBy: delivery.profiles?.full_name || 'Unknown User'
+              })
+            });
+          }
+        }
+      }
+    } else if (action === 'order_completed') {
+      // Notify order creator when order is fully delivered
+      if (delivery.orders?.created_by) {
+        const { data: creatorUser } = await supabase.auth.admin.getUserById(delivery.orders.created_by);
+        if (creatorUser?.user?.email) {
+          notifications.push({
+            to: creatorUser.user.email,
+            subject: `Order Completed - Order #${delivery.order_id.slice(-8)}`,
+            html: createDeliveryEmailHtml({
+              action: 'order_completed',
+              delivery,
+              recipientName: delivery.orders.profiles?.full_name || 'User',
+              actionBy: delivery.profiles?.full_name || 'System'
+            })
+          });
+        }
+      }
+    }
+
+    // Send all notifications
+    if (notifications.length > 0) {
+      await sendEmail(notifications);
+      console.log(`Sent ${notifications.length} delivery notifications for ${action}`);
+    }
+
+  } catch (error) {
+    console.error('Error sending delivery notifications:', error);
+  }
+}
+
+// Helper function to create delivery email HTML
+function createDeliveryEmailHtml({
+  action,
+  delivery,
+  recipientName,
+  actionBy
+}: {
+  action: 'created' | 'order_completed';
+  delivery: any;
+  recipientName: string;
+  actionBy: string;
+}) {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://your-app.vercel.app';
+  const isCompleted = action === 'order_completed';
+  
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: #f8fafc; border-radius: 8px; padding: 24px; margin-bottom: 20px;">
+        <h1 style="color: #1e293b; margin: 0 0 16px 0;">
+          ${isCompleted ? 'Order Completed' : 'Delivery Recorded'}
+        </h1>
+        <p style="color: #64748b; margin: 0;">Hi ${recipientName},</p>
+      </div>
+
+      <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px; margin-bottom: 20px;">
+        <h2 style="color: #1e293b; margin: 0 0 16px 0;">
+          ${isCompleted ? 'Order Details' : 'Delivery Details'}
+        </h2>
+        
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td style="padding: 8px 0; color: #64748b; width: 140px;">Order ID:</td>
+            <td style="padding: 8px 0; color: #1e293b; font-weight: 500;">#${delivery.order_id.slice(-8)}</td>
+          </tr>
+          ${!isCompleted ? `
+          <tr>
+            <td style="padding: 8px 0; color: #64748b;">Product:</td>
+            <td style="padding: 8px 0; color: #1e293b; font-weight: 500;">${delivery.products?.name || 'Unknown Product'}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #64748b;">Quantity Delivered:</td>
+            <td style="padding: 8px 0; color: #1e293b; font-weight: 600; font-size: 18px;">${delivery.delivered_qty} ${delivery.products?.unit || 'units'}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #64748b;">Delivered At:</td>
+            <td style="padding: 8px 0; color: #1e293b;">${new Date(delivery.delivered_at).toLocaleDateString()}</td>
+          </tr>
+          ${delivery.note ? `
+          <tr>
+            <td style="padding: 8px 0; color: #64748b; vertical-align: top;">Notes:</td>
+            <td style="padding: 8px 0; color: #1e293b;">${delivery.note}</td>
+          </tr>
+          ` : ''}
+          ` : `
+          <tr>
+            <td style="padding: 8px 0; color: #64748b;">Total Amount:</td>
+            <td style="padding: 8px 0; color: #1e293b; font-weight: 600; font-size: 18px;">$${delivery.orders?.total_amount || '0.00'}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #64748b;">Supplier:</td>
+            <td style="padding: 8px 0; color: #1e293b; font-weight: 500;">${delivery.orders?.supplier_name || 'Unknown'}</td>
+          </tr>
+          `}
+          <tr>
+            <td style="padding: 8px 0; color: #64748b;">Status:</td>
+            <td style="padding: 8px 0;">
+              <span style="
+                display: inline-block;
+                padding: 4px 12px;
+                border-radius: 20px;
+                font-size: 12px;
+                font-weight: 500;
+                text-transform: uppercase;
+                ${isCompleted ? 'background: #dcfce7; color: #166534;' : 'background: #fef3c7; color: #d97706;'}
+              ">
+                ${isCompleted ? 'delivered' : 'partially_delivered'}
+              </span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #64748b;">${isCompleted ? 'Completed by:' : 'Recorded by:'}</td>
+            <td style="padding: 8px 0; color: #1e293b; font-weight: 500;">${actionBy}</td>
+          </tr>
+        </table>
+      </div>
+
+      <div style="text-align: center; margin: 24px 0;">
+        <a href="${baseUrl}/orders/${delivery.order_id}" style="
+          display: inline-block;
+          background: #3b82f6;
+          color: white;
+          padding: 12px 24px;
+          border-radius: 6px;
+          text-decoration: none;
+          font-weight: 500;
+        ">View Order Details</a>
       </div>
 
       <div style="color: #64748b; font-size: 12px; text-align: center; margin-top: 32px;">

@@ -2,23 +2,27 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Package, Clock, CheckCircle, XCircle, User, Calendar, FileText, ShoppingCart } from 'lucide-react';
+import { ArrowLeft, Package, Clock, CheckCircle, XCircle, User, Calendar, FileText, ShoppingCart, Truck, Plus } from 'lucide-react';
 import { PageHeader, Section } from '@/components/ui/Layout';
 import { ModernModal } from '@/components/ui/ModernModal';
 import { FormField } from '@/components/forms/FormField';
+import RecordDeliveryModal from '@/components/ui/RecordDeliveryModal';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase-client';
 import { toast } from 'sonner';
+import { formatDistanceToNow } from 'date-fns';
 
 interface Order {
   id: string;
   product_id: string;
   qty: number;
   notes: string | null;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'partially_delivered' | 'delivered';
   po_number: string | null;
   created_at: string;
   decided_at: string | null;
+  total_amount?: number;
+  supplier_name?: string;
   product?: {
     id: string;
     name: string;
@@ -38,11 +42,45 @@ interface Order {
     full_name: string;
     email: string;
   };
+  order_items?: OrderItem[];
+}
+
+interface OrderItem {
+  id: string;
+  order_id: string;
+  product_id: string;
+  ordered_qty: number;
+  delivered_qty: number;
+  product: {
+    id: string;
+    name: string;
+    sku: string;
+    unit: string;
+  };
+}
+
+interface Delivery {
+  id: string;
+  order_id: string;
+  product_id: string;
+  delivered_qty: number;
+  delivered_at: string;
+  note?: string;
+  proof_url?: string;
+  created_at: string;
+  products: {
+    name: string;
+    sku: string;
+    unit: string;
+  };
+  profiles: {
+    full_name: string;
+  };
 }
 
 interface UserProfile {
   id: string;
-  role: 'owner' | 'admin' | 'member';
+  role: 'viewer' | 'bookkeeper' | 'manager' | 'admin';
 }
 
 export default function OrderDetailPage() {
@@ -55,21 +93,66 @@ export default function OrderDetailPage() {
     action: '' as 'approve' | 'reject' | '',
     po_number: ''
   });
+  
+  // Delivery-related state
+  const [deliveries, setDeliveries] = useState<Delivery[]>([]);
+  const [loadingDeliveries, setLoadingDeliveries] = useState(false);
+  const [showDeliveryModal, setShowDeliveryModal] = useState(false);
+  const [selectedOrderItem, setSelectedOrderItem] = useState<OrderItem | null>(null);
 
   const params = useParams();
   const router = useRouter();
   const supabase = createClient();
   const orderId = params.id as string;
 
-  const isAdmin = userProfile?.role === 'owner' || userProfile?.role === 'admin';
+  const isAdmin = userProfile?.role === 'admin';
   const canMakeDecision = isAdmin && order?.status === 'pending';
+  const canRecordDeliveries = (userProfile?.role === 'admin' || userProfile?.role === 'bookkeeper' || userProfile?.role === 'manager') && 
+    (order?.status === 'approved' || order?.status === 'partially_delivered');
 
   useEffect(() => {
     if (orderId) {
       fetchOrder();
       fetchUserProfile();
+      fetchDeliveries();
     }
   }, [orderId]);
+
+  const fetchDeliveries = async () => {
+    if (!orderId) return;
+    
+    setLoadingDeliveries(true);
+    try {
+      const response = await fetch(`/api/order-deliveries?order_id=${orderId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setDeliveries(data.deliveries || []);
+      }
+    } catch (error) {
+      console.error('Error fetching deliveries:', error);
+    } finally {
+      setLoadingDeliveries(false);
+    }
+  };
+
+  const handleRecordDelivery = (orderItem: OrderItem) => {
+    setSelectedOrderItem({
+      order_id: orderItem.order_id,
+      product_id: orderItem.product_id,
+      product_name: orderItem.product.name,
+      sku: orderItem.product.sku,
+      unit: orderItem.product.unit,
+      ordered_qty: orderItem.ordered_qty,
+      delivered_qty: orderItem.delivered_qty || 0,
+    } as any);
+    setShowDeliveryModal(true);
+  };
+
+  const handleDeliverySuccess = () => {
+    toast.success('Delivery recorded successfully!');
+    fetchOrder(); // Refresh order to get updated delivery status
+    fetchDeliveries(); // Refresh delivery list
+  };
 
   const fetchUserProfile = async () => {
     try {
@@ -83,7 +166,7 @@ export default function OrderDetailPage() {
             .eq('id', user.id)
             .single();
           
-          setUserProfile(profile || { id: user.id, role: 'member' });
+          setUserProfile(profile || { id: user.id, role: 'viewer' });
         } catch (error) {
           // If profiles table doesn't exist or user has no profile, default to member
           console.log('Profile fetch failed, defaulting to member role:', error);
@@ -92,8 +175,8 @@ export default function OrderDetailPage() {
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
-      // Default to member role, not admin
-      setUserProfile({ id: 'unknown', role: 'member' });
+      // Default to viewer role, not admin
+      setUserProfile({ id: 'unknown', role: 'viewer' });
     }
   };
 
@@ -190,6 +273,8 @@ export default function OrderDetailPage() {
       case 'pending': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'approved': return 'bg-green-100 text-green-800 border-green-200';
       case 'rejected': return 'bg-red-100 text-red-800 border-red-200';
+      case 'partially_delivered': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'delivered': return 'bg-emerald-100 text-emerald-800 border-emerald-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
@@ -305,6 +390,147 @@ export default function OrderDetailPage() {
               </div>
             )}
           </Section>
+
+          {/* Delivery Panel - Show for approved orders */}
+          {(order.status === 'approved' || order.status === 'partially_delivered' || order.status === 'delivered') && (
+            <Section>
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <Truck className="h-5 w-5 text-blue-600" />
+                  <h2 className="text-lg font-medium text-zinc-900">Deliveries</h2>
+                </div>
+                {canRecordDeliveries && order.order_items && order.order_items.some(item => (item.delivered_qty || 0) < item.ordered_qty) && (
+                  <button
+                    onClick={() => {
+                      // For single product orders, use the first item
+                      const firstItem = order.order_items?.[0];
+                      if (firstItem) {
+                        handleRecordDelivery(firstItem);
+                      }
+                    }}
+                    className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Record Delivery
+                  </button>
+                )}
+              </div>
+
+              {/* Order Items with Delivery Status */}
+              {order.order_items && order.order_items.length > 0 ? (
+                <div className="space-y-4">
+                  {order.order_items.map((item) => {
+                    const remainingQty = item.ordered_qty - (item.delivered_qty || 0);
+                    const deliveryProgress = item.ordered_qty > 0 ? ((item.delivered_qty || 0) / item.ordered_qty) * 100 : 0;
+                    
+                    return (
+                      <div key={item.id} className="rounded-xl border border-zinc-200 bg-white p-4">
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <h3 className="font-medium text-zinc-900">{item.product.name}</h3>
+                            <p className="text-sm text-zinc-500">SKU: {item.product.sku}</p>
+                          </div>
+                          {canRecordDeliveries && remainingQty > 0 && (
+                            <button
+                              onClick={() => handleRecordDelivery(item)}
+                              className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-2 py-1 text-sm font-medium text-blue-700 hover:bg-blue-100"
+                            >
+                              <Plus className="h-3 w-3" />
+                              Record
+                            </button>
+                          )}
+                        </div>
+                        
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3 text-sm">
+                          <div>
+                            <span className="text-zinc-500">Ordered:</span>
+                            <span className="ml-1 font-medium">{item.ordered_qty} {item.product.unit}</span>
+                          </div>
+                          <div>
+                            <span className="text-zinc-500">Delivered:</span>
+                            <span className="ml-1 font-medium text-green-600">{item.delivered_qty || 0} {item.product.unit}</span>
+                          </div>
+                          <div>
+                            <span className="text-zinc-500">Remaining:</span>
+                            <span className="ml-1 font-medium text-blue-600">{remainingQty} {item.product.unit}</span>
+                          </div>
+                          <div>
+                            <span className="text-zinc-500">Progress:</span>
+                            <span className="ml-1 font-medium">{deliveryProgress.toFixed(1)}%</span>
+                          </div>
+                        </div>
+                        
+                        {/* Progress Bar */}
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className={`h-2 rounded-full transition-all duration-300 ${
+                              deliveryProgress >= 100 ? 'bg-green-500' : 'bg-blue-500'
+                            }`}
+                            style={{ width: `${Math.min(deliveryProgress, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-zinc-500">
+                  <Truck className="h-8 w-8 mx-auto mb-2 text-zinc-400" />
+                  <p>No delivery information available</p>
+                </div>
+              )}
+
+              {/* Recent Deliveries */}
+              {deliveries.length > 0 && (
+                <div className="mt-6">
+                  <h3 className="font-medium text-zinc-900 mb-4">Recent Deliveries</h3>
+                  <div className="space-y-3">
+                    {deliveries.slice(0, 3).map((delivery) => (
+                      <div key={delivery.id} className="flex items-start gap-3 p-3 bg-zinc-50 rounded-lg">
+                        <div className="p-2 rounded-full bg-green-100">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-medium text-zinc-900">{delivery.products.name}</span>
+                            <span className="text-sm text-zinc-500">
+                              {formatDistanceToNow(new Date(delivery.delivered_at), { addSuffix: true })}
+                            </span>
+                          </div>
+                          <div className="text-sm text-zinc-600">
+                            <span className="font-medium">{delivery.delivered_qty} {delivery.products.unit}</span>
+                            {' '}delivered by {delivery.profiles.full_name}
+                          </div>
+                          {delivery.note && (
+                            <p className="text-sm text-zinc-500 mt-1">{delivery.note}</p>
+                          )}
+                          {delivery.proof_url && (
+                            <a
+                              href={delivery.proof_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm text-blue-600 hover:text-blue-500 font-medium"
+                            >
+                              View Proof →
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {deliveries.length > 3 && (
+                      <Link
+                        href={`/order-deliveries?order_id=${order.id}`}
+                        className="block text-center py-2 text-sm text-blue-600 hover:text-blue-500 font-medium"
+                      >
+                        View All {deliveries.length} Deliveries →
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              )}
+            </Section>
+          )}
 
           {/* Notes */}
           {order.notes && (
@@ -456,6 +682,19 @@ export default function OrderDetailPage() {
           </div>
         </div>
       </ModernModal>
+
+      {/* Record Delivery Modal */}
+      {selectedOrderItem && (
+        <RecordDeliveryModal
+          isOpen={showDeliveryModal}
+          onClose={() => {
+            setShowDeliveryModal(false);
+            setSelectedOrderItem(null);
+          }}
+          onSuccess={handleDeliverySuccess}
+          orderItem={selectedOrderItem}
+        />
+      )}
     </div>
   );
 }
