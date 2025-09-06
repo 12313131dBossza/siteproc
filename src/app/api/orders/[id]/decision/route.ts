@@ -1,4 +1,5 @@
 import { sbServer } from '@/lib/supabase-server';
+import { sendOrderNotifications } from '@/lib/notifications';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(
@@ -102,6 +103,15 @@ export async function POST(
         { error: 'Failed to update order' },
         { status: 500 }
       );
+    }
+
+    // Send email notification for order status change
+    try {
+      await sendOrderNotifications(orderId, action === 'approve' ? 'approved' : 'rejected', 'Admin');
+      console.log('Order decision notification sent successfully');
+    } catch (emailError) {
+      console.error('Failed to send order decision notification:', emailError);
+      // Don't fail the request if email fails
     }
 
     return NextResponse.json(updatedOrder);

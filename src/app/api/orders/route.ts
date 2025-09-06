@@ -1,4 +1,5 @@
 import { sbServer } from '@/lib/supabase-server';
+import { sendOrderNotifications } from '@/lib/notifications';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
@@ -115,6 +116,16 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('Orders POST: Success');
+    
+    // Send email notification for new order
+    try {
+      await sendOrderNotifications(order.id, 'created');
+      console.log('Order notification sent successfully');
+    } catch (emailError) {
+      console.error('Failed to send order notification:', emailError);
+      // Don't fail the request if email fails
+    }
+    
     return NextResponse.json(order, { status: 201 });
 
   } catch (error) {
