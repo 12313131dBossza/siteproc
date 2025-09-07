@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
 
     // Get user by email - we'll use listUsers and filter
     const { data: userList } = await supabase.auth.admin.listUsers();
-    const userData = userList.users.find(user => user.email === email);
+    const userData = userList.users.find((user: any) => user.email === email);
     
     if (!userData) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });

@@ -38,13 +38,13 @@ export async function POST(req: NextRequest, context: any) {
       return r
     }
   // Optionally enforce one-time token (invalidate after first successful submit)
-  if (config.coOneTime && rfq.public_token_used_at) return NextResponse.json({ error: 'Already used' }, { status: 410 })
+  if (config.coOneTime && (rfq as any).public_token_used_at) return NextResponse.json({ error: 'Already used' }, { status: 410 })
 
-  const { data: ins, error } = await sb
+  const { data: ins, error } = await (sb as any)
       .from('quotes')
       .insert({
-        company_id: rfq.company_id,
-        rfq_id: rfq.id,
+        company_id: (rfq as any).company_id,
+        rfq_id: (rfq as any).id,
         supplier_id: parsed.supplier_id ?? null,
         total: parsed.total,
         lead_time: parsed.lead_time,
@@ -56,10 +56,10 @@ export async function POST(req: NextRequest, context: any) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     if (config.coOneTime) {
-      await sb.from('rfqs').update({ public_token_used_at: new Date().toISOString() } as any).eq('id', rfq.id as any)
+      await (sb as any).from('rfqs').update({ public_token_used_at: new Date().toISOString() } as any).eq('id', (rfq as any).id as any)
     }
 
-  try { await audit(rfq.company_id as string, null, 'quote', ins?.id as string, 'public_submit', { rfq_id: rfq.id }, { ip: req.headers.get('x-forwarded-for'), userAgent: req.headers.get('user-agent') }) } catch {}
+  try { await audit((rfq as any).company_id as string, null, 'quote', ins?.id as string, 'public_submit', { rfq_id: (rfq as any).id }, { ip: req.headers.get('x-forwarded-for'), userAgent: req.headers.get('user-agent') }) } catch {}
   const res = NextResponse.json({ id: ins?.id })
   res.headers.set('X-Public-IP', req.headers.get('x-forwarded-for') || 'local')
   res.headers.set('X-User-Agent', req.headers.get('user-agent') || '')

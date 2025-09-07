@@ -25,28 +25,39 @@ function LoginForm() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!mounted || !supabase) {
       setMessage('Loading...');
       return;
     }
-    
+
     setLoading(true);
     setMessage('');
 
     try {
       // Get app URL safely for client-side only
       const appUrl = window.location.origin;
-      
+
       // Preserve redirectTo parameter
       const redirectTo = searchParams.get('redirectTo');
       let callbackUrl = `${appUrl}/auth/callback`;
       if (redirectTo) {
         callbackUrl += `?redirectTo=${encodeURIComponent(redirectTo)}`;
       }
+
+      console.log('Starting authentication process...');
+      console.log('Email:', email);
+      console.log('App URL:', appUrl);
+      console.log('Callback URL:', callbackUrl);
+      console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+      
+      // Create a timeout promise
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Authentication request timed out after 15 seconds')), 15000);
+      });
       
       // Use PKCE flow with explicit configuration
-      const { error } = await supabase.auth.signInWithOtp({
+      const authPromise = supabase.auth.signInWithOtp({
         email,
         options: {
           emailRedirectTo: callbackUrl,
@@ -54,11 +65,39 @@ function LoginForm() {
         },
       });
 
-      if (error) throw error;
+      console.log('Auth response received...');
+      
+      // Race between auth call and timeout
+      const { error } = await Promise.race([authPromise, timeoutPromise]) as any;
 
+      console.log('Auth response received, error:', error);
+
+      if (error) {
+        console.error('Supabase auth error:', error);
+        console.error('Error message:', error.message);
+        console.error('Error status:', error.status);
+        console.error('Full error object:', JSON.stringify(error, null, 2));
+        throw error;
+      }
+
+      console.log('Magic link sent successfully');
       setMessage('Check your email for the login link!');
     } catch (error: any) {
-      setMessage('Error: ' + error.message);
+      console.error('Full catch error:', error);
+      console.error('Error type:', typeof error);
+      console.error('Error constructor:', error?.constructor?.name);
+      
+      let errorMessage = 'Unknown error occurred';
+      
+      if (error && error.message) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      } else if (error) {
+        errorMessage = JSON.stringify(error);
+      }
+      
+      setMessage('Error: ' + errorMessage);
     } finally {
       setLoading(false);
     }

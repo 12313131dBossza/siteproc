@@ -24,9 +24,9 @@ export async function computeJobKpis(jobId: string): Promise<JobKpis> {
   ])
   const rfqs = rfqsRes.data || []
   const rfqCreatedAt: Record<string,string> = {}
-  rfqs.forEach(r=>{ if (r.id) rfqCreatedAt[r.id as string] = r.created_at as string })
+  rfqs.forEach((r: any)=>{ if (r.id) rfqCreatedAt[r.id as string] = r.created_at as string })
   const cycles: number[] = []
-  ;(selectedQuotesRes.data||[]).forEach(q => {
+  ;(selectedQuotesRes.data||[]).forEach((q: any) => {
     const rfqId = q.rfq_id as string | undefined
     if (!rfqId) return
     const start = rfqCreatedAt[rfqId]
@@ -44,25 +44,25 @@ export async function computeJobKpis(jobId: string): Promise<JobKpis> {
   // Need mapping: delivery -> po -> rfq -> needed_date
   const posRes = await sb.from('pos').select('id,rfq_id,job_id').eq('job_id', jobId)
   const pos = posRes.data || []
-  const rfqIds = Array.from(new Set(pos.map(p=>p.rfq_id).filter(Boolean))) as string[]
+  const rfqIds = Array.from(new Set(pos.map((p: any)=>p.rfq_id).filter(Boolean))) as string[]
   let rfqNeeded: Record<string,string> = {}
   if (rfqIds.length) {
     const needRes = await sb.from('rfqs').select('id,needed_date').in('id', rfqIds)
-    ;(needRes.data||[]).forEach(r=> { if (r.id && r.needed_date) rfqNeeded[r.id as string] = r.needed_date as string })
+    ;(needRes.data||[]).forEach((r: any)=> { if (r.id && r.needed_date) rfqNeeded[r.id as string] = r.needed_date as string })
   }
   const deliveriesRes = await sb.from('deliveries').select('id,po_id,delivered_at,status').eq('job_id', jobId).eq('status','delivered')
   const deliveries = deliveriesRes.data || []
   const posRfqMap: Record<string,string> = {}
-  pos.forEach(p=> { if (p.id && p.rfq_id) posRfqMap[p.id as string] = p.rfq_id as string })
+  pos.forEach((p: any)=> { if (p.id && p.rfq_id) posRfqMap[p.id as string] = p.rfq_id as string })
   let onTime = 0
   let considered = 0
-  deliveries.forEach(d => {
+  deliveries.forEach((d: any) => {
     const poId = d.po_id as string | undefined
     if (!poId) return
     const rfqId = posRfqMap[poId]
     if (!rfqId) return
     const needed = rfqNeeded[rfqId]
-    const deliveredAt = d.delivered_at as string | undefined
+    const deliveredAt = (d as any).delivered_at as string | undefined
     if (!needed || !deliveredAt) return
     considered++
     if (new Date(deliveredAt).toISOString().slice(0,10) <= needed) onTime++

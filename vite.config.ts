@@ -13,6 +13,7 @@ export default defineConfig({
     include: ['tests/**/*.test.ts'],
     environment: 'node',
     coverage: {
+      provider: 'v8',
       reporter: ['text', 'lcov'],
       // Exclude Next.js pages and API routes from unit coverage; covered by E2E instead
       exclude: [

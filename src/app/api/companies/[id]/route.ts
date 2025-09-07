@@ -17,7 +17,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
   const body = await req.json().catch(()=> ({}))
   const { name, currency, units } = body || {}
   const sb = supabaseService()
-  const { error } = await sb.from('companies').update({ name, currency, units }).eq('id', context?.params?.id)
+  const { error } = await (sb as any).from('companies').update({ name, currency, units }).eq('id', context?.params?.id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   try { await audit(context?.params?.id, null, 'company', context?.params?.id, 'update', { name, currency, units }) } catch {}
   return NextResponse.json({ ok: true })

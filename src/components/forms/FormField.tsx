@@ -10,6 +10,11 @@ interface FormFieldProps {
   required?: boolean;
   error?: string;
   options?: { value: string; label: string }[];
+  min?: string | number;
+  max?: string | number;
+  step?: string | number;
+  rows?: number;
+  helpText?: string;
 }
 
 export function FormField({
@@ -21,7 +26,12 @@ export function FormField({
   onChange,
   required = false,
   error,
-  options
+  options,
+  min,
+  max,
+  step,
+  rows,
+  helpText
 }: FormFieldProps) {
   const baseClasses = "w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent";
   const errorClasses = error ? "border-red-300 focus:ring-red-500" : "";
@@ -39,7 +49,7 @@ export function FormField({
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           required={required}
-          rows={3}
+          rows={rows || 3}
           className={`${baseClasses} ${errorClasses}`}
         />
       ) : type === 'select' ? (
@@ -65,10 +75,16 @@ export function FormField({
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           required={required}
+          min={min}
+          max={max}
+          step={step}
           className={`${baseClasses} ${errorClasses}`}
         />
       )}
       
+      {helpText && (
+        <p className="text-xs text-zinc-500">{helpText}</p>
+      )}
       {error && (
         <p className="text-xs text-red-600">{error}</p>
       )}

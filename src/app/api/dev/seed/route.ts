@@ -6,14 +6,14 @@ export const runtime = 'nodejs'
 export async function POST() {
   try {
     const sb = supabaseService()
-    const { data: company, error: cErr } = await sb
+    const { data: company, error: cErr } = await (sb as any)
       .from('companies')
       .insert({ name: `Local Demo ${new Date().toISOString().slice(0,10)}` })
       .select('id')
       .single()
     if (cErr || !company) return NextResponse.json({ error: cErr?.message || 'Company create failed' }, { status: 500 })
 
-    const { data: job, error: jErr } = await sb
+    const { data: job, error: jErr } = await (sb as any)
       .from('jobs')
       .insert({ company_id: company.id, name: 'Demo Job', code: 'DEMO-001' })
       .select('id')

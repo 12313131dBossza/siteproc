@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 
     // First, let's find the user in auth.users
     const { data: userList } = await supabase.auth.admin.listUsers();
-    const authUser = userList.users.find(user => user.email === email);
+    const authUser = userList.users.find((user: any) => user.email === email);
     
     if (!authUser) {
       return NextResponse.json({ error: 'User not found in auth system' }, { status: 404 });

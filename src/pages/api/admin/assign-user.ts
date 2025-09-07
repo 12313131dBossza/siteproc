@@ -24,7 +24,7 @@ export default async function handler(
     const { data: user, error: userError } = await supabase.auth.admin.listUsers();
     if (userError) throw userError;
 
-    const targetUser = user.users.find(u => u.email === email);
+    const targetUser = (user as any).users.find((u: any) => u.email === email);
     if (!targetUser) {
       return res.status(404).json({ error: 'User not found' });
     }

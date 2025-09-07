@@ -170,7 +170,7 @@ export default function OrderDetailPage() {
         } catch (error) {
           // If profiles table doesn't exist or user has no profile, default to member
           console.log('Profile fetch failed, defaulting to member role:', error);
-          setUserProfile({ id: user.id, role: 'member' });
+          setUserProfile({ id: user.id, role: 'viewer' });
         }
       }
     } catch (error) {
@@ -692,7 +692,15 @@ export default function OrderDetailPage() {
             setSelectedOrderItem(null);
           }}
           onSuccess={handleDeliverySuccess}
-          orderItem={selectedOrderItem}
+          orderItem={{
+            order_id: selectedOrderItem.order_id,
+            product_id: selectedOrderItem.product_id,
+            product_name: selectedOrderItem.product.name,
+            sku: selectedOrderItem.product.sku,
+            unit: selectedOrderItem.product.unit,
+            ordered_qty: selectedOrderItem.ordered_qty,
+            delivered_qty: selectedOrderItem.delivered_qty
+          }}
         />
       )}
     </div>

@@ -11,9 +11,9 @@ const NONCE_TTL_MS = 60 * 60 * 1000
 function recordNonce(nonce: string, now: number): boolean {
   try {
     const sb = supabaseService()
-  // Fire and forget insert (best-effort). Using then chain to avoid making caller async.
-  sb.from('nonce_replay').insert({ nonce, seen_at: new Date(now).toISOString() }) as any
-  return true // cannot easily detect unique violation synchronously
+    // Fire and forget insert (best-effort). Using then chain to avoid making caller async.
+    ;(sb as any).from('nonce_replay').insert({ nonce, seen_at: new Date(now).toISOString() }).then(() => {}).catch(() => {})
+    return true // cannot easily detect unique violation synchronously
   } catch {
     // fallback to memory
     for (const [k, ts] of seenNonces) {
@@ -61,7 +61,7 @@ export function verifyPublicSignature(payload: any, signature: string | undefine
     if (opt?.requireNonce) {
       const nonce = payload.nonce
       if (!nonce || typeof nonce !== 'string') return false
-  const ok = recordNonce(nonce, now)
+      const ok = recordNonce(nonce, now)
       if (!ok) return false
     }
     return true

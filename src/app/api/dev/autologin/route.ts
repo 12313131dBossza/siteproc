@@ -15,7 +15,7 @@ export async function GET() {
     
     // Try to get existing user first
     const { data: userList } = await supabase.auth.admin.listUsers();
-    let existingUser = userList.users.find(user => user.email === testEmail);
+    let existingUser = userList.users.find((user: any) => user.email === testEmail);
     
     if (!existingUser) {
       // Create test user if doesn't exist

@@ -7,17 +7,17 @@ const styles = StyleSheet.create({ page: { padding: 24, fontSize: 12 }, h1: { fo
 export async function renderJobReport(jobId: string, kpis?: JobKpis): Promise<Buffer> {
   const sb = supabaseService()
   const [{ data: job }, { data: pos }, { data: deliveries }, { data: cos }] = await Promise.all([
-    sb.from('jobs').select('*').eq('id', jobId).single(),
-    sb.from('pos').select('id,po_number,total,status').eq('job_id', jobId),
-    sb.from('deliveries').select('id,status,delivered_at').eq('job_id', jobId),
-    sb.from('change_orders').select('id,status,cost_delta').eq('job_id', jobId),
+    (sb as any).from('jobs').select('*').eq('id', jobId).single(),
+    (sb as any).from('pos').select('id,po_number,total,status').eq('job_id', jobId),
+    (sb as any).from('deliveries').select('id,status,delivered_at').eq('job_id', jobId),
+    (sb as any).from('change_orders').select('id,status,cost_delta').eq('job_id', jobId),
   ])
 
   const doc = (
     <Document>
       <Page size="LETTER" style={styles.page}>
         <Text style={styles.h1}>Job Report</Text>
-  <Text>Job: {(job?.name as string) || jobId}</Text>
+  <Text>Job: {job?.name || jobId || 'Unknown Job'}</Text>
         <View style={styles.section}><Text>POs: {pos?.length || 0}</Text></View>
         <View style={styles.section}>
           <Text>Deliveries: {deliveries?.length || 0}</Text>
