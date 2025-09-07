@@ -90,7 +90,74 @@ function roundToTwo(num: number): number {
   return Math.round(num * 100) / 100
 }
 
-// GET endpoint - Fetch deliveries from database with role-based access
+// Mock data generator
+function generateMockDeliveries(page: number = 1, limit: number = 10, companyId?: string): Delivery[] {
+  const statuses: Delivery['status'][] = ['pending', 'in_transit', 'delivered', 'cancelled']
+  const products = [
+    { name: 'Portland Cement 50kg', unit: 'bags', basePrice: 12.50 },
+    { name: 'Steel Rebar 12mm', unit: 'pieces', basePrice: 8.75 },
+    { name: 'Concrete Blocks 200x100x400mm', unit: 'pieces', basePrice: 3.25 },
+    { name: 'Sand (Fine)', unit: 'cubic meters', basePrice: 25.00 },
+    { name: 'Gravel 20mm', unit: 'cubic meters', basePrice: 30.00 },
+    { name: 'Lumber 2x4x12ft', unit: 'pieces', basePrice: 15.50 },
+    { name: 'Plywood 18mm 4x8ft', unit: 'sheets', basePrice: 45.00 },
+    { name: 'Roofing Tiles Clay', unit: 'pieces', basePrice: 2.75 }
+  ]
+  
+  const drivers = ['John Smith', 'Maria Garcia', 'Ahmed Hassan', 'Li Wei', 'Sarah Johnson']
+  const vehicles = ['TRK-001', 'TRK-002', 'VAN-003', 'TRK-004', 'VAN-005']
+
+  const deliveries: Delivery[] = []
+  const startIndex = (page - 1) * limit
+
+  for (let i = startIndex; i < startIndex + limit; i++) {
+    const itemCount = Math.floor(Math.random() * 3) + 1
+    const items: DeliveryItem[] = []
+    let totalAmount = 0
+
+    for (let j = 0; j < itemCount; j++) {
+      const product = products[Math.floor(Math.random() * products.length)]
+      const quantity = Math.floor(Math.random() * 20) + 1
+      const priceVariation = (Math.random() * 4) - 2 // +/- $2 variation
+      const unitPrice = roundToTwo(product.basePrice + priceVariation)
+      const totalPrice = roundToTwo(quantity * unitPrice)
+
+      items.push({
+        id: `item_${i + 1}_${j + 1}`,
+        product_name: product.name,
+        quantity,
+        unit: product.unit,
+        unit_price: unitPrice,
+        total_price: totalPrice
+      })
+
+      totalAmount += totalPrice
+    }
+
+    const deliveryDate = new Date()
+    deliveryDate.setDate(deliveryDate.getDate() - Math.floor(Math.random() * 30))
+
+    deliveries.push({
+      id: `delivery_${i + 1}`,
+      order_id: `ORD-${String(Math.floor(Math.random() * 1000) + 1).padStart(3, '0')}`,
+      delivery_date: deliveryDate.toISOString(),
+      status: statuses[Math.floor(Math.random() * statuses.length)],
+      driver_name: drivers[Math.floor(Math.random() * drivers.length)],
+      vehicle_number: vehicles[Math.floor(Math.random() * vehicles.length)],
+      notes: Math.random() > 0.5 ? 'Delivery completed successfully' : undefined,
+      total_amount: roundToTwo(totalAmount),
+      items,
+      created_at: deliveryDate.toISOString(),
+      updated_at: deliveryDate.toISOString(),
+      company_id: companyId,
+      created_by: `user_${Math.floor(Math.random() * 5) + 1}`
+    })
+  }
+
+  return deliveries
+}
+
+// GET endpoint - Fetch deliveries with role-based access
 export async function GET(req: NextRequest) {
   try {
     // Authentication check
@@ -115,7 +182,7 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get('status') || ''
     const search = searchParams.get('search') || ''
     
-    console.log('Fetching deliveries from database:', { 
+    console.log('Fetching deliveries:', { 
       user: user.email,
       role: user.role, 
       company_id: user.company_id,
@@ -125,105 +192,52 @@ export async function GET(req: NextRequest) {
       search 
     })
 
-    // Create Supabase client for database operations
-    const cookieStore = cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
-          },
-        },
-      }
-    )
-
-    // Build query for deliveries with items
-    let query = supabase
-      .from('deliveries')
-      .select(`
-        id,
-        order_id,
-        delivery_date,
-        status,
-        driver_name,
-        vehicle_number,
-        notes,
-        total_amount,
-        created_at,
-        updated_at,
-        created_by,
-        delivery_items (
-          id,
-          product_name,
-          quantity,
-          unit,
-          unit_price,
-          total_price
-        )
-      `)
-      .eq('company_id', user.company_id)
-      .order('created_at', { ascending: false })
-
+    // Generate mock data with company context
+    const allMockDeliveries = generateMockDeliveries(1, 50, user.company_id)
+    
+    let filteredDeliveries = allMockDeliveries
+    
     // Apply status filter
     if (status && status !== 'all') {
-      query = query.eq('status', status)
+      filteredDeliveries = filteredDeliveries.filter(d => d.status === status)
     }
-
-    // Apply search filter (search across multiple fields)
+    
+    // Apply search filter
     if (search) {
-      query = query.or(`driver_name.ilike.%${search}%,vehicle_number.ilike.%${search}%,notes.ilike.%${search}%,order_id.ilike.%${search}%`)
+      const searchLower = search.toLowerCase()
+      filteredDeliveries = filteredDeliveries.filter(d => 
+        d.driver_name?.toLowerCase().includes(searchLower) ||
+        d.vehicle_number?.toLowerCase().includes(searchLower) ||
+        d.notes?.toLowerCase().includes(searchLower) ||
+        d.order_id.toLowerCase().includes(searchLower) ||
+        d.items.some(item => item.product_name.toLowerCase().includes(searchLower))
+      )
     }
 
-    // Get total count for pagination
-    const { count: totalCount } = await supabase
-      .from('deliveries')
-      .select('*', { count: 'exact', head: true })
-      .eq('company_id', user.company_id)
-
-    // Apply pagination
+    // Pagination
+    const totalCount = filteredDeliveries.length
     const startIndex = (page - 1) * limit
-    query = query.range(startIndex, startIndex + limit - 1)
-
-    const { data: deliveries, error } = await query
-
-    if (error) {
-      console.error('Database error:', error)
-      return NextResponse.json({
-        success: false,
-        error: 'Failed to fetch deliveries from database',
-        deliveries: [],
-        pagination: { current_page: 1, per_page: 10, total: 0, total_pages: 0, has_next: false, has_prev: false },
-        summary: { total_deliveries: 0, pending: 0, in_transit: 0, delivered: 0, cancelled: 0, total_value: 0 }
-      }, { status: 500 })
-    }
-
-    // Transform data to match interface
-    const formattedDeliveries = deliveries?.map(delivery => ({
-      ...delivery,
-      items: delivery.delivery_items || []
-    })) || []
-
-    // Calculate summary statistics
+    const paginatedDeliveries = filteredDeliveries.slice(startIndex, startIndex + limit)
+    
+    // Summary statistics
     const summaryStats = {
-      total_deliveries: totalCount || 0,
-      pending: formattedDeliveries.filter(d => d.status === 'pending').length,
-      in_transit: formattedDeliveries.filter(d => d.status === 'in_transit').length,
-      delivered: formattedDeliveries.filter(d => d.status === 'delivered').length,
-      cancelled: formattedDeliveries.filter(d => d.status === 'cancelled').length,
-      total_value: roundToTwo(formattedDeliveries.reduce((sum, d) => sum + Number(d.total_amount), 0))
+      total_deliveries: totalCount,
+      pending: filteredDeliveries.filter(d => d.status === 'pending').length,
+      in_transit: filteredDeliveries.filter(d => d.status === 'in_transit').length,
+      delivered: filteredDeliveries.filter(d => d.status === 'delivered').length,
+      cancelled: filteredDeliveries.filter(d => d.status === 'cancelled').length,
+      total_value: roundToTwo(filteredDeliveries.reduce((sum, d) => sum + d.total_amount, 0))
     }
 
     return NextResponse.json({
       success: true,
-      deliveries: formattedDeliveries,
+      deliveries: paginatedDeliveries,
       pagination: {
         current_page: page,
         per_page: limit,
-        total: totalCount || 0,
-        total_pages: Math.ceil((totalCount || 0) / limit),
-        has_next: page < Math.ceil((totalCount || 0) / limit),
+        total: totalCount,
+        total_pages: Math.ceil(totalCount / limit),
+        has_next: page < Math.ceil(totalCount / limit),
         has_prev: page > 1
       },
       summary: summaryStats,
@@ -246,7 +260,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST endpoint - Create new delivery in database with role-based access
+// POST endpoint - Create new delivery with role-based access
 export async function POST(req: NextRequest) {
   try {
     // Authentication check
@@ -266,7 +280,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    console.log('Creating delivery in database:', { 
+    console.log('Creating delivery:', { 
       user_id: user.id, 
       role: user.role, 
       company_id: user.company_id,
@@ -311,83 +325,32 @@ export async function POST(req: NextRequest) {
       }, 0)
     )
 
-    // Create Supabase client for database operations
-    const cookieStore = cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
-          },
-        },
-      }
-    )
-
-    // Prepare delivery data
-    const deliveryData = {
+    const newDelivery: Delivery = {
+      id: crypto.randomUUID(),
       order_id: body.order_id || `ORD-${Date.now()}`,
       delivery_date: body.delivery_date || new Date().toISOString(),
       status: body.status || 'pending',
-      driver_name: body.driver_name || null,
-      vehicle_number: body.vehicle_number || null,
-      notes: body.notes || null,
+      driver_name: body.driver_name || '',
+      vehicle_number: body.vehicle_number || '',
+      notes: body.notes || '',
       total_amount: totalAmount,
-      company_id: user.company_id,
-      created_by: user.id
-    }
-
-    // Insert delivery into database
-    const { data: newDelivery, error: deliveryError } = await supabase
-      .from('deliveries')
-      .insert([deliveryData])
-      .select()
-      .single()
-
-    if (deliveryError) {
-      console.error('Database error creating delivery:', deliveryError)
-      return NextResponse.json({
-        success: false,
-        error: 'Failed to create delivery in database'
-      }, { status: 500 })
-    }
-
-    // Prepare delivery items data
-    const itemsData = body.items.map((item: any) => ({
-      delivery_id: newDelivery.id,
-      product_name: item.product_name.trim(),
-      quantity: item.quantity,
-      unit: item.unit || 'pieces',
-      unit_price: roundToTwo(item.unit_price),
-      total_price: roundToTwo(item.quantity * item.unit_price)
-    }))
-
-    // Insert delivery items into database
-    const { data: newItems, error: itemsError } = await supabase
-      .from('delivery_items')
-      .insert(itemsData)
-      .select()
-
-    if (itemsError) {
-      console.error('Database error creating delivery items:', itemsError)
-      // Rollback delivery if items failed
-      await supabase.from('deliveries').delete().eq('id', newDelivery.id)
-      return NextResponse.json({
-        success: false,
-        error: 'Failed to create delivery items in database'
-      }, { status: 500 })
-    }
-
-    // Return the complete delivery with items
-    const completeDelivery = {
-      ...newDelivery,
-      items: newItems || []
+      items: body.items.map((item: any) => ({
+        id: crypto.randomUUID(),
+        product_name: item.product_name.trim(),
+        quantity: item.quantity,
+        unit: item.unit || 'pieces',
+        unit_price: roundToTwo(item.unit_price),
+        total_price: roundToTwo(item.quantity * item.unit_price)
+      })),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      created_by: user.id,
+      company_id: user.company_id
     }
 
     return NextResponse.json({
       success: true,
-      delivery: completeDelivery,
+      delivery: newDelivery,
       message: `Delivery created successfully by ${user.role}`,
       user_info: {
         role: user.role,

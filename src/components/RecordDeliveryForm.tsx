@@ -66,11 +66,16 @@ export default function RecordDeliveryForm({ onSuccess, onCancel }: RecordDelive
     }))
   }
 
+  // Helper function for precise calculations
+  const roundToTwo = (num: number): number => {
+    return Math.round(num * 100) / 100
+  }
+
   const calculateTotal = () => {
-    return Math.round(formData.items.reduce((total, item) => {
-      const itemTotal = item.quantity * item.unit_price
+    return roundToTwo(formData.items.reduce((total, item) => {
+      const itemTotal = roundToTwo(item.quantity * item.unit_price)
       return total + itemTotal
-    }, 0) * 100) / 100
+    }, 0))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -341,7 +346,7 @@ export default function RecordDeliveryForm({ onSuccess, onCancel }: RecordDelive
                   <div className="md:col-span-2 flex items-end">
                     <div className="text-sm text-gray-600">
                       <span className="font-medium">Total: </span>
-                      ${(item.quantity * item.unit_price).toFixed(2)}
+                      ${roundToTwo(item.quantity * item.unit_price).toFixed(2)}
                     </div>
                   </div>
                 </div>
