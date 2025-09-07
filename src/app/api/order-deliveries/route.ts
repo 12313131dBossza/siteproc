@@ -139,32 +139,26 @@ export async function GET(req: NextRequest) {
       }
     )
 
-    // Build query for deliveries with items
+    // Probe if deliveries has company_id column; if not, fall back to no company filter
+    let supportsCompany = true
+    try {
+      const test = await supabase
+        .from('deliveries')
+        .select('id', { count: 'exact', head: true })
+        .eq('company_id', user.company_id)
+      if (test.error && /company_id/.test(test.error.message)) supportsCompany = false
+    } catch {
+      supportsCompany = false
+    }
+
+    // Build query for deliveries with items; select wildcard to avoid missing-column errors
     let query = supabase
       .from('deliveries')
-      .select(`
-        id,
-        order_id,
-        delivery_date,
-        status,
-        driver_name,
-        vehicle_number,
-        notes,
-        total_amount,
-        created_at,
-        updated_at,
-        created_by,
-        delivery_items (
-          id,
-          product_name,
-          quantity,
-          unit,
-          unit_price,
-          total_price
-        )
-      `)
-      .eq('company_id', user.company_id)
+      .select(`*, delivery_items (*)`)
       .order('created_at', { ascending: false })
+    if (supportsCompany) {
+      query = query.eq('company_id', user.company_id)
+    }
 
     // Apply status filter
     if (status && status !== 'all') {
@@ -177,10 +171,20 @@ export async function GET(req: NextRequest) {
     }
 
     // Get total count for pagination
-    const { count: totalCount } = await supabase
-      .from('deliveries')
-      .select('*', { count: 'exact', head: true })
-      .eq('company_id', user.company_id)
+    let totalCount = 0
+    try {
+      const c = await supabase
+        .from('deliveries')
+        .select('*', { count: 'exact', head: true })
+      const c2 = supportsCompany ? await supabase
+        .from('deliveries')
+        .select('*', { count: 'exact', head: true })
+        .eq('company_id', user.company_id) : null
+      totalCount = (supportsCompany ? (c2?.count || 0) : (c.count || 0))
+    } catch {
+      // Best effort; will compute from page data
+      totalCount = 0
+    }
 
     // Apply pagination
     const startIndex = (page - 1) * limit
@@ -207,18 +211,18 @@ export async function GET(req: NextRequest) {
         unit_price: typeof it.unit_price === 'string' ? Number(it.unit_price) : it.unit_price,
         total_price: typeof it.total_price === 'string' ? Number(it.total_price) : it.total_price,
       }))
-      const total_amount = typeof delivery.total_amount === 'string' ? Number(delivery.total_amount) : delivery.total_amount
+      const total_amount = typeof delivery.total_amount === 'string' ? Number(delivery.total_amount) : (delivery.total_amount ?? 0)
       return { ...delivery, items, total_amount }
     })
 
     // Calculate summary statistics
     const summaryStats = {
-      total_deliveries: totalCount || 0,
+  total_deliveries: totalCount || formattedDeliveries.length || 0,
       pending: formattedDeliveries.filter(d => d.status === 'pending').length,
       in_transit: formattedDeliveries.filter(d => d.status === 'in_transit').length,
       delivered: formattedDeliveries.filter(d => d.status === 'delivered').length,
       cancelled: formattedDeliveries.filter(d => d.status === 'cancelled').length,
-      total_value: roundToTwo(formattedDeliveries.reduce((sum, d) => sum + Number(d.total_amount), 0))
+  total_value: roundToTwo(formattedDeliveries.reduce((sum, d) => sum + Number(d.total_amount || 0), 0))
     }
 
     return NextResponse.json({
@@ -227,9 +231,9 @@ export async function GET(req: NextRequest) {
       pagination: {
         current_page: page,
         per_page: limit,
-        total: totalCount || 0,
-        total_pages: Math.ceil((totalCount || 0) / limit),
-        has_next: page < Math.ceil((totalCount || 0) / limit),
+  total: totalCount || formattedDeliveries.length || 0,
+  total_pages: Math.max(1, Math.ceil((totalCount || formattedDeliveries.length || 0) / limit)),
+  has_next: page < Math.ceil((totalCount || formattedDeliveries.length || 0) / limit),
         has_prev: page > 1
       },
       summary: summaryStats,
@@ -344,12 +348,30 @@ export async function POST(req: NextRequest) {
       created_by: user.id
     }
 
-    // Insert delivery into database
-    const { data: newDelivery, error: deliveryError } = await supabase
-      .from('deliveries')
-      .insert([deliveryData])
-      .select()
-      .single()
+    // Insert delivery into database; if company_id/created_by missing, retry minimal insert
+    let newDelivery: any = null
+    let deliveryError: any = null
+    {
+      const res = await supabase
+        .from('deliveries')
+        .insert([deliveryData])
+        .select()
+        .single()
+      newDelivery = res.data
+      deliveryError = res.error
+    }
+    if (deliveryError && /column .*company_id|created_by|does not exist/i.test(deliveryError.message || '')) {
+      const minimal = { ...deliveryData }
+      delete (minimal as any).company_id
+      delete (minimal as any).created_by
+      const res2 = await supabase
+        .from('deliveries')
+        .insert([minimal])
+        .select()
+        .single()
+      newDelivery = res2.data
+      deliveryError = res2.error
+    }
 
     if (deliveryError) {
       console.error('Database error creating delivery:', deliveryError)
