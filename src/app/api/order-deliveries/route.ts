@@ -431,7 +431,7 @@ export async function POST(req: NextRequest) {
         } else if (res3.error) {
           // If the error is due to UUID syntax (e.g. job_id uuid), retry with a generated UUID
           const msg = res3.error.message || ''
-          if (/invalid input syntax for type uuid/i.test(msg) || /job_id.*uuid/i.test(msg)) {
+          if (/invalid input syntax for type uuid/i.test(msg) || /job_id.*uuid/i.test(msg) || (/job_id/i.test(msg) && /not-null|null value/i.test(msg))) {
             const retry = await (sbSvc as any)
               .from('deliveries')
               .insert([{ ...withJobSR, job_id: randomUUID() }])
