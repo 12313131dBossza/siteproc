@@ -227,7 +227,7 @@ export async function GET(req: NextRequest) {
         const itemUnitPrice = it.unit_price || 0
         const itemTotalPrice = it.total_price || (itemQuantity * itemUnitPrice)
         
-        return {
+        const formattedItem = {
           id: it.id || crypto.randomUUID(),
           product_name: it.product_name || it.description || 'Unnamed Item',
           quantity: typeof itemQuantity === 'string' ? Number(itemQuantity) : itemQuantity,
@@ -235,7 +235,16 @@ export async function GET(req: NextRequest) {
           unit_price: typeof itemUnitPrice === 'string' ? Number(itemUnitPrice) : itemUnitPrice,
           total_price: typeof itemTotalPrice === 'string' ? Number(itemTotalPrice) : itemTotalPrice,
         }
-      }).filter(item => item.quantity > 0) // Filter out items with invalid quantities
+        
+        console.log('🔧 Item transformation:', {
+          raw: { quantity: it.quantity, qty: it.qty, product_name: it.product_name, description: it.description },
+          formatted: formattedItem
+        })
+        
+        return formattedItem
+      })
+      // Temporarily remove the filter to debug
+      // .filter(item => item.quantity > 0)
       
       const total_amount = typeof delivery.total_amount === 'string' ? Number(delivery.total_amount) : (delivery.total_amount ?? 0)
       
