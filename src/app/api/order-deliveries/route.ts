@@ -363,6 +363,17 @@ export async function POST(req: NextRequest) {
       newDelivery = res.data
       deliveryError = res.error
     }
+    // If schema requires a job_id and rejected NULL, retry including job_id mapped from provided order_id/job_id
+    if (deliveryError && /job_id/gi.test(deliveryError.message || '') && /not-null|null value/i.test(deliveryError.message || '')) {
+      const withJob = { ...deliveryData, job_id: body.job_id || body.order_id || `ORD-${Date.now()}` }
+      const resJob = await supabase
+        .from('deliveries')
+        .insert([withJob])
+        .select()
+        .single()
+      newDelivery = resJob.data
+      deliveryError = resJob.error
+    }
     if (deliveryError && /column .*company_id|created_by|does not exist/i.test(deliveryError.message || '')) {
       const minimal = { ...deliveryData }
       delete (minimal as any).company_id
@@ -375,13 +386,27 @@ export async function POST(req: NextRequest) {
       newDelivery = res2.data
       deliveryError = res2.error
     }
+    // If minimal still fails with job_id NOT NULL, try minimal + job_id mapping as last anon try
+    if (deliveryError && /job_id/gi.test(deliveryError.message || '') && /not-null|null value/i.test(deliveryError.message || '')) {
+      const minimalJob: any = { ...deliveryData, job_id: body.job_id || body.order_id || `ORD-${Date.now()}` }
+      delete minimalJob.company_id
+      delete minimalJob.created_by
+      const res2b = await supabase
+        .from('deliveries')
+        .insert([minimalJob])
+        .select()
+        .single()
+      newDelivery = res2b.data
+      deliveryError = res2b.error
+    }
     // If still failing (likely RLS), fallback to service role on server side only
   if (deliveryError) {
       try {
         const sbSvc = supabaseService()
+        const withJobSR = { ...deliveryData, job_id: body.job_id || body.order_id || `ORD-${Date.now()}` }
         const res3 = await (sbSvc as any)
           .from('deliveries')
-          .insert([deliveryData])
+          .insert([withJobSR])
           .select()
           .single()
         if (!res3.error && res3.data) {

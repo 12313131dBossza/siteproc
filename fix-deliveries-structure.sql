@@ -10,6 +10,8 @@ ORDER BY ordinal_position;
 
 -- Add missing columns
 ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS order_id text DEFAULT 'ORD-' || extract(epoch from now());
+-- Some legacy schemas use job_id instead of order_id; add it if missing (nullable) so inserts can map it
+ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS job_id text;
 ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS delivery_date timestamptz DEFAULT now();
 ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS status text DEFAULT 'pending';
 ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS driver_name text;
