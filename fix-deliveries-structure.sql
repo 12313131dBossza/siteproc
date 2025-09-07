@@ -22,6 +22,47 @@ ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS company_id uuid;
 ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS created_by uuid;
 ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();
 
+-- If order_id exists but is not text, try to convert it to text to match API
+DO $$
+BEGIN
+	IF EXISTS (
+		SELECT 1 FROM information_schema.columns 
+		WHERE table_schema='public' AND table_name='deliveries' AND column_name='order_id' AND data_type <> 'text'
+	) THEN
+		BEGIN
+			ALTER TABLE public.deliveries ALTER COLUMN order_id TYPE text USING order_id::text;
+		EXCEPTION WHEN others THEN
+			RAISE NOTICE 'Could not alter deliveries.order_id to text (may be constrained by FK); leaving as-is.';
+		END;
+	END IF;
+END $$;
+
+-- Relax legacy columns that may block inserts (from older schema)
+DO $$
+BEGIN
+	IF EXISTS (
+		SELECT 1 FROM information_schema.columns 
+		WHERE table_schema='public' AND table_name='deliveries' AND column_name='product_id'
+	) THEN
+		BEGIN
+			ALTER TABLE public.deliveries ALTER COLUMN product_id DROP NOT NULL;
+		EXCEPTION WHEN others THEN
+			RAISE NOTICE 'Could not drop NOT NULL on deliveries.product_id (safe to ignore if already nullable).';
+		END;
+	END IF;
+
+	IF EXISTS (
+		SELECT 1 FROM information_schema.columns 
+		WHERE table_schema='public' AND table_name='deliveries' AND column_name='delivered_qty'
+	) THEN
+		BEGIN
+			ALTER TABLE public.deliveries ALTER COLUMN delivered_qty DROP NOT NULL;
+		EXCEPTION WHEN others THEN
+			RAISE NOTICE 'Could not drop NOT NULL on deliveries.delivered_qty (safe to ignore if already nullable).';
+		END;
+	END IF;
+END $$;
+
 -- Ensure index for fast company scoping
 CREATE INDEX IF NOT EXISTS idx_deliveries_company_id ON deliveries(company_id);
 
