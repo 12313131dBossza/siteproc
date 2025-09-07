@@ -11,7 +11,23 @@ ORDER BY ordinal_position;
 -- Add missing columns
 ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS order_id text DEFAULT 'ORD-' || extract(epoch from now());
 -- Some legacy schemas use job_id instead of order_id; add it if missing (nullable) so inserts can map it
-ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS job_id text;
+-- Add job_id with a sensible type. If a job table uses uuid and job_id is uuid on this schema, prefer uuid; else text.
+DO $$
+BEGIN
+	IF NOT EXISTS (
+		SELECT 1 FROM information_schema.columns 
+		WHERE table_schema='public' AND table_name='deliveries' AND column_name='job_id'
+	) THEN
+		BEGIN
+			-- Try to add as uuid first; if type mismatch for your schema, fallback to text
+			BEGIN
+				ALTER TABLE deliveries ADD COLUMN job_id uuid;
+			EXCEPTION WHEN others THEN
+				ALTER TABLE deliveries ADD COLUMN job_id text;
+			END;
+		END;
+	END IF;
+END $$;
 ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS delivery_date timestamptz DEFAULT now();
 ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS status text DEFAULT 'pending';
 ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS driver_name text;

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { randomUUID } from 'crypto'
 import { createServerClient } from '@supabase/ssr'
 import { supabaseService } from '@/lib/supabase'
 import { cookies } from 'next/headers'
@@ -337,7 +338,8 @@ export async function POST(req: NextRequest) {
     )
 
     // Prepare delivery data
-    const deliveryData = {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    const deliveryData: any = {
       order_id: body.order_id || `ORD-${Date.now()}`,
       delivery_date: body.delivery_date || new Date().toISOString(),
       status: body.status || 'pending',
@@ -347,6 +349,10 @@ export async function POST(req: NextRequest) {
       total_amount: totalAmount,
       company_id: user.company_id,
       created_by: user.id
+    }
+    // If client sent job_id and it looks like a UUID, include it; otherwise defer to fallbacks
+    if (body.job_id && uuidRegex.test(String(body.job_id))) {
+      deliveryData.job_id = body.job_id
     }
 
     // Insert delivery into database; if company_id/created_by missing or RLS blocks, try graceful fallbacks
@@ -365,7 +371,9 @@ export async function POST(req: NextRequest) {
     }
     // If schema requires a job_id and rejected NULL, retry including job_id mapped from provided order_id/job_id
     if (deliveryError && /job_id/gi.test(deliveryError.message || '') && /not-null|null value/i.test(deliveryError.message || '')) {
-      const withJob = { ...deliveryData, job_id: body.job_id || body.order_id || `ORD-${Date.now()}` }
+      const withJob: any = { ...deliveryData }
+      // Prefer a valid UUID; if body.order_id is not a UUID and the column is uuid, generating avoids syntax errors
+      withJob.job_id = uuidRegex.test(String(body.job_id || '')) ? body.job_id : randomUUID()
       const resJob = await supabase
         .from('deliveries')
         .insert([withJob])
@@ -388,7 +396,7 @@ export async function POST(req: NextRequest) {
     }
     // If minimal still fails with job_id NOT NULL, try minimal + job_id mapping as last anon try
     if (deliveryError && /job_id/gi.test(deliveryError.message || '') && /not-null|null value/i.test(deliveryError.message || '')) {
-      const minimalJob: any = { ...deliveryData, job_id: body.job_id || body.order_id || `ORD-${Date.now()}` }
+      const minimalJob: any = { ...deliveryData, job_id: randomUUID() }
       delete minimalJob.company_id
       delete minimalJob.created_by
       const res2b = await supabase
@@ -400,11 +408,18 @@ export async function POST(req: NextRequest) {
       deliveryError = res2b.error
     }
     // If still failing (likely RLS), fallback to service role on server side only
-  if (deliveryError) {
+    if (deliveryError) {
       try {
         const sbSvc = supabaseService()
-        const withJobSR = { ...deliveryData, job_id: body.job_id || body.order_id || `ORD-${Date.now()}` }
-        const res3 = await (sbSvc as any)
+        let withJobSR: any = { ...deliveryData }
+        // Only set job_id if it looks like a UUID; otherwise, leave it undefined for first try
+        const maybeId = body.job_id || body.order_id
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+        if (maybeId && uuidRegex.test(String(maybeId))) {
+          withJobSR.job_id = maybeId
+        }
+
+        let res3 = await (sbSvc as any)
           .from('deliveries')
           .insert([withJobSR])
           .select()
@@ -413,6 +428,25 @@ export async function POST(req: NextRequest) {
           newDelivery = res3.data
           deliveryError = null
           dbForItems = sbSvc
+        } else if (res3.error) {
+          // If the error is due to UUID syntax (e.g. job_id uuid), retry with a generated UUID
+          const msg = res3.error.message || ''
+          if (/invalid input syntax for type uuid/i.test(msg) || /job_id.*uuid/i.test(msg)) {
+            const retry = await (sbSvc as any)
+              .from('deliveries')
+              .insert([{ ...withJobSR, job_id: randomUUID() }])
+              .select()
+              .single()
+            if (!retry.error && retry.data) {
+              newDelivery = retry.data
+              deliveryError = null
+              dbForItems = sbSvc
+            } else {
+              deliveryError = retry.error
+            }
+          } else {
+            deliveryError = res3.error
+          }
         }
       } catch (e) {
     fallbackError = e
