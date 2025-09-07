@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import { Plus, Upload, X, Trash2 } from 'lucide-react'
+import { sbBrowser } from '@/lib/supabase-browser'
 
 interface DeliveryItem {
   product_name: string
@@ -18,6 +19,8 @@ interface RecordDeliveryFormProps {
 export default function RecordDeliveryForm({ onSuccess, onCancel }: RecordDeliveryFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [images, setImages] = useState<File[]>([])
+  const [imagePreviews, setImagePreviews] = useState<string[]>([])
   
   const [formData, setFormData] = useState({
     order_id: '',
@@ -89,6 +92,31 @@ export default function RecordDeliveryForm({ onSuccess, onCancel }: RecordDelive
         throw new Error('Please fill in all item details with valid quantities and prices')
       }
 
+      // 1) Upload images first (optional). We'll try but won't fail the submission if uploads fail.
+      let proofUrls: string[] = []
+      if (images.length > 0) {
+        try {
+          const supabase = sbBrowser()
+          const bucket = 'delivery-proofs'
+          const uploaded: string[] = []
+          for (let i = 0; i < images.length; i++) {
+            const file = images[i]
+            const ext = file.name.split('.').pop() || 'jpg'
+            const path = `uploads/${Date.now()}_${i}.${ext}`
+            const { error: upErr } = await supabase.storage.from(bucket).upload(path, file, {
+              cacheControl: '3600',
+              upsert: false,
+            })
+            if (upErr) throw upErr
+            const { data: pub } = supabase.storage.from(bucket).getPublicUrl(path)
+            if (pub?.publicUrl) uploaded.push(pub.publicUrl)
+          }
+          proofUrls = uploaded
+        } catch (uploadErr) {
+          console.warn('Image upload failed, continuing without proofs:', uploadErr)
+        }
+      }
+
       const deliveryData = {
         order_id: formData.order_id || `ORDER-${Date.now()}`,
         driver_name: formData.driver_name,
@@ -96,7 +124,8 @@ export default function RecordDeliveryForm({ onSuccess, onCancel }: RecordDelive
         delivery_date: formData.delivery_date + 'T00:00:00.000Z',
         status: formData.status,
         notes: formData.notes || undefined,
-        items: formData.items
+        items: formData.items,
+        proof_urls: proofUrls.length > 0 ? proofUrls : undefined
       }
 
       const response = await fetch('/api/order-deliveries', {
@@ -130,6 +159,8 @@ export default function RecordDeliveryForm({ onSuccess, onCancel }: RecordDelive
           unit_price: 0
         }]
       })
+  setImages([])
+  setImagePreviews([])
 
       if (onSuccess) {
         onSuccess(result.delivery)
@@ -254,7 +285,7 @@ export default function RecordDeliveryForm({ onSuccess, onCancel }: RecordDelive
           </select>
         </div>
 
-        {/* Items */}
+  {/* Items */}
         <div>
           <div className="flex items-center justify-between mb-4">
             <h4 className="text-sm font-medium text-gray-700">Delivery Items *</h4>
@@ -376,6 +407,43 @@ export default function RecordDeliveryForm({ onSuccess, onCancel }: RecordDelive
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             placeholder="Optional notes about the delivery..."
           />
+        </div>
+
+        {/* Attachments */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Photo Proof (optional)</label>
+          <div className="flex items-center space-x-3">
+            <label className="inline-flex items-center px-3 py-2 border rounded-lg cursor-pointer text-gray-700 hover:bg-gray-50">
+              <Upload className="h-4 w-4 mr-2" />
+              <span>Upload Images</span>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  const files = Array.from(e.target.files || []) as File[]
+                  const limited = files.slice(0, 5)
+                  setImages(limited)
+                  const urls = limited.map(f => URL.createObjectURL(f))
+                  setImagePreviews(urls)
+                }}
+              />
+            </label>
+            {images.length > 0 && (
+              <span className="text-sm text-gray-600">{images.length} selected</span>
+            )}
+          </div>
+          {imagePreviews.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {imagePreviews.map((src, i) => (
+                <div key={i} className="relative w-24 h-24 border rounded overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={src} alt={`preview-${i}`} className="object-cover w-full h-full" />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="flex space-x-3 pt-4 border-t">

@@ -379,7 +379,7 @@ export async function POST(req: NextRequest) {
       }, { status: 403 })
     }
 
-    const body = await req.json()
+  const body = await req.json()
     console.log('Creating delivery in database:', { 
       user_id: user.id, 
       role: user.role, 
@@ -452,6 +452,11 @@ export async function POST(req: NextRequest) {
       company_id: user.company_id,
       created_by: user.id
     }
+    // If proof_urls array is provided, attempt to store it on a jsonb column (add if missing)
+    if (Array.isArray(body.proof_urls) && body.proof_urls.length > 0) {
+      // Optimistic assignment; if DB lacks the column, the insert will fail and we retry after adding the column
+      deliveryData.proof_urls = body.proof_urls
+    }
     // If client sent job_id and it looks like a UUID, include it; otherwise defer to fallbacks
     if (body.job_id && uuidRegex.test(String(body.job_id))) {
       deliveryData.job_id = body.job_id
@@ -470,6 +475,20 @@ export async function POST(req: NextRequest) {
         .single()
       newDelivery = res.data
       deliveryError = res.error
+    }
+    // If insert failed due to missing column proof_urls, add it then retry once
+    if (deliveryError && /column .*proof_urls.* does not exist/i.test(deliveryError.message || '')) {
+      try {
+        const sbSvc = supabaseService() as any
+        await sbSvc.rpc('exec_sql', { sql: "ALTER TABLE public.deliveries ADD COLUMN IF NOT EXISTS proof_urls jsonb;" })
+      } catch {}
+      const resRetry = await supabase
+        .from('deliveries')
+        .insert([deliveryData])
+        .select()
+        .single()
+      newDelivery = resRetry.data
+      deliveryError = resRetry.error
     }
     // If schema requires a job_id and rejected NULL, retry including job_id mapped from provided order_id/job_id
     if (deliveryError && /job_id/gi.test(deliveryError.message || '') && /not-null|null value/i.test(deliveryError.message || '')) {
