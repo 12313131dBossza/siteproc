@@ -495,13 +495,15 @@ export async function POST(req: NextRequest) {
     // Insert delivery items into database with adaptive column mapping
     async function insertItemsAdaptively(client: any) {
       const shapes = [
+        // Try with description (your schema requires this)
+        (it: any) => ({ delivery_id: newDelivery.id, description: it.product_name, quantity: it.quantity, unit: it.unit, unit_price: it.unit_price, total_price: it.total_price, company_id: user.company_id }),
+        // Standard patterns with company_id
         (it: any) => ({ delivery_id: newDelivery.id, product_name: it.product_name, quantity: it.quantity, unit: it.unit, unit_price: it.unit_price, total_price: it.total_price, company_id: user.company_id }),
         (it: any) => ({ delivery_id: newDelivery.id, product: it.product_name, quantity: it.quantity, unit: it.unit, unit_price: it.unit_price, total_price: it.total_price, company_id: user.company_id }),
         (it: any) => ({ delivery_id: newDelivery.id, item_name: it.product_name, quantity: it.quantity, unit: it.unit, unit_price: it.unit_price, total_price: it.total_price, company_id: user.company_id }),
         (it: any) => ({ delivery_id: newDelivery.id, name: it.product_name, quantity: it.quantity, unit: it.unit, unit_price: it.unit_price, total_price: it.total_price, company_id: user.company_id }),
-        (it: any) => ({ delivery_id: newDelivery.id, description: it.product_name, quantity: it.quantity, unit: it.unit, unit_price: it.unit_price, total_price: it.total_price, company_id: user.company_id }),
-        (it: any) => ({ delivery_id: newDelivery.id, quantity: it.quantity, unit: it.unit, unit_price: it.unit_price, total_price: it.total_price, company_id: user.company_id }),
-        // Fallback without company_id if it doesn't exist in schema
+        // Fallbacks without company_id
+        (it: any) => ({ delivery_id: newDelivery.id, description: it.product_name, quantity: it.quantity, unit: it.unit, unit_price: it.unit_price, total_price: it.total_price }),
         (it: any) => ({ delivery_id: newDelivery.id, product_name: it.product_name, quantity: it.quantity, unit: it.unit, unit_price: it.unit_price, total_price: it.total_price }),
         (it: any) => ({ delivery_id: newDelivery.id, product: it.product_name, quantity: it.quantity, unit: it.unit, unit_price: it.unit_price, total_price: it.total_price })
       ]

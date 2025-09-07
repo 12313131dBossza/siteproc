@@ -108,13 +108,15 @@ BEGIN
     WHERE table_schema='public' AND table_name='delivery_items'
   ) THEN
     BEGIN
+      ALTER TABLE public.delivery_items ADD COLUMN IF NOT EXISTS description text;
       ALTER TABLE public.delivery_items ADD COLUMN IF NOT EXISTS product_name text;
       ALTER TABLE public.delivery_items ADD COLUMN IF NOT EXISTS quantity numeric(10,2);
       ALTER TABLE public.delivery_items ADD COLUMN IF NOT EXISTS unit text;
       ALTER TABLE public.delivery_items ADD COLUMN IF NOT EXISTS unit_price numeric(10,2);
       ALTER TABLE public.delivery_items ADD COLUMN IF NOT EXISTS total_price numeric(12,2);
       ALTER TABLE public.delivery_items ADD COLUMN IF NOT EXISTS company_id uuid;
-      -- Make company_id nullable if it was enforced as NOT NULL
+      -- Make description and company_id nullable if they were enforced as NOT NULL
+      ALTER TABLE public.delivery_items ALTER COLUMN description DROP NOT NULL;
       ALTER TABLE public.delivery_items ALTER COLUMN company_id DROP NOT NULL;
     EXCEPTION WHEN others THEN
       RAISE NOTICE 'Could not add some columns to delivery_items; ignore if already present or differently named.';
