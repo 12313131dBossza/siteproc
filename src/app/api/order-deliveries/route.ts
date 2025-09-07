@@ -221,14 +221,21 @@ export async function GET(req: NextRequest) {
         unit_price: i.unit_price
       })))
       
-      const items = rawItems.map((it: any) => ({
-        id: it.id || crypto.randomUUID(),
-        product_name: it.product_name || it.description || 'Unnamed Item',
-        quantity: typeof it.quantity === 'string' ? Number(it.quantity) : (it.quantity || 1),
-        unit: it.unit || 'pieces',
-        unit_price: typeof it.unit_price === 'string' ? Number(it.unit_price) : (it.unit_price || 0),
-        total_price: typeof it.total_price === 'string' ? Number(it.total_price) : (it.total_price || 0),
-      }))
+      const items = rawItems.map((it: any) => {
+        // Handle the dual quantity fields (both 'quantity' and 'qty' exist)
+        const itemQuantity = it.quantity || it.qty || 1
+        const itemUnitPrice = it.unit_price || 0
+        const itemTotalPrice = it.total_price || (itemQuantity * itemUnitPrice)
+        
+        return {
+          id: it.id || crypto.randomUUID(),
+          product_name: it.product_name || it.description || 'Unnamed Item',
+          quantity: typeof itemQuantity === 'string' ? Number(itemQuantity) : itemQuantity,
+          unit: it.unit || 'pieces',
+          unit_price: typeof itemUnitPrice === 'string' ? Number(itemUnitPrice) : itemUnitPrice,
+          total_price: typeof itemTotalPrice === 'string' ? Number(itemTotalPrice) : itemTotalPrice,
+        }
+      }).filter(item => item.quantity > 0) // Filter out items with invalid quantities
       
       const total_amount = typeof delivery.total_amount === 'string' ? Number(delivery.total_amount) : (delivery.total_amount ?? 0)
       
