@@ -110,7 +110,9 @@ export default function RecordDeliveryForm({ onSuccess, onCancel }: RecordDelive
       const result = await response.json()
 
       if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Failed to record delivery')
+        const msg = result.error || 'Failed to record delivery'
+        const details = result.details ? `: ${result.details}` : ''
+        throw new Error(msg + details)
       }
       
       // Reset form
