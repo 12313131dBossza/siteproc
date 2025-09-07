@@ -1,3 +1,4 @@
+"use client"
 import { Metadata } from 'next'
 import RecordDeliveryForm from '@/components/RecordDeliveryForm'
 import Link from 'next/link'
@@ -18,14 +19,7 @@ export default function NewDeliveryPage() {
             Back to Deliveries
           </Link>
         </div>
-        <RecordDeliveryForm
-          onSuccess={() => {
-            // After a successful create, send the user to the deliveries management list
-            if (typeof window !== 'undefined') {
-              window.location.href = '/order-deliveries'
-            }
-          }}
-        />
+  <RecordDeliveryForm />
       </div>
     </div>
   )
