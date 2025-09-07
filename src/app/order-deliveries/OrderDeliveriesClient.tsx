@@ -67,6 +67,7 @@ interface DeliveriesResponse {
     cancelled: number
     total_value: number
   }
+  error?: string
   user_info?: {
     role: string
     permissions: {
@@ -158,6 +159,22 @@ export default function OrderDeliveriesClient() {
       }
 
       const data: DeliveriesResponse = await response.json()
+      // Debug: surface what the API actually returned so we can compare items vs delivery_items
+      try {
+        const brief = Array.isArray((data as any)?.deliveries) ? (data as any).deliveries.map((d: any) => ({
+          id: d.id,
+          order_id: d.order_id,
+          items_len: Array.isArray(d.items) ? d.items.length : null,
+          delivery_items_len: Array.isArray(d.delivery_items) ? d.delivery_items.length : null,
+          keys: Object.keys(d || {})
+        })) : []
+        // eslint-disable-next-line no-console
+        console.log('[OrderDeliveriesClient] API result summary:', {
+          success: (data as any)?.success,
+          total: (data as any)?.pagination?.total,
+          deliveries: brief
+        })
+      } catch {}
       
       if (data.success) {
         setDeliveries(data.deliveries)
@@ -486,6 +503,9 @@ export default function OrderDeliveriesClient() {
           ) : (
             deliveries.map((delivery) => {
               const StatusIcon = statusIcons[delivery.status]
+              // Fallback: if API didn't populate items, try raw delivery_items from the response
+              const fallbackItems = (delivery as any)?.delivery_items || []
+              const itemsToRender = (delivery.items && delivery.items.length > 0) ? delivery.items : fallbackItems
               return (
                 <div key={delivery.id} className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
                   <div className="p-6">
@@ -532,7 +552,7 @@ export default function OrderDeliveriesClient() {
                             ${delivery.total_amount.toLocaleString()}
                           </div>
                           <div className="text-sm text-gray-500">
-                            {delivery.items.length} item{delivery.items.length !== 1 ? 's' : ''}
+                            {itemsToRender.length} item{itemsToRender.length !== 1 ? 's' : ''}
                           </div>
                         </div>
                         
@@ -568,16 +588,16 @@ export default function OrderDeliveriesClient() {
                     <div className="mb-4">
                       <h4 className="text-sm font-medium text-gray-700 mb-2">Delivery Items:</h4>
                       <div className="space-y-2">
-                        {delivery.items.map((item) => (
+                        {itemsToRender.map((item: any) => (
                           <div key={item.id} className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-lg">
                             <div className="flex-1">
-                              <span className="font-medium text-gray-900">{item.product_name}</span>
+                              <span className="font-medium text-gray-900">{item.product_name || item.description}</span>
                               <span className="text-gray-600 ml-2">
-                                {item.quantity} {item.unit} × ${item.unit_price.toFixed(2)}
+                                {Number(item.quantity)} {item.unit || 'pieces'} × ${Number(item.unit_price).toFixed(2)}
                               </span>
                             </div>
                             <div className="font-medium text-gray-900">
-                              ${item.total_price.toFixed(2)}
+                              ${Number(item.total_price || (Number(item.quantity) * Number(item.unit_price))).toFixed(2)}
                             </div>
                           </div>
                         ))}
