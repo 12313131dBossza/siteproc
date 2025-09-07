@@ -103,23 +103,24 @@ CREATE TABLE IF NOT EXISTS public.delivery_items (
 -- If delivery_items exists with a different shape, ensure required columns exist
 DO $$
 BEGIN
-	IF EXISTS (
-		SELECT 1 FROM information_schema.tables 
-		WHERE table_schema='public' AND table_name='delivery_items'
-	) THEN
-		BEGIN
-			ALTER TABLE public.delivery_items ADD COLUMN IF NOT EXISTS product_name text;
-			ALTER TABLE public.delivery_items ADD COLUMN IF NOT EXISTS quantity numeric(10,2);
-			ALTER TABLE public.delivery_items ADD COLUMN IF NOT EXISTS unit text;
-			ALTER TABLE public.delivery_items ADD COLUMN IF NOT EXISTS unit_price numeric(10,2);
-			ALTER TABLE public.delivery_items ADD COLUMN IF NOT EXISTS total_price numeric(12,2);
-		EXCEPTION WHEN others THEN
-			RAISE NOTICE 'Could not add some columns to delivery_items; ignore if already present or differently named.';
-		END;
-	END IF;
-END $$;
-
--- Helpful index for joining items to deliveries
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables 
+    WHERE table_schema='public' AND table_name='delivery_items'
+  ) THEN
+    BEGIN
+      ALTER TABLE public.delivery_items ADD COLUMN IF NOT EXISTS product_name text;
+      ALTER TABLE public.delivery_items ADD COLUMN IF NOT EXISTS quantity numeric(10,2);
+      ALTER TABLE public.delivery_items ADD COLUMN IF NOT EXISTS unit text;
+      ALTER TABLE public.delivery_items ADD COLUMN IF NOT EXISTS unit_price numeric(10,2);
+      ALTER TABLE public.delivery_items ADD COLUMN IF NOT EXISTS total_price numeric(12,2);
+      ALTER TABLE public.delivery_items ADD COLUMN IF NOT EXISTS company_id uuid;
+      -- Make company_id nullable if it was enforced as NOT NULL
+      ALTER TABLE public.delivery_items ALTER COLUMN company_id DROP NOT NULL;
+    EXCEPTION WHEN others THEN
+      RAISE NOTICE 'Could not add some columns to delivery_items; ignore if already present or differently named.';
+    END;
+  END IF;
+END $$;-- Helpful index for joining items to deliveries
 CREATE INDEX IF NOT EXISTS idx_delivery_items_delivery_id ON public.delivery_items(delivery_id);
 
 -- Show updated structure
