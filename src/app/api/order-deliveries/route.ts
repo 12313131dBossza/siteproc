@@ -516,17 +516,39 @@ export async function POST(req: NextRequest) {
       return { data: null, error: lastErr, attempted: null }
     }
 
-    const { data: newItems, error: itemsError, attempted } = await insertItemsAdaptively(dbForItems) as any
+    let { data: newItems, error: itemsError, attempted } = await insertItemsAdaptively(dbForItems) as any
+
+    // If RLS/permission blocks items insert, retry with service role
+    if (itemsError) {
+      const msg = (itemsError.message || '').toLowerCase()
+      const rlsBlocked = /row-level security|permission denied|not allowed|rls/i.test(msg)
+      if (rlsBlocked) {
+        try {
+          const sbSvc = supabaseService()
+          const retry = await insertItemsAdaptively(sbSvc) as any
+          if (!retry.error) {
+            newItems = retry.data
+            itemsError = null
+          } else {
+            itemsError = retry.error
+          }
+        } catch (e) {
+          // keep original error
+        }
+      }
+    }
 
     if (itemsError) {
       console.error('Database error creating delivery items:', itemsError)
       // Rollback delivery if items failed
-      await dbForItems.from('deliveries').delete().eq('id', newDelivery.id)
+      try { await dbForItems.from('deliveries').delete().eq('id', newDelivery.id) } catch {}
+      try { const sbSvc = supabaseService(); await (sbSvc as any).from('deliveries').delete().eq('id', newDelivery.id) } catch {}
+      const hasServiceKey = !!(process.env.SUPABASE_SERVICE_ROLE || process.env.SUPABASE_SERVICE_ROLE_KEY)
       return NextResponse.json({
         success: false,
         error: 'Failed to create delivery items in database',
         details: itemsError?.message || String(itemsError),
-        diagnostics: { attemptedItemColumns: attempted }
+        diagnostics: { attemptedItemColumns: attempted, hasServiceKey }
       }, { status: 500 })
     }
 
