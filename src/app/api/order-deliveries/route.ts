@@ -159,13 +159,12 @@ export async function GET(req: NextRequest) {
       .select(`*, delivery_items (*)`)
       .order('created_at', { ascending: false })
     
-    // TEMPORARILY DISABLE COMPANY FILTERING TO FIX ITEMS ISSUE
-    // TODO: Fix company_id mismatch in database then re-enable this
-    // if (supportsCompany) {
-    //   query = query.eq('company_id', user.company_id)
-    // }
+    // Company filtering - ensures users only see their company's deliveries
+    if (supportsCompany) {
+      query = query.eq('company_id', user.company_id)
+    }
     
-    console.log(`🔍 Fetching deliveries WITHOUT company filter (temporarily) for user: ${user.email}`)
+    console.log(`🔍 Fetching deliveries for company: ${user.company_id} (user: ${user.email})`)
 
     // Apply status filter
     if (status && status !== 'all') {
