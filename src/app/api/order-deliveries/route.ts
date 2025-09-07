@@ -207,18 +207,27 @@ export async function GET(req: NextRequest) {
 
     // Transform data to match interface and coerce numeric strings -> numbers
     const formattedDeliveries = (deliveries || []).map((delivery: any) => {
-      const items = (delivery.delivery_items || []).map((it: any) => ({
-        ...it,
-        quantity: typeof it.quantity === 'string' ? Number(it.quantity) : it.quantity,
-        unit_price: typeof it.unit_price === 'string' ? Number(it.unit_price) : it.unit_price,
-        total_price: typeof it.total_price === 'string' ? Number(it.total_price) : it.total_price,
+      // Ensure delivery_items is an array
+      const rawItems = Array.isArray(delivery.delivery_items) ? delivery.delivery_items : []
+      
+      const items = rawItems.map((it: any) => ({
+        id: it.id || crypto.randomUUID(),
+        product_name: it.product_name || it.description || 'Unnamed Item',
+        quantity: typeof it.quantity === 'string' ? Number(it.quantity) : (it.quantity || 1),
+        unit: it.unit || 'pieces',
+        unit_price: typeof it.unit_price === 'string' ? Number(it.unit_price) : (it.unit_price || 0),
+        total_price: typeof it.total_price === 'string' ? Number(it.total_price) : (it.total_price || 0),
       }))
+      
       const total_amount = typeof delivery.total_amount === 'string' ? Number(delivery.total_amount) : (delivery.total_amount ?? 0)
       
       // Debug logging for items transformation
-      console.log(`📦 Delivery #${delivery.id?.slice(-8)}: ${delivery.delivery_items?.length || 0} raw items -> ${items.length} formatted items`)
-      if (items.length === 0 && delivery.delivery_items?.length > 0) {
-        console.log('⚠️  Items lost during transformation:', delivery.delivery_items)
+      console.log(`📦 Delivery #${delivery.id?.slice(-8)}: ${rawItems.length} raw items -> ${items.length} formatted items`)
+      if (items.length === 0 && rawItems.length > 0) {
+        console.log('⚠️  Items lost during transformation:', rawItems)
+      }
+      if (items.length > 0) {
+        console.log(`✅ Items for ${delivery.id?.slice(-8)}:`, items.map(i => `${i.product_name} (${i.quantity})`))
       }
       
       return { ...delivery, items, total_amount }
