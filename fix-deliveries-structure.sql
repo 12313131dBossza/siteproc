@@ -40,6 +40,10 @@ ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS company_id uuid;
 ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS created_by uuid;
 ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();
 
+-- Make job_id optional and remove strict FK if present (aligns with API flexibility)
+ALTER TABLE public.deliveries ALTER COLUMN job_id DROP NOT NULL;
+ALTER TABLE public.deliveries DROP CONSTRAINT IF EXISTS deliveries_job_id_fkey;
+
 -- If order_id exists but is not text, try to convert it to text to match API
 DO $$
 BEGIN

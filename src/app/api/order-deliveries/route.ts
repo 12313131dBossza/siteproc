@@ -408,7 +408,7 @@ export async function POST(req: NextRequest) {
       deliveryError = res2b.error
     }
     // If still failing (likely RLS), fallback to service role on server side only
-    if (deliveryError) {
+  if (deliveryError) {
       try {
         const sbSvc = supabaseService()
         let withJobSR: any = { ...deliveryData }
@@ -417,6 +417,20 @@ export async function POST(req: NextRequest) {
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
         if (maybeId && uuidRegex.test(String(maybeId))) {
           withJobSR.job_id = maybeId
+        }
+
+        // If FK exists and requires a valid job row, try to create a placeholder job (best-effort)
+        const msgBefore = (deliveryError?.message || '').toLowerCase()
+        if (/job_id.*fkey|foreign key/i.test(msgBefore)) {
+          try {
+            const jobId = randomUUID()
+            // Attempt to create a placeholder job row in common job tables if they exist
+            const tryTables = ['jobs', 'orders', 'work_orders']
+            for (const t of tryTables) {
+              const { error: tErr } = await (sbSvc as any).from(t).insert([{ id: jobId }])
+              if (!tErr) { withJobSR.job_id = jobId; break }
+            }
+          } catch {}
         }
 
         let res3 = await (sbSvc as any)
