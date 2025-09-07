@@ -492,11 +492,31 @@ export async function POST(req: NextRequest) {
       total_price: roundToTwo(item.quantity * item.unit_price)
     }))
 
-    // Insert delivery items into database
-  const { data: newItems, error: itemsError } = await dbForItems
-      .from('delivery_items')
-      .insert(itemsData)
-      .select()
+    // Insert delivery items into database with adaptive column mapping
+    async function insertItemsAdaptively(client: any) {
+      const shapes = [
+        (it: any) => ({ delivery_id: newDelivery.id, product_name: it.product_name, quantity: it.quantity, unit: it.unit, unit_price: it.unit_price, total_price: it.total_price }),
+        (it: any) => ({ delivery_id: newDelivery.id, product: it.product_name, quantity: it.quantity, unit: it.unit, unit_price: it.unit_price, total_price: it.total_price }),
+        (it: any) => ({ delivery_id: newDelivery.id, item_name: it.product_name, quantity: it.quantity, unit: it.unit, unit_price: it.unit_price, total_price: it.total_price }),
+        (it: any) => ({ delivery_id: newDelivery.id, name: it.product_name, quantity: it.quantity, unit: it.unit, unit_price: it.unit_price, total_price: it.total_price }),
+        (it: any) => ({ delivery_id: newDelivery.id, description: it.product_name, quantity: it.quantity, unit: it.unit, unit_price: it.unit_price, total_price: it.total_price }),
+        (it: any) => ({ delivery_id: newDelivery.id, quantity: it.quantity, unit: it.unit, unit_price: it.unit_price, total_price: it.total_price })
+      ]
+      let lastErr: any = null
+      for (const shape of shapes) {
+        const rows = itemsData.map(shape)
+        const { data, error } = await client.from('delivery_items').insert(rows).select()
+        if (!error) return { data, error: null, attempted: Object.keys(rows[0] || {}) }
+        lastErr = error
+        // If the error was clearly due to missing column, try next; else break
+        const msg = (error.message || '').toLowerCase()
+        const missingCol = /could not find .* column|column .* does not exist|invalid input syntax/i.test(msg)
+        if (!missingCol) break
+      }
+      return { data: null, error: lastErr, attempted: null }
+    }
+
+    const { data: newItems, error: itemsError, attempted } = await insertItemsAdaptively(dbForItems) as any
 
     if (itemsError) {
       console.error('Database error creating delivery items:', itemsError)
@@ -505,7 +525,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         success: false,
         error: 'Failed to create delivery items in database',
-        details: itemsError?.message || String(itemsError)
+        details: itemsError?.message || String(itemsError),
+        diagnostics: { attemptedItemColumns: attempted }
       }, { status: 500 })
     }
 
