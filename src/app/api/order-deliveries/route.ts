@@ -214,6 +214,13 @@ export async function GET(req: NextRequest) {
       // Ensure delivery_items is an array
       const rawItems = Array.isArray(delivery.delivery_items) ? delivery.delivery_items : []
       
+      console.log(`🔍 DEBUG: Delivery ${delivery.id?.slice(-8)} has ${rawItems.length} raw items:`, rawItems.map(i => ({
+        id: i.id,
+        product_name: i.product_name,
+        quantity: i.quantity,
+        unit_price: i.unit_price
+      })))
+      
       const items = rawItems.map((it: any) => ({
         id: it.id || crypto.randomUUID(),
         product_name: it.product_name || it.description || 'Unnamed Item',
@@ -227,6 +234,7 @@ export async function GET(req: NextRequest) {
       
       // Debug logging for items transformation
       console.log(`📦 Delivery #${delivery.id?.slice(-8)}: ${rawItems.length} raw items -> ${items.length} formatted items`)
+      console.log(`📝 Formatted items:`, items.map(i => `${i.product_name}: ${i.quantity} ${i.unit} @ $${i.unit_price}`))
       if (items.length === 0 && rawItems.length > 0) {
         console.log('⚠️  Items lost during transformation:', rawItems)
       }
