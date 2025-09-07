@@ -214,6 +214,13 @@ export async function GET(req: NextRequest) {
         total_price: typeof it.total_price === 'string' ? Number(it.total_price) : it.total_price,
       }))
       const total_amount = typeof delivery.total_amount === 'string' ? Number(delivery.total_amount) : (delivery.total_amount ?? 0)
+      
+      // Debug logging for items transformation
+      console.log(`📦 Delivery #${delivery.id?.slice(-8)}: ${delivery.delivery_items?.length || 0} raw items -> ${items.length} formatted items`)
+      if (items.length === 0 && delivery.delivery_items?.length > 0) {
+        console.log('⚠️  Items lost during transformation:', delivery.delivery_items)
+      }
+      
       return { ...delivery, items, total_amount }
     })
 
