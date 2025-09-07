@@ -1,6 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+impo    for (let j = 0; j < itemCount; j++) {
+      const product = products[Math.floor(Math.random() * products.length)]
+      const quantity = Math.floor(Math.random() * 20) + 1
+      const baseUnitPrice = product.price + (Math.random() * 5) - 2.5
+      const unitPrice = Math.round(baseUnitPrice * 100) / 100 // Round to 2 decimals
+      const totalPrice = Math.round((quantity * unitPrice) * 100) / 100 // Round to 2 decimals
+
+      items.push({
+        id: `item_${i}_${j}`,
+        product_name: product.name,
+        quantity,
+        unit: product.unit,
+        unit_price: unitPrice,
+        total_price: totalPrice
+      })
+
+      totalAmount += totalPrice
+    }om 'next/headers'
 
 export const runtime = 'nodejs'
 
@@ -291,7 +308,8 @@ export async function POST(req: NextRequest) {
     }
 
     const totalAmount = body.items.reduce((sum: number, item: any) => {
-      return sum + (item.quantity * item.unit_price)
+      const itemTotal = Math.round((item.quantity * item.unit_price) * 100) / 100
+      return sum + itemTotal
     }, 0)
 
     const newDelivery: Delivery = {

@@ -67,7 +67,10 @@ export default function RecordDeliveryForm({ onSuccess, onCancel }: RecordDelive
   }
 
   const calculateTotal = () => {
-    return formData.items.reduce((total, item) => total + (item.quantity * item.unit_price), 0)
+    return Math.round(formData.items.reduce((total, item) => {
+      const itemTotal = item.quantity * item.unit_price
+      return total + itemTotal
+    }, 0) * 100) / 100
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
