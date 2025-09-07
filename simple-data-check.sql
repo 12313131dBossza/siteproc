@@ -1,16 +1,31 @@
--- Simple data check - no complex functions
--- Run this to see what data exists
+-- Simple check: What's actually in our database?
+-- Run this to see exactly what we have
 
--- Check table counts
-SELECT COUNT(*) as orders_count FROM orders;
-SELECT COUNT(*) as deliveries_count FROM deliveries;
-SELECT COUNT(*) as order_items_count FROM order_items;
+-- 1. Check if both tables exist
+SELECT 'TABLE CHECK:' as info;
+SELECT 
+    tablename,
+    'EXISTS' as status
+FROM pg_tables 
+WHERE tablename IN ('deliveries', 'delivery_items')
+ORDER BY tablename;
 
--- Show any existing orders
-SELECT * FROM orders LIMIT 3;
+-- 2. Check deliveries table data
+SELECT 'DELIVERIES DATA:' as info;
+SELECT 
+    id,
+    order_id,
+    status,
+    total_amount,
+    company_id,
+    created_at
+FROM deliveries 
+LIMIT 5;
 
--- Show any existing deliveries  
-SELECT * FROM deliveries LIMIT 3;
+-- 3. Check delivery_items data
+SELECT 'DELIVERY_ITEMS DATA:' as info;
+SELECT COUNT(*) as items_count FROM delivery_items;
 
--- Show companies
-SELECT * FROM companies LIMIT 5;
+-- 4. Show companies
+SELECT 'COMPANIES:' as info;
+SELECT id, name FROM companies LIMIT 5;

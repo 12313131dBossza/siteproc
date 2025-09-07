@@ -1,7 +1,7 @@
--- Create Delivery Tables for SiteProc
+-- Simple Delivery Tables Creation (No Foreign Keys)
 -- Run this in your Supabase SQL Editor
 
--- 1. Create deliveries table
+-- 1. Create deliveries table (without foreign keys)
 CREATE TABLE IF NOT EXISTS public.deliveries (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     order_id TEXT NOT NULL,
@@ -29,29 +29,11 @@ CREATE TABLE IF NOT EXISTS public.delivery_items (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 3. Add foreign key constraints (safer to add after table creation)
-DO $$ 
-BEGIN
-    -- Add company_id foreign key if companies table exists
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'companies' AND table_schema = 'public') THEN
-        ALTER TABLE public.deliveries 
-        ADD CONSTRAINT fk_deliveries_company_id 
-        FOREIGN KEY (company_id) REFERENCES public.companies(id) ON DELETE CASCADE;
-    END IF;
-    
-    -- Add created_by foreign key if auth.users exists
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'users' AND table_schema = 'auth') THEN
-        ALTER TABLE public.deliveries 
-        ADD CONSTRAINT fk_deliveries_created_by 
-        FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE SET NULL;
-    END IF;
-END $$;
-
--- 4. Enable Row Level Security (RLS)
+-- 3. Enable Row Level Security (RLS)
 ALTER TABLE public.deliveries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.delivery_items ENABLE ROW LEVEL SECURITY;
 
--- 5. Create RLS policies for deliveries table
+-- 4. Create RLS policies for deliveries table
 
 -- Policy: Users can only see deliveries from their company
 CREATE POLICY "deliveries_select_company" ON public.deliveries
@@ -100,7 +82,7 @@ CREATE POLICY "deliveries_delete_admin" ON public.deliveries
         )
     );
 
--- 6. Create RLS policies for delivery_items table
+-- 5. Create RLS policies for delivery_items table
 
 -- Policy: Users can see items for deliveries in their company
 CREATE POLICY "delivery_items_select_company" ON public.delivery_items
@@ -160,14 +142,14 @@ CREATE POLICY "delivery_items_delete_admin" ON public.delivery_items
         )
     );
 
--- 7. Create indexes for better performance
+-- 6. Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_deliveries_company_id ON public.deliveries(company_id);
 CREATE INDEX IF NOT EXISTS idx_deliveries_created_by ON public.deliveries(created_by);
 CREATE INDEX IF NOT EXISTS idx_deliveries_status ON public.deliveries(status);
 CREATE INDEX IF NOT EXISTS idx_deliveries_delivery_date ON public.deliveries(delivery_date);
 CREATE INDEX IF NOT EXISTS idx_delivery_items_delivery_id ON public.delivery_items(delivery_id);
 
--- 8. Create function to automatically update updated_at
+-- 7. Create function to automatically update updated_at
 CREATE OR REPLACE FUNCTION public.handle_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -176,17 +158,17 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 9. Create trigger to update updated_at on deliveries
+-- 8. Create trigger to update updated_at on deliveries
 DROP TRIGGER IF EXISTS handle_deliveries_updated_at ON public.deliveries;
 CREATE TRIGGER handle_deliveries_updated_at
     BEFORE UPDATE ON public.deliveries
     FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 
--- 10. Grant permissions
+-- 9. Grant permissions
 GRANT ALL ON public.deliveries TO authenticated;
 GRANT ALL ON public.delivery_items TO authenticated;
 
--- 11. Verify tables were created
+-- 10. Verify tables were created
 SELECT 
     'Deliveries table created!' as status,
     count(*) as delivery_count 
@@ -197,7 +179,7 @@ SELECT
     count(*) as items_count 
 FROM public.delivery_items;
 
--- Show table structure (alternative to \d commands)
+-- 11. Show table structure
 SELECT 
     table_name,
     column_name,

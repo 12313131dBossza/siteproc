@@ -122,12 +122,12 @@ export default function RecordDeliveryModal({
         order_id: orderItem.order_id,
         product_id: orderItem.product_id,
         delivered_qty: deliveredQty,
-        delivered_at: new Date(formData.delivered_at + 'T12:00:00.000Z'),
+        delivered_at: formData.delivered_at + 'T12:00:00.000Z',
         note: formData.note.trim() || undefined,
         proof_url: proofUrl,
       }
 
-      const response = await fetch('/api/order-deliveries', {
+      const response = await fetch('/api/order-deliveries/record', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

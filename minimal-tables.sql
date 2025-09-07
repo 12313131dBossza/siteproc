@@ -1,53 +1,37 @@
--- MINIMAL: Just create the bare tables first
--- No indexes, no RLS, no nothing - just tables
+-- MINIMAL: Just create the delivery tables first
+-- No RLS, no complex policies - just the basic tables
 
--- Create orders table
-CREATE TABLE IF NOT EXISTS orders (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id UUID,
-  supplier_id UUID,
-  order_number VARCHAR(50),
-  status VARCHAR(50) DEFAULT 'draft',
-  total_amount DECIMAL(12,2) DEFAULT 0,
-  notes TEXT,
-  delivery_address TEXT,
-  delivery_date DATE,
-  created_by UUID,
-  approved_by UUID,
-  approved_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
+-- 1. Create deliveries table (basic structure)
+CREATE TABLE IF NOT EXISTS public.deliveries (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    order_id TEXT NOT NULL,
+    delivery_date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'in_transit', 'delivered', 'cancelled')),
+    driver_name TEXT,
+    vehicle_number TEXT,
+    notes TEXT,
+    total_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
+    company_id UUID,
+    created_by UUID,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Create order_items table
-CREATE TABLE IF NOT EXISTS order_items (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  order_id UUID,
-  product_id UUID,
-  ordered_qty DECIMAL(10,2),
-  delivered_qty DECIMAL(10,2) DEFAULT 0,
-  unit_price DECIMAL(12,2),
-  total_price DECIMAL(12,2) DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
+-- 2. Create delivery_items table
+CREATE TABLE IF NOT EXISTS public.delivery_items (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    delivery_id UUID REFERENCES public.deliveries(id) ON DELETE CASCADE,
+    product_name TEXT NOT NULL,
+    quantity DECIMAL(10,2) NOT NULL CHECK (quantity > 0),
+    unit TEXT NOT NULL DEFAULT 'pieces',
+    unit_price DECIMAL(10,2) NOT NULL CHECK (unit_price >= 0),
+    total_price DECIMAL(12,2) NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Create deliveries table
-CREATE TABLE IF NOT EXISTS deliveries (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  order_id UUID,
-  product_id UUID,
-  delivered_qty DECIMAL(10,2),
-  delivered_at TIMESTAMPTZ DEFAULT now(),
-  note TEXT,
-  proof_url TEXT,
-  supplier_id UUID,
-  company_id UUID,
-  created_by UUID,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
+-- 3. Grant basic permissions
+GRANT ALL ON public.deliveries TO authenticated;
+GRANT ALL ON public.delivery_items TO authenticated;
 
--- That's it! Just verify they exist
-SELECT 'Tables created!' as status;
-SELECT tablename FROM pg_tables WHERE tablename IN ('orders', 'order_items', 'deliveries') ORDER BY tablename;
+-- 4. Simple verification
+SELECT 'Delivery tables created successfully!' as status;

@@ -26,7 +26,7 @@ function getRolePermissions(role: string): UserPermissions {
 
 // Authentication helper
 async function getAuthenticatedUser() {
-  const cookieStore = await cookies()
+  const cookieStore = cookies()
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -126,7 +126,7 @@ export async function GET(req: NextRequest) {
     })
 
     // Create Supabase client for database operations
-  const cookieStore = await cookies()
+    const cookieStore = cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -199,17 +199,11 @@ export async function GET(req: NextRequest) {
       }, { status: 500 })
     }
 
-    // Transform data to match interface and coerce numeric strings -> numbers
-    const formattedDeliveries = (deliveries || []).map((delivery: any) => {
-      const items = (delivery.delivery_items || []).map((it: any) => ({
-        ...it,
-        quantity: typeof it.quantity === 'string' ? Number(it.quantity) : it.quantity,
-        unit_price: typeof it.unit_price === 'string' ? Number(it.unit_price) : it.unit_price,
-        total_price: typeof it.total_price === 'string' ? Number(it.total_price) : it.total_price,
-      }))
-      const total_amount = typeof delivery.total_amount === 'string' ? Number(delivery.total_amount) : delivery.total_amount
-      return { ...delivery, items, total_amount }
-    })
+    // Transform data to match interface
+    const formattedDeliveries = deliveries?.map(delivery => ({
+      ...delivery,
+      items: delivery.delivery_items || []
+    })) || []
 
     // Calculate summary statistics
     const summaryStats = {
@@ -318,7 +312,7 @@ export async function POST(req: NextRequest) {
     )
 
     // Create Supabase client for database operations
-  const cookieStore = await cookies()
+    const cookieStore = cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -359,7 +353,7 @@ export async function POST(req: NextRequest) {
       }, { status: 500 })
     }
 
-  // Prepare delivery items data
+    // Prepare delivery items data
     const itemsData = body.items.map((item: any) => ({
       delivery_id: newDelivery.id,
       product_name: item.product_name.trim(),
@@ -388,13 +382,7 @@ export async function POST(req: NextRequest) {
     // Return the complete delivery with items
     const completeDelivery = {
       ...newDelivery,
-      total_amount: typeof newDelivery.total_amount === 'string' ? Number(newDelivery.total_amount) : newDelivery.total_amount,
-      items: (newItems || []).map((it: any) => ({
-        ...it,
-        quantity: typeof it.quantity === 'string' ? Number(it.quantity) : it.quantity,
-        unit_price: typeof it.unit_price === 'string' ? Number(it.unit_price) : it.unit_price,
-        total_price: typeof it.total_price === 'string' ? Number(it.total_price) : it.total_price,
-      }))
+      items: newItems || []
     }
 
     return NextResponse.json({
