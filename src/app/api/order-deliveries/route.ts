@@ -350,8 +350,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Insert delivery into database; if company_id/created_by missing or RLS blocks, try graceful fallbacks
-    let newDelivery: any = null
-    let deliveryError: any = null
+  let newDelivery: any = null
+  let deliveryError: any = null
+  let fallbackError: any = null
     let dbForItems: any = supabase
     {
       const res = await supabase
@@ -375,7 +376,7 @@ export async function POST(req: NextRequest) {
       deliveryError = res2.error
     }
     // If still failing (likely RLS), fallback to service role on server side only
-    if (deliveryError) {
+  if (deliveryError) {
       try {
         const sbSvc = supabaseService()
         const res3 = await (sbSvc as any)
@@ -389,16 +390,22 @@ export async function POST(req: NextRequest) {
           dbForItems = sbSvc
         }
       } catch (e) {
-        // keep original error
+    fallbackError = e
       }
     }
 
     if (deliveryError) {
       console.error('Database error creating delivery:', deliveryError)
+      const hasServiceKey = !!(process.env.SUPABASE_SERVICE_ROLE || process.env.SUPABASE_SERVICE_ROLE_KEY)
       return NextResponse.json({
         success: false,
         error: 'Failed to create delivery in database',
-        details: deliveryError?.message || String(deliveryError)
+        details: deliveryError?.message || String(deliveryError),
+        diagnostics: {
+          hasServiceKey,
+          serviceKeyVar: process.env.SUPABASE_SERVICE_ROLE ? 'SUPABASE_SERVICE_ROLE' : (process.env.SUPABASE_SERVICE_ROLE_KEY ? 'SUPABASE_SERVICE_ROLE_KEY' : null),
+          fallbackError: fallbackError ? (fallbackError as Error).message : null
+        }
       }, { status: 500 })
     }
 
