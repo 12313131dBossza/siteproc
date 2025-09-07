@@ -19,7 +19,8 @@ import {
   DollarSign,
   Users,
   TrendingUp,
-  MoreHorizontal
+  MoreHorizontal,
+  XCircle
 } from 'lucide-react'
 import { useCompanyId } from '@/lib/useCompanyId'
 import RecordDeliveryForm from '@/components/RecordDeliveryForm'
@@ -174,6 +175,30 @@ export default function OrderDeliveriesClient() {
       setError(err instanceof Error ? err.message : 'Failed to fetch deliveries')
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Update delivery status (approve/reject)
+  const updateDeliveryStatus = async (deliveryId: string, newStatus: 'delivered' | 'cancelled') => {
+    try {
+      const response = await fetch(`/api/order-deliveries/${deliveryId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      })
+
+      if (response.ok) {
+        // Refresh the deliveries list
+        fetchDeliveries()
+      } else {
+        const error = await response.json()
+        alert(`Failed to update delivery: ${error.error || 'Unknown error'}`)
+      }
+    } catch (err) {
+      console.error('Error updating delivery:', err)
+      alert('Failed to update delivery status')
     }
   }
 
@@ -510,6 +535,29 @@ export default function OrderDeliveriesClient() {
                             {delivery.items.length} item{delivery.items.length !== 1 ? 's' : ''}
                           </div>
                         </div>
+                        
+                        {/* Approve/Reject Buttons */}
+                        {delivery.status === 'pending' && userInfo?.permissions?.canUpdate && (
+                          <div className="flex items-center space-x-2 ml-4">
+                            <button
+                              onClick={() => updateDeliveryStatus(delivery.id, 'delivered')}
+                              className="px-3 py-1.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-1"
+                              title="Approve Delivery"
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                              <span>Approve</span>
+                            </button>
+                            <button
+                              onClick={() => updateDeliveryStatus(delivery.id, 'cancelled')}
+                              className="px-3 py-1.5 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-1"
+                              title="Reject Delivery"
+                            >
+                              <XCircle className="h-4 w-4" />
+                              <span>Reject</span>
+                            </button>
+                          </div>
+                        )}
+                        
                         <button className="p-2 text-gray-400 hover:text-gray-600 rounded-lg">
                           <MoreHorizontal className="h-5 w-5" />
                         </button>
