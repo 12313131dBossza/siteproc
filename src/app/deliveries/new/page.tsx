@@ -1,13 +1,7 @@
 "use client"
-import { Metadata } from 'next'
 import RecordDeliveryForm from '@/components/RecordDeliveryForm'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
-
-export const metadata: Metadata = {
-  title: 'New Delivery - SiteProc',
-  description: 'Record a new delivery',
-}
 
 export default function NewDeliveryPage() {
   return (
