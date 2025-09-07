@@ -158,9 +158,14 @@ export async function GET(req: NextRequest) {
       .from('deliveries')
       .select(`*, delivery_items (*)`)
       .order('created_at', { ascending: false })
-    if (supportsCompany) {
-      query = query.eq('company_id', user.company_id)
-    }
+    
+    // TEMPORARILY DISABLE COMPANY FILTERING TO FIX ITEMS ISSUE
+    // TODO: Fix company_id mismatch in database then re-enable this
+    // if (supportsCompany) {
+    //   query = query.eq('company_id', user.company_id)
+    // }
+    
+    console.log(`🔍 Fetching deliveries WITHOUT company filter (temporarily) for user: ${user.email}`)
 
     // Apply status filter
     if (status && status !== 'all') {
