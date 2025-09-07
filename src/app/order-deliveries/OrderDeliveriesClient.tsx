@@ -161,18 +161,17 @@ export default function OrderDeliveriesClient() {
       const data: DeliveriesResponse = await response.json()
       // Debug: surface what the API actually returned so we can compare items vs delivery_items
       try {
-        const brief = Array.isArray((data as any)?.deliveries) ? (data as any).deliveries.map((d: any) => ({
-          id: d.id,
-          order_id: d.order_id,
-          items_len: Array.isArray(d.items) ? d.items.length : null,
-          delivery_items_len: Array.isArray(d.delivery_items) ? d.delivery_items.length : null,
-          keys: Object.keys(d || {})
-        })) : []
+        const ds = (data as any)?.deliveries || []
+        const lens = ds.map((d: any) => ({
+          id: String(d?.id).slice(-6),
+          items: Array.isArray(d?.items) ? d.items.length : -1,
+          delivery_items: Array.isArray(d?.delivery_items) ? d.delivery_items.length : -1
+        }))
         // eslint-disable-next-line no-console
         console.log('[OrderDeliveriesClient] API result summary:', {
           success: (data as any)?.success,
           total: (data as any)?.pagination?.total,
-          deliveries: brief
+          deliveries: lens
         })
       } catch {}
       
@@ -506,6 +505,8 @@ export default function OrderDeliveriesClient() {
               // Fallback: if API didn't populate items, try raw delivery_items from the response
               const fallbackItems = (delivery as any)?.delivery_items || []
               const itemsToRender = (delivery.items && delivery.items.length > 0) ? delivery.items : fallbackItems
+              // eslint-disable-next-line no-console
+              try { console.log('[Render] del', delivery.id.slice(-6), 'len', itemsToRender.length, 'items=', delivery.items?.length, 'delivery_items=', (delivery as any)?.delivery_items?.length) } catch {}
               return (
                 <div key={delivery.id} className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
                   <div className="p-6">

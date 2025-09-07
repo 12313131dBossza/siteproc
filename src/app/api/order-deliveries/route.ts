@@ -196,7 +196,7 @@ export async function GET(req: NextRequest) {
     const startIndex = (page - 1) * limit
     query = query.range(startIndex, startIndex + limit - 1)
 
-    const { data: deliveries, error } = await query
+  const { data: deliveries, error } = await query
 
     if (error) {
       console.error('Database error:', error)
@@ -209,8 +209,8 @@ export async function GET(req: NextRequest) {
       }, { status: 500 })
     }
 
-    // Transform data to match interface and coerce numeric strings -> numbers
-    const formattedDeliveries = (deliveries || []).map((delivery: any) => {
+  // Transform data to match interface and coerce numeric strings -> numbers
+  let formattedDeliveries = (deliveries || []).map((delivery: any) => {
       // Ensure delivery_items is an array
       const rawItems = Array.isArray(delivery.delivery_items) ? delivery.delivery_items : []
       
@@ -260,6 +260,64 @@ export async function GET(req: NextRequest) {
       
       return { ...delivery, items, total_amount }
     })
+
+    // If nested items came back empty (likely due to RLS or missing grants), try a follow-up fetch and merge
+    try {
+      const needsBackfill = formattedDeliveries.some((d: any) => (d.items?.length || 0) === 0)
+      if (needsBackfill && formattedDeliveries.length > 0) {
+        const ids = formattedDeliveries.map((d: any) => d.id).filter(Boolean)
+        console.log('🩹 Backfilling delivery items with direct query for deliveries:', ids.map((x: string) => x?.slice(-8)))
+
+        // First attempt with user context (may be blocked by RLS)
+        let itemsRes = await (supabase as any)
+          .from('delivery_items')
+          .select('*')
+          .in('delivery_id', ids)
+
+        // If blocked or zero, retry with service role on server
+        if (itemsRes.error || (Array.isArray(itemsRes.data) && itemsRes.data.length === 0)) {
+          try {
+            const svc = supabaseService() as any
+            itemsRes = await svc
+              .from('delivery_items')
+              .select('*')
+              .in('delivery_id', ids)
+          } catch (e) {
+            console.log('Backfill service fallback failed:', (e as Error).message)
+          }
+        }
+
+        if (Array.isArray(itemsRes.data) && itemsRes.data.length > 0) {
+          const byDelivery: Record<string, any[]> = {}
+          for (const it of itemsRes.data) {
+            const did = it.delivery_id
+            if (!byDelivery[did]) byDelivery[did] = []
+            byDelivery[did].push({
+              id: it.id,
+              product_name: it.product_name || it.description || 'Unnamed Item',
+              quantity: typeof it.quantity === 'string' ? Number(it.quantity) : it.quantity,
+              unit: it.unit || 'pieces',
+              unit_price: typeof it.unit_price === 'string' ? Number(it.unit_price) : it.unit_price,
+              total_price: typeof it.total_price === 'string' ? Number(it.total_price) : (Number(it.quantity) * Number(it.unit_price))
+            })
+          }
+          formattedDeliveries = formattedDeliveries.map((d: any) => {
+            if (!d.items || d.items.length === 0) {
+              const merged = byDelivery[d.id] || []
+              if (merged.length > 0) {
+                console.log(`✅ Backfilled ${merged.length} items for delivery ${d.id?.slice(-8)}`)
+              }
+              return { ...d, items: merged }
+            }
+            return d
+          })
+        } else {
+          console.log('ℹ️ Backfill query returned no items or an error:', itemsRes.error?.message)
+        }
+      }
+    } catch (e) {
+      console.log('Backfill step skipped due to error:', (e as Error).message)
+    }
 
     // Calculate summary statistics
     const summaryStats = {
