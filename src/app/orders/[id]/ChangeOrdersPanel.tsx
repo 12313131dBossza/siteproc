@@ -19,25 +19,49 @@ export default function ChangeOrdersPanel() {
   const [loading, setLoading] = useState(true)
   const [proposedQty, setProposedQty] = useState<number>(0)
   const [reason, setReason] = useState<string>("")
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string>("")
+  const [success, setSuccess] = useState<string>("")
 
   async function load() {
     setLoading(true)
-    const res = await fetch(`/api/change-orders?orderId=${orderId}`)
-    const json = await res.json()
-    if (res.ok) setItems(json.data || [])
+    setError("")
+    try {
+      const res = await fetch(`/api/change-orders?orderId=${orderId}`)
+      const json = await res.json().catch(() => ({}))
+      if (res.ok) {
+        setItems(json.data || [])
+      } else {
+        setError(typeof json.error === 'string' ? json.error : 'Failed to load change orders')
+      }
+    } catch (e: any) {
+      setError('Network error while loading')
+    }
     setLoading(false)
   }
   useEffect(() => { if (orderId) load() }, [orderId])
 
   async function submit() {
-    if (!proposedQty || proposedQty <= 0) return
-    const res = await fetch(`/api/change-orders`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ order_id: orderId, proposed_qty: proposedQty, reason })
-    })
-    if (res.ok) {
-      setProposedQty(0); setReason(''); load()
+    setError(""); setSuccess("")
+    if (!proposedQty || proposedQty <= 0) { setError('Enter a quantity greater than 0'); return }
+    setSubmitting(true)
+    try {
+      const res = await fetch(`/api/change-orders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: orderId, proposed_qty: proposedQty, reason })
+      })
+      const json = await res.json().catch(() => ({}))
+      if (res.ok) {
+        setProposedQty(0); setReason(''); setSuccess('Request submitted');
+        load()
+      } else {
+        setError(typeof json.error === 'string' ? json.error : 'Failed to submit request')
+      }
+    } catch (e: any) {
+      setError('Network error while submitting')
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -50,8 +74,10 @@ export default function ChangeOrdersPanel() {
             placeholder="New quantity" className="border rounded-xl px-3 py-2" />
           <input value={reason} onChange={(e) => setReason(e.target.value)}
             placeholder="Reason (optional)" className="border rounded-xl px-3 py-2 md:col-span-2" />
-          <button onClick={submit} className="rounded-xl px-4 py-2 bg-black text-white hover:opacity-90">Submit</button>
+          <button onClick={submit} disabled={submitting} className={`rounded-xl px-4 py-2 text-white ${submitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-black hover:opacity-90'}`}>{submitting ? 'Submitting…' : 'Submit'}</button>
         </div>
+        {error ? <div className="mt-2 text-sm text-red-600">{error}</div> : null}
+        {success ? <div className="mt-2 text-sm text-green-600">{success}</div> : null}
       </div>
 
       <div className="rounded-2xl border p-4">
