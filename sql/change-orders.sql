@@ -107,6 +107,19 @@ do $$ begin
   end if;
 end $$;
 
+-- Legacy compatibility: some schemas use 'description' instead of 'reason'
+do $$ begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema='public' and table_name='change_orders' and column_name='description'
+  ) then
+    -- Make description optional if it exists, so reason can be the primary field
+    begin
+      alter table public.change_orders alter column description drop not null;
+    exception when others then null; end;
+  end if;
+end $$;
+
 -- RLS
 alter table public.change_orders enable row level security;
 

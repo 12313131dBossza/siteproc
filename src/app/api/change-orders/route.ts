@@ -81,6 +81,16 @@ export async function POST(req: Request) {
     .single()
   if (error) {
     const msg = String(error.message || '')
+    
+    // If legacy schema requires description instead of reason
+    if (/description/gi.test(msg) && /not-null|null value/i.test(msg)) {
+      const retry: any = { ...payload, description: reason || 'Change request' }
+      delete retry.reason
+      const again = await supabase.from('change_orders').insert(retry).select('*').single()
+      if (!again.error && again.data) return NextResponse.json({ data: again.data })
+      return NextResponse.json({ error: again.error?.message || 'insert_failed' }, { status: 400 })
+    }
+    
     // If a legacy schema requires job_id NOT NULL, retry by mapping order_id to job_id
     if (/job_id/gi.test(msg) && /not-null|null value/i.test(msg)) {
       const retry: any = { ...payload, job_id: order_id }
@@ -88,6 +98,7 @@ export async function POST(req: Request) {
       if (!again.error && again.data) return NextResponse.json({ data: again.data })
       return NextResponse.json({ error: again.error?.message || 'insert_failed' }, { status: 400 })
     }
+    
     return NextResponse.json({ error: error.message }, { status: 400 })
   }
 

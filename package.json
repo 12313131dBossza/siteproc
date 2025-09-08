@@ -10,6 +10,7 @@
     "test": "vitest run --coverage tests",
     "analyze:accessibility": "npx lighthouse http://localhost:3000 --only-categories=accessibility --quiet --chrome-flags='--headless=new' || true",
     "loadtest:publicQuote": "node scripts/loadtest-public-quote.js",
+  "sql:change-orders": "node scripts/run-sql.js sql/change-orders.sql",
     "scan:secrets": "npx @trufflesecurity/trufflehog filesystem --only-verified --json . || true",
     "e2e": "playwright test",
     "e2e:headed": "playwright test --project=chromium --headed",
