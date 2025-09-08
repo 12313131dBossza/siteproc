@@ -38,10 +38,7 @@ export default function ProjectsPageClient({ rows, error }: { rows: ProjectRow[]
     <div className='space-y-6'>
       <div className='flex items-center justify-between'>
         <h1 className='text-xl font-semibold'>Projects</h1>
-        <div className="flex gap-2">
-          <Button href='/projects'>View User Projects</Button>
-          <Button href='/admin/projects/new'>New Project</Button>
-        </div>
+        <Button href='/projects'>View User Projects</Button>
       </div>
 
       {(error || apiError) && (
