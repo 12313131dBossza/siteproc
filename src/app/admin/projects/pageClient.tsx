@@ -2,37 +2,74 @@
 import DataTable from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
 import { useState, useEffect } from 'react';
-import { usePaginatedRealtime } from '@/lib/paginationRealtime';
-export interface ProjectRow { id:string; name:string; code:string|null }
-export default function ProjectsPageClient({ rows }: { rows: ProjectRow[] }){
-  const [companyId, setCompanyId] = useState<string | null>(null)
-  useEffect(() => { setCompanyId(localStorage.getItem('company_id')) }, [])
-  const { items, loadMore, nextCursor, loading } = usePaginatedRealtime<ProjectRow>({
-    table: 'jobs',
-    companyId: companyId || undefined,
-    id: r=>r.id,
-    fetchPage: async ({ companyId, limit, cursor }) => {
-      const url = new URL('/api/jobs/list', window.location.origin)
-      url.searchParams.set('limit', String(limit))
-      if (cursor) url.searchParams.set('cursor', cursor)
-      const res = await fetch(url.toString(), { headers: { 'x-company-id': companyId } })
-      const json = await res.json().catch(()=>({ items: [] }))
-      const items = Array.isArray(json?.items) ? json.items : (Array.isArray(json) ? json : [])
-      return { items, nextCursor: json.nextCursor || null }
+
+export interface ProjectRow { 
+  id: string; 
+  name: string; 
+  code: string|null; 
+  status?: string; 
+  budget?: number 
+}
+
+export default function ProjectsPageClient({ rows, error }: { rows: ProjectRow[]; error?: string }){
+  const [projects, setProjects] = useState<ProjectRow[]>(rows || [])
+  const [loading, setLoading] = useState(false)
+  const [apiError, setApiError] = useState<string>()
+
+  // Try to load from projects API as fallback if server-side failed
+  useEffect(() => {
+    if ((!rows || rows.length === 0) && !error) {
+      setLoading(true)
+      fetch('/api/projects', { headers: { 'Accept': 'application/json' } })
+        .then(r => r.json())
+        .then(j => {
+          if (j?.data) {
+            setProjects(j.data)
+          } else if (j?.error) {
+            setApiError(j.error)
+          }
+        })
+        .catch(e => setApiError(e?.message || 'Failed to load projects'))
+        .finally(() => setLoading(false))
     }
-  })
+  }, [rows, error])
+
   return (
     <div className='space-y-6'>
       <div className='flex items-center justify-between'>
         <h1 className='text-xl font-semibold'>Projects</h1>
-        <Button href='/admin/projects/new'>New Project</Button>
+        <div className="flex gap-2">
+          <Button href='/projects'>View User Projects</Button>
+          <Button href='/admin/projects/new'>New Project</Button>
+        </div>
       </div>
-  <DataTable columns={[
-        { key:'id', header:'ID', sortable:true },
-        { key:'name', header:'Name', sortable:true },
-        { key:'code', header:'Code', sortable:true }
-  ] as any} rows={items as any} emptyMessage='No projects.' onRowClick={(r:any)=>location.href='/admin/projects/'+r.id} />
-  {nextCursor && <button disabled={loading} onClick={()=>loadMore()} className='text-xs px-3 py-1 border rounded disabled:opacity-50'>Load more…</button>}
+
+      {(error || apiError) && (
+        <div className="rounded border border-red-200 bg-red-50 text-red-700 p-3">
+          <div className="font-medium mb-1">Error loading projects</div>
+          <div className="text-sm">{error || apiError}</div>
+          <div className="text-xs mt-2 text-red-600/80">
+            The projects module might not be set up yet. Try running the projects migration or use the user-facing projects page.
+          </div>
+        </div>
+      )}
+
+      {loading ? (
+        <div>Loading projects...</div>
+      ) : (
+        <DataTable 
+          columns={[
+            { key:'id', header:'ID', sortable:true },
+            { key:'name', header:'Name', sortable:true },
+            { key:'code', header:'Code', sortable:true },
+            { key:'status', header:'Status', sortable:true },
+            { key:'budget', header:'Budget', render: (row: any) => row.budget ? `$${Number(row.budget).toFixed(2)}` : '—' }
+          ] as any} 
+          rows={projects as any} 
+          emptyMessage='No projects found. Try creating one or check if the projects migration has been applied.' 
+          onRowClick={(r:any)=>location.href='/projects/'+r.id} 
+        />
+      )}
     </div>
   );
 }
