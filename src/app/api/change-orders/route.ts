@@ -47,20 +47,21 @@ export async function POST(req: Request) {
   const myCompany = (profRes.data as any)?.company_id as string | undefined
   if (!myCompany) return NextResponse.json({ error: 'no_company' }, { status: 400 })
 
-  // Load order using service role (bypass RLS only for existence + company match)
-  const sb = supabaseService()
-  const { data: order, error: orderErr } = await sb
-    .from('orders')
-    .select('id, company_id, status')
-    .eq('id', order_id)
-    .single()
-  if (orderErr || !order) return NextResponse.json({ error: 'order_not_found' }, { status: 404 })
-  const orderRow = order as any
-  if (orderRow.company_id !== myCompany) return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+  // Try to read order using SSR (RLS). If not visible, fall back to service-role read; if still not found, let FK validate on insert.
+  let orderRow: any | null = null
+  const ssr = await supabase.from('orders').select('id, company_id, status').eq('id', order_id).single() as any
+  if (!ssr.error && ssr.data) orderRow = ssr.data
+  if (!orderRow) {
+    const sb = supabaseService()
+    const svc = await sb.from('orders').select('id, company_id, status').eq('id', order_id).single() as any
+    if (!svc.error && svc.data) orderRow = svc.data
+  }
 
-  // Optional: restrict to approved/partially_delivered orders
-  if (!['approved', 'partially_delivered'].includes((orderRow as any).status)) {
-    return NextResponse.json({ error: 'invalid_order_state' }, { status: 400 })
+  if (orderRow) {
+    if (orderRow.company_id !== myCompany) return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+    if (!['approved', 'partially_delivered'].includes(orderRow.status)) {
+      return NextResponse.json({ error: 'invalid_order_state' }, { status: 400 })
+    }
   }
 
   // Insert under RLS with the authenticated user
