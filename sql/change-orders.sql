@@ -88,6 +88,25 @@ left join public.deliveries d
 left join public.delivery_items di on di.delivery_id = d.id
 group by o.id, o.qty;
 
+-- Legacy compatibility: some schemas had change_orders.job_id NOT NULL with an FK
+do $$ begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema='public' and table_name='change_orders' and column_name='job_id'
+  ) then
+    -- Make job_id optional so new order_id-based flow works
+    begin
+      alter table public.change_orders alter column job_id drop not null;
+    exception when others then null; end;
+
+    -- Drop any strict FK on job_id if present (name may vary across installs)
+    begin
+      alter table public.change_orders drop constraint if exists change_orders_job_id_fkey;
+      alter table public.change_orders drop constraint if exists fk_change_orders_job_id;
+    exception when others then null; end;
+  end if;
+end $$;
+
 -- RLS
 alter table public.change_orders enable row level security;
 
