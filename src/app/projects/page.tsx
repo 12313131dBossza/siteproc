@@ -12,23 +12,40 @@ type Project = {
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string|undefined>()
   const [modal, setModal] = useState(false)
   const [form, setForm] = useState({ name: '', budget: 0, code: '', status: 'active' })
 
   async function load() {
     setLoading(true)
-    const res = await fetch('/api/projects')
-    const json = await res.json()
-    if (res.ok) setProjects(json.data || [])
+    setError(undefined)
+    try {
+      const res = await fetch('/api/projects', { headers: { 'Accept': 'application/json' } })
+      const json = await res.json().catch(()=>({}))
+      if (res.ok) {
+        setProjects(json.data || [])
+      } else {
+        setProjects([])
+        setError(json?.error || `Failed to load projects (HTTP ${res.status})`)
+      }
+    } catch (e:any) {
+      setProjects([])
+      setError(e?.message || 'Failed to load projects')
+    }
     setLoading(false)
   }
   useEffect(() => { load() }, [])
 
   async function createProject() {
-    const res = await fetch('/api/projects', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
+    const res = await fetch('/api/projects', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(form) })
     if (res.ok) {
+      const j = await res.json().catch(()=>({}))
+      const created = j?.data
+      // Optimistic update
+      if (created) setProjects(prev => [created, ...prev])
       setModal(false)
       setForm({ name: '', budget: 0, code: '', status: 'active' })
+      // Also refresh in background to ensure rollups/statuses
       load()
     } else {
       const e = await res.json().catch(()=>({}))
@@ -43,10 +60,34 @@ export default function ProjectsPage() {
         <button onClick={() => setModal(true)} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">New Project</button>
       </div>
 
+      {error && (
+        <div className="mb-4 rounded border border-red-200 bg-red-50 text-red-700 p-3">
+          <div className="font-medium mb-1">Couldn’t load projects</div>
+          <div className="text-sm">{error}</div>
+          <div className="text-xs mt-2 text-red-600/80">If this is a new environment, make sure the database migration for projects has been applied (sql/projects.sql) and you’re signed in.</div>
+        </div>
+      )}
+
       {loading ? (
-        <div>Loading…</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {Array.from({ length: 4 }).map((_,i)=> (
+            <div key={i} className="animate-pulse bg-white border rounded-lg p-5">
+              <div className="h-5 w-40 bg-gray-200 rounded mb-2" />
+              <div className="h-3 w-24 bg-gray-100 rounded mb-4" />
+              <div className="grid grid-cols-3 gap-3">
+                <div className="h-4 bg-gray-100 rounded" />
+                <div className="h-4 bg-gray-100 rounded" />
+                <div className="h-4 bg-gray-100 rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : projects.length === 0 ? (
-        <div className="text-gray-600">No projects yet.</div>
+        <div className="text-gray-600 border border-dashed rounded-lg p-8 text-center">
+          <div className="text-lg font-medium mb-1">No projects yet</div>
+          <div className="text-sm mb-4">Create your first project to track budget, actuals, and deliveries.</div>
+          <button onClick={()=>setModal(true)} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded">Create a Project</button>
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {projects.map(p => <ProjectCard key={p.id} p={p} />)}
@@ -95,7 +136,7 @@ export default function ProjectsPage() {
 function ProjectCard({ p }: { p: Project }) {
   const [rollup, setRollup] = useState<any>(null)
   useEffect(() => {
-    fetch(`/api/projects/${p.id}/rollup`).then(r=>r.json()).then(j=>setRollup(j.data)).catch(()=>{})
+  fetch(`/api/projects/${p.id}/rollup`).then(r=>r.json()).then(j=>setRollup(j.data)).catch(()=>setRollup(null))
   }, [p.id])
 
   const varianceColor = useMemo(() => {
@@ -104,7 +145,7 @@ function ProjectCard({ p }: { p: Project }) {
   }, [rollup])
 
   return (
-    <a href={`/projects/${p.id}`} className="block bg-white border rounded-lg p-5 hover:shadow-md transition">
+  <a href={`/projects/${p.id}`} className="block bg-white border rounded-lg p-5 hover:shadow-md transition">
       <div className="flex items-center justify-between mb-2">
         <div className="font-semibold text-lg">{p.name}</div>
         <span className="text-xs px-2 py-1 rounded-full border bg-gray-50">{p.status}</span>

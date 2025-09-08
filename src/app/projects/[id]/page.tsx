@@ -10,20 +10,34 @@ export default function ProjectDetailPage() {
   const [tab, setTab] = useState<'overview'|'orders'|'expenses'|'deliveries'>('overview')
   const [assign, setAssign] = useState({ orders: '', expenses: '', deliveries: '' })
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string|undefined>()
 
   async function load() {
-    const [p, r] = await Promise.all([
-      fetch(`/api/projects/${id}`).then(r=>r.json()),
-      fetch(`/api/projects/${id}/rollup`).then(r=>r.json())
-    ])
-    setProject(p.data)
-    setRollup(r.data)
+    setError(undefined)
+    try {
+      const [p, r] = await Promise.all([
+        fetch(`/api/projects/${id}`, { headers: { 'Accept': 'application/json' } }).then(r=>r.json()),
+        fetch(`/api/projects/${id}/rollup`, { headers: { 'Accept': 'application/json' } }).then(r=>r.json())
+      ])
+      if (p?.error) throw new Error(p.error)
+      setProject(p.data)
+      setRollup(r.data)
+    } catch (e:any) {
+      setError(e?.message || 'Failed to load project')
+    }
   }
   useEffect(() => { if (id) load() }, [id])
 
   async function updateStatus(status: string) {
-    const res = await fetch(`/api/projects/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) })
-    if (res.ok) load(); else alert('Failed to update status')
+    const res = await fetch(`/api/projects/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify({ status }) })
+    if (res.ok) {
+      const j = await res.json().catch(()=>({}))
+      if (j?.data) setProject(j.data)
+      // Refresh rollup in background
+      fetch(`/api/projects/${id}/rollup`).then(r=>r.json()).then(j=>setRollup(j.data)).catch(()=>{})
+    } else {
+      alert('Failed to update status')
+    }
   }
 
   async function doAssign() {
@@ -37,7 +51,18 @@ export default function ProjectDetailPage() {
   }
 
   if (!id) return null
-  if (!project) return <div className="p-6">Loading…</div>
+  if (!project) return (
+    <div className="p-6">
+      {error ? (
+        <div className="rounded border border-red-200 bg-red-50 text-red-700 p-3">
+          <div className="font-medium mb-1">Couldn’t load project</div>
+          <div className="text-sm">{error}</div>
+        </div>
+      ) : (
+        <div>Loading…</div>
+      )}
+    </div>
+  )
 
   const variance = Number(rollup?.variance || 0)
 
@@ -50,7 +75,7 @@ export default function ProjectDetailPage() {
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600">Status:</span>
-          <select defaultValue={project.status} onChange={e=>updateStatus(e.target.value)} className="border rounded px-3 py-2">
+          <select value={project.status} onChange={e=>updateStatus(e.target.value)} className="border rounded px-3 py-2">
             <option value="active">Active</option>
             <option value="on_hold">On Hold</option>
             <option value="closed">Closed</option>
