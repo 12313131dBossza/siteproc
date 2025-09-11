@@ -1,10 +1,11 @@
 "use client"
-import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useEffect, useMemo, useState } from 'react'
+import { useParams, useRouter } from 'next/navigation'
 
 export default function ProjectDetailPage() {
   const params = useParams() as { id: string }
   const id = params?.id
+  const router = useRouter()
   const [project, setProject] = useState<any>(null)
   const [rollup, setRollup] = useState<any>(null)
   const [tab, setTab] = useState<'overview'|'orders'|'expenses'|'deliveries'>('overview')
@@ -101,39 +102,65 @@ export default function ProjectDetailPage() {
   )
 
   const variance = Number(rollup?.variance || 0)
+  const fmtCurrency = useMemo(() => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }), [])
 
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">{project.name}</h1>
-          <div className="text-gray-500">{project.code || '—'}</div>
+    <div className="max-w-7xl mx-auto p-6 space-y-6">
+      {/* Header */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-start gap-4">
+          <button onClick={()=>router.push('/projects')} className="h-9 px-3 rounded-lg border bg-white hover:bg-gray-50 text-sm flex items-center gap-1 shadow-sm">
+            <span className="text-lg leading-none -ml-1">←</span>
+            <span>Projects</span>
+          </button>
+          <div>
+            <div className="flex items-center gap-3 mb-1">
+              <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
+              {project.code && <span className="text-xs px-2 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-100">{project.code}</span>}
+            </div>
+            <div className="flex flex-wrap gap-3 text-xs text-gray-500">
+              <div>Created: {new Date(project.created_at).toLocaleDateString()}</div>
+              <div>Updated: {new Date(project.updated_at).toLocaleDateString()}</div>
+              <div>ID: <span className="font-mono">{project.id.slice(0,8)}…</span></div>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">Status:</span>
-          <select value={project.status} onChange={e=>updateStatus(e.target.value)} className="border rounded px-3 py-2">
+        <div className="flex items-center gap-3 self-start md:self-auto">
+          <label className="text-sm text-gray-600" htmlFor="project-status">Status</label>
+          <select id="project-status" value={project.status} onChange={e=>updateStatus(e.target.value)} className="border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/40">
             <option value="active">Active</option>
             <option value="on_hold">On Hold</option>
             <option value="closed">Closed</option>
           </select>
+          <button onClick={()=>load()} className="h-9 px-3 rounded-lg border bg-white hover:bg-gray-50 text-sm shadow-sm">Refresh</button>
         </div>
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <KPI title="Budget" value={`$${Number(project.budget).toFixed(2)}`} />
-        <KPI title="Actual (Expenses)" value={`$${Number(rollup?.actual_expenses||0).toFixed(2)}`} />
-        <KPI title="Variance" value={`$${variance.toFixed(2)}`} emphasize={variance<0? 'bad':'good'} />
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+        <KPI title="Budget" value={fmtCurrency.format(Number(project.budget||0))} />
+        <KPI title="Actual (Expenses)" value={fmtCurrency.format(Number(rollup?.actual_expenses||0))} />
+        <KPI title="Variance" value={fmtCurrency.format(variance)} emphasize={variance<0? 'bad':'good'} />
         <KPI title="# Orders" value={String(rollup?.counts?.orders||0)} />
         <KPI title="# Expenses" value={String(rollup?.counts?.expenses||0)} />
         <KPI title="# Deliveries" value={String(rollup?.counts?.deliveries||0)} />
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b">
-        {(['overview','orders','expenses','deliveries'] as const).map(t=> (
-          <button key={t} onClick={()=>setTab(t)} className={`px-4 py-2 -mb-px border-b-2 ${tab===t? 'border-blue-600 text-blue-700':'border-transparent text-gray-600'}`}>{t[0].toUpperCase()+t.slice(1)}</button>
-        ))}
+      <div className="flex gap-1 border-b overflow-x-auto scrollbar-none -mx-6 px-6 sticky top-0 bg-gray-50/60 backdrop-blur supports-[backdrop-filter]:bg-white/70">
+        {(['overview','orders','expenses','deliveries'] as const).map(t=> {
+          const active = tab===t
+          return (
+            <button
+              key={t}
+              onClick={()=>setTab(t)}
+              className={`relative px-5 py-2 text-sm font-medium transition-colors ${active? 'text-blue-700':'text-gray-600 hover:text-gray-900'}`}
+            >
+              {t[0].toUpperCase()+t.slice(1)}
+              <span className={`absolute left-0 right-0 -bottom-px h-0.5 rounded-full transition-all ${active? 'bg-blue-600 scale-x-100':'bg-transparent scale-x-0'}`} />
+            </button>
+          )
+        })}
       </div>
 
       {tab==='overview' && (
@@ -149,76 +176,82 @@ export default function ProjectDetailPage() {
           {loadingTab && <div className="text-sm text-gray-500">Loading {tab}…</div>}
           {!loadingTab && tab==='expenses' && (
             expenses.length? (
-              <table className="w-full text-sm border">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="text-left p-2 border">Vendor</th>
-                    <th className="text-left p-2 border">Category</th>
-                    <th className="text-right p-2 border">Amount</th>
-                    <th className="text-left p-2 border">Status</th>
-                    <th className="text-left p-2 border">ID</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {expenses.map(e=> (
-                    <tr key={e.id} className="hover:bg-gray-50">
-                      <td className="p-2 border">{e.vendor}</td>
-                      <td className="p-2 border capitalize">{e.category}</td>
-                      <td className="p-2 border text-right">${'{'}Number(e.amount).toFixed(2){'}'}</td>
-                      <td className="p-2 border">{e.status}</td>
-                      <td className="p-2 border text-xs text-gray-500">{e.id.slice(0,8)}…</td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border rounded-lg overflow-hidden">
+                  <thead className="bg-gray-50 text-gray-600">
+                    <tr className="divide-x">
+                      <th className="text-left p-2">Vendor</th>
+                      <th className="text-left p-2">Category</th>
+                      <th className="text-right p-2">Amount</th>
+                      <th className="text-left p-2">Status</th>
+                      <th className="text-left p-2">ID</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y">
+                    {expenses.map(e=> (
+                      <tr key={e.id} className="hover:bg-blue-50/50">
+                        <td className="p-2 font-medium">{e.vendor}</td>
+                        <td className="p-2 capitalize">{e.category}</td>
+                        <td className="p-2 text-right tabular-nums">{fmtCurrency.format(Number(e.amount||0))}</td>
+                        <td className="p-2"><span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-green-50 text-green-700 border border-green-200">{e.status}</span></td>
+                        <td className="p-2 text-xs text-gray-500 font-mono">{e.id.slice(0,8)}…</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             ) : <div className="text-sm text-gray-500">No expenses linked yet.</div>
           )}
           {!loadingTab && tab==='orders' && (
             orders.length? (
-              <table className="w-full text-sm border">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="text-left p-2 border">Product</th>
-                    <th className="text-right p-2 border">Qty</th>
-                    <th className="text-left p-2 border">Status</th>
-                    <th className="text-left p-2 border">ID</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {orders.map(o=> (
-                    <tr key={o.id} className="hover:bg-gray-50">
-                      <td className="p-2 border">{o.product?.name || '—'}</td>
-                      <td className="p-2 border text-right">{o.qty ?? '—'}</td>
-                      <td className="p-2 border">{o.status}</td>
-                      <td className="p-2 border text-xs text-gray-500">{o.id.slice(0,8)}…</td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border rounded-lg overflow-hidden">
+                  <thead className="bg-gray-50 text-gray-600">
+                    <tr className="divide-x">
+                      <th className="text-left p-2">Product</th>
+                      <th className="text-right p-2">Qty</th>
+                      <th className="text-left p-2">Status</th>
+                      <th className="text-left p-2">ID</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y">
+                    {orders.map(o=> (
+                      <tr key={o.id} className="hover:bg-blue-50/50">
+                        <td className="p-2 font-medium">{o.product?.name || '—'}</td>
+                        <td className="p-2 text-right">{o.qty ?? '—'}</td>
+                        <td className="p-2"><span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-indigo-50 text-indigo-700 border border-indigo-200">{o.status}</span></td>
+                        <td className="p-2 text-xs text-gray-500 font-mono">{o.id.slice(0,8)}…</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             ) : <div className="text-sm text-gray-500">No orders linked yet.</div>
           )}
           {!loadingTab && tab==='deliveries' && (
             deliveries.length? (
-              <table className="w-full text-sm border">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="text-left p-2 border">Order Ref</th>
-                    <th className="text-left p-2 border">Status</th>
-                    <th className="text-right p-2 border">Total</th>
-                    <th className="text-left p-2 border">ID</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {deliveries.map(d=> (
-                    <tr key={d.id} className="hover:bg-gray-50">
-                      <td className="p-2 border">{d.order_id || '—'}</td>
-                      <td className="p-2 border">{d.status || '—'}</td>
-                      <td className="p-2 border text-right">{d.total_amount ? `$${'{'}Number(d.total_amount).toFixed(2){'}'}` : '—'}</td>
-                      <td className="p-2 border text-xs text-gray-500">{d.id.slice(0,8)}…</td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border rounded-lg overflow-hidden">
+                  <thead className="bg-gray-50 text-gray-600">
+                    <tr className="divide-x">
+                      <th className="text-left p-2">Order Ref</th>
+                      <th className="text-left p-2">Status</th>
+                      <th className="text-right p-2">Total</th>
+                      <th className="text-left p-2">ID</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y">
+                    {deliveries.map(d=> (
+                      <tr key={d.id} className="hover:bg-blue-50/50">
+                        <td className="p-2 font-medium">{d.order_id || '—'}</td>
+                        <td className="p-2"><span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-amber-50 text-amber-700 border border-amber-200">{d.status || '—'}</span></td>
+                        <td className="p-2 text-right tabular-nums">{d.total_amount != null ? fmtCurrency.format(Number(d.total_amount||0)) : '—'}</td>
+                        <td className="p-2 text-xs text-gray-500 font-mono">{d.id.slice(0,8)}…</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             ) : <div className="text-sm text-gray-500">No deliveries linked yet.</div>
           )}
           <div className="pt-2 border-t mt-4 text-xs text-gray-400">Bulk assignment UI upgrade in progress; previous textarea method removed.</div>
