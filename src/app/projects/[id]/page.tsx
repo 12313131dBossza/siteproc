@@ -98,6 +98,32 @@ export default function ProjectDetailPage() {
     }
   }
 
+  async function createTestOrder() {
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/projects/${id}/create-test-order`, { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
+      
+      if (res.ok) {
+        const result = await res.json()
+        alert(`Success: ${result.message}`)
+        // Refresh data to show the new order
+        load()
+        // Switch to Orders tab to show the result
+        setTab('orders')
+      } else {
+        const error = await res.json().catch(() => ({ error: 'Unknown error' }))
+        alert(`Failed: ${error.error}`)
+      }
+    } catch (e: any) {
+      alert(`Error: ${e.message}`)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   async function doAssign() {
     setSaving(true)
     const orders = assign.orders.split(/[,\s]+/).filter(Boolean)
@@ -157,6 +183,9 @@ export default function ProjectDetailPage() {
             <option value="closed">Closed</option>
           </select>
           <button onClick={()=>load()} className="h-9 px-3 rounded-lg border bg-white hover:bg-gray-50 text-sm shadow-sm">Refresh</button>
+          <button onClick={()=>createTestOrder()} disabled={saving} className="h-9 px-3 rounded-lg border bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 text-sm shadow-sm">
+            {saving ? 'Creating...' : 'Create Test Order'}
+          </button>
         </div>
       </div>
 
@@ -195,7 +224,22 @@ export default function ProjectDetailPage() {
         <div className="bg-white border rounded p-4 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="font-medium capitalize">{tab}</h2>
-            <button onClick={()=>setTab(tab)} disabled className="text-xs text-gray-400 border rounded px-2 py-1 cursor-default">Linked</button>
+            <div className="flex items-center gap-2">
+              <button onClick={()=>setTab(tab)} disabled className="text-xs text-gray-400 border rounded px-2 py-1 cursor-default">Linked</button>
+              {tab==='orders' && (
+                <button
+                  onClick={async ()=>{
+                    try {
+                      const res = await fetch(`/api/projects/${id}/test-order`, { method: 'POST' });
+                      if (!res.ok) throw new Error('Failed to create test order');
+                      // Reload orders tab
+                      setTab('orders');
+                    } catch (e) { alert((e as any)?.message || 'Failed'); }
+                  }}
+                  className="text-xs text-blue-600 border border-blue-200 rounded px-2 py-1 hover:bg-blue-50"
+                >Create test order</button>
+              )}
+            </div>
           </div>
           {loadingTab && <div className="text-sm text-gray-500">Loading {tab}…</div>}
           {!loadingTab && tab==='expenses' && (

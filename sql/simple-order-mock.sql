@@ -14,7 +14,7 @@ WHERE NOT EXISTS (SELECT 1 FROM products WHERE stock > 0);
 
 DO $$
 DECLARE
-  v_override uuid := NULL; -- <-- Replace NULL with your project UUID to force-link, e.g. '00000000-0000-0000-0000-000000000000'::uuid
+  v_override uuid := '96abb05f-5920-4ce9-9066-90411a660aac'::uuid; -- <-- Set to your exact project UUID
   v_user uuid;
   v_company uuid;
   v_project uuid;
