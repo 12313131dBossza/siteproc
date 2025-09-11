@@ -222,7 +222,7 @@ export async function GET(request: NextRequest) {
     let orders = null;
     let queryError = null;
 
-    // First attempt: Try with created_by column
+  // First attempt: Try with created_by column
     console.log('Orders GET: Trying with created_by column');
     let query = supabase
       .from('orders')
@@ -232,13 +232,15 @@ export async function GET(request: NextRequest) {
       `)
       .order('created_at', { ascending: false });
 
-    // Apply user filtering if not admin
-    if (!isAdmin) {
+  // Apply user filtering if not admin and NOT scoped to a specific project
+  // When viewing a project, we want all orders for that project, regardless of creator.
+  if (!isAdmin && !projectId) {
       query = query.eq('created_by', user.id);
     }
 
     // Apply project filter if provided
     if (projectId) {
+      console.log('Orders GET: Applying project filter for created_by path:', projectId);
       query = query.eq('project_id', projectId);
     }
 
@@ -269,8 +271,8 @@ export async function GET(request: NextRequest) {
         `)
         .order('created_at', { ascending: false });
 
-      // Apply user filtering if not admin
-      if (!isAdmin) {
+  // Apply user filtering if not admin and NOT scoped to a specific project
+  if (!isAdmin && !projectId) {
         query2 = query2.eq('user_id', user.id);
       }
 
@@ -281,6 +283,7 @@ export async function GET(request: NextRequest) {
 
       // Apply project filter if provided
       if (projectId) {
+        console.log('Orders GET: Applying project filter for user_id path:', projectId);
         query2 = query2.eq('project_id', projectId);
       }
 
@@ -315,8 +318,9 @@ export async function GET(request: NextRequest) {
       console.log('Orders GET: After search filter:', filteredOrders.length);
     }
 
-    console.log('Orders GET: Success, returning', filteredOrders.length, 'orders');
-    return NextResponse.json(filteredOrders);
+  console.log('Orders GET: Success, returning', filteredOrders.length, 'orders');
+  // Return a simple array; project page handles plain array. For robustness, also include a data key if requested in future.
+  return NextResponse.json(filteredOrders);
 
   } catch (error) {
     console.error('Orders GET API error:', error);
