@@ -52,7 +52,7 @@ BEGIN
   SELECT id INTO v_product
   FROM products
   WHERE stock > 0
-  ORDER BY updated_at DESC NULLS LAST, created_at DESC
+  ORDER BY created_at DESC
   LIMIT 1;
 
   IF v_product IS NULL THEN
