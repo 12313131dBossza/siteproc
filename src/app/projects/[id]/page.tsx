@@ -2,6 +2,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 
+class Boundary extends (require('react').Component as any) {
+  state = { hasError: false, message: '' }
+  static getDerivedStateFromError(err: any) { return { hasError: true, message: err?.message || 'Render error' } }
+  componentDidCatch(err: any, info: any) { if (console && console.error) console.error('ProjectDetail boundary error', err, info) }
+  render() { if (this.state.hasError) return <div className="p-6 text-sm text-red-600">Failed to render project view: {this.state.message}</div>; return this.props.children }
+}
+
 export default function ProjectDetailPage() {
   const params = useParams() as { id: string }
   const id = params?.id
@@ -119,9 +126,9 @@ export default function ProjectDetailPage() {
               {project.code && <span className="text-xs px-2 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-100">{project.code}</span>}
             </div>
             <div className="flex flex-wrap gap-3 text-xs text-gray-500">
-              <div>Created: {new Date(project.created_at).toLocaleDateString()}</div>
-              <div>Updated: {new Date(project.updated_at).toLocaleDateString()}</div>
-              <div>ID: <span className="font-mono">{project.id.slice(0,8)}…</span></div>
+              <div>Created: {project?.created_at ? new Date(project.created_at).toLocaleDateString() : '—'}</div>
+              <div>Updated: {project?.updated_at ? new Date(project.updated_at).toLocaleDateString() : '—'}</div>
+              <div>ID: <span className="font-mono">{project?.id ? project.id.slice(0,8)+'…' : '—'}</span></div>
             </div>
           </div>
         </div>
@@ -184,6 +191,7 @@ export default function ProjectDetailPage() {
                       <th className="text-left p-2">Category</th>
                       <th className="text-right p-2">Amount</th>
                       <th className="text-left p-2">Status</th>
+                      <th className="text-left p-2">Date</th>
                       <th className="text-left p-2">ID</th>
                     </tr>
                   </thead>
@@ -194,6 +202,7 @@ export default function ProjectDetailPage() {
                         <td className="p-2 capitalize">{e.category}</td>
                         <td className="p-2 text-right tabular-nums">{fmtCurrency.format(Number(e.amount||0))}</td>
                         <td className="p-2"><span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-green-50 text-green-700 border border-green-200">{e.status}</span></td>
+                        <td className="p-2 text-xs">{e.created_at ? new Date(e.created_at).toLocaleDateString() : '—'}</td>
                         <td className="p-2 text-xs text-gray-500 font-mono">{e.id.slice(0,8)}…</td>
                       </tr>
                     ))}
@@ -209,8 +218,11 @@ export default function ProjectDetailPage() {
                   <thead className="bg-gray-50 text-gray-600">
                     <tr className="divide-x">
                       <th className="text-left p-2">Product</th>
+                      <th className="text-left p-2">Vendor</th>
                       <th className="text-right p-2">Qty</th>
+                      <th className="text-right p-2">Amount</th>
                       <th className="text-left p-2">Status</th>
+                      <th className="text-left p-2">Date</th>
                       <th className="text-left p-2">ID</th>
                     </tr>
                   </thead>
@@ -218,8 +230,11 @@ export default function ProjectDetailPage() {
                     {orders.map(o=> (
                       <tr key={o.id} className="hover:bg-blue-50/50">
                         <td className="p-2 font-medium">{o.product?.name || '—'}</td>
+                        <td className="p-2">{o.vendor || o.product?.vendor || '—'}</td>
                         <td className="p-2 text-right">{o.qty ?? '—'}</td>
+                        <td className="p-2 text-right tabular-nums">{o.product?.price && o.qty ? fmtCurrency.format(Number(o.product.price)*Number(o.qty)) : '—'}</td>
                         <td className="p-2"><span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-indigo-50 text-indigo-700 border border-indigo-200">{o.status}</span></td>
+                        <td className="p-2 text-xs">{o.created_at ? new Date(o.created_at).toLocaleDateString() : '—'}</td>
                         <td className="p-2 text-xs text-gray-500 font-mono">{o.id.slice(0,8)}…</td>
                       </tr>
                     ))}
@@ -234,9 +249,11 @@ export default function ProjectDetailPage() {
                 <table className="w-full text-sm border rounded-lg overflow-hidden">
                   <thead className="bg-gray-50 text-gray-600">
                     <tr className="divide-x">
-                      <th className="text-left p-2">Order Ref</th>
+                      <th className="text-left p-2">Delivery</th>
+                      <th className="text-left p-2">Items</th>
                       <th className="text-left p-2">Status</th>
                       <th className="text-right p-2">Total</th>
+                      <th className="text-left p-2">Date</th>
                       <th className="text-left p-2">ID</th>
                     </tr>
                   </thead>
@@ -244,8 +261,10 @@ export default function ProjectDetailPage() {
                     {deliveries.map(d=> (
                       <tr key={d.id} className="hover:bg-blue-50/50">
                         <td className="p-2 font-medium">{d.order_id || '—'}</td>
+                        <td className="p-2 text-xs leading-tight max-w-[240px]">{Array.isArray(d.items)&&d.items.length? d.items.map((it:any)=>`${it.product_name}(${it.quantity})`).slice(0,4).join(', ')+(d.items.length>4?'…':'') : '—'}</td>
                         <td className="p-2"><span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-amber-50 text-amber-700 border border-amber-200">{d.status || '—'}</span></td>
                         <td className="p-2 text-right tabular-nums">{d.total_amount != null ? fmtCurrency.format(Number(d.total_amount||0)) : '—'}</td>
+                        <td className="p-2 text-xs">{d.delivery_date ? new Date(d.delivery_date).toLocaleDateString() : (d.created_at ? new Date(d.created_at).toLocaleDateString() : '—')}</td>
                         <td className="p-2 text-xs text-gray-500 font-mono">{d.id.slice(0,8)}…</td>
                       </tr>
                     ))}
