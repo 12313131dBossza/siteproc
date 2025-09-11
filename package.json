@@ -13,6 +13,8 @@
   "sql:change-orders": "node scripts/run-sql.js sql/change-orders.sql",
   "sql:projects": "node scripts/run-sql.js sql/projects.sql",
   "sql:mock-order": "node scripts/run-sql.js sql/simple-order-mock.sql",
+  "create:test-order": "node scripts/create-test-order.js",
+  "create:test-order:project": "node scripts/create-test-order.js $env:PROJECT_ID",
     "scan:secrets": "npx @trufflesecurity/trufflehog filesystem --only-verified --json . || true",
     "e2e": "playwright test",
     "e2e:headed": "playwright test --project=chromium --headed",
