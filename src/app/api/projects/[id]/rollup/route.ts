@@ -13,13 +13,18 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   console.log('Rollup API: fetching rollup for project ID:', id)
 
   try {
-    // Load project
-    const proj = await supabase.from('projects').select('id, budget, company_id, status').eq('id', id).single()
+    // Load project - handle case where project doesn't exist
+    const proj = await supabase.from('projects').select('id, budget, company_id, status').eq('id', id).maybeSingle()
     console.log('Rollup API: project query result - data:', proj.data, 'error:', proj.error)
     
-    if (proj.error || !proj.data) {
-      console.error('Rollup API: Failed to load project:', proj.error)
-      return NextResponse.json({ error: 'not_found' }, { status: 404 })
+    if (proj.error) {
+      console.error('Rollup API: Database error:', proj.error)
+      return NextResponse.json({ error: 'database_error: ' + proj.error.message }, { status: 500 })
+    }
+    
+    if (!proj.data) {
+      console.error('Rollup API: Project not found:', id)
+      return NextResponse.json({ error: 'project_not_found' }, { status: 404 })
     }
 
     // actual_expenses: approved expenses on this project

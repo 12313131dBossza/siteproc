@@ -13,17 +13,17 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   console.log('Project API: fetching project with ID:', id)
   
   try {
-    const { data, error } = await supabase.from('projects').select('*').eq('id', id).single()
+    const { data, error } = await supabase.from('projects').select('*').eq('id', id).maybeSingle()
     console.log('Project API: query result - data:', data, 'error:', error)
     
     if (error) {
-      console.error('Project API: Supabase error:', error)
-      return NextResponse.json({ error: error.message }, { status: 400 })
+      console.error('Project API: Database error:', error)
+      return NextResponse.json({ error: 'database_error: ' + error.message }, { status: 500 })
     }
     
     if (!data) {
-      console.error('Project API: No data returned for project ID:', id)
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+      console.error('Project API: Project not found:', id)
+      return NextResponse.json({ error: 'project_not_found' }, { status: 404 })
     }
     
     console.log('Project API: returning data:', data)
