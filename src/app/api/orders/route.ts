@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     console.log('Orders POST: Request body:', body);
     
-    const { product_id, qty, notes } = body;
+  const { product_id, qty, notes } = body;
 
     // Validate required fields
     if (!product_id || !qty || qty <= 0) {
@@ -60,6 +60,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Look up user's company for company_id (optional)
+    let companyId: string | null = null;
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .single();
+      companyId = (profile as any)?.company_id || null;
+      console.log('Orders POST: Resolved company_id:', companyId);
+    } catch (e) {
+      console.log('Orders POST: Failed to resolve company_id (continuing)');
+    }
+
     // Create the order - try different column combinations
     console.log('Orders POST: Creating order');
     
@@ -75,19 +89,20 @@ export async function POST(request: NextRequest) {
     let insertError = null;
 
     for (const { userCol, noteCol } of columnVariations) {
-      const orderData = {
+      const baseData: any = {
         product_id,
         qty: parseFloat(qty),
         [noteCol]: notes || null,
         [userCol]: user.id,
-        status: 'pending'
+    status: 'pending',
+    ...(companyId ? { company_id: companyId } : {})
       };
       
-      console.log(`Orders POST: Trying ${userCol}/${noteCol} combination:`, orderData);
+      console.log(`Orders POST: Trying ${userCol}/${noteCol} combination:`, baseData);
 
-      const result = await supabase
+      let result: any = await supabase
         .from('orders')
-        .insert([orderData])
+        .insert([baseData])
         .select(`
           *,
           product:products(id, name, sku, price, unit)
@@ -102,6 +117,34 @@ export async function POST(request: NextRequest) {
       } else {
         insertError = result.error;
         console.log(`Orders POST: Failed with ${userCol}/${noteCol}:`, result.error.message);
+        // If the error indicates company_id column is missing, retry once without company_id
+        const msg: string = (result.error.message || '').toLowerCase();
+        const companyColMissing = /company_id/.test(msg) && /(does not exist|unknown|column|missing)/.test(msg);
+        if (companyColMissing && companyId) {
+          try {
+            const withoutCompany = { ...baseData } as any;
+            delete withoutCompany.company_id;
+            const retry = await supabase
+              .from('orders')
+              .insert([withoutCompany])
+              .select(`
+                *,
+                product:products(id, name, sku, price, unit)
+              `)
+              .single();
+            if (!retry.error) {
+              order = retry.data;
+              insertError = null;
+              console.log(`Orders POST: Success on retry without company_id using ${userCol}/${noteCol}`);
+              break;
+            } else {
+              insertError = retry.error;
+              console.log('Orders POST: Retry without company_id failed:', retry.error.message);
+            }
+          } catch (e) {
+            console.log('Orders POST: Retry without company_id threw error');
+          }
+        }
       }
     }
 
@@ -167,8 +210,9 @@ export async function GET(request: NextRequest) {
 
     // Parse query parameters
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status');
+  const status = searchParams.get('status');
     const search = searchParams.get('search');
+  const projectId = searchParams.get('projectId');
 
     console.log('Orders GET: Query parameters:', { status, search });
 
@@ -191,6 +235,11 @@ export async function GET(request: NextRequest) {
       query = query.eq('created_by', user.id);
     }
 
+    // Apply project filter if provided
+    if (projectId) {
+      query = query.eq('project_id', projectId);
+    }
+
     // Apply status filter
     if (status && ['pending', 'approved', 'rejected'].includes(status)) {
       query = query.eq('status', status);
@@ -207,7 +256,7 @@ export async function GET(request: NextRequest) {
 
       // Second attempt: Try with user_id column
       console.log('Orders GET: Trying with user_id column');
-      let query2 = supabase
+  let query2 = supabase
         .from('orders')
         .select(`
           *,
@@ -223,6 +272,11 @@ export async function GET(request: NextRequest) {
       // Apply status filter
       if (status && ['pending', 'approved', 'rejected'].includes(status)) {
         query2 = query2.eq('status', status);
+      }
+
+      // Apply project filter if provided
+      if (projectId) {
+        query2 = query2.eq('project_id', projectId);
       }
 
       const result2 = await query2;

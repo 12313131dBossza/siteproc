@@ -22,17 +22,19 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   if (!myCompany) return NextResponse.json({ error: 'no_company' }, { status: 400 })
 
   const sb = supabaseService()
-  const project = await sb.from('projects').select('id, company_id, status').eq('id', params.id).single()
-  if (project.error || !project.data) return NextResponse.json({ error: 'project_not_found' }, { status: 404 })
-  if ((project.data as any).company_id !== myCompany) return NextResponse.json({ error: 'forbidden' }, { status: 403 })
-  if ((project.data as any).status === 'closed') return NextResponse.json({ error: 'project_closed' }, { status: 400 })
+  const projectRes: any = await (sb as any).from('projects').select('id, company_id, status').eq('id', params.id).single()
+  if (projectRes.error || !projectRes.data) return NextResponse.json({ error: 'project_not_found' }, { status: 404 })
+  if ((projectRes.data as any).company_id !== myCompany) return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+  if ((projectRes.data as any).status === 'closed') return NextResponse.json({ error: 'project_closed' }, { status: 400 })
 
   const ensureCompany = async (table: 'orders'|'expenses'|'deliveries', ids: string[]) => {
     if (!ids?.length) return { ok: true }
     const { data, error } = await sb.from(table).select('id, company_id').in('id', ids)
     if (error) return { ok: false, error: error.message }
     for (const r of data || []) {
-      if ((r as any).company_id !== myCompany) return { ok: false, error: `cross_company_${table}` }
+      const cid = (r as any).company_id
+      // Allow assignment if company_id is null (legacy rows) or matches myCompany
+      if (cid && cid !== myCompany) return { ok: false, error: `cross_company_${table}` }
     }
     return { ok: true }
   }
@@ -44,11 +46,24 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   // Perform updates (service role after validation)
   const updates: Array<Promise<any>> = []
-  if (orders.length) updates.push(sb.from('orders').update({ project_id: params.id }).in('id', orders))
-  if (expenses.length) updates.push(sb.from('expenses').update({ project_id: params.id }).in('id', expenses))
-  if (deliveries.length) updates.push(sb.from('deliveries').update({ project_id: params.id }).in('id', deliveries))
+  // For orders, also set company_id if it's currently null. If the column doesn't exist, fall back to only project_id.
+  if (orders.length) {
+    const upd = (sb as any)
+      .from('orders')
+      .update({ project_id: params.id, company_id: myCompany })
+      .in('id', orders)
+      .then((r: any) => r)
+    updates.push(upd)
+  }
+  if (expenses.length) updates.push(((sb as any).from('expenses').update({ project_id: params.id }).in('id', expenses) as any).then((r: any)=>r))
+  if (deliveries.length) updates.push(((sb as any).from('deliveries').update({ project_id: params.id }).in('id', deliveries) as any).then((r: any)=>r))
 
-  const results = await Promise.all(updates)
+  let results: any[] = await Promise.all(updates)
+  // If orders update failed due to missing company_id column, retry without setting company_id
+  if (orders.length && results[0]?.error && /company_id/.test(results[0].error.message || '')) {
+    const retry = await (sb as any).from('orders').update({ project_id: params.id }).in('id', orders)
+    results[0] = retry
+  }
   for (const r of results) { if ((r as any)?.error) return NextResponse.json({ error: (r as any).error.message }, { status: 400 }) }
 
   return NextResponse.json({ ok: true })

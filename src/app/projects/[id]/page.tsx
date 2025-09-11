@@ -54,10 +54,10 @@ export default function ProjectDetailPage() {
             const res = await fetch('/api/expenses')
             const j = await res.json().catch(()=>({}))
             if (!aborted) setExpenses((j.expenses||[]).filter((e:any)=>e.project_id===id))
-        } else if (tab==='orders') {
-            const res = await fetch('/api/orders')
-            const j = await res.json().catch(()=>[])
-            if (!aborted) setOrders((j||[]).filter((o:any)=>o.project_id===id))
+    } else if (tab==='orders') {
+      const res = await fetch(`/api/orders?projectId=${encodeURIComponent(id)}`)
+      const j = await res.json().catch(()=>[])
+      if (!aborted) setOrders(Array.isArray(j)? j : (j?.data || j || []))
         } else if (tab==='deliveries') {
             // Deliveries API returns list; filter by project_id if present
             const res = await fetch('/api/order-deliveries')
