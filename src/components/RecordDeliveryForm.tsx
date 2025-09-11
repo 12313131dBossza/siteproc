@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Plus, Upload, X, Trash2 } from 'lucide-react'
 import { sbBrowser } from '@/lib/supabase-browser'
 
@@ -9,6 +9,11 @@ interface DeliveryItem {
   quantity: number
   unit: string
   unit_price: number
+}
+
+interface Project {
+  id: string
+  name: string
 }
 
 interface RecordDeliveryFormProps {
@@ -21,6 +26,7 @@ export default function RecordDeliveryForm({ onSuccess, onCancel }: RecordDelive
   const [error, setError] = useState<string | null>(null)
   const [images, setImages] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
+  const [projects, setProjects] = useState<Project[]>([])
   
   const [formData, setFormData] = useState({
     order_id: '',
@@ -29,6 +35,7 @@ export default function RecordDeliveryForm({ onSuccess, onCancel }: RecordDelive
     delivery_date: new Date().toISOString().split('T')[0],
     status: 'pending' as 'pending' | 'in_transit' | 'delivered' | 'cancelled',
     notes: '',
+    projectId: '',
     items: [
       {
         product_name: '',
@@ -38,6 +45,23 @@ export default function RecordDeliveryForm({ onSuccess, onCancel }: RecordDelive
       }
     ] as DeliveryItem[]
   })
+
+  // Fetch projects for dropdown
+  const fetchProjects = async () => {
+    try {
+      const response = await fetch('/api/projects')
+      if (response.ok) {
+        const data = await response.json()
+        setProjects(data)
+      }
+    } catch (error) {
+      console.error('Error fetching projects:', error)
+    }
+  }
+
+  useEffect(() => {
+    fetchProjects()
+  }, [])
 
   const addItem = () => {
     setFormData(prev => ({
@@ -143,6 +167,27 @@ export default function RecordDeliveryForm({ onSuccess, onCancel }: RecordDelive
         const details = result.details ? `: ${result.details}` : ''
         throw new Error(msg + details)
       }
+
+      // If a project is selected, assign the delivery to the project
+      if (formData.projectId && result.delivery) {
+        try {
+          const assignResponse = await fetch(`/api/projects/${formData.projectId}/assign`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              deliveries: [result.delivery.id]
+            })
+          });
+
+          if (!assignResponse.ok) {
+            console.error('Failed to assign delivery to project');
+            // Don't throw error here, delivery was created successfully
+          }
+        } catch (error) {
+          console.error('Error assigning delivery to project:', error);
+          // Don't throw error here, delivery was created successfully
+        }
+      }
       
       // Reset form
       setFormData({
@@ -152,6 +197,7 @@ export default function RecordDeliveryForm({ onSuccess, onCancel }: RecordDelive
         delivery_date: new Date().toISOString().split('T')[0],
         status: 'pending',
         notes: '',
+        projectId: '',
         items: [{
           product_name: '',
           quantity: 1,
@@ -282,6 +328,25 @@ export default function RecordDeliveryForm({ onSuccess, onCancel }: RecordDelive
             <option value="in_transit">In Transit</option>
             <option value="delivered">Delivered</option>
             <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="project_id" className="block text-sm font-medium text-gray-700 mb-1">
+            Project (Optional)
+          </label>
+          <select
+            id="project_id"
+            value={formData.projectId}
+            onChange={(e) => setFormData(prev => ({ ...prev, projectId: e.target.value }))}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="">Select a project (optional)...</option>
+            {projects.map(project => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))}
           </select>
         </div>
 

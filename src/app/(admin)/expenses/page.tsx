@@ -48,8 +48,11 @@ export default function ExpensesPage() {
     category: '',
     amount: '',
     notes: '',
-    receiptUrl: ''
+    receiptUrl: '',
+    projectId: ''
   });
+
+  const [projects, setProjects] = useState<Array<{ id: string; name: string; code?: string }>>([]);
 
   const supabase = createClient();
   const isAdmin = userProfile?.role === 'admin' || userProfile?.role === 'owner' || userProfile?.role === 'bookkeeper';
@@ -58,7 +61,20 @@ export default function ExpensesPage() {
 
   useEffect(() => {
     fetchData();
+    fetchProjects();
   }, [statusFilter, searchQuery, showAllExpenses]);
+
+  const fetchProjects = async () => {
+    try {
+      const response = await fetch('/api/projects');
+      if (response.ok) {
+        const data = await response.json();
+        setProjects(data.data || []);
+      }
+    } catch (error) {
+      console.error('Failed to load projects:', error);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -133,9 +149,34 @@ export default function ExpensesPage() {
       }
 
       const result = await response.json();
-      toast.success(result.message || 'Expense created successfully!');
       
-      setFormData({ vendor: '', category: '', amount: '', notes: '', receiptUrl: '' });
+      // If a project is selected, assign the expense to it
+      if (formData.projectId && result.id) {
+        try {
+          const assignResponse = await fetch(`/api/projects/${formData.projectId}/assign`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              expenses: [result.id]
+            })
+          });
+          
+          if (assignResponse.ok) {
+            toast.success(`${result.message || 'Expense created successfully!'} and assigned to project.`);
+          } else {
+            toast.success(result.message || 'Expense created successfully!');
+            toast.warning('Could not assign to project. You can assign it manually from the project page.');
+          }
+        } catch (assignError) {
+          console.warn('Project assignment failed:', assignError);
+          toast.success(result.message || 'Expense created successfully!');
+          toast.warning('Could not assign to project. You can assign it manually from the project page.');
+        }
+      } else {
+        toast.success(result.message || 'Expense created successfully!');
+      }
+      
+      setFormData({ vendor: '', category: '', amount: '', notes: '', receiptUrl: '', projectId: '' });
       setIsModalOpen(false);
       fetchData(); // Refresh the list
 
@@ -476,6 +517,20 @@ export default function ExpensesPage() {
                 { value: 'other', label: 'Other' }
               ]}
               required
+            />
+            <FormField
+              label="Project (Optional)"
+              id="projectId"
+              type="select"
+              value={formData.projectId}
+              onChange={(value) => setFormData(prev => ({ ...prev, projectId: value }))}
+              options={[
+                { value: '', label: 'No project assigned' },
+                ...projects.map(project => ({
+                  value: project.id,
+                  label: project.code ? `${project.code} - ${project.name}` : project.name
+                }))
+              ]}
             />
             <div className="space-y-1">
               <label htmlFor="amount" className="block text-sm font-medium text-zinc-700">

@@ -2,6 +2,8 @@
 
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+**🚀 Latest Update (January 11, 2025):** Added project selection to all creation forms for better project management and item assignment.
+
 ## Authentication System
 
 SiteProc uses Supabase Magic Link authentication with comprehensive user profile management and session persistence.

@@ -27,8 +27,11 @@ function NewOrderForm() {
   const [formData, setFormData] = useState({
     product_id: '',
     qty: '',
-    notes: ''
+    notes: '',
+    projectId: ''
   });
+
+  const [projects, setProjects] = useState<Array<{ id: string; name: string; code?: string }>>([]);
 
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -37,7 +40,20 @@ function NewOrderForm() {
 
   useEffect(() => {
     fetchProducts();
+    fetchProjects();
   }, []);
+
+  const fetchProjects = async () => {
+    try {
+      const response = await fetch('/api/projects');
+      if (response.ok) {
+        const data = await response.json();
+        setProjects(data.data || []);
+      }
+    } catch (error) {
+      console.error('Failed to load projects:', error);
+    }
+  };
 
   useEffect(() => {
     if (preselectedProductId && products.length > 0) {
@@ -70,7 +86,7 @@ function NewOrderForm() {
   const handleProductChange = (productId: string) => {
     const product = products.find(p => p.id === productId);
     setSelectedProduct(product || null);
-    setFormData(prev => ({ ...prev, product_id: productId, qty: '' }));
+    setFormData(prev => ({ ...prev, product_id: productId, qty: '', projectId: prev.projectId }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -101,6 +117,28 @@ function NewOrderForm() {
       }
 
       const order = await response.json();
+
+      // If a project is selected, assign the order to the project
+      if (formData.projectId) {
+        try {
+          const assignResponse = await fetch(`/api/projects/${formData.projectId}/assign`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              orders: [order.id]
+            })
+          });
+
+          if (!assignResponse.ok) {
+            console.error('Failed to assign order to project');
+            // Don't throw error here, order was created successfully
+          }
+        } catch (error) {
+          console.error('Error assigning order to project:', error);
+          // Don't throw error here, order was created successfully
+        }
+      }
+
       toast.success('Order request submitted successfully!');
       router.push(`/orders/${order.id}`);
     } catch (error) {
@@ -154,6 +192,21 @@ function NewOrderForm() {
                     ...products.map(product => ({
                       value: product.id,
                       label: `${product.name}${product.sku ? ` (${product.sku})` : ''} - $${product.price} - ${product.stock} in stock`
+                    }))
+                  ]}
+                />
+
+                <FormField
+                  label="Project"
+                  id="project_id"
+                  type="select"
+                  value={formData.projectId}
+                  onChange={(value) => setFormData(prev => ({ ...prev, projectId: value }))}
+                  options={[
+                    { value: '', label: 'Select a project (optional)...' },
+                    ...projects.map(project => ({
+                      value: project.id,
+                      label: project.name
                     }))
                   ]}
                 />
