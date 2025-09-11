@@ -1,8 +1,8 @@
 "use client"
-import { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 
-class Boundary extends (require('react').Component as any) {
+class Boundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; message: string }> {
   state = { hasError: false, message: '' }
   static getDerivedStateFromError(err: any) { return { hasError: true, message: err?.message || 'Render error' } }
   componentDidCatch(err: any, info: any) { if (console && console.error) console.error('ProjectDetail boundary error', err, info) }
@@ -112,6 +112,7 @@ export default function ProjectDetailPage() {
   const fmtCurrency = useMemo(() => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }), [])
 
   return (
+    <Boundary>
     <div className="max-w-7xl mx-auto p-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -277,6 +278,7 @@ export default function ProjectDetailPage() {
         </div>
       )}
     </div>
+    </Boundary>
   )
 }
 
