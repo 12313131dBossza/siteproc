@@ -61,22 +61,26 @@ BEGIN
 
   -- Try insert variants to handle schema drift
   BEGIN
-    INSERT INTO orders (id, product_id, qty, status, note, created_by, project_id, company_id)
-    VALUES (gen_random_uuid(), v_product, 1, 'pending', 'MOCK TEST ORDER', v_user, v_project, v_company)
+    -- First try: full columns with created_by and company_id
+    INSERT INTO orders (id, product_id, qty, status, note, created_by, project_id, company_id, user_id)
+    VALUES (gen_random_uuid(), v_product, 1, 'pending', 'MOCK TEST ORDER', v_user, v_project, v_company, v_user)
     RETURNING id INTO v_order;
   EXCEPTION WHEN undefined_column THEN
     BEGIN
-      INSERT INTO orders (id, product_id, qty, status, note, created_by, project_id)
-      VALUES (gen_random_uuid(), v_product, 1, 'pending', 'MOCK TEST ORDER', v_user, v_project)
+      -- Second try: user_id + project_id + company_id
+      INSERT INTO orders (id, product_id, qty, status, note, user_id, project_id, company_id)
+      VALUES (gen_random_uuid(), v_product, 1, 'pending', 'MOCK TEST ORDER', v_user, v_project, v_company)
       RETURNING id INTO v_order;
     EXCEPTION WHEN undefined_column THEN
       BEGIN
+        -- Third try: just user_id + project_id (most likely schema)
         INSERT INTO orders (id, product_id, qty, status, note, user_id, project_id)
         VALUES (gen_random_uuid(), v_product, 1, 'pending', 'MOCK TEST ORDER', v_user, v_project)
         RETURNING id INTO v_order;
       EXCEPTION WHEN undefined_column THEN
-        INSERT INTO orders (id, product_id, qty, status, project_id)
-        VALUES (gen_random_uuid(), v_product, 1, 'pending', v_project)
+        -- Fourth try: created_by instead of user_id
+        INSERT INTO orders (id, product_id, qty, status, note, created_by, project_id)
+        VALUES (gen_random_uuid(), v_product, 1, 'pending', 'MOCK TEST ORDER', v_user, v_project)
         RETURNING id INTO v_order;
       END;
     END;
