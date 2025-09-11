@@ -2,13 +2,7 @@ import { sbServer } from '@/lib/supabase-server';
 import { sendOrderNotifications } from '@/lib/notifications';
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function POST(request: Ne    // Parse query parameters
-    const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status');
-    const search = searchParams.get('search');
-    const projectId = searchParams.get('projectId');
-
-    console.log('Orders GET: Query parameters:', { status, search, projectId });st) {
+export async function POST(request: NextRequest) {
   try {
     console.log('Orders POST: Starting request processing');
     
