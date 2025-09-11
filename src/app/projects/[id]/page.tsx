@@ -29,14 +29,24 @@ export default function ProjectDetailPage() {
   async function load() {
     setError(undefined)
     try {
+      console.log('Project detail: loading project:', id);
       const [p, r] = await Promise.all([
-        fetch(`/api/projects/${id}`, { headers: { 'Accept': 'application/json' } }).then(r=>r.json()),
-        fetch(`/api/projects/${id}/rollup`, { headers: { 'Accept': 'application/json' } }).then(r=>r.json())
+        fetch(`/api/projects/${id}`, { headers: { 'Accept': 'application/json' } }).then(r=>{
+          console.log('Project detail: project response status:', r.status);
+          return r.json();
+        }),
+        fetch(`/api/projects/${id}/rollup`, { headers: { 'Accept': 'application/json' } }).then(r=>{
+          console.log('Project detail: rollup response status:', r.status);
+          return r.json();
+        })
       ])
+      console.log('Project detail: project data:', p);
+      console.log('Project detail: rollup data:', r);
       if (p?.error) throw new Error(p.error)
       setProject(p.data)
       setRollup(r.data)
     } catch (e:any) {
+      console.error('Project detail: load error:', e);
       setError(e?.message || 'Failed to load project')
     }
   }

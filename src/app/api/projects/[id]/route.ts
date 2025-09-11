@@ -10,9 +10,28 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     { cookies: { get(name: string) { return cookieStore.get(name)?.value } } as any }
   )
   const { id } = params
-  const { data, error } = await supabase.from('projects').select('*').eq('id', id).single()
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 })
-  return NextResponse.json({ data })
+  console.log('Project API: fetching project with ID:', id)
+  
+  try {
+    const { data, error } = await supabase.from('projects').select('*').eq('id', id).single()
+    console.log('Project API: query result - data:', data, 'error:', error)
+    
+    if (error) {
+      console.error('Project API: Supabase error:', error)
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
+    
+    if (!data) {
+      console.error('Project API: No data returned for project ID:', id)
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+    }
+    
+    console.log('Project API: returning data:', data)
+    return NextResponse.json({ data })
+  } catch (err: any) {
+    console.error('Project API: Unexpected error:', err)
+    return NextResponse.json({ error: 'Internal server error: ' + err.message }, { status: 500 })
+  }
 }
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
