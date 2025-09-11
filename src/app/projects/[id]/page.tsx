@@ -94,6 +94,9 @@ export default function ProjectDetailPage() {
     setSaving(false)
   }
 
+  // Hooks must not appear after conditional returns; prepare memoized formatter early
+  const fmtCurrency = useMemo(() => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }), [])
+
   if (!id) return null
   if (!project) return (
     <div className="p-6">
@@ -109,7 +112,6 @@ export default function ProjectDetailPage() {
   )
 
   const variance = Number(rollup?.variance || 0)
-  const fmtCurrency = useMemo(() => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }), [])
 
   return (
     <Boundary>
