@@ -218,11 +218,11 @@ export async function GET(request: NextRequest) {
 
     // Parse query parameters
     const { searchParams } = new URL(request.url);
-  const status = searchParams.get('status');
+    const status = searchParams.get('status');
     const search = searchParams.get('search');
-  const projectId = searchParams.get('projectId');
+    const projectId = searchParams.get('projectId');
 
-    console.log('Orders GET: Query parameters:', { status, search });
+    console.log('Orders GET: Query parameters:', { status, search, projectId });
 
     // Try different query approaches based on schema
     let orders = null;
