@@ -11,10 +11,22 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [mounted, setMounted] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const searchParams = useSearchParams();
 
   useEffect(() => {
     setMounted(true);
+    // Restore remember me preference from localStorage
+    const savedRememberMe = localStorage.getItem('rememberMe') === 'true';
+    setRememberMe(savedRememberMe);
+    
+    // Restore email if remember me was previously checked
+    if (savedRememberMe) {
+      const savedEmail = localStorage.getItem('savedEmail');
+      if (savedEmail) {
+        setEmail(savedEmail);
+      }
+    }
   }, []);
 
   // Only create supabase client after component mounts
@@ -35,6 +47,14 @@ function LoginForm() {
     setMessage('');
 
     try {
+      // Save remember me preference and email if checked
+      localStorage.setItem('rememberMe', rememberMe.toString());
+      if (rememberMe) {
+        localStorage.setItem('savedEmail', email);
+      } else {
+        localStorage.removeItem('savedEmail');
+      }
+
       // Get app URL safely for client-side only
       const appUrl = window.location.origin;
 
@@ -47,6 +67,7 @@ function LoginForm() {
 
       console.log('Starting authentication process...');
       console.log('Email:', email);
+      console.log('Remember Me:', rememberMe);
       console.log('App URL:', appUrl);
       console.log('Callback URL:', callbackUrl);
       console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
@@ -57,11 +78,15 @@ function LoginForm() {
       });
       
       // Use PKCE flow with explicit configuration
+      // When remember me is checked, we don't change the OTP behavior but the session will be longer after auth
       const authPromise = supabase.auth.signInWithOtp({
         email,
         options: {
           emailRedirectTo: callbackUrl,
           shouldCreateUser: true,
+          data: {
+            rememberMe: rememberMe // Pass remember me preference to be used after login
+          }
         },
       });
 
@@ -128,6 +153,21 @@ function LoginForm() {
               onChange={(e) => setEmail(e.target.value)}
               disabled={loading}
             />
+          </div>
+
+          <div className="flex items-center">
+            <input
+              id="remember-me"
+              name="remember-me"
+              type="checkbox"
+              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              disabled={loading}
+            />
+            <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
+              Remember me
+            </label>
           </div>
           
           <div>

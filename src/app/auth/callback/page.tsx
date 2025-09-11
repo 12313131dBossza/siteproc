@@ -35,12 +35,17 @@ function CallbackContent() {
           console.log('[callback] Hash params:', Object.fromEntries(hashParams.entries()));
           console.log('[callback] URL params:', Object.fromEntries(searchParams.entries()));
 
+          // Check for remember me preference
+          const rememberMe = localStorage.getItem('rememberMe') === 'true';
+          console.log('[callback] Remember me preference:', rememberMe);
+
           const response = await fetch('/api/auth/set-session', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               access_token: finalAccessToken,
               refresh_token: finalRefreshToken,
+              rememberMe: rememberMe,
             }),
           });
 
@@ -49,6 +54,26 @@ function CallbackContent() {
 
           if (response.ok) {
             console.log('[callback] Session set successfully');
+            
+            // Check for remember me preference and extend session if needed
+            const rememberMe = localStorage.getItem('rememberMe') === 'true';
+            console.log('[callback] Remember me preference:', rememberMe);
+            
+            if (rememberMe) {
+              try {
+                // For remember me, we'll set a longer-lived refresh token persistence
+                // This is handled by ensuring cookies have appropriate max-age
+                console.log('[callback] Remember me enabled - session will persist longer');
+                
+                // Store a flag that the user wants to be remembered
+                localStorage.setItem('sessionPersistence', 'extended');
+              } catch (err) {
+                console.error('[callback] Remember me setup error:', err);
+              }
+            } else {
+              // Clear extended session preference if not remembering
+              localStorage.removeItem('sessionPersistence');
+            }
             
             // Get the current user and ensure profile exists
             try {
@@ -84,10 +109,18 @@ function CallbackContent() {
           if (code) {
             // PKCE flow: exchange code for session
             console.log('[callback] Using PKCE code flow with code:', code);
+            
+            // Check for remember me preference
+            const rememberMe = localStorage.getItem('rememberMe') === 'true';
+            console.log('[callback] Remember me preference for PKCE:', rememberMe);
+            
             const response = await fetch('/api/auth/exchange-code', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ code }),
+              body: JSON.stringify({ 
+                code,
+                rememberMe: rememberMe 
+              }),
             });
 
             const responseData = await response.json();
@@ -95,6 +128,26 @@ function CallbackContent() {
 
             if (response.ok) {
               console.log('[callback] PKCE exchange successful');
+              
+              // Check for remember me preference and extend session if needed
+              const rememberMe = localStorage.getItem('rememberMe') === 'true';
+              console.log('[callback] Remember me preference:', rememberMe);
+              
+              if (rememberMe) {
+                try {
+                  // For remember me, we'll set a longer-lived refresh token persistence
+                  console.log('[callback] Remember me enabled - session will persist longer');
+                  
+                  // Store a flag that the user wants to be remembered
+                  localStorage.setItem('sessionPersistence', 'extended');
+                } catch (err) {
+                  console.error('[callback] Remember me setup error:', err);
+                }
+              } else {
+                // Clear extended session preference if not remembering
+                localStorage.removeItem('sessionPersistence');
+              }
+              
               setStatus('Login successful! Redirecting...');
               
               // Check for redirectTo parameter

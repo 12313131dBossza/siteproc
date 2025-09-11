@@ -13,9 +13,10 @@ export async function POST(req: Request) {
       key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'SET' : 'MISSING'
     });
     
-    const { code } = await req.json();
+    const { code, rememberMe } = await req.json();
     
     console.log('[exchange-code] Received code:', code ? 'present' : 'missing');
+    console.log('[exchange-code] Remember me:', rememberMe);
     
     if (!code) {
       console.error('[exchange-code] Missing code');
@@ -23,6 +24,15 @@ export async function POST(req: Request) {
     }
 
     const cookieStore = await cookies();
+    
+    // Configure cookie options based on remember me preference
+    const cookieOptions = rememberMe ? {
+      // For remember me: 30 days
+      maxAge: 30 * 24 * 60 * 60, // 30 days in seconds
+    } : {
+      // For normal login: session cookie (expires when browser closes)
+      maxAge: undefined,
+    };
     
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -35,7 +45,10 @@ export async function POST(req: Request) {
           setAll(cookiesToSet) {
             try {
               cookiesToSet.forEach(({ name, value, options }) => {
-                cookieStore.set(name, value, options)
+                // Apply remember me options to auth cookies
+                const finalOptions = name.includes('supabase') && rememberMe ? 
+                  { ...options, ...cookieOptions } : options;
+                cookieStore.set(name, value, finalOptions)
               })
             } catch {
               // The `setAll` method was called from a Server Component.

@@ -7,9 +7,10 @@ export const runtime = 'nodejs';
 
 export async function POST(req: Request) {
   try {
-    const { access_token, refresh_token } = await req.json();
+    const { access_token, refresh_token, rememberMe } = await req.json();
     
     console.log('[set-session] Setting session from tokens');
+    console.log('[set-session] Remember me:', rememberMe);
     
     if (!access_token || !refresh_token) {
       console.error('[set-session] Missing tokens');
@@ -17,6 +18,15 @@ export async function POST(req: Request) {
     }
 
     const cookieStore = await cookies();
+
+    // Configure cookie options based on remember me preference
+    const cookieOptions = rememberMe ? {
+      // For remember me: 30 days
+      maxAge: 30 * 24 * 60 * 60, // 30 days in seconds
+    } : {
+      // For normal login: session cookie (expires when browser closes)
+      maxAge: undefined,
+    };
 
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -29,7 +39,10 @@ export async function POST(req: Request) {
           setAll(cookiesToSet) {
             try {
               cookiesToSet.forEach(({ name, value, options }) => {
-                cookieStore.set(name, value, options)
+                // Apply remember me options to auth cookies
+                const finalOptions = name.includes('supabase') && rememberMe ? 
+                  { ...options, ...cookieOptions } : options;
+                cookieStore.set(name, value, finalOptions)
               })
             } catch {
               // The `setAll` method was called from a Server Component.
