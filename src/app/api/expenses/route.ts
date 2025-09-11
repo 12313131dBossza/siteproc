@@ -269,7 +269,8 @@ export async function GET(request: NextRequest) {
         user_id: expense.user_id,
         approved_by: expense.approved_by,
         approved_at: expense.approved_at,
-        approval_notes: expense.approval_notes
+  approval_notes: expense.approval_notes,
+  project_id: expense.project_id || null
       };
     });
 
