@@ -9,7 +9,13 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     
     // Use service role to bypass RLS for creating test data
     const serviceUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqaGpzdG56eG5rdG5rcG10d3hsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczNDMwNDQ5MSwiZXhwIjoyMDQ5ODgwNDkxfQ.rIjcDOPLROD8dIhNg1Qj4CZFVvT6FMmOqKv0SxHzAzE'
+    
+    if (!serviceKey) {
+      console.error('Create test order: Missing SUPABASE_SERVICE_ROLE_KEY')
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
+    }
+    
     const supabase = createClient(serviceUrl, serviceKey)
     
     // Verify project exists
