@@ -101,13 +101,14 @@ function NewOrderForm() {
 
     setSubmitting(true);
     try {
-      const response = await fetch('/api/orders', {
+    const response = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           product_id: formData.product_id,
           qty: qty,
-          notes: formData.notes || null
+      notes: formData.notes || null,
+      project_id: formData.projectId || null
         })
       });
 
@@ -116,28 +117,7 @@ function NewOrderForm() {
         throw new Error(error.error || 'Failed to create order');
       }
 
-      const order = await response.json();
-
-      // If a project is selected, assign the order to the project
-      if (formData.projectId) {
-        try {
-          const assignResponse = await fetch(`/api/projects/${formData.projectId}/assign`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              orders: [order.id]
-            })
-          });
-
-          if (!assignResponse.ok) {
-            console.error('Failed to assign order to project');
-            // Don't throw error here, order was created successfully
-          }
-        } catch (error) {
-          console.error('Error assigning order to project:', error);
-          // Don't throw error here, order was created successfully
-        }
-      }
+  const order = await response.json();
 
       toast.success('Order request submitted successfully!');
       router.push(`/orders/${order.id}`);

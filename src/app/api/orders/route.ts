@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
     console.log('Orders POST: Request body:', body);
     
   const { product_id, qty, notes } = body;
+  const bodyProject = (body as any).project_id || (body as any).projectId || null;
 
     // Validate required fields
     if (!product_id || !qty || qty <= 0) {
@@ -100,9 +101,10 @@ export async function POST(request: NextRequest) {
       
       console.log(`Orders POST: Trying ${userCol}/${noteCol} combination:`, baseData);
 
+      const withProject = bodyProject ? { project_id: bodyProject } : {};
       let result: any = await supabase
         .from('orders')
-        .insert([baseData])
+        .insert([{ ...baseData, ...withProject }])
         .select(`
           *,
           product:products(id, name, sku, price, unit)
@@ -122,7 +124,7 @@ export async function POST(request: NextRequest) {
         const companyColMissing = /company_id/.test(msg) && /(does not exist|unknown|column|missing)/.test(msg);
         if (companyColMissing && companyId) {
           try {
-            const withoutCompany = { ...baseData } as any;
+            const withoutCompany = { ...baseData, ...withProject } as any;
             delete withoutCompany.company_id;
             const retry = await supabase
               .from('orders')
