@@ -55,9 +55,13 @@ export default function ProjectDetailPage() {
             const j = await res.json().catch(()=>({}))
             if (!aborted) setExpenses((j.expenses||[]).filter((e:any)=>e.project_id===id))
     } else if (tab==='orders') {
+      console.log('Project detail: fetching orders for project:', id);
       const res = await fetch(`/api/orders?projectId=${encodeURIComponent(id)}`)
       const j = await res.json().catch(()=>[])
-      if (!aborted) setOrders(Array.isArray(j)? j : (j?.data || j || []))
+      console.log('Project detail: orders response:', j);
+      const ordersList = Array.isArray(j)? j : (j?.data || j || []);
+      console.log('Project detail: setting orders:', ordersList);
+      if (!aborted) setOrders(ordersList)
         } else if (tab==='deliveries') {
             // Deliveries API returns list; filter by project_id if present
             const res = await fetch('/api/order-deliveries')

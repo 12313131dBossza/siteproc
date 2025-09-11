@@ -2,7 +2,13 @@ import { sbServer } from '@/lib/supabase-server';
 import { sendOrderNotifications } from '@/lib/notifications';
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Ne    // Parse query parameters
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get('status');
+    const search = searchParams.get('search');
+    const projectId = searchParams.get('projectId');
+
+    console.log('Orders GET: Query parameters:', { status, search, projectId });st) {
   try {
     console.log('Orders POST: Starting request processing');
     
@@ -22,10 +28,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     console.log('Orders POST: Request body:', body);
     
-  const { product_id, qty, notes } = body;
-  const bodyProject = (body as any).project_id || (body as any).projectId || null;
-
-    // Validate required fields
+    const { product_id, qty, notes } = body;
+    const bodyProject = (body as any).project_id || (body as any).projectId || null;
+    console.log('Orders POST: Extracted project_id:', bodyProject);    // Validate required fields
     if (!product_id || !qty || qty <= 0) {
       console.log('Orders POST: Validation failed');
       return NextResponse.json(
@@ -102,6 +107,7 @@ export async function POST(request: NextRequest) {
       console.log(`Orders POST: Trying ${userCol}/${noteCol} combination:`, baseData);
 
       const withProject = bodyProject ? { project_id: bodyProject } : {};
+      console.log('Orders POST: withProject data:', withProject);
       let result: any = await supabase
         .from('orders')
         .insert([{ ...baseData, ...withProject }])
@@ -114,7 +120,7 @@ export async function POST(request: NextRequest) {
       if (!result.error) {
         order = result.data;
         insertError = null;
-        console.log(`Orders POST: Success with ${userCol}/${noteCol}`);
+        console.log(`Orders POST: Success with ${userCol}/${noteCol}, order:`, order);
         break;
       } else {
         insertError = result.error;
@@ -252,6 +258,9 @@ export async function GET(request: NextRequest) {
     if (!result1.error) {
       orders = result1.data;
       console.log('Orders GET: Success with created_by column, found:', orders?.length || 0);
+      if (projectId) {
+        console.log('Orders GET: Filtered by projectId, sample results:', orders?.slice(0,2).map(o => ({ id: o.id, project_id: o.project_id })));
+      }
     } else {
       console.log('Orders GET: Failed with created_by:', result1.error.message);
       queryError = result1.error;
