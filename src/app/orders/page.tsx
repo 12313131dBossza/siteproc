@@ -1,22 +1,38 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { Search, Filter, Package, Clock, CheckCircle, XCircle, Plus } from 'lucide-react';
-import { PageHeader, Section } from '@/components/ui/Layout';
-import { ModernStatCard } from '@/components/ui/ModernStatCard';
-import Link from 'next/link';
-import { createClient } from '@/lib/supabase-client';
-import { toast } from 'sonner';
+import { useState, useEffect } from "react";
+import { AppLayout } from "@/components/app-layout";
+import { Button } from "@/components/ui/button";
+import {
+  ShoppingCart,
+  Plus,
+  Search,
+  Filter,
+  Download,
+  Calendar,
+  Package,
+  Clock,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  MoreHorizontal,
+  Eye,
+  Edit,
+  Truck,
+  X
+} from "lucide-react";
+import { format } from "date-fns";
+import { cn, formatCurrency } from "@/lib/utils";
 
 interface Order {
   id: string;
   product_id: string;
   qty: number;
-  notes: string | null;
-  status: 'pending' | 'approved' | 'rejected';
-  po_number: string | null;
+  notes?: string | null;
+  status: "pending" | "approved" | "rejected";
+  po_number?: string | null;
   created_at: string;
-  decided_at: string | null;
+  decided_at?: string | null;
   product?: {
     id: string;
     name: string;
@@ -29,6 +45,7 @@ interface Order {
     full_name: string;
     email: string;
   };
+}
   decided_by_profile?: {
     id: string;
     full_name: string;

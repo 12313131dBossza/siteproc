@@ -1,55 +1,115 @@
-"use client"
-import { useEffect, useMemo, useState } from 'react'
+"use client";
 
-type Project = {
-  id: string
-  name: string
-  code: string | null
-  status: 'active'|'on_hold'|'closed'
-  budget: number
+import { useState, useEffect, useMemo } from "react";
+import { AppLayout } from "@/components/app-layout";
+import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
+import { 
+  FolderOpen,
+  Plus,
+  Search,
+  Filter,
+  MoreHorizontal,
+  Calendar,
+  DollarSign,
+  Users,
+  Clock,
+  CheckCircle,
+  AlertCircle,
+  TrendingUp,
+  TrendingDown,
+  BarChart3,
+  MapPin,
+  Eye,
+  Edit,
+  X
+} from "lucide-react";
+import { format } from "date-fns";
+import { cn, formatCurrency, formatNumber } from "@/lib/utils";
+
+interface Project {
+  id: string;
+  name: string;
+  code?: string | null;
+  status: "active" | "on_hold" | "closed";
+  budget: number;
+  rollup?: {
+    actual_expenses?: number;
+    variance?: number;
+  };
+  created_at?: string;
 }
 
+const tabs = [
+  { id: "all", label: "All Projects", icon: FolderOpen },
+  { id: "active", label: "Active", icon: Clock },
+  { id: "on_hold", label: "On Hold", icon: AlertCircle },
+  { id: "closed", label: "Completed", icon: CheckCircle },
+];
+
 export default function ProjectsPage() {
-  const [projects, setProjects] = useState<Project[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string|undefined>()
-  const [modal, setModal] = useState(false)
-  const [form, setForm] = useState({ name: '', budget: 0, code: '', status: 'active' })
+  const [activeTab, setActiveTab] = useState("all");
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | undefined>();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [modal, setModal] = useState(false);
+  const [form, setForm] = useState({ name: '', budget: 0, code: '', status: 'active' });
+  const router = useRouter();
 
   async function load() {
-    setLoading(true)
-    setError(undefined)
+    setLoading(true);
+    setError(undefined);
     try {
-      const res = await fetch('/api/projects', { headers: { 'Accept': 'application/json' } })
-      const json = await res.json().catch(()=>({}))
+      const res = await fetch('/api/projects', { headers: { 'Accept': 'application/json' } });
+      const json = await res.json().catch(()=>({}));
       if (res.ok) {
-        setProjects(json.data || [])
+        const projectsData = json.data || [];
+        // Fetch rollup data for each project
+        const projectsWithRollup = await Promise.all(
+          projectsData.map(async (project: Project) => {
+            try {
+              const rollupRes = await fetch(`/api/projects/${project.id}/rollup`);
+              const rollupData = await rollupRes.json();
+              return {
+                ...project,
+                rollup: rollupData.data
+              };
+            } catch {
+              return project;
+            }
+          })
+        );
+        setProjects(projectsWithRollup);
       } else {
-        setProjects([])
-        setError(json?.error || `Failed to load projects (HTTP ${res.status})`)
+        setProjects([]);
+        setError(json?.error || `Failed to load projects (HTTP ${res.status})`);
       }
-    } catch (e:any) {
-      setProjects([])
-      setError(e?.message || 'Failed to load projects')
+    } catch (e: any) {
+      setProjects([]);
+      setError(e?.message || 'Failed to load projects');
     }
-    setLoading(false)
+    setLoading(false);
   }
-  useEffect(() => { load() }, [])
+
+  useEffect(() => { load(); }, []);
 
   async function createProject() {
-    const res = await fetch('/api/projects', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(form) })
+    const res = await fetch('/api/projects', { 
+      method: 'POST', 
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, 
+      body: JSON.stringify(form) 
+    });
     if (res.ok) {
-      const j = await res.json().catch(()=>({}))
-      const created = j?.data
-      // Optimistic update
-      if (created) setProjects(prev => [created, ...prev])
-      setModal(false)
-      setForm({ name: '', budget: 0, code: '', status: 'active' })
-      // Also refresh in background to ensure rollups/statuses
-      load()
+      const j = await res.json().catch(()=>({}));
+      const created = j?.data;
+      if (created) setProjects(prev => [created, ...prev]);
+      setModal(false);
+      setForm({ name: '', budget: 0, code: '', status: 'active' });
+      load();
     } else {
-      const e = await res.json().catch(()=>({}))
-      alert(e.error || 'Failed to create project')
+      const e = await res.json().catch(()=>({}));
+      alert(e.error || 'Failed to create project');
     }
   }
 
