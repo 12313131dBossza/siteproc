@@ -303,7 +303,7 @@ export default function ExpensesPage() {
         expense.id === selectedExpense.id 
           ? {
               ...expense,
-              status: approvalAction,
+              status: approvalAction === 'approve' ? 'approved' : 'rejected',
               approved_by: user.email || 'Current User',
               approved_at: new Date().toISOString(),
               approval_notes: approvalNotes,
@@ -707,7 +707,7 @@ export default function ExpensesPage() {
                 Cancel
               </Button>
               <Button
-                variant={approvalAction === 'approve' ? 'primary' : 'destructive'}
+                variant={approvalAction === 'approve' ? 'primary' : 'danger'}
                 onClick={handleApproval}
                 className="flex-1"
               >

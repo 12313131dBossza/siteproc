@@ -19,11 +19,14 @@ import {
   Eye,
   Edit,
   Truck,
-  X
+  X,
+  TrendingUp,
+  DollarSign
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn, formatCurrency } from "@/lib/utils";
 import { createClient } from "@/lib/supabase-client";
+import Link from "next/link";
 
 interface Order {
   id: string;
@@ -58,272 +61,541 @@ interface UserProfile {
   role: 'owner' | 'admin' | 'member';
 }
 
+interface OrderStats {
+  total: number;
+  pending: number;
+  approved: number;
+  rejected: number;
+  totalValue: number;
+  thisMonth: number;
+}
+
+interface TabConfig {
+  id: string;
+  label: string;
+  count?: number;
+  filter?: (order: Order) => boolean;
+}
+
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-
-  const supabase = createClient();
-  const isAdmin = userProfile?.role === 'owner' || userProfile?.role === 'admin';
+  const [activeTab, setActiveTab] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [decisionModalOpen, setDecisionModalOpen] = useState(false);
+  const [decisionAction, setDecisionAction] = useState<'approve' | 'reject'>('approve');
+  const [decisionNotes, setDecisionNotes] = useState('');
 
   useEffect(() => {
-    fetchData();
-  }, [statusFilter, searchQuery]);
+    fetchUserProfile();
+    fetchOrders();
+  }, []);
 
-  const fetchData = async () => {
+  const fetchUserProfile = async () => {
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (profile) {
+          setUserProfile(profile);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  };
+
+  const fetchOrders = async () => {
     try {
       setLoading(true);
       
-      // Get user profile
-      const { data: { user }, error: authErr } = await supabase.auth.getUser();
-      if (authErr) {
-        console.error('Auth error:', authErr);
-        return;
-      }
-      
-      if (user) {
-        // Try to get profile with fallback handling
-        try {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('id, role')
-            .eq('id', user.id)
-            .single();
-          
-          setUserProfile(profile || { id: user.id, role: 'member' });
-        } catch (error) {
-          // If profiles table doesn't exist or user has no profile, default to member
-          console.log('Profile fetch failed, defaulting to member role:', error);
-          setUserProfile({ id: user.id, role: 'member' });
+      // Mock data for now - replace with actual API call
+      const mockOrders: Order[] = [
+        {
+          id: "1",
+          product_id: "prod_1",
+          qty: 50,
+          status: "pending",
+          notes: "Urgent delivery needed",
+          created_at: new Date().toISOString(),
+          product: {
+            id: "prod_1",
+            name: "Steel Beams",
+            sku: "SB-001",
+            price: 250,
+            unit: "piece"
+          },
+          created_by_profile: {
+            id: "user_1",
+            full_name: "John Smith",
+            email: "john@company.com"
+          }
+        },
+        {
+          id: "2",
+          product_id: "prod_2",
+          qty: 100,
+          status: "approved",
+          po_number: "PO-2025-001",
+          created_at: new Date(Date.now() - 86400000).toISOString(),
+          decided_at: new Date(Date.now() - 43200000).toISOString(),
+          product: {
+            id: "prod_2",
+            name: "Concrete Mix",
+            sku: "CM-002",
+            price: 45,
+            unit: "bag"
+          },
+          created_by_profile: {
+            id: "user_2",
+            full_name: "Sarah Johnson",
+            email: "sarah@company.com"
+          },
+          decided_by_profile: {
+            id: "user_3",
+            full_name: "Mike Manager",
+            email: "mike@company.com"
+          }
+        },
+        {
+          id: "3",
+          product_id: "prod_3",
+          qty: 25,
+          status: "rejected",
+          notes: "Budget exceeded for this month",
+          created_at: new Date(Date.now() - 172800000).toISOString(),
+          decided_at: new Date(Date.now() - 86400000).toISOString(),
+          product: {
+            id: "prod_3",
+            name: "Power Tools",
+            sku: "PT-003",
+            price: 150,
+            unit: "piece"
+          },
+          created_by_profile: {
+            id: "user_4",
+            full_name: "Tom Wilson",
+            email: "tom@company.com"
+          },
+          decided_by_profile: {
+            id: "user_3",
+            full_name: "Mike Manager",
+            email: "mike@company.com"
+          }
         }
-      }
+      ];
 
-      // Build query parameters
-      const params = new URLSearchParams();
-      if (statusFilter) params.append('status', statusFilter);
-      if (searchQuery) params.append('search', searchQuery);
-
-      // Fetch orders via API
-      const response = await fetch(`/api/orders?${params.toString()}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch orders');
-      }
-
-      const ordersData = await response.json();
-      setOrders(ordersData);
-
+      setOrders(mockOrders);
     } catch (error) {
       console.error('Error fetching orders:', error);
-      toast.error('Failed to load orders');
     } finally {
       setLoading(false);
     }
   };
 
-  // Filter orders locally as backup
-  const filteredOrders = orders.filter(order => {
+  const calculateStats = (): OrderStats => {
+    const total = orders.length;
+    const pending = orders.filter(o => o.status === 'pending').length;
+    const approved = orders.filter(o => o.status === 'approved').length;
+    const rejected = orders.filter(o => o.status === 'rejected').length;
+    
+    const totalValue = orders.reduce((sum, order) => {
+      return sum + (order.product?.price || 0) * order.qty;
+    }, 0);
+    
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const thisMonth = orders
+      .filter(o => new Date(o.created_at) >= startOfMonth)
+      .reduce((sum, o) => sum + (o.product?.price || 0) * o.qty, 0);
+
+    return { total, pending, approved, rejected, totalValue, thisMonth };
+  };
+
+  const stats = calculateStats();
+
+  const tabs: TabConfig[] = [
+    {
+      id: "all",
+      label: "All Orders",
+      count: orders.length,
+    },
+    {
+      id: "pending",
+      label: "Pending",
+      count: orders.filter(o => o.status === 'pending').length,
+      filter: (order) => order.status === 'pending',
+    },
+    {
+      id: "approved",
+      label: "Approved",
+      count: orders.filter(o => o.status === 'approved').length,
+      filter: (order) => order.status === 'approved',
+    },
+    {
+      id: "rejected",
+      label: "Rejected",
+      count: orders.filter(o => o.status === 'rejected').length,
+      filter: (order) => order.status === 'rejected',
+    },
+  ];
+
+  const filteredOrders = orders.filter((order) => {
+    const matchesTab = activeTab === "all" || !tabs.find(tab => tab.id === activeTab)?.filter || 
+                     tabs.find(tab => tab.id === activeTab)?.filter?.(order);
     const matchesSearch = !searchQuery || 
-      order.product?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.notes?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = !statusFilter || order.status === statusFilter;
-    return matchesSearch && matchesStatus;
+                         order.product?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         order.product?.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         order.notes?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    return matchesTab && matchesSearch;
   });
 
-  // Calculate stats
-  const pendingCount = orders.filter(o => o.status === 'pending').length;
-  const approvedCount = orders.filter(o => o.status === 'approved').length;
-  const totalCount = orders.length;
+  const handleDecision = async () => {
+    if (!selectedOrder) return;
+
+    try {
+      // Mock API call - replace with actual implementation
+      setOrders(prev => prev.map(order => 
+        order.id === selectedOrder.id 
+          ? {
+              ...order,
+              status: decisionAction === 'approve' ? 'approved' : 'rejected',
+              decided_at: new Date().toISOString(),
+              po_number: decisionAction === 'approve' ? `PO-${Date.now()}` : undefined,
+            }
+          : order
+      ));
+
+      setDecisionModalOpen(false);
+      setSelectedOrder(null);
+      setDecisionNotes('');
+      
+      // Show success message
+      console.log(`Order ${decisionAction}d successfully`);
+    } catch (error) {
+      console.error('Error updating order:', error);
+    }
+  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'pending': return <Clock className="h-4 w-4" />;
-      case 'approved': return <CheckCircle className="h-4 w-4" />;
-      case 'rejected': return <XCircle className="h-4 w-4" />;
-      default: return <Package className="h-4 w-4" />;
+      case 'approved': return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'rejected': return <XCircle className="h-4 w-4 text-red-500" />;
+      case 'pending': return <Clock className="h-4 w-4 text-yellow-500" />;
+      default: return <Clock className="h-4 w-4 text-gray-400" />;
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'approved': return 'bg-green-100 text-green-800';
-      case 'rejected': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'approved': return 'bg-green-100 text-green-700';
+      case 'rejected': return 'bg-red-100 text-red-700';
+      case 'pending': return 'bg-yellow-100 text-yellow-700';
+      default: return 'bg-gray-100 text-gray-700';
     }
   };
 
+  const canDecide = userProfile?.role && ['owner', 'admin'].includes(userProfile.role);
+
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="h-8 bg-zinc-200 rounded animate-pulse" />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="h-24 bg-zinc-200 rounded-2xl animate-pulse" />
-          ))}
+      <AppLayout title="Orders" description="Manage product orders and procurement">
+        <div className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-xl border border-gray-200 p-6 animate-pulse">
+                <div className="h-6 bg-gray-200 rounded mb-2" />
+                <div className="h-8 bg-gray-200 rounded mb-2" />
+                <div className="h-4 bg-gray-200 rounded" />
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="space-y-4">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="h-20 bg-zinc-200 rounded-2xl animate-pulse" />
-          ))}
-        </div>
-      </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader title="Orders" showBackButton={true} backHref="/dashboard">
-        <Link
-          href="/orders/new"
-          className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
-        >
-          <Plus className="h-4 w-4" />
-          New Order
-        </Link>
-      </PageHeader>
-
-      {/* Stats */}
-      <Section>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <ModernStatCard 
-            title="Total Orders" 
-            value={totalCount.toString()} 
-            trend={isAdmin ? 'All company orders' : 'Your orders'}
-            icon={<Package className="h-5 w-5" />} 
-          />
-          <ModernStatCard 
-            title="Pending" 
-            value={pendingCount.toString()} 
-            trend="Awaiting approval"
-            icon={<Clock className="h-5 w-5" />} 
-          />
-          <ModernStatCard 
-            title="Approved" 
-            value={approvedCount.toString()} 
-            trend="Ready to fulfill"
-            icon={<CheckCircle className="h-5 w-5" />} 
-          />
+    <AppLayout
+      title="Orders"
+      description="Manage product orders and procurement"
+      actions={
+        <div className="flex gap-2">
+          <Button variant="ghost" leftIcon={<Download className="h-4 w-4" />}>
+            Export
+          </Button>
+          <Link href="/orders/new">
+            <Button variant="primary" leftIcon={<Plus className="h-4 w-4" />}>
+              New Order
+            </Button>
+          </Link>
         </div>
-      </Section>
-
-      {/* Filters */}
-      <Section>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 shadow-sm">
-            <Search className="h-4 w-4 text-zinc-400" />
-            <input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="outline-none text-sm bg-transparent placeholder:text-zinc-400 flex-1"
-              placeholder="Search by product name or notes..."
-            />
+      }
+    >
+      <div className="p-6">
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-blue-50 rounded-lg">
+                <ShoppingCart className="h-6 w-6 text-blue-600" />
+              </div>
+              <TrendingUp className="h-4 w-4 text-green-500" />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-1">{stats.total}</h3>
+            <p className="text-sm text-gray-500">Total Orders</p>
           </div>
-          <div className="flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 shadow-sm">
-            <Filter className="h-4 w-4 text-zinc-400" />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="outline-none text-sm bg-transparent flex-1"
-            >
-              <option value="">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-            </select>
+
+          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-yellow-50 rounded-lg">
+                <Clock className="h-6 w-6 text-yellow-600" />
+              </div>
+              <span className="text-xs text-yellow-600 font-medium">{stats.pending}</span>
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-1">{stats.pending}</h3>
+            <p className="text-sm text-gray-500">Pending Approval</p>
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-green-50 rounded-lg">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              </div>
+              <span className="text-xs text-green-600 font-medium">{stats.approved}</span>
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-1">{stats.approved}</h3>
+            <p className="text-sm text-gray-500">Approved</p>
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-purple-50 rounded-lg">
+                <DollarSign className="h-6 w-6 text-purple-600" />
+              </div>
+              <span className="text-xs text-purple-600 font-medium">
+                {((stats.thisMonth / (stats.totalValue || 1)) * 100).toFixed(0)}%
+              </span>
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-1">{formatCurrency(stats.totalValue)}</h3>
+            <p className="text-sm text-gray-500">Total Value</p>
           </div>
         </div>
-      </Section>
 
-      {/* Orders List */}
-      <Section>
-        {filteredOrders.length === 0 ? (
-          <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm p-8 text-center">
-            <Package className="h-12 w-12 text-zinc-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-zinc-900 mb-2">No orders found</h3>
-            <p className="text-zinc-500 mb-4">
-              {searchQuery || statusFilter 
-                ? 'Try adjusting your search or filters.'
-                : 'Create your first order to get started.'
-              }
-            </p>
-            <Link
-              href="/orders/new"
-              className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-            >
-              <Plus className="h-4 w-4" />
-              Create Order
-            </Link>
+        {/* Tabs and Filters */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="flex flex-wrap gap-1">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={cn(
+                      "px-4 py-2 rounded-lg font-medium text-sm transition-colors",
+                      activeTab === tab.id
+                        ? "bg-blue-50 text-blue-700 border border-blue-200"
+                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                    )}
+                  >
+                    {tab.label}
+                    {tab.count !== undefined && (
+                      <span className={cn(
+                        "ml-2 px-2 py-0.5 rounded-full text-xs",
+                        activeTab === tab.id
+                          ? "bg-blue-100 text-blue-700"
+                          : "bg-gray-100 text-gray-600"
+                      )}>
+                        {tab.count}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <input
+                  type="text"
+                  placeholder="Search orders..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
           </div>
-        ) : (
-          <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
-            <div className="divide-y divide-zinc-200">
-              {filteredOrders.map((order) => (
-                <Link
-                  key={order.id}
-                  href={`/orders/${order.id}`}
-                  className="block p-4 hover:bg-zinc-50 transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="flex items-center gap-2">
-                          {getStatusIcon(order.status)}
-                          <span className={`inline-flex px-2 py-1 text-xs rounded-full font-medium ${getStatusColor(order.status)}`}>
-                            {order.status}
+
+          {/* Orders List */}
+          <div className="divide-y divide-gray-200">
+            {filteredOrders.length === 0 ? (
+              <div className="p-12 text-center">
+                <ShoppingCart className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No orders found</h3>
+                <p className="text-gray-500 mb-4">
+                  {searchQuery
+                    ? "Try adjusting your search criteria"
+                    : "Get started by creating your first order"}
+                </p>
+                <Link href="/orders/new">
+                  <Button variant="primary" leftIcon={<Plus className="h-4 w-4" />}>
+                    Create Order
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              filteredOrders.map((order) => (
+                <div key={order.id} className="p-6 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-4">
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <Package className="h-5 w-5 text-gray-600" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="font-semibold text-gray-900">{order.product?.name}</h4>
+                          <span className="text-sm text-gray-500">({order.product?.sku})</span>
+                          <span className={cn(
+                            "px-2 py-1 rounded-full text-xs font-medium",
+                            getStatusColor(order.status)
+                          )}>
+                            {getStatusIcon(order.status)}
+                            <span className="ml-1">{order.status}</span>
                           </span>
                         </div>
-                        {order.po_number && (
-                          <span className="text-xs text-zinc-500 bg-zinc-100 px-2 py-1 rounded">
-                            PO: {order.po_number}
-                          </span>
-                        )}
-                      </div>
-                      
-                      <div className="flex items-center justify-between mb-1">
-                        <h3 className="font-medium text-zinc-900 truncate">
-                          {order.product?.name || 'Unknown Product'}
-                        </h3>
-                        <span className="text-sm text-zinc-600 ml-4">
-                          Qty: {order.qty} {order.product?.unit}
-                        </span>
-                      </div>
-                      
-                      <div className="flex items-center justify-between text-sm text-zinc-500">
-                        <div className="flex items-center gap-4">
-                          {order.product?.sku && (
-                            <span>SKU: {order.product.sku}</span>
+                        <p className="text-sm text-gray-600 mb-2">
+                          Quantity: {order.qty} {order.product?.unit}
+                          {order.po_number && (
+                            <span className="ml-4 text-blue-600">PO: {order.po_number}</span>
                           )}
-                          {order.created_by_profile && (
-                            <span>By: {order.created_by_profile.full_name || order.created_by_profile.email}</span>
-                          )}
-                        </div>
-                        <span>{new Date(order.created_at).toLocaleDateString()}</span>
-                      </div>
-                      
-                      {order.notes && (
-                        <p className="text-sm text-zinc-600 mt-1 truncate">
-                          Note: {order.notes}
                         </p>
-                      )}
-                    </div>
-                    
-                    <div className="ml-4 text-right">
-                      <div className="text-sm font-medium text-zinc-900">
-                        ${(order.product?.price || 0 * order.qty).toFixed(2)}
+                        {order.notes && (
+                          <p className="text-sm text-gray-500 mb-2">{order.notes}</p>
+                        )}
+                        <div className="flex items-center gap-4 text-xs text-gray-500">
+                          <span>Created {format(new Date(order.created_at), "MMM dd, yyyy")}</span>
+                          <span>by {order.created_by_profile?.full_name}</span>
+                          {order.decided_by_profile && (
+                            <span>Decided by {order.decided_by_profile.full_name}</span>
+                          )}
+                        </div>
                       </div>
-                      <div className="text-xs text-zinc-500">
-                        ${order.product?.price || 0} each
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <div className="text-lg font-bold text-gray-900">
+                          {formatCurrency((order.product?.price || 0) * order.qty)}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {formatCurrency(order.product?.price || 0)} per {order.product?.unit}
+                        </div>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          leftIcon={<Eye className="h-4 w-4" />}
+                          onClick={() => setSelectedOrder(order)}
+                        >
+                        </Button>
+                        {canDecide && order.status === 'pending' && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              leftIcon={<CheckCircle className="h-4 w-4" />}
+                              onClick={() => {
+                                setSelectedOrder(order);
+                                setDecisionAction('approve');
+                                setDecisionModalOpen(true);
+                              }}
+                            >
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              leftIcon={<XCircle className="h-4 w-4" />}
+                              onClick={() => {
+                                setSelectedOrder(order);
+                                setDecisionAction('reject');
+                                setDecisionModalOpen(true);
+                              }}
+                            >
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
-                </Link>
-              ))}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Decision Modal */}
+      {decisionModalOpen && selectedOrder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              {decisionAction === 'approve' ? 'Approve' : 'Reject'} Order
+            </h3>
+            <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+              <h4 className="font-medium text-gray-900">{selectedOrder.product?.name}</h4>
+              <p className="text-sm text-gray-600">
+                Quantity: {selectedOrder.qty} {selectedOrder.product?.unit} • 
+                Total: {formatCurrency((selectedOrder.product?.price || 0) * selectedOrder.qty)}
+              </p>
+              {selectedOrder.notes && (
+                <p className="text-sm text-gray-500 mt-1">{selectedOrder.notes}</p>
+              )}
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {decisionAction === 'approve' ? 'Approval' : 'Rejection'} Notes
+              </label>
+              <textarea
+                value={decisionNotes}
+                onChange={(e) => setDecisionNotes(e.target.value)}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder={`Add notes for this ${decisionAction}...`}
+              />
+            </div>
+            <div className="flex gap-3">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setDecisionModalOpen(false);
+                  setSelectedOrder(null);
+                  setDecisionNotes('');
+                }}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant={decisionAction === 'approve' ? 'primary' : 'danger'}
+                onClick={handleDecision}
+                className="flex-1"
+              >
+                {decisionAction === 'approve' ? 'Approve' : 'Reject'}
+              </Button>
             </div>
           </div>
-        )}
-      </Section>
-    </div>
+        </div>
+      )}
+    </AppLayout>
   );
 }
