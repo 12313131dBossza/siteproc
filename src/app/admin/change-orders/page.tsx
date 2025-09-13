@@ -1,7 +1,6 @@
 "use client"
 import { useEffect, useState } from 'react'
 import { CheckCircle, XCircle, Clock, AlertCircle, Eye, EyeOff } from 'lucide-react'
-import { AppLayout } from '@/components/app-layout'
 
 type ChangeOrder = {
   id: string
@@ -150,10 +149,14 @@ export default function AdminChangeOrdersPage() {
   }
 
   return (
-    <AppLayout
-      title="Change Orders"
-      description="Review and manage quantity change requests"
-    >
+    <div>
+      <div className="mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Change Orders</h1>
+          <p className="text-gray-600 mt-1">Review and manage quantity change requests</p>
+        </div>
+      </div>
+      
       <div className="mb-6">
         <button
           onClick={() => setShowHistory(!showHistory)}
@@ -219,7 +222,7 @@ export default function AdminChangeOrdersPage() {
           )}
         </div>
       )}
-    </AppLayout>
+    </div>
   )
 }
  

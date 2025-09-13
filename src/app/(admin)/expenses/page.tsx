@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { AppLayout } from "@/components/app-layout";
 import { Button } from "@/components/ui/Button";
 import {
   DollarSign,
@@ -354,27 +353,31 @@ export default function ExpensesPage() {
 
   if (loading) {
     return (
-      <AppLayout title="Expenses" description="Manage and track project expenses">
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="bg-white rounded-xl border border-gray-200 p-6 animate-pulse">
-                <div className="h-6 bg-gray-200 rounded mb-2" />
-                <div className="h-8 bg-gray-200 rounded mb-2" />
-                <div className="h-4 bg-gray-200 rounded" />
-              </div>
-            ))}
-          </div>
+      <div>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Expenses</h1>
+          <p className="text-gray-600 mt-1">Manage and track project expenses</p>
         </div>
-      </AppLayout>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="bg-white rounded-xl border border-gray-200 p-6 animate-pulse">
+              <div className="h-6 bg-gray-200 rounded mb-2" />
+              <div className="h-8 bg-gray-200 rounded mb-2" />
+              <div className="h-4 bg-gray-200 rounded" />
+            </div>
+          ))}
+        </div>
+      </div>
     );
   }
 
   return (
-    <AppLayout
-      title="Expenses"
-      description="Manage and track project expenses"
-      actions={
+    <div>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Expenses</h1>
+          <p className="text-gray-600 mt-1">Manage and track project expenses</p>
+        </div>
         <div className="flex gap-2">
           <Button variant="ghost" leftIcon={<Download className="h-4 w-4" />}>
             Export
@@ -383,11 +386,10 @@ export default function ExpensesPage() {
             Add Expense
           </Button>
         </div>
-      }
-    >
-      <div className="p-6">
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between mb-4">
               <div className="p-3 bg-blue-50 rounded-lg">
@@ -596,7 +598,6 @@ export default function ExpensesPage() {
             )}
           </div>
         </div>
-      </div>
 
       {/* Add Expense Modal */}
       {isModalOpen && (
@@ -717,6 +718,6 @@ export default function ExpensesPage() {
           </div>
         </div>
       )}
-    </AppLayout>
+    </div>
   );
 }
