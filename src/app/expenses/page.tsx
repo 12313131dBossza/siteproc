@@ -1,0 +1,516 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { AppLayout } from "@/components/app-layout";
+import { Button } from "@/components/ui/Button";
+import {
+  DollarSign,
+  TrendingUp,
+  AlertCircle,
+  Search,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Eye,
+  Plus,
+  Filter,
+  Download,
+  Calendar,
+  Receipt,
+  FileText,
+  Users,
+  Building
+} from "lucide-react";
+import { format } from "date-fns";
+import { cn, formatCurrency } from "@/lib/utils";
+import { createClient } from '@/lib/supabase-client';
+import { toast } from 'sonner';
+
+interface Expense {
+  id: string;
+  vendor: string;
+  category: 'labor' | 'materials' | 'equipment' | 'rentals' | 'transportation' | 'other';
+  amount: number;
+  description: string;
+  receipt_url?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  project_id?: string;
+  project_name?: string;
+  created_at: string;
+  approved_at?: string;
+  approved_by?: string;
+  approval_notes?: string;
+  created_by_profile?: {
+    id: string;
+    full_name: string;
+    email: string;
+  };
+}
+
+export default function ExpensesPage() {
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [selectedTab, setSelectedTab] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
+  const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
+  const [approvalAction, setApprovalAction] = useState<'approve' | 'reject'>('approve');
+  const [approvalNotes, setApprovalNotes] = useState('');
+  const [userProfile, setUserProfile] = useState<any>(null);
+
+  // Mock user for approval functionality
+  const user = { email: 'admin@siteproc.com' };
+
+  useEffect(() => {
+    fetchExpenses();
+  }, []);
+
+  const fetchExpenses = async () => {
+    try {
+      // Mock data - replace with actual API call
+      const mockExpenses: Expense[] = [
+        {
+          id: '1',
+          vendor: 'Steel Suppliers Co.',
+          category: 'materials',
+          amount: 15000,
+          description: 'Steel beams for foundation',
+          status: 'approved',
+          project_name: 'Downtown Office Building',
+          created_at: new Date().toISOString(),
+          approved_at: new Date().toISOString(),
+          approved_by: 'John Manager',
+          created_by_profile: {
+            id: '1',
+            full_name: 'Site Foreman',
+            email: 'foreman@site.com'
+          }
+        },
+        {
+          id: '2',
+          vendor: 'Construction Equipment Rental',
+          category: 'equipment',
+          amount: 2500,
+          description: 'Crane rental for 3 days',
+          status: 'pending',
+          project_name: 'Riverside Apartments',
+          created_at: new Date(Date.now() - 86400000).toISOString(),
+          created_by_profile: {
+            id: '2',
+            full_name: 'Project Manager',
+            email: 'pm@project.com'
+          }
+        },
+        {
+          id: '3',
+          vendor: 'Labor Contractors Inc.',
+          category: 'labor',
+          amount: 8000,
+          description: 'Additional workers for site preparation',
+          status: 'rejected',
+          project_name: 'Shopping Mall Renovation',
+          created_at: new Date(Date.now() - 172800000).toISOString(),
+          approved_at: new Date(Date.now() - 86400000).toISOString(),
+          approved_by: 'Mike Manager',
+          approval_notes: 'Budget exceeded for this month',
+          created_by_profile: {
+            id: '3',
+            full_name: 'Site Supervisor',
+            email: 'supervisor@site.com'
+          }
+        }
+      ];
+      
+      setExpenses(mockExpenses);
+    } catch (error) {
+      console.error('Failed to fetch expenses:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredExpenses = expenses.filter(expense => {
+    const matchesSearch = expense.vendor.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         expense.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = selectedTab === 'all' || expense.status === selectedTab;
+    const matchesCategory = categoryFilter === 'all' || expense.category === categoryFilter;
+    return matchesSearch && matchesStatus && matchesCategory;
+  });
+
+  const stats = {
+    total: expenses.reduce((sum, exp) => sum + exp.amount, 0),
+    pending: expenses.filter(e => e.status === 'pending').reduce((sum, exp) => sum + exp.amount, 0),
+    approved: expenses.filter(e => e.status === 'approved').reduce((sum, exp) => sum + exp.amount, 0),
+    thisMonth: expenses.reduce((sum, exp) => sum + exp.amount, 0) // Mock this month calculation
+  };
+
+  const getCategoryColor = (category: string) => {
+    const colors = {
+      labor: 'bg-blue-50 text-blue-700 border-blue-200',
+      materials: 'bg-green-50 text-green-700 border-green-200',
+      equipment: 'bg-purple-50 text-purple-700 border-purple-200',
+      rentals: 'bg-orange-50 text-orange-700 border-orange-200',
+      transportation: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+      other: 'bg-gray-50 text-gray-700 border-gray-200'
+    };
+    return colors[category as keyof typeof colors] || colors.other;
+  };
+
+  const getStatusConfig = (status: string) => {
+    const configs = {
+      pending: { icon: Clock, color: 'text-yellow-600 bg-yellow-50 border-yellow-200', label: 'Pending' },
+      approved: { icon: CheckCircle, color: 'text-green-600 bg-green-50 border-green-200', label: 'Approved' },
+      rejected: { icon: XCircle, color: 'text-red-600 bg-red-50 border-red-200', label: 'Rejected' }
+    };
+    return configs[status as keyof typeof configs] || configs.pending;
+  };
+
+  const handleApproval = async () => {
+    if (!selectedExpense) return;
+    
+    try {
+      // Mock success - replace with actual API call
+      setExpenses(prev => prev.map(expense => 
+        expense.id === selectedExpense.id 
+          ? {
+              ...expense,
+              status: approvalAction === 'approve' ? 'approved' : 'rejected',
+              approved_by: user.email || 'Current User',
+              approved_at: new Date().toISOString(),
+              approval_notes: approvalNotes,
+            }
+          : expense
+      ));
+      
+      toast.success(`Expense ${approvalAction === 'approve' ? 'approved' : 'rejected'} successfully`);
+      setIsApprovalModalOpen(false);
+      setSelectedExpense(null);
+      setApprovalNotes('');
+    } catch (error) {
+      toast.error(`Failed to ${approvalAction} expense`);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    // Handle new expense creation
+    setIsModalOpen(false);
+  };
+
+  if (loading) {
+    return (
+      <AppLayout title="Expenses" description="Manage and track project expenses">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="bg-white rounded-xl border border-gray-200 p-6 animate-pulse">
+              <div className="h-6 bg-gray-200 rounded mb-2" />
+              <div className="h-8 bg-gray-200 rounded mb-2" />
+              <div className="h-4 bg-gray-200 rounded" />
+            </div>
+          ))}
+        </div>
+      </AppLayout>
+    );
+  }
+
+  return (
+    <AppLayout
+      title="Expenses"
+      description="Manage and track project expenses"
+      actions={
+        <div className="flex gap-2">
+          <Button variant="ghost" leftIcon={<Download className="h-4 w-4" />}>
+            Export
+          </Button>
+          <Button variant="primary" leftIcon={<Plus className="h-4 w-4" />} onClick={() => setIsModalOpen(true)}>
+            Add Expense
+          </Button>
+        </div>
+      }
+    >
+      <div className="space-y-6">
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-blue-50 rounded-lg">
+                <DollarSign className="h-6 w-6 text-blue-600" />
+              </div>
+              <TrendingUp className="h-4 w-4 text-green-500" />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-1">{formatCurrency(stats.total)}</h3>
+            <p className="text-sm text-gray-500">Total Expenses</p>
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-yellow-50 rounded-lg">
+                <Clock className="h-6 w-6 text-yellow-600" />
+              </div>
+              <span className="text-sm font-medium text-yellow-600">1</span>
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-1">{formatCurrency(stats.pending)}</h3>
+            <p className="text-sm text-gray-500">Pending Approval</p>
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-green-50 rounded-lg">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              </div>
+              <span className="text-sm font-medium text-green-600">2</span>
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-1">{formatCurrency(stats.approved)}</h3>
+            <p className="text-sm text-gray-500">Approved</p>
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-purple-50 rounded-lg">
+                <Calendar className="h-6 w-6 text-purple-600" />
+              </div>
+              <span className="text-sm font-medium text-purple-600">2625000%</span>
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-1">{formatCurrency(stats.thisMonth)}</h3>
+            <p className="text-sm text-gray-500">This Month</p>
+          </div>
+        </div>
+
+        {/* Filters and Search */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+          <div className="p-6">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <input
+                    type="text"
+                    placeholder="Search expenses..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <select
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="all">All Categories</option>
+                  <option value="labor">Labor</option>
+                  <option value="materials">Materials</option>
+                  <option value="equipment">Equipment</option>
+                  <option value="rentals">Rentals</option>
+                  <option value="transportation">Transportation</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+          <div className="border-b border-gray-200">
+            <nav className="flex space-x-8 px-6">
+              {[
+                { key: 'all', label: 'All Expenses', count: expenses.length },
+                { key: 'pending', label: 'Pending', count: expenses.filter(e => e.status === 'pending').length },
+                { key: 'approved', label: 'Approved', count: expenses.filter(e => e.status === 'approved').length },
+                { key: 'rejected', label: 'Rejected', count: expenses.filter(e => e.status === 'rejected').length }
+              ].map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setSelectedTab(tab.key as any)}
+                  className={cn(
+                    "py-4 px-2 border-b-2 font-medium text-sm transition-colors",
+                    selectedTab === tab.key
+                      ? "border-blue-500 text-blue-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  )}
+                >
+                  {tab.label} ({tab.count})
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          {/* Expense List */}
+          <div className="p-6">
+            {filteredExpenses.length === 0 ? (
+              <div className="text-center py-12">
+                <Receipt className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No expenses found</h3>
+                <p className="text-gray-500">Try adjusting your filters or add a new expense.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredExpenses.map((expense) => {
+                  const statusConfig = getStatusConfig(expense.status);
+                  const StatusIcon = statusConfig.icon;
+                  
+                  return (
+                    <div key={expense.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <span className="font-semibold text-gray-900">{expense.vendor}</span>
+                            <span className={cn("px-2 py-1 rounded-full text-xs font-medium border", getCategoryColor(expense.category))}>
+                              {expense.category}
+                            </span>
+                            <div className={cn("flex items-center gap-1.5 px-2 py-1 rounded-full border text-xs font-medium", statusConfig.color)}>
+                              <StatusIcon className="w-3.5 h-3.5" />
+                              {statusConfig.label}
+                            </div>
+                          </div>
+                          <p className="text-gray-600 mb-2">{expense.description}</p>
+                          {expense.project_name && (
+                            <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
+                              <Building className="h-4 w-4" />
+                              <span>{expense.project_name}</span>
+                            </div>
+                          )}
+                          <div className="text-sm text-gray-500">
+                            <div>Created: {format(new Date(expense.created_at), 'MMM dd, yyyy')}</div>
+                            {expense.approved_at && (
+                              <div>Approved: {format(new Date(expense.approved_at), 'MMM dd, yyyy')} by {expense.approved_by}</div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xl font-bold text-gray-900">{formatCurrency(expense.amount)}</div>
+                          {expense.status === 'pending' && (
+                            <div className="flex gap-2 mt-2">
+                              <Button
+                                size="sm"
+                                variant="primary"
+                                onClick={() => {
+                                  setSelectedExpense(expense);
+                                  setApprovalAction('approve');
+                                  setIsApprovalModalOpen(true);
+                                }}
+                                leftIcon={<CheckCircle className="w-4 h-4" />}
+                              >
+                                Approve
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="danger"
+                                onClick={() => {
+                                  setSelectedExpense(expense);
+                                  setApprovalAction('reject');
+                                  setIsApprovalModalOpen(true);
+                                }}
+                                leftIcon={<XCircle className="w-4 h-4" />}
+                              >
+                                Reject
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Add Expense Modal */}
+        {isModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl max-w-md w-full p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Expense</h3>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Vendor</label>
+                  <input type="text" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                  <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                    <option value="">Select category</option>
+                    <option value="labor">Labor</option>
+                    <option value="materials">Materials</option>
+                    <option value="equipment">Equipment</option>
+                    <option value="rentals">Rentals</option>
+                    <option value="transportation">Transportation</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Amount</label>
+                  <input type="number" step="0.01" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <textarea className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" rows={3} required />
+                </div>
+                <div className="flex gap-2 pt-4">
+                  <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)} className="flex-1">
+                    Cancel
+                  </Button>
+                  <Button type="submit" variant="primary" className="flex-1">
+                    Add Expense
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Approval Modal */}
+        {isApprovalModalOpen && selectedExpense && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl max-w-md w-full p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                {approvalAction === 'approve' ? 'Approve' : 'Reject'} Expense
+              </h3>
+              <div className="mb-4">
+                <p className="text-sm text-gray-600">
+                  <strong>Vendor:</strong> {selectedExpense.vendor}
+                </p>
+                <p className="text-sm text-gray-600">
+                  <strong>Amount:</strong> {formatCurrency(selectedExpense.amount)}
+                </p>
+                <p className="text-sm text-gray-600">
+                  <strong>Description:</strong> {selectedExpense.description}
+                </p>
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {approvalAction === 'approve' ? 'Approval' : 'Rejection'} Notes
+                </label>
+                <textarea
+                  value={approvalNotes}
+                  onChange={(e) => setApprovalNotes(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  rows={3}
+                  placeholder={`Add notes for this ${approvalAction}...`}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button variant="ghost" onClick={() => setIsApprovalModalOpen(false)} className="flex-1">
+                  Cancel
+                </Button>
+                <Button
+                  variant={approvalAction === 'approve' ? 'primary' : 'danger'}
+                  onClick={handleApproval}
+                  className="flex-1"
+                >
+                  {approvalAction === 'approve' ? 'Approve' : 'Reject'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </AppLayout>
+  );
+}
