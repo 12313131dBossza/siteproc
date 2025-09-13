@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { Plus, Search, Package, ShoppingCart, Edit3, Trash2, MoreHorizontal } from 'lucide-react';
-import { PageHeader, Section } from '@/components/ui/Layout';
 import { ModernStatCard } from '@/components/ui/ModernStatCard';
 import { ModernModal } from '@/components/ui/ModernModal';
 import { FormField } from '@/components/forms/FormField';
+import { Button } from '@/components/ui/Button';
 import { createClient } from '@/lib/supabase-client';
 import { toast } from 'sonner';
 import Link from 'next/link';
@@ -266,20 +266,24 @@ export default function TokoPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Toko - Product Catalog" showBackButton={true} backHref="/dashboard">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Toko - Product Catalog</h1>
+          <p className="text-gray-600 mt-1">Manage your product inventory and catalog</p>
+        </div>
         {isAdmin && (
-          <button
+          <Button
             onClick={() => setIsProductModalOpen(true)}
-            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+            variant="primary"
+            leftIcon={<Plus className="h-4 w-4" />}
           >
-            <Plus className="h-4 w-4" />
             Add Product
-          </button>
+          </Button>
         )}
-      </PageHeader>
+      </div>
 
       {/* Stats */}
-      <Section>
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <ModernStatCard 
             title="Total Products" 
@@ -300,10 +304,10 @@ export default function TokoPage() {
             icon={<ShoppingCart className="h-5 w-5" />} 
           />
         </div>
-      </Section>
+      </div>
 
       {/* Filters */}
-      <Section>
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 shadow-sm">
             <Search className="h-4 w-4 text-zinc-400" />
@@ -325,10 +329,10 @@ export default function TokoPage() {
             ))}
           </select>
         </div>
-      </Section>
+      </div>
 
       {/* Products Grid */}
-      <Section>
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
         {filteredProducts.length === 0 ? (
           <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm p-8 text-center">
             <Package className="h-12 w-12 text-zinc-400 mx-auto mb-4" />
@@ -444,11 +448,11 @@ export default function TokoPage() {
             ))}
           </div>
         )}
-      </Section>
+      </div>
 
       {/* Orders Section (Admin only) */}
       {isAdmin && orders.length > 0 && (
-        <Section>
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h2 className="text-lg font-semibold text-zinc-900 mb-4">Recent Orders</h2>
           <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
             <div className="divide-y divide-zinc-200">
@@ -496,7 +500,7 @@ export default function TokoPage() {
               ))}
             </div>
           </div>
-        </Section>
+        </div>
       )}
 
       {/* Add/Edit Product Modal */}

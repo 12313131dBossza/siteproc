@@ -3,7 +3,8 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Package, ShoppingCart } from 'lucide-react';
-import { PageHeader, Section } from '@/components/ui/Layout';
+import { AppLayout } from '@/components/app-layout';
+import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/forms/FormField';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase-client';
@@ -139,19 +140,19 @@ function NewOrderForm() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader title="Create New Order">
-        <Link
-          href="/orders"
-          className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 px-4 py-2 text-sm font-medium hover:bg-zinc-50"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Orders
+    <AppLayout
+      title="Create New Order"
+      description="Add a new product order to your procurement list"
+      actions={
+        <Link href="/orders">
+          <Button variant="ghost" leftIcon={<ArrowLeft className="h-4 w-4" />}>
+            Back to Orders
+          </Button>
         </Link>
-      </PageHeader>
-
-      <Section>
-        <div className="max-w-2xl mx-auto">
+      }
+    >
+      <div className="max-w-2xl mx-auto">
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm p-6">
               <div className="flex items-center gap-3 mb-6">
@@ -276,8 +277,8 @@ function NewOrderForm() {
             </div>
           </form>
         </div>
-      </Section>
-    </div>
+      </div>
+    </AppLayout>
   );
 }
 

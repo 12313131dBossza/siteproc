@@ -1,7 +1,6 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { Activity, Package, DollarSign, FileEdit, User, Filter } from 'lucide-react';
-import { PageHeader, Section } from '@/components/ui/Layout';
 
 interface ActivityItem {
   id: string;
@@ -91,10 +90,13 @@ export default function ActivityPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Activity Log" />
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">Activity Log</h1>
+        <p className="text-gray-600 mt-1">Track all system activities and changes</p>
+      </div>
 
       {/* Filter */}
-      <Section>
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-zinc-400" />
@@ -115,10 +117,10 @@ export default function ActivityPage() {
             <option value="user">Users</option>
           </select>
         </div>
-      </Section>
+      </div>
 
       {/* Activity List */}
-      <Section>
+      <div className="bg-white rounded-xl border border-gray-200">
         <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
           <div className="divide-y divide-zinc-200">
             {paginatedActivities.map((activity) => (
@@ -178,7 +180,7 @@ export default function ActivityPage() {
             </div>
           )}
         </div>
-      </Section>
+      </div>
 
       {/* Empty State */}
       {filteredActivities.length === 0 && (
