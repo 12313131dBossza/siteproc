@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { AppLayout } from "@/components/app-layout";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import { useRouter } from "next/navigation";
 import { 
   FolderOpen,

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/app-layout";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import {
   ShoppingCart,
   Plus,
@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn, formatCurrency } from "@/lib/utils";
+import { createClient } from "@/lib/supabase-client";
 
 interface Order {
   id: string;
@@ -45,7 +46,6 @@ interface Order {
     full_name: string;
     email: string;
   };
-}
   decided_by_profile?: {
     id: string;
     full_name: string;
