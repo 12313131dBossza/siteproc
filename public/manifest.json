@@ -1,13 +1,75 @@
 {
-  "name": "SiteProc",
+  "name": "SiteProc - Project Management",
   "short_name": "SiteProc",
+  "description": "Complete project management solution for orders, expenses, and deliveries",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#000000",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#0066cc",
+  "categories": ["business", "productivity", "finance"],
+  "scope": "/",
   "icons": [
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "/icons/icon.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any maskable" }
-  ]
+    { 
+      "src": "/icons/icon-192.png", 
+      "sizes": "192x192", 
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    { 
+      "src": "/icons/icon-512.png", 
+      "sizes": "512x512", 
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "View project dashboard",
+      "url": "/dashboard",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "New Project",
+      "short_name": "New Project",
+      "description": "Create a new project",
+      "url": "/projects/new",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Place Order",
+      "short_name": "Order",
+      "description": "Place a new order",
+      "url": "/orders/new",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Add Expense",
+      "short_name": "Expense",
+      "description": "Submit an expense",
+      "url": "/expenses/new",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "96x96" }]
+    }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "files",
+          "accept": ["image/*", "application/pdf"]
+        }
+      ]
+    }
+  },
+  "prefer_related_applications": false,
+  "lang": "en",
+  "dir": "ltr"
 }

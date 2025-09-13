@@ -60,6 +60,9 @@ export default function ExpensesPage() {
   const [approvalAction, setApprovalAction] = useState<'approve' | 'reject'>('approve');
   const [approvalNotes, setApprovalNotes] = useState('');
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [newExpense, setNewExpense] = useState({ vendor: '', category: '', amount: '', description: '', project_id: '' } as any);
+  const [projects, setProjects] = useState<Array<{ id: string; name: string }>>([]);
+  const [projectsLoading, setProjectsLoading] = useState(false);
 
   // Mock user for approval functionality
   const user = { email: 'admin@siteproc.com' };
@@ -68,65 +71,48 @@ export default function ExpensesPage() {
     fetchExpenses();
   }, []);
 
+  const loadProjects = async () => {
+    try {
+      setProjectsLoading(true);
+      const res = await fetch('/api/projects');
+      if (!res.ok) throw new Error(`projects ${res.status}`);
+      const data = await res.json();
+      const list = data?.data || data?.projects || [];
+      setProjects(list.map((p: any) => ({ id: p.id, name: p.name })));
+      if (list.length === 1) {
+        setNewExpense(v => ({ ...v, project_id: list[0].id } as any));
+      }
+    } catch (e) {
+      console.error('Failed to load projects', e);
+      setProjects([]);
+    } finally {
+      setProjectsLoading(false);
+    }
+  };
+
   const fetchExpenses = async () => {
     try {
-      // Mock data - replace with actual API call
-      const mockExpenses: Expense[] = [
-        {
-          id: '1',
-          vendor: 'Steel Suppliers Co.',
-          category: 'materials',
-          amount: 15000,
-          description: 'Steel beams for foundation',
-          status: 'approved',
-          project_name: 'Downtown Office Building',
-          created_at: new Date().toISOString(),
-          approved_at: new Date().toISOString(),
-          approved_by: 'John Manager',
-          created_by_profile: {
-            id: '1',
-            full_name: 'Site Foreman',
-            email: 'foreman@site.com'
-          }
+      // Fetch expenses from API
+      const response = await fetch('/api/expenses', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        {
-          id: '2',
-          vendor: 'Construction Equipment Rental',
-          category: 'equipment',
-          amount: 2500,
-          description: 'Crane rental for 3 days',
-          status: 'pending',
-          project_name: 'Riverside Apartments',
-          created_at: new Date(Date.now() - 86400000).toISOString(),
-          created_by_profile: {
-            id: '2',
-            full_name: 'Project Manager',
-            email: 'pm@project.com'
-          }
-        },
-        {
-          id: '3',
-          vendor: 'Labor Contractors Inc.',
-          category: 'labor',
-          amount: 8000,
-          description: 'Additional workers for site preparation',
-          status: 'rejected',
-          project_name: 'Shopping Mall Renovation',
-          created_at: new Date(Date.now() - 172800000).toISOString(),
-          approved_at: new Date(Date.now() - 86400000).toISOString(),
-          approved_by: 'Mike Manager',
-          approval_notes: 'Budget exceeded for this month',
-          created_by_profile: {
-            id: '3',
-            full_name: 'Site Supervisor',
-            email: 'supervisor@site.com'
-          }
-        }
-      ];
-      
-      setExpenses(mockExpenses);
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch expenses: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const fetchedExpenses: Expense[] = data.expenses || [];
+
+      setExpenses(fetchedExpenses);
     } catch (error) {
       console.error('Failed to fetch expenses:', error);
+      
+      // Fallback to empty state - no mock data
+      setExpenses([]);
     } finally {
       setLoading(false);
     }
@@ -172,17 +158,35 @@ export default function ExpensesPage() {
     if (!selectedExpense) return;
     
     try {
-      // Mock success - replace with actual API call
+      // Update expense status via API
+      const response = await fetch(`/api/expenses/${selectedExpense.id}/approve`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: approvalAction === 'approve' ? 'approve' : 'reject',
+          notes: approvalNotes,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to update expense: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const updated = data.expense || data.data || data;
+      
+      // Update local state
       setExpenses(prev => prev.map(expense => 
-        expense.id === selectedExpense.id 
-          ? {
-              ...expense,
-              status: approvalAction === 'approve' ? 'approved' : 'rejected',
-              approved_by: user.email || 'Current User',
-              approved_at: new Date().toISOString(),
-              approval_notes: approvalNotes,
-            }
-          : expense
+        expense.id === selectedExpense.id ? {
+          ...expense,
+          ...updated,
+          status: approvalAction === 'approve' ? 'approved' : 'rejected',
+          approval_notes: approvalNotes || expense.approval_notes,
+          approved_at: updated?.approved_at || new Date().toISOString(),
+          approved_by: updated?.approved_by || 'You'
+        } : expense
       ));
       
       toast.success(`Expense ${approvalAction === 'approve' ? 'approved' : 'rejected'} successfully`);
@@ -190,14 +194,55 @@ export default function ExpensesPage() {
       setSelectedExpense(null);
       setApprovalNotes('');
     } catch (error) {
+      console.error('Error updating expense:', error);
       toast.error(`Failed to ${approvalAction} expense`);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle new expense creation
-    setIsModalOpen(false);
+    try {
+      const payload: any = {
+        amount: parseFloat(newExpense.amount),
+        description: newExpense.description,
+        category: newExpense.category || 'other',
+        vendor: newExpense.vendor,
+        project_id: newExpense.project_id,
+      };
+
+      const res = await fetch('/api/expenses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) throw new Error(`Create failed ${res.status}`);
+      const created = await res.json();
+      const expense = created?.data || created?.expense || created;
+
+      // Optimistically add to list
+      setExpenses(prev => [
+        {
+          id: expense.id,
+          vendor: expense.vendor || payload.vendor || 'Unknown',
+          category: (expense.category || payload.category || 'other') as any,
+          amount: typeof expense.amount === 'number' ? expense.amount : parseFloat(expense.amount),
+          description: expense.description || payload.description,
+          status: expense.status || 'pending',
+          created_at: expense.created_at || new Date().toISOString(),
+          project_id: expense.project_id,
+          receipt_url: expense.receipt_url,
+        } as Expense,
+        ...prev,
+      ]);
+
+      toast.success('Expense submitted');
+      setIsModalOpen(false);
+      setNewExpense({ vendor: '', category: '', amount: '', description: '', project_id: '' });
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to submit expense');
+    }
   };
 
   if (loading) {
@@ -225,7 +270,7 @@ export default function ExpensesPage() {
           <Button variant="ghost" leftIcon={<Download className="h-4 w-4" />}>
             Export
           </Button>
-          <Button variant="primary" leftIcon={<Plus className="h-4 w-4" />} onClick={() => setIsModalOpen(true)}>
+          <Button variant="primary" leftIcon={<Plus className="h-4 w-4" />} onClick={() => { setIsModalOpen(true); loadProjects(); }}>
             Add Expense
           </Button>
         </div>
@@ -430,11 +475,11 @@ export default function ExpensesPage() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Vendor</label>
-                  <input type="text" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required />
+                  <input type="text" value={newExpense.vendor} onChange={(e) => setNewExpense(v => ({ ...v, vendor: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                  <select value={newExpense.category} onChange={(e) => setNewExpense(v => ({ ...v, category: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                     <option value="">Select category</option>
                     <option value="labor">Labor</option>
                     <option value="materials">Materials</option>
@@ -446,11 +491,20 @@ export default function ExpensesPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Amount</label>
-                  <input type="number" step="0.01" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required />
+                  <input type="number" step="0.01" value={newExpense.amount} onChange={(e) => setNewExpense(v => ({ ...v, amount: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                  <textarea className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" rows={3} required />
+                  <textarea value={newExpense.description} onChange={(e) => setNewExpense(v => ({ ...v, description: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" rows={3} required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Project</label>
+                  <select value={newExpense.project_id} onChange={(e) => setNewExpense((v: any) => ({ ...v, project_id: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                    <option value="">{projectsLoading ? 'Loading projects...' : 'Select project'}</option>
+                    {projects.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="flex gap-2 pt-4">
                   <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)} className="flex-1">
