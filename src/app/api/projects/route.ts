@@ -1,62 +1,141 @@
-import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
-import { createServerClient } from '@supabase/ssr'
+import { NextRequest, NextResponse } from 'next/server'
+import { getCurrentUserProfile, validateRole, logActivity, getProjectSummary, response } from '@/lib/server-utils'
 
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url)
-  const status = searchParams.get('status')
-  const cookieStore = await cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { get(name: string) { return cookieStore.get(name)?.value } } as any }
-  )
+// GET /api/projects - List projects for user's company
+export async function GET() {
+  try {
+    const { profile, supabase } = await getCurrentUserProfile()
+    
+    // Get projects for user's company
+    const { data: projects, error } = await supabase
+      .from('projects')
+      .select(`
+        id,
+        name,
+        description,
+        budget,
+        start_date,
+        end_date,
+        status,
+        created_at,
+        updated_at
+      `)
+      .eq('company_id', profile.company_id)
+      .order('created_at', { ascending: false })
 
-  const me = await supabase.auth.getUser()
-  const uid = me.data.user?.id
-  if (!uid) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-  const prof = await supabase.from('profiles').select('company_id, role').eq('id', uid as any).single()
-  const myCompany = (prof.data as any)?.company_id
-  if (!myCompany) return NextResponse.json({ error: 'no_company' }, { status: 400 })
+    if (error) {
+      console.error('Error fetching projects:', error)
+      return response.error('Failed to fetch projects', 500)
+    }
 
-  let q = supabase.from('projects').select('*').eq('company_id', myCompany).order('created_at', { ascending: false })
-  if (status) q = q.eq('status', status)
-  const { data, error } = await q
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 })
-  return NextResponse.json({ data })
+    // Get project summaries for each project
+    const projectsWithSummary = await Promise.all(
+      projects.map(async (project) => {
+        const summary = await getProjectSummary(project.id, profile.company_id)
+        return {
+          ...project,
+          summary: {
+            totalOrders: summary.totalOrders,
+            approvedOrders: summary.approvedOrders,
+            pendingOrders: summary.pendingOrders,
+            rejectedOrders: summary.rejectedOrders,
+            totalExpenses: summary.totalExpenses,
+            approvedExpenses: summary.approvedExpenses,
+            pendingExpenses: summary.pendingExpenses,
+            totalDeliveries: summary.totalDeliveries,
+            completedDeliveries: summary.completedDeliveries,
+            pendingDeliveries: summary.pendingDeliveries,
+            totalSpent: summary.totalSpent,
+            budgetRemaining: project.budget - summary.totalSpent,
+            budgetUsedPercent: project.budget > 0 ? (summary.totalSpent / project.budget) * 100 : 0
+          }
+        }
+      })
+    )
+
+    return response.success(projectsWithSummary)
+  } catch (error) {
+    console.error('Error in GET /api/projects:', error)
+    return response.error('Internal server error', 500)
+  }
 }
 
-export async function POST(req: Request) {
-  const cookieStore = await cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { get(name: string) { return cookieStore.get(name)?.value } } as any }
-  )
+// POST /api/projects - Create new project (admin only)
+export async function POST(request: NextRequest) {
+  try {
+    const { profile, supabase } = await getCurrentUserProfile()
+    
+    // Validate admin role
+    if (!validateRole(profile, 'admin')) {
+      return response.error('Only admins can create projects', 403)
+    }
 
-  const body = await req.json().catch(() => ({}))
-  const { name, budget, code, status } = body as { name?: string; budget?: number; code?: string; status?: 'active'|'on_hold'|'closed' }
-  if (!name || String(name).trim().length === 0) return NextResponse.json({ error: 'name_required' }, { status: 400 })
-  if (budget != null && Number(budget) < 0) return NextResponse.json({ error: 'budget_must_be_positive' }, { status: 400 })
+    const body = await request.json()
+    const { name, description, budget, start_date, end_date } = body
 
-  const me = await supabase.auth.getUser()
-  const uid = me.data.user?.id
-  if (!uid) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-  const prof = await supabase.from('profiles').select('company_id').eq('id', uid as any).single()
-  const myCompany = (prof.data as any)?.company_id
-  if (!myCompany) return NextResponse.json({ error: 'no_company' }, { status: 400 })
+    // Validate required fields
+    if (!name || !budget || !start_date) {
+      return response.error('Name, budget, and start_date are required', 400)
+    }
 
-  const payload: any = {
-    name: String(name).trim(),
-    budget: Number(budget || 0),
-    code: code ? String(code).trim() : null,
-    status: status || 'active',
-    company_id: myCompany,
-    created_by: uid,
+    if (typeof budget !== 'number' || budget <= 0) {
+      return response.error('Budget must be a positive number', 400)
+    }
+
+    // Create project
+    const { data: project, error } = await supabase
+      .from('projects')
+      .insert({
+        company_id: profile.company_id,
+        name: name.trim(),
+        description: description?.trim() || null,
+        budget,
+        start_date,
+        end_date: end_date || null,
+        status: 'active'
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error creating project:', error)
+      return response.error('Failed to create project', 500)
+    }
+
+    // Log activity
+    await logActivity(
+      profile.company_id,
+      profile.id,
+      'project',
+      project.id,
+      'create',
+      { projectName: project.name, budget: project.budget }
+    )
+
+    // Get project with summary
+    const summary = await getProjectSummary(project.id, profile.company_id)
+    const projectWithSummary = {
+      ...project,
+      summary: {
+        totalOrders: 0,
+        approvedOrders: 0,
+        pendingOrders: 0,
+        rejectedOrders: 0,
+        totalExpenses: 0,
+        approvedExpenses: 0,
+        pendingExpenses: 0,
+        totalDeliveries: 0,
+        completedDeliveries: 0,
+        pendingDeliveries: 0,
+        totalSpent: 0,
+        budgetRemaining: project.budget,
+        budgetUsedPercent: 0
+      }
+    }
+
+    return response.success(projectWithSummary, 201)
+  } catch (error) {
+    console.error('Error in POST /api/projects:', error)
+    return response.error('Internal server error', 500)
   }
-
-  const { data, error } = await supabase.from('projects').insert(payload).select('*').single()
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 })
-
-  return NextResponse.json({ data })
 }

@@ -64,58 +64,29 @@ export default function DeliveriesPage() {
 
   const fetchDeliveries = async () => {
     try {
-      // Mock data - replace with actual API call
-      const mockDeliveries: Delivery[] = [
-        {
-          id: '1',
-          order_id: 'ORD-001',
-          recipient_name: 'Downtown Construction Site',
-          address: '123 Main Street, Building A',
-          city: 'New York, NY 10001',
-          status: 'pending',
-          scheduled_date: new Date().toISOString(),
-          tracking_number: 'TRK001234567',
-          items_count: 5,
-          total_value: 12500,
-          notes: 'Delivery to loading dock, ask for site manager',
-          created_at: new Date().toISOString()
+      // Fetch deliveries from API
+      const response = await fetch('/api/deliveries', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        {
-          id: '2',
-          order_id: 'ORD-002',
-          recipient_name: 'Riverside Office Complex',
-          address: '456 Business Ave, Suite 100',
-          city: 'Boston, MA 02101',
-          status: 'in_transit',
-          scheduled_date: new Date().toISOString(),
-          driver_name: 'Mike Johnson',
-          tracking_number: 'TRK001234568',
-          items_count: 3,
-          total_value: 8750,
-          created_at: new Date(Date.now() - 86400000).toISOString()
-        },
-        {
-          id: '3',
-          order_id: 'ORD-003',
-          recipient_name: 'Metro Shopping Center',
-          address: '789 Commerce Blvd',
-          city: 'Chicago, IL 60601',
-          status: 'delivered',
-          scheduled_date: new Date(Date.now() - 172800000).toISOString(),
-          delivered_date: new Date(Date.now() - 86400000).toISOString(),
-          driver_name: 'Sarah Wilson',
-          tracking_number: 'TRK001234569',
-          items_count: 8,
-          total_value: 15000,
-          created_at: new Date(Date.now() - 259200000).toISOString()
-        }
-      ]
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch deliveries: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const fetchedDeliveries: Delivery[] = data.deliveries || [];
       
-      setDeliveries(mockDeliveries)
+      setDeliveries(fetchedDeliveries);
     } catch (error) {
-      console.error('Failed to fetch deliveries:', error)
+      console.error('Failed to fetch deliveries:', error);
+      
+      // Fallback to empty state - no mock data
+      setDeliveries([]);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 

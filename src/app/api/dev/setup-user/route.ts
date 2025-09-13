@@ -1,18 +1,22 @@
-import { sbServer } from '@/lib/supabase-server';
 import { NextRequest, NextResponse } from 'next/server';
+import { createServerSupabaseClient } from '@/lib/server-utils';
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await sbServer();
+    // Use service role client so we can perform admin operations (list users, upsert bypassing RLS)
+    const supabase = createServerSupabaseClient();
     const { email, companyName } = await request.json();
     
     if (!email) {
       return NextResponse.json({ error: 'Email required' }, { status: 400 });
     }
 
-    // Get user from auth system
-    const { data: userList } = await supabase.auth.admin.listUsers();
-    const authUser = userList.users.find((user: any) => user.email === email);
+    // Get user from auth system (requires service role)
+    const { data: userList, error: listErr } = await supabase.auth.admin.listUsers();
+    if (listErr) {
+      return NextResponse.json({ error: 'Auth listUsers failed', details: listErr.message }, { status: 500 });
+    }
+    const authUser = userList.users.find((user: any) => user.email?.toLowerCase() === String(email).toLowerCase());
     
     if (!authUser) {
       return NextResponse.json({ error: 'User not found in auth system' }, { status: 404 });
@@ -78,7 +82,6 @@ export async function POST(request: NextRequest) {
       .from('profiles')
       .upsert({
         id: authUser.id,
-        email: authUser.email,
         role: 'member', // Start as member
         company_id: company.id,
         updated_at: new Date().toISOString()

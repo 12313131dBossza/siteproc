@@ -81,6 +81,7 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -118,85 +119,28 @@ export default function OrdersPage() {
     try {
       setLoading(true);
       
-      // Mock data for now - replace with actual API call
-      const mockOrders: Order[] = [
-        {
-          id: "1",
-          product_id: "prod_1",
-          qty: 50,
-          status: "pending",
-          notes: "Urgent delivery needed",
-          created_at: new Date().toISOString(),
-          product: {
-            id: "prod_1",
-            name: "Steel Beams",
-            sku: "SB-001",
-            price: 250,
-            unit: "piece"
-          },
-          created_by_profile: {
-            id: "user_1",
-            full_name: "John Smith",
-            email: "john@company.com"
-          }
+      // Fetch orders from API
+      const response = await fetch('/api/orders', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        {
-          id: "2",
-          product_id: "prod_2",
-          qty: 100,
-          status: "approved",
-          po_number: "PO-2025-001",
-          created_at: new Date(Date.now() - 86400000).toISOString(),
-          decided_at: new Date(Date.now() - 43200000).toISOString(),
-          product: {
-            id: "prod_2",
-            name: "Concrete Mix",
-            sku: "CM-002",
-            price: 45,
-            unit: "bag"
-          },
-          created_by_profile: {
-            id: "user_2",
-            full_name: "Sarah Johnson",
-            email: "sarah@company.com"
-          },
-          decided_by_profile: {
-            id: "user_3",
-            full_name: "Mike Manager",
-            email: "mike@company.com"
-          }
-        },
-        {
-          id: "3",
-          product_id: "prod_3",
-          qty: 25,
-          status: "rejected",
-          notes: "Budget exceeded for this month",
-          created_at: new Date(Date.now() - 172800000).toISOString(),
-          decided_at: new Date(Date.now() - 86400000).toISOString(),
-          product: {
-            id: "prod_3",
-            name: "Power Tools",
-            sku: "PT-003",
-            price: 150,
-            unit: "piece"
-          },
-          created_by_profile: {
-            id: "user_4",
-            full_name: "Tom Wilson",
-            email: "tom@company.com"
-          },
-          decided_by_profile: {
-            id: "user_3",
-            full_name: "Mike Manager",
-            email: "mike@company.com"
-          }
-        }
-      ];
+      });
 
-      setOrders(mockOrders);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch orders: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const fetchedOrders: Order[] = data.orders || [];
+
+      setOrders(fetchedOrders);
     } catch (error) {
       console.error('Error fetching orders:', error);
+      setError('Failed to load orders');
+      
+      // Fallback to empty state - no mock data
+      setOrders([]);
     } finally {
       setLoading(false);
     }
@@ -264,16 +208,28 @@ export default function OrdersPage() {
     if (!selectedOrder) return;
 
     try {
-      // Mock API call - replace with actual implementation
+      // Update order status via API
+      const response = await fetch(`/api/orders/${selectedOrder.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: decisionAction === 'approve' ? 'approved' : 'rejected',
+          notes: decisionNotes,
+          po_number: decisionAction === 'approve' ? `PO-${Date.now()}` : undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to update order: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // Update local state
       setOrders(prev => prev.map(order => 
-        order.id === selectedOrder.id 
-          ? {
-              ...order,
-              status: decisionAction === 'approve' ? 'approved' : 'rejected',
-              decided_at: new Date().toISOString(),
-              po_number: decisionAction === 'approve' ? `PO-${Date.now()}` : undefined,
-            }
-          : order
+        order.id === selectedOrder.id ? data.order : order
       ));
 
       setDecisionModalOpen(false);
@@ -284,6 +240,7 @@ export default function OrdersPage() {
       console.log(`Order ${decisionAction}d successfully`);
     } catch (error) {
       console.error('Error updating order:', error);
+      // Could show error toast here
     }
   };
 

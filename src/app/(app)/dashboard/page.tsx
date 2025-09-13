@@ -73,7 +73,162 @@ export default function DashboardPage() {
 
   const fetchDashboardData = async () => {
     try {
-      // Mock data - replace with actual API calls
+      setLoading(true);
+      
+      // Fetch real data from our APIs
+      const [projectsRes, ordersRes, expensesRes, deliveriesRes, activityRes] = await Promise.allSettled([
+        fetch('/api/projects'),
+        fetch('/api/orders'),
+        fetch('/api/expenses'),
+        fetch('/api/deliveries'),
+        fetch('/api/activity?limit=10') // Assume we have activity endpoint
+      ]);
+
+      // Parse successful responses
+      const projects = projectsRes.status === 'fulfilled' && projectsRes.value.ok 
+        ? await projectsRes.value.json() 
+        : { success: true, data: [] };
+      
+      const orders = ordersRes.status === 'fulfilled' && ordersRes.value.ok 
+        ? await ordersRes.value.json() 
+        : { success: true, data: [] };
+      
+      const expenses = expensesRes.status === 'fulfilled' && expensesRes.value.ok 
+        ? await expensesRes.value.json() 
+        : { success: true, data: [] };
+      
+      const deliveries = deliveriesRes.status === 'fulfilled' && deliveriesRes.value.ok 
+        ? await deliveriesRes.value.json() 
+        : { success: true, data: [] };
+
+      // Calculate real stats from API data
+      const projectData = projects.success ? projects.data : [];
+      const orderData = orders.success ? orders.data : [];
+      const expenseData = expenses.success ? expenses.data : [];
+      const deliveryData = deliveries.success ? deliveries.data : [];
+
+      // Calculate project stats
+      const activeProjects = projectData.filter((p: any) => p.status === 'active');
+      const totalBudget = projectData.reduce((sum: number, p: any) => sum + (p.budget || 0), 0);
+      const totalSpent = projectData.reduce((sum: number, p: any) => sum + (p.summary?.totalSpent || 0), 0);
+
+      // Calculate order stats
+      const pendingOrders = orderData.filter((o: any) => o.status === 'pending');
+      const totalOrderValue = orderData.reduce((sum: number, o: any) => sum + (o.amount || 0), 0);
+      const thisMonthOrders = orderData.filter((o: any) => {
+        const orderDate = new Date(o.created_at);
+        const now = new Date();
+        return orderDate.getMonth() === now.getMonth() && orderDate.getFullYear() === now.getFullYear();
+      });
+      const thisMonthOrderValue = thisMonthOrders.reduce((sum: number, o: any) => sum + (o.amount || 0), 0);
+
+      // Calculate expense stats
+      const approvedExpenses = expenseData.filter((e: any) => e.status === 'approved');
+      const pendingExpenses = expenseData.filter((e: any) => e.status === 'pending');
+      const totalExpenseAmount = approvedExpenses.reduce((sum: number, e: any) => sum + (e.amount || 0), 0);
+      const pendingExpenseAmount = pendingExpenses.reduce((sum: number, e: any) => sum + (e.amount || 0), 0);
+      const thisMonthExpenses = approvedExpenses.filter((e: any) => {
+        const expenseDate = new Date(e.created_at);
+        const now = new Date();
+        return expenseDate.getMonth() === now.getMonth() && expenseDate.getFullYear() === now.getFullYear();
+      });
+      const thisMonthExpenseAmount = thisMonthExpenses.reduce((sum: number, e: any) => sum + (e.amount || 0), 0);
+
+      // Calculate delivery stats
+      const deliveredDeliveries = deliveryData.filter((d: any) => d.status === 'delivered');
+      const inTransitDeliveries = deliveryData.filter((d: any) => d.status === 'in_transit');
+      const failedDeliveries = deliveryData.filter((d: any) => d.status === 'failed');
+
+      const calculatedStats: DashboardStats = {
+        projects: {
+          total: projectData.length,
+          active: activeProjects.length,
+          totalBudget,
+          totalSpent,
+        },
+        orders: {
+          total: orderData.length,
+          pending: pendingOrders.length,
+          totalValue: totalOrderValue,
+          thisMonth: thisMonthOrderValue,
+        },
+        expenses: {
+          total: totalExpenseAmount,
+          thisMonth: thisMonthExpenseAmount,
+          approved: totalExpenseAmount,
+          pending: pendingExpenseAmount,
+        },
+        deliveries: {
+          total: deliveryData.length,
+          inTransit: inTransitDeliveries.length,
+          delivered: deliveredDeliveries.length,
+          failed: failedDeliveries.length,
+        },
+      };
+
+      // Create recent activity from real data
+      const recentActivityItems: RecentActivity[] = [];
+      
+      // Add recent projects
+      projectData.slice(0, 2).forEach((project: any) => {
+        recentActivityItems.push({
+          id: `project-${project.id}`,
+          type: "project",
+          title: project.name,
+          description: `Project with $${(project.budget / 100).toFixed(2)} budget`,
+          amount: project.budget,
+          timestamp: project.created_at,
+          status: project.status,
+        });
+      });
+
+      // Add recent orders
+      orderData.slice(0, 2).forEach((order: any) => {
+        recentActivityItems.push({
+          id: `order-${order.id}`,
+          type: "order",
+          title: order.description,
+          description: `${order.category} order for project`,
+          amount: order.amount,
+          timestamp: order.created_at,
+          status: order.status,
+        });
+      });
+
+      // Add recent expenses
+      expenseData.slice(0, 2).forEach((expense: any) => {
+        recentActivityItems.push({
+          id: `expense-${expense.id}`,
+          type: "expense",
+          title: expense.description,
+          description: `${expense.category} expense`,
+          amount: expense.amount,
+          timestamp: expense.created_at,
+          status: expense.status,
+        });
+      });
+
+      // Add recent deliveries
+      deliveryData.slice(0, 2).forEach((delivery: any) => {
+        recentActivityItems.push({
+          id: `delivery-${delivery.id}`,
+          type: "delivery",
+          title: delivery.orders?.description || "Delivery",
+          description: `Delivery for order`,
+          timestamp: delivery.created_at,
+          status: delivery.status,
+        });
+      });
+
+      // Sort by timestamp and take most recent
+      recentActivityItems.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+      setStats(calculatedStats);
+      setRecentActivity(recentActivityItems.slice(0, 4));
+    } catch (error) {
+      console.error("Failed to fetch dashboard data:", error);
+      
+      // Fallback to mock data if API fails
       const mockStats: DashboardStats = {
         projects: {
           total: 12,
@@ -141,8 +296,6 @@ export default function DashboardPage() {
 
       setStats(mockStats);
       setRecentActivity(mockActivity);
-    } catch (error) {
-      console.error("Failed to fetch dashboard data:", error);
     } finally {
       setLoading(false);
     }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppLayout } from "@/components/app-layout";
 import { Button } from "@/components/ui/Button";
 import {
@@ -600,7 +600,7 @@ export default function UsersPage() {
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Role:</span>
                   <div className={cn("flex items-center gap-1.5 px-2 py-1 rounded-full border text-xs font-medium", getRoleConfig(selectedUser.role).color)}>
-                    <selectedUser.role className="w-3.5 h-3.5" />
+                    {getRoleConfig(selectedUser.role).icon && React.createElement(getRoleConfig(selectedUser.role).icon, { className: "w-3.5 h-3.5" })}
                     {getRoleConfig(selectedUser.role).label}
                   </div>
                 </div>

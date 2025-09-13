@@ -443,8 +443,6 @@ export default function ActivityPage() {
             ) : (
               <div className="space-y-4">
                 {filteredActivities.map((activity) => {
-                  const StatusIcon = getStatusIcon(activity.status);
-                  
                   return (
                     <div key={activity.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
                       <div className="flex items-start gap-4">
@@ -461,7 +459,7 @@ export default function ActivityPage() {
                             <div className="flex items-center gap-2 ml-4">
                               {activity.status && (
                                 <div className={cn("flex items-center gap-1", getStatusColor(activity.status))}>
-                                  <StatusIcon />
+                                  {getStatusIcon(activity.status)}
                                 </div>
                               )}
                               <Button
