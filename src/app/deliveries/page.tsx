@@ -61,13 +61,39 @@ export default function DeliveriesPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [selectedTab, setSelectedTab] = useState<'pending' | 'in_transit' | 'delivered'>('pending')
+  const [authenticated, setAuthenticated] = useState<boolean | null>(null)
+
+  // Check authentication first
+  useEffect(() => {
+    checkAuth()
+  }, [])
 
   useEffect(() => {
-    fetchDeliveries()
-  }, [])
+    if (authenticated === true) {
+      fetchDeliveries()
+    }
+  }, [authenticated])
+
+  const checkAuth = async () => {
+    try {
+      const response = await fetch('/api/auth/session')
+      const data = await response.json()
+      
+      if (data.authenticated) {
+        setAuthenticated(true)
+      } else {
+        console.log('Not authenticated, redirecting to login...')
+        window.location.href = '/login?redirectTo=' + encodeURIComponent(window.location.pathname)
+      }
+    } catch (error) {
+      console.error('Auth check failed:', error)
+      window.location.href = '/login?redirectTo=' + encodeURIComponent(window.location.pathname)
+    }
+  }
 
   const fetchDeliveries = async () => {
     try {
+      console.log('Fetching deliveries...')
       // Fetch deliveries from API
       const response = await fetch('/api/order-deliveries', {
         method: 'GET',
@@ -76,14 +102,23 @@ export default function DeliveriesPage() {
         },
       });
 
+      console.log('Response status:', response.status)
+
       if (!response.ok) {
+        if (response.status === 401) {
+          console.log('Unauthorized - redirecting to login')
+          window.location.href = '/login?redirectTo=' + encodeURIComponent(window.location.pathname)
+          return
+        }
         throw new Error(`Failed to fetch deliveries: ${response.status}`);
       }
 
       const data = await response.json();
+      console.log('Fetched deliveries data:', data)
       const fetchedDeliveries: Delivery[] = data.deliveries || [];
       
       setDeliveries(fetchedDeliveries);
+      console.log('Set deliveries:', fetchedDeliveries.length, 'items')
     } catch (error) {
       console.error('Failed to fetch deliveries:', error);
       
@@ -114,6 +149,19 @@ export default function DeliveriesPage() {
     total: deliveries.length
   }
 
+  if (authenticated === null) {
+    return (
+      <AppLayout title="Deliveries" description="Track and manage delivery status">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Checking authentication...</p>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
   if (loading) {
     return (
       <AppLayout title="Deliveries" description="Track and manage delivery status">
@@ -142,7 +190,11 @@ export default function DeliveriesPage() {
             Schedule
           </Button>
           <Link href="/deliveries/new">
-            <Button variant="primary" leftIcon={<Package className="h-4 w-4" />}>
+            <Button 
+              variant="primary" 
+              leftIcon={<Package className="h-4 w-4" />}
+              onClick={() => console.log('New Delivery button clicked')}
+            >
               New Delivery
             </Button>
           </Link>
