@@ -33,7 +33,7 @@ export default function RecordDeliveryForm({ onSuccess, onCancel }: RecordDelive
     driver_name: '',
     vehicle_number: '',
     delivery_date: new Date().toISOString().split('T')[0],
-    status: 'pending' as 'pending' | 'in_transit' | 'delivered' | 'cancelled',
+    status: 'pending' as 'pending' | 'partial' | 'delivered',
     notes: '',
     projectId: '',
     items: [
@@ -328,9 +328,8 @@ export default function RecordDeliveryForm({ onSuccess, onCancel }: RecordDelive
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="pending">Pending</option>
-            <option value="in_transit">In Transit</option>
+            <option value="partial">Partial</option>
             <option value="delivered">Delivered</option>
-            <option value="cancelled">Cancelled</option>
           </select>
         </div>
 

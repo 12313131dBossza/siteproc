@@ -212,16 +212,6 @@ export default function DeliveriesPage() {
           >
             New Delivery
           </Button>
-          {/* Fallback button for testing */}
-          <button 
-            onClick={() => {
-              console.log('Fallback button clicked')
-              window.location.href = '/deliveries/new'
-            }}
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
-          >
-            TEST: New Delivery
-          </button>
         </div>
       }
     >
