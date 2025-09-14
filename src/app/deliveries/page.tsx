@@ -10,18 +10,22 @@ import Link from 'next/link'
 interface Delivery {
   id: string
   order_id: string
-  recipient_name: string
-  address: string
-  city: string
-  status: 'pending' | 'in_transit' | 'delivered' | 'failed'
-  scheduled_date: string
-  delivered_date?: string
   driver_name?: string
-  tracking_number: string
-  items_count: number
-  total_value: number
+  vehicle_number?: string
+  status: 'pending' | 'in_transit' | 'delivered' | 'cancelled'
+  delivery_date: string
   notes?: string
+  total_amount: number
+  items: Array<{
+    id: string
+    product_name: string
+    quantity: number
+    unit: string
+    unit_price: number
+    total_price: number
+  }>
   created_at: string
+  updated_at: string
 }
 
 const statusConfig = {
@@ -43,10 +47,10 @@ const statusConfig = {
     label: 'Delivered',
     bgColor: 'bg-green-50'
   },
-  failed: { 
+  cancelled: { 
     icon: AlertCircle, 
     color: 'text-red-600 bg-red-50 border-red-200', 
-    label: 'Failed',
+    label: 'Cancelled',
     bgColor: 'bg-red-50'
   }
 }
@@ -65,7 +69,7 @@ export default function DeliveriesPage() {
   const fetchDeliveries = async () => {
     try {
       // Fetch deliveries from API
-      const response = await fetch('/api/deliveries', {
+      const response = await fetch('/api/order-deliveries', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -91,8 +95,8 @@ export default function DeliveriesPage() {
   }
 
   const filteredDeliveries = deliveries.filter(delivery => {
-    const matchesSearch = delivery.recipient_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         delivery.tracking_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = (delivery.driver_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (delivery.vehicle_number || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                          delivery.order_id.toLowerCase().includes(searchTerm.toLowerCase())
     
     if (statusFilter === 'all') return matchesSearch
@@ -198,7 +202,7 @@ export default function DeliveriesPage() {
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                   <input
                     type="text"
-                    placeholder="Search deliveries by recipient, tracking number, or order ID..."
+                    placeholder="Search deliveries by driver, vehicle number, or order ID..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -215,7 +219,7 @@ export default function DeliveriesPage() {
                   <option value="pending">Pending</option>
                   <option value="in_transit">In Transit</option>
                   <option value="delivered">Delivered</option>
-                  <option value="failed">Failed</option>
+                  <option value="cancelled">Cancelled</option>
                 </select>
               </div>
             </div>
@@ -267,21 +271,20 @@ export default function DeliveriesPage() {
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
                             <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
-                              {delivery.tracking_number}
+                              {delivery.order_id}
                             </span>
                             <div className={cn("flex items-center gap-1.5 px-2 py-1 rounded-full border text-xs font-medium", config.color)}>
                               <StatusIcon className="w-3.5 h-3.5" />
                               {config.label}
                             </div>
                           </div>
-                          <h3 className="text-lg font-semibold text-gray-900 mb-1">{delivery.recipient_name}</h3>
-                          <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                            <MapPin className="h-4 w-4" />
-                            <span>{delivery.address}, {delivery.city}</span>
-                          </div>
-                          {delivery.driver_name && (
-                            <div className="text-sm text-gray-600 mb-2">
-                              <span className="font-medium">Driver:</span> {delivery.driver_name}
+                          <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                            {delivery.driver_name ? `Driver: ${delivery.driver_name}` : 'Delivery'}
+                          </h3>
+                          {delivery.vehicle_number && (
+                            <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                              <Truck className="h-4 w-4" />
+                              <span>Vehicle: {delivery.vehicle_number}</span>
                             </div>
                           )}
                           {delivery.notes && (
@@ -291,8 +294,8 @@ export default function DeliveriesPage() {
                           )}
                         </div>
                         <div className="text-right">
-                          <div className="text-lg font-bold text-gray-900">{formatCurrency(delivery.total_value)}</div>
-                          <div className="text-sm text-gray-500">{delivery.items_count} items</div>
+                          <div className="text-lg font-bold text-gray-900">{formatCurrency(delivery.total_amount)}</div>
+                          <div className="text-sm text-gray-500">{delivery.items?.length || 0} items</div>
                         </div>
                       </div>
                       
@@ -300,10 +303,10 @@ export default function DeliveriesPage() {
                         <div className="text-sm text-gray-500">
                           <div>Order: {delivery.order_id}</div>
                           <div>
-                            Scheduled: {format(new Date(delivery.scheduled_date), 'MMM dd, yyyy')}
+                            Delivery Date: {format(new Date(delivery.delivery_date), 'MMM dd, yyyy')}
                           </div>
-                          {delivery.delivered_date && (
-                            <div>Delivered: {format(new Date(delivery.delivered_date), 'MMM dd, yyyy')}</div>
+                          {delivery.status === 'delivered' && (
+                            <div>Status: Delivered</div>
                           )}
                         </div>
                         <div className="flex gap-2">
