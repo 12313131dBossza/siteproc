@@ -76,11 +76,10 @@ export default function ExpensesPage() {
       setProjectsLoading(true);
       const res = await fetch('/api/projects');
       if (!res.ok) throw new Error(`projects ${res.status}`);
-      const data = await res.json();
-      const list = data?.data || data?.projects || [];
-      setProjects(list.map((p: any) => ({ id: p.id, name: p.name })));
-      if (list.length === 1) {
-        setNewExpense(v => ({ ...v, project_id: list[0].id } as any));
+      const projects = await res.json();
+      setProjects(projects.map((p: any) => ({ id: p.id, name: p.name })));
+      if (projects.length === 1) {
+        setNewExpense(v => ({ ...v, project_id: projects[0].id } as any));
       }
     } catch (e) {
       console.error('Failed to load projects', e);
@@ -201,47 +200,56 @@ export default function ExpensesPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      const payload: any = {
-        amount: parseFloat(newExpense.amount),
-        description: newExpense.description,
-        category: newExpense.category || 'other',
-        vendor: newExpense.vendor,
-        project_id: newExpense.project_id,
-      };
+    
+    if (!newExpense.vendor || !newExpense.amount || !newExpense.project_id) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
 
-      const res = await fetch('/api/expenses', {
+    try {
+      const response = await fetch('/api/expenses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          vendor: newExpense.vendor,
+          category: newExpense.category,
+          amount: parseFloat(newExpense.amount),
+          description: newExpense.description,
+          project_id: newExpense.project_id
+        })
       });
 
-      if (!res.ok) throw new Error(`Create failed ${res.status}`);
-      const created = await res.json();
-      const expense = created?.data || created?.expense || created;
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to create expense');
+      }
 
-      // Optimistically add to list
-      setExpenses(prev => [
-        {
-          id: expense.id,
-          vendor: expense.vendor || payload.vendor || 'Unknown',
-          category: (expense.category || payload.category || 'other') as any,
-          amount: typeof expense.amount === 'number' ? expense.amount : parseFloat(expense.amount),
-          description: expense.description || payload.description,
-          status: expense.status || 'pending',
-          created_at: expense.created_at || new Date().toISOString(),
-          project_id: expense.project_id,
-          receipt_url: expense.receipt_url,
-        } as Expense,
-        ...prev,
-      ]);
-
-      toast.success('Expense submitted');
+      const createdExpense = await response.json();
+      
+      // Add to expenses list
+      setExpenses([{
+        id: createdExpense.id,
+        vendor: createdExpense.vendor,
+        category: createdExpense.category,
+        amount: createdExpense.amount,
+        description: createdExpense.description,
+        status: createdExpense.status || 'pending',
+        created_at: createdExpense.created_at,
+        project_id: newExpense.project_id
+      }, ...expenses]);
+      
       setIsModalOpen(false);
-      setNewExpense({ vendor: '', category: '', amount: '', description: '', project_id: '' });
-    } catch (err) {
-      console.error(err);
-      toast.error('Failed to submit expense');
+      setNewExpense({
+        vendor: '',
+        category: 'materials',
+        amount: '',
+        description: '',
+        project_id: ''
+      });
+      toast.success('Expense created successfully');
+    } catch (error) {
+      console.error('Error creating expense:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to create expense');
     }
   };
 
