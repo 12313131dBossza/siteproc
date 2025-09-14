@@ -202,15 +202,26 @@ export default function DeliveriesPage() {
           <Button variant="ghost" leftIcon={<Calendar className="h-4 w-4" />}>
             Schedule
           </Button>
-          <Link href="/deliveries/new">
-            <Button 
-              variant="primary" 
-              leftIcon={<Package className="h-4 w-4" />}
-              onClick={() => console.log('New Delivery button clicked')}
-            >
-              New Delivery
-            </Button>
-          </Link>
+          <Button 
+            variant="primary" 
+            leftIcon={<Package className="h-4 w-4" />}
+            onClick={() => {
+              console.log('New Delivery button clicked - navigating...')
+              window.location.href = '/deliveries/new'
+            }}
+          >
+            New Delivery
+          </Button>
+          {/* Fallback button for testing */}
+          <button 
+            onClick={() => {
+              console.log('Fallback button clicked')
+              window.location.href = '/deliveries/new'
+            }}
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
+          >
+            TEST: New Delivery
+          </button>
         </div>
       }
     >
@@ -328,11 +339,16 @@ export default function DeliveriesPage() {
                     : "Deliveries will appear here when they match this status."
                   }
                 </p>
-                <Link href="/deliveries/new">
-                  <Button variant="primary" leftIcon={<Package className="h-4 w-4" />}>
-                    Create Your First Delivery
-                  </Button>
-                </Link>
+                <Button 
+                  variant="primary" 
+                  leftIcon={<Package className="h-4 w-4" />}
+                  onClick={() => {
+                    console.log('Create First Delivery button clicked - navigating...')
+                    window.location.href = '/deliveries/new'
+                  }}
+                >
+                  Create Your First Delivery
+                </Button>
               </div>
             ) : (
               <div className="space-y-4">
