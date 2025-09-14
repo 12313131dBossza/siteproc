@@ -65,16 +65,18 @@ export async function GET(request: NextRequest) {
     const expenses = (rows || []).map((r: any) => ({
       id: r.id,
       vendor: r.vendor ?? 'Unknown',
-      category: (r.category ?? 'other').toLowerCase(),
+      category: (r.category ?? 'other').toString().toLowerCase(),
       amount: typeof r.amount === 'number' ? r.amount : parseFloat(r.amount ?? '0'),
+      // Some schemas may not have description; normalize to empty string
       description: r.description ?? '',
       receipt_url: r.receipt_url ?? undefined,
       status: r.status ?? 'pending',
       project_id: r.project_id ?? undefined,
       project_name: undefined,
       created_at: r.created_at,
-      approved_at: r.approved_at ?? undefined,
-      approved_by: r.approved_by ?? undefined,
+      // Support both approved_* and decided_* shapes
+      approved_at: (r.approved_at ?? r.decided_at) ?? undefined,
+      approved_by: (r.approved_by ?? r.decided_by) ?? undefined,
       approval_notes: r.approval_notes ?? undefined,
       created_by_profile: undefined
     }))
@@ -108,7 +110,15 @@ export async function POST(request: NextRequest) {
     // Support both project_id and job_id for backwards compatibility
     const actualProjectId = project_id || job_id
     const actualDescription = description || memo || 'No description provided'
-    const actualCategory = category || 'general'
+    // Map category to allowed values ('Labor','Materials','Rentals','Other')
+    const rawCategory = (category || 'Other').toString().toLowerCase()
+    const actualCategory = rawCategory.includes('labor')
+      ? 'Labor'
+      : rawCategory.includes('material')
+      ? 'Materials'
+      : rawCategory.includes('rental')
+      ? 'Rentals'
+      : 'Other'
 
     // Validate required fields
     if (!actualProjectId || !amount) {
@@ -139,15 +149,16 @@ export async function POST(request: NextRequest) {
     const isAdmin = validateRole(profile, 'admin')
     const initialStatus = isAdmin ? 'approved' : 'pending'
 
-    // Create expense
+    // Create expense - align with current DB schema
     const expenseData: any = {
+      company_id: profile.company_id,
       project_id: actualProjectId,
       amount,
-      description: actualDescription,
       category: actualCategory,
       status: initialStatus,
       submitted_by: profile.id,
-      submitted_at: spent_at || new Date().toISOString()
+      // Use spend_date (date) when available; fall back to today
+      spend_date: spent_at ? new Date(spent_at).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10)
     }
 
     if (vendor) {
@@ -159,8 +170,9 @@ export async function POST(request: NextRequest) {
     }
 
     if (initialStatus === 'approved') {
-      expenseData.approved_by = profile.id
-      expenseData.approved_at = new Date().toISOString()
+      // Some schemas use decided_* fields instead of approved_*
+      expenseData.decided_by = profile.id
+      expenseData.decided_at = new Date().toISOString()
     }
 
     const { data: expense, error } = await supabase
@@ -219,7 +231,7 @@ export async function POST(request: NextRequest) {
             description: expense.description,
             category: expense.category,
             adminName: adminEmails[0], // Send to first admin
-            dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL}/projects/${project_id}`,
+            dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL}/projects/${actualProjectId}`,
             receiptUrl: expense.receipt_url || undefined
           })
         }
@@ -229,7 +241,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return response.success(expense, 201)
+    // Return created expense plus echo back description for UI
+    return response.success({ ...expense, description: actualDescription }, 201)
   } catch (error) {
     console.error('Error in POST /api/expenses:', error)
     return response.error('Internal server error', 500)

@@ -91,13 +91,14 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     console.log('Expense Approval: Updating expense status');
     
     const newStatus = action === 'approve' ? 'approved' : 'rejected';
-    const updateData = {
+    // Support both approved_* and decided_* fields based on current schema
+    const updateData: any = {
       status: newStatus,
-      approved_by: user.id,
-      approved_at: new Date().toISOString(),
       approval_notes: notes || null,
       updated_at: new Date().toISOString()
     };
+    updateData.decided_by = user.id;
+    updateData.decided_at = new Date().toISOString();
 
     const { data: updatedExpense, error: updateError } = await serviceClient
       .from('expenses')
@@ -154,12 +155,15 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       message: `Expense ${action}d successfully`,
       expense: {
         ...updatedExpense,
-        // Parse memo for frontend compatibility
-        vendor: updatedExpense.memo?.split(' - ')[0] || 'Unknown Vendor',
-        category: updatedExpense.memo?.includes('labor') ? 'labor' : 
-                 updatedExpense.memo?.includes('materials') ? 'materials' :
-                 updatedExpense.memo?.includes('rentals') ? 'rentals' : 'other',
-        notes: updatedExpense.memo?.split(': ')[1] || updatedExpense.memo || ''
+        // Backfill vendor/category from either explicit columns or memo
+        vendor: updatedExpense.vendor || updatedExpense.memo?.split(' - ')[0] || 'Unknown Vendor',
+        category: (updatedExpense.category?.toLowerCase?.() || '').includes('labor') ? 'labor' :
+                  (updatedExpense.category?.toLowerCase?.() || '').includes('material') ? 'materials' :
+                  (updatedExpense.category?.toLowerCase?.() || '').includes('rental') ? 'rentals' :
+                  (updatedExpense.memo?.toLowerCase?.().includes('labor') ? 'labor' :
+                   updatedExpense.memo?.toLowerCase?.().includes('materials') ? 'materials' :
+                   updatedExpense.memo?.toLowerCase?.().includes('rentals') ? 'rentals' : 'other'),
+        notes: updatedExpense.approval_notes || updatedExpense.memo?.split(': ')[1] || updatedExpense.memo || ''
       }
     });
 
