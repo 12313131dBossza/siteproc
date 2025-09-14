@@ -10,49 +10,29 @@ export async function GET() {
   try {
     const supabase = await sbServer();
     
-    // Get or create a test user
-    const testEmail = 'test@example.com';
+    // Use the dev email from environment
+    const testEmail = process.env.DEV_AUTOLOGIN_EMAIL || 'bossbcz@gmail.com';
     
-    // Try to get existing user first
-    const { data: userList } = await supabase.auth.admin.listUsers();
-    let existingUser = userList.users.find((user: any) => user.email === testEmail);
+    console.log('Sending magic link to:', testEmail);
     
-    if (!existingUser) {
-      // Create test user if doesn't exist
-      const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
-        email: testEmail,
-        password: 'test123456',
-        email_confirm: true
-      });
-      
-      if (createError) {
-        console.error('Failed to create test user:', createError);
-        return NextResponse.json({ error: 'Failed to create test user' }, { status: 500 });
-      }
-      
-      existingUser = newUser.user;
-    }
-
-    if (!existingUser) {
-      return NextResponse.json({ error: 'No user found' }, { status: 404 });
-    }
-
-    // Generate a session for the user
-    const { data: session, error: sessionError } = await supabase.auth.admin.generateLink({
-      type: 'magiclink',
+    // Send magic link to dev email
+    const { error } = await supabase.auth.signInWithOtp({
       email: testEmail,
       options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/callback?redirectTo=/dashboard`
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/callback?redirectTo=/dashboard`
       }
     });
 
-    if (sessionError) {
-      console.error('Session error:', sessionError);
-      return NextResponse.json({ error: 'Failed to generate session' }, { status: 500 });
+    if (error) {
+      console.error('Magic link error:', error);
+      return NextResponse.json({ error: 'Failed to send magic link: ' + error.message }, { status: 500 });
     }
 
-    // Redirect to the magic link URL
-    return NextResponse.redirect(session.properties.action_link);
+    return NextResponse.json({ 
+      success: true, 
+      message: `Magic link sent to ${testEmail}. Check your email!`,
+      email: testEmail
+    });
 
   } catch (error) {
     console.error('Autologin error:', error);

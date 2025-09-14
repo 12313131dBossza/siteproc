@@ -63,18 +63,48 @@ export default function ExpensesPage() {
   const [newExpense, setNewExpense] = useState({ vendor: '', category: '', amount: '', description: '', project_id: '' } as any);
   const [projects, setProjects] = useState<Array<{ id: string; name: string }>>([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
+  const [authenticated, setAuthenticated] = useState<boolean | null>(null);
 
   // Mock user for approval functionality
   const user = { email: 'admin@siteproc.com' };
 
+  // Check authentication first
   useEffect(() => {
-    fetchExpenses();
+    checkAuth();
   }, []);
+
+  useEffect(() => {
+    if (authenticated === true) {
+      fetchExpenses();
+    }
+  }, [authenticated]);
+
+  const checkAuth = async () => {
+    try {
+      const response = await fetch('/api/auth/session');
+      const data = await response.json();
+      
+      if (data.authenticated) {
+        setAuthenticated(true);
+      } else {
+        console.log('Not authenticated, redirecting to login...');
+        window.location.href = '/login?redirectTo=' + encodeURIComponent(window.location.pathname);
+      }
+    } catch (error) {
+      console.error('Auth check failed:', error);
+      window.location.href = '/login?redirectTo=' + encodeURIComponent(window.location.pathname);
+    }
+  };
 
   const loadProjects = async () => {
     try {
       setProjectsLoading(true);
       const res = await fetch('/api/projects');
+      if (res.status === 401) {
+        console.log('Unauthorized - redirecting to login');
+        window.location.href = '/login?redirectTo=' + encodeURIComponent(window.location.pathname);
+        return;
+      }
       if (!res.ok) throw new Error(`projects ${res.status}`);
       const projects = await res.json();
       setProjects(projects.map((p: any) => ({ id: p.id, name: p.name })));
@@ -201,30 +231,65 @@ export default function ExpensesPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('=== FRONTEND EXPENSE SUBMISSION ===');
+    console.log('Form data:', newExpense);
+    
     if (!newExpense.vendor || !newExpense.amount || !newExpense.project_id) {
       toast.error('Please fill in all required fields');
+      console.error('Missing required fields:', {
+        vendor: !!newExpense.vendor,
+        amount: !!newExpense.amount,
+        project_id: !!newExpense.project_id
+      });
       return;
     }
 
     try {
+      const requestBody = {
+        vendor: newExpense.vendor,
+        category: newExpense.category,
+        amount: parseFloat(newExpense.amount),
+        description: newExpense.description,
+        project_id: newExpense.project_id
+      };
+      
+      console.log('Sending request with body:', requestBody);
+      
       const response = await fetch('/api/expenses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          vendor: newExpense.vendor,
-          category: newExpense.category,
-          amount: parseFloat(newExpense.amount),
-          description: newExpense.description,
-          project_id: newExpense.project_id
-        })
+        body: JSON.stringify(requestBody)
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to create expense');
+        const errorText = await response.text();
+        console.error('Error response text:', errorText);
+        
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { error: errorText };
+        }
+        
+        console.error('Parsed error data:', errorData);
+        throw new Error(errorData.error || `HTTP ${response.status}: ${errorText}`);
       }
 
-      const createdExpense = await response.json();
+      const responseText = await response.text();
+      console.log('Success response text:', responseText);
+      
+      let createdExpense;
+      try {
+        createdExpense = JSON.parse(responseText);
+      } catch {
+        throw new Error('Invalid JSON response: ' + responseText);
+      }
+      
+      console.log('Created expense:', createdExpense);
       
       // Add to expenses list
       setExpenses([{
@@ -247,11 +312,32 @@ export default function ExpensesPage() {
         project_id: ''
       });
       toast.success('Expense created successfully');
+      console.log('=== EXPENSE SUBMISSION COMPLETE ===');
     } catch (error) {
-      console.error('Error creating expense:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to create expense');
+      console.error('=== EXPENSE SUBMISSION FAILED ===');
+      console.error('Error type:', typeof error);
+      console.error('Error constructor:', error?.constructor?.name);
+      console.error('Error message:', error instanceof Error ? error.message : String(error));
+      console.error('Full error object:', error);
+      console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
+      
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create expense';
+      toast.error(errorMessage);
     }
   };
+
+  if (authenticated === null) {
+    return (
+      <AppLayout title="Expenses" description="Manage and track project expenses">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Checking authentication...</p>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   if (loading) {
     return (

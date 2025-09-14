@@ -210,6 +210,9 @@ export default function RecordDeliveryForm({ onSuccess, onCancel }: RecordDelive
 
       if (onSuccess) {
         onSuccess(result.delivery)
+      } else {
+        // Navigate to deliveries page if no callback is provided
+        window.location.href = '/deliveries'
       }
 
     } catch (err) {

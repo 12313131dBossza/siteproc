@@ -11,18 +11,23 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get user's company
-    const { data: profile } = await supabase
+    // Get user's company from profiles table
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('company_id')
       .eq('id', user.id)
       .single()
 
-    if (!profile?.company_id) {
-      return NextResponse.json([])
+    if (profileError) {
+      console.error('Profile error:', profileError)
+      return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
-    // Get projects for the company
+    if (!profile?.company_id) {
+      return NextResponse.json({ error: 'No company associated' }, { status: 400 })
+    }
+
+    // Get all projects for this company
     const { data: projects, error } = await supabase
       .from('projects')
       .select('*')
@@ -30,11 +35,12 @@ export async function GET() {
       .order('created_at', { ascending: false })
 
     if (error) {
-      console.error('Error fetching projects:', error)
-      return NextResponse.json({ error: 'Failed to fetch projects' }, { status: 500 })
+      console.error('Projects fetch error:', error)
+      throw error
     }
 
-    return NextResponse.json({ data: projects || [] })
+    // Return projects array directly (not wrapped in data object)
+    return NextResponse.json(projects || [])
   } catch (error) {
     console.error('Error in GET /api/projects:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -53,28 +59,33 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user profile with company
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('company_id')
       .eq('id', user.id)
       .single()
 
-    if (!profile?.company_id) {
+    if (profileError || !profile?.company_id) {
+      console.error('Profile error:', profileError)
       return NextResponse.json({ error: 'No company associated' }, { status: 400 })
     }
 
-    // Create project with simple fields
+    // Create project - ensure all required fields are present
     const projectData = {
-      name: body.name,
-      project_number: body.project_number || `PRJ-${Date.now()}`,
+      name: body.name || 'Untitled Project',
+      project_number: body.code || body.project_number || `PRJ-${Date.now()}`,
       description: body.description || '',
-      status: body.status || 'planning',
+      status: body.status || 'active',
       company_id: profile.company_id,
       created_by: user.id,
-      start_date: body.start_date || new Date().toISOString().split('T')[0],
+      start_date: body.start_date || new Date().toISOString(),
       end_date: body.end_date || null,
-      budget: parseFloat(body.budget) || 0
+      budget: parseFloat(body.budget) || 0,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     }
+
+    console.log('Creating project with data:', projectData)
 
     const { data: project, error } = await supabase
       .from('projects')
@@ -85,12 +96,13 @@ export async function POST(request: NextRequest) {
     if (error) {
       console.error('Insert error:', error)
       return NextResponse.json({ 
-        error: 'Failed to create project',
+        error: 'Failed to create project', 
         details: error.message 
       }, { status: 500 })
     }
 
-    return NextResponse.json({ data: project })
+    console.log('Project created:', project)
+    return NextResponse.json(project)
   } catch (error) {
     console.error('Error creating project:', error)
     return NextResponse.json({ 

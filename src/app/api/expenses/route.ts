@@ -6,21 +6,33 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = await sbServer()
     
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError) {
+      console.error('Auth error:', authError)
+      return NextResponse.json({ error: 'Authentication failed' }, { status: 401 })
+    }
     if (!user) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
-    // Get user's company
-    const { data: profile } = await supabase
+    // Get user's company with proper error handling
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('company_id')
       .eq('id', user.id)
       .single()
 
+    if (profileError) {
+      console.error('Profile error:', profileError)
+      return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+    }
+
     if (!profile?.company_id) {
+      console.log('No company ID for user:', user.id)
       return NextResponse.json({ expenses: [] }, { status: 200 })
     }
+
+    console.log('Fetching expenses for company:', profile.company_id)
 
     // Get expenses directly - simple query
     const { data: expenses, error } = await supabase
@@ -34,10 +46,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch expenses' }, { status: 500 })
     }
 
-    // Simple mapping without complex transformations
+    console.log('Found expenses:', expenses?.length || 0)
+
+    // Improved mapping to handle missing data properly
     const formattedExpenses = expenses?.map(expense => ({
       id: expense.id,
-      vendor: expense.vendor || expense.description || 'Unknown Vendor',
+      vendor: expense.vendor || (expense.description ? expense.description.substring(0, 50) : 'Expense'),
       category: expense.category || 'other',
       amount: expense.amount || 0,
       description: expense.description || expense.memo || '',
@@ -62,42 +76,67 @@ export async function POST(request: NextRequest) {
     const supabase = await sbServer()
     const body = await request.json()
 
-    const { data: { user } } = await supabase.auth.getUser()
+    console.log('Creating expense with body:', body)
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError) {
+      console.error('Auth error:', authError)
+      return NextResponse.json({ error: 'Authentication failed' }, { status: 401 })
+    }
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Get user profile with company
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('company_id, role')
       .eq('id', user.id)
       .single()
 
+    if (profileError) {
+      console.error('Profile error:', profileError)
+      return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+    }
+
     if (!profile?.company_id) {
+      console.error('No company associated with user:', user.id)
       return NextResponse.json({ error: 'No company associated' }, { status: 400 })
     }
 
-    // Simple insert with the fields that were working
+    // Ensure we have required fields
+    if (!body.vendor && !body.description) {
+      return NextResponse.json({ error: 'Vendor or description is required' }, { status: 400 })
+    }
+
+    if (!body.amount || parseFloat(body.amount) <= 0) {
+      return NextResponse.json({ error: 'Valid amount is required' }, { status: 400 })
+    }
+
+    // Create expense data using the correct database column names
     const expenseData = {
-      vendor: body.vendor || body.description || 'Unknown Vendor',
+      vendor: body.vendor || (body.description ? body.description.substring(0, 100) : 'Expense'),
       category: body.category || 'other',
-      amount: parseFloat(body.amount) || 0,
-      description: body.description || '',
-      memo: body.description || '',
+      amount: parseFloat(body.amount),
+      description: body.description || body.vendor || '',
+      memo: body.memo || body.description || '',
       status: 'pending',
       company_id: profile.company_id,
       project_id: body.project_id || null,
-      spend_date: new Date().toISOString().split('T')[0],
-      created_by: user.id
+      spent_at: body.spend_date || new Date().toISOString().split('T')[0],
+      spent_on: body.spend_date || new Date().toISOString().split('T')[0],
+      user_id: user.id,
+      tax: 0
     }
 
     // Auto-approve for admins
     if (profile.role === 'admin' || profile.role === 'owner') {
       expenseData.status = 'approved'
-      ;(expenseData as any).decided_at = new Date().toISOString()
-      ;(expenseData as any).decided_by = user.id
+      ;(expenseData as any).approved_at = new Date().toISOString()
+      ;(expenseData as any).approved_by = user.id
     }
+
+    console.log('Inserting expense data:', expenseData)
 
     const { data: expense, error } = await supabase
       .from('expenses')
@@ -113,7 +152,9 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
 
-    // Return simplified response
+    console.log('Expense created successfully:', expense)
+
+    // Return properly formatted response
     return NextResponse.json({
       id: expense.id,
       vendor: expense.vendor,
@@ -121,7 +162,8 @@ export async function POST(request: NextRequest) {
       amount: expense.amount,
       description: expense.description,
       status: expense.status,
-      created_at: expense.created_at
+      created_at: expense.created_at,
+      project_id: expense.project_id
     })
   } catch (error) {
     console.error('Error creating expense:', error)

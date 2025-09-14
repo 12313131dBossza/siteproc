@@ -64,7 +64,7 @@ export default function ProjectsPage() {
       const res = await fetch('/api/projects', { headers: { 'Accept': 'application/json' } });
       const json = await res.json().catch(()=>({}));
       if (res.ok) {
-        const projectsData = json.data || [];
+        const projectsData = Array.isArray(json) ? json : (json.data || []);
         // Fetch rollup data for each project
         const projectsWithRollup = await Promise.all(
           projectsData.map(async (project: Project) => {
@@ -102,7 +102,7 @@ export default function ProjectsPage() {
     });
     if (res.ok) {
       const j = await res.json().catch(()=>({}));
-      const created = j?.data;
+      const created = j?.id ? j : (j?.data);
       if (created) setProjects(prev => [created, ...prev]);
       setModal(false);
       setForm({ name: '', budget: 0, code: '', status: 'active' });

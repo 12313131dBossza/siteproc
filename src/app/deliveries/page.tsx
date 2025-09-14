@@ -137,9 +137,11 @@ export default function DeliveriesPage() {
           <Button variant="ghost" leftIcon={<Calendar className="h-4 w-4" />}>
             Schedule
           </Button>
-          <Button variant="primary" leftIcon={<Package className="h-4 w-4" />}>
-            New Delivery
-          </Button>
+          <Link href="/deliveries/new">
+            <Button variant="primary" leftIcon={<Package className="h-4 w-4" />}>
+              New Delivery
+            </Button>
+          </Link>
         </div>
       }
     >
