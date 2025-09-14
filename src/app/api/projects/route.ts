@@ -34,7 +34,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Failed to fetch projects' }, { status: 500 })
     }
 
-    return NextResponse.json(projects || [])
+    return NextResponse.json({ data: projects || [] })
   } catch (error) {
     console.error('Error in GET /api/projects:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
 
-    return NextResponse.json(project)
+    return NextResponse.json({ data: project })
   } catch (error) {
     console.error('Error creating project:', error)
     return NextResponse.json({ 
