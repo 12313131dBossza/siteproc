@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { AppLayout } from "@/components/app-layout"
 import { Button } from "@/components/ui/Button"
-import { Package, Truck, MapPin, Clock, CheckCircle, AlertCircle, Search, Filter, Eye, Calendar } from 'lucide-react'
+import { Package, Truck, MapPin, Clock, CheckCircle, CheckCircle2, AlertCircle, Search, Filter, Eye, Calendar, Lock } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn, formatCurrency } from '@/lib/utils'
 import Link from 'next/link'
@@ -62,6 +62,7 @@ export default function DeliveriesPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [selectedTab, setSelectedTab] = useState<'pending' | 'in_transit' | 'delivered'>('pending')
   const [authenticated, setAuthenticated] = useState<boolean | null>(null)
+  const [updatingDelivery, setUpdatingDelivery] = useState<string | null>(null)
 
   // Check authentication first
   useEffect(() => {
@@ -160,6 +161,45 @@ export default function DeliveriesPage() {
     in_transit: getTabDeliveries('in_transit').length,
     delivered: getTabDeliveries('delivered').length,
     total: deliveries.length
+  }
+
+  const markAsDelivered = async (deliveryId: string, notes?: string) => {
+    setUpdatingDelivery(deliveryId)
+    try {
+      const response = await fetch(`/api/order-deliveries/${deliveryId}/mark-delivered`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          notes: notes,
+          delivered_at: new Date().toISOString()
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || 'Failed to mark delivery as delivered')
+      }
+
+      const result = await response.json()
+      
+      // Update the local state
+      setDeliveries(prev => prev.map(delivery => 
+        delivery.id === deliveryId 
+          ? { ...delivery, status: 'delivered' as const, notes: notes || delivery.notes }
+          : delivery
+      ))
+
+      // Switch to delivered tab to show the updated delivery
+      setSelectedTab('delivered')
+      
+    } catch (error) {
+      console.error('Error marking delivery as delivered:', error)
+      alert('Failed to mark delivery as delivered. Please try again.')
+    } finally {
+      setUpdatingDelivery(null)
+    }
   }
 
   if (authenticated === null) {
@@ -347,7 +387,10 @@ export default function DeliveriesPage() {
                   const StatusIcon = config.icon
                   
                   return (
-                    <div key={delivery.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                    <div key={delivery.id} className={cn(
+                      "border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow",
+                      delivery.status === 'delivered' && "bg-green-50 border-green-200"
+                    )}>
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
@@ -358,6 +401,12 @@ export default function DeliveriesPage() {
                               <StatusIcon className="w-3.5 h-3.5" />
                               {config.label}
                             </div>
+                            {delivery.status === 'delivered' && (
+                              <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-gray-100 text-xs font-medium text-gray-600">
+                                <Lock className="w-3 h-3" />
+                                Locked
+                              </div>
+                            )}
                           </div>
                           <h3 className="text-lg font-semibold text-gray-900 mb-1">
                             {delivery.driver_name ? `Driver: ${delivery.driver_name}` : 'Delivery'}
@@ -387,7 +436,9 @@ export default function DeliveriesPage() {
                             Delivery Date: {format(new Date(delivery.delivery_date), 'MMM dd, yyyy')}
                           </div>
                           {delivery.status === 'delivered' && (
-                            <div>Status: Delivered</div>
+                            <div className="text-green-600 font-medium">
+                              ✓ Delivered - Record is locked from editing
+                            </div>
                           )}
                         </div>
                         <div className="flex gap-2">
@@ -397,6 +448,22 @@ export default function DeliveriesPage() {
                           <Button variant="ghost" size="sm" leftIcon={<MapPin className="h-4 w-4" />}>
                             Track
                           </Button>
+                          {(delivery.status === 'pending' || delivery.status === 'in_transit') && (
+                            <Button 
+                              variant="primary" 
+                              size="sm" 
+                              leftIcon={<CheckCircle2 className="h-4 w-4" />}
+                              onClick={() => {
+                                const notes = prompt('Add any delivery notes (optional):')
+                                if (notes !== null) { // User didn't cancel
+                                  markAsDelivered(delivery.id, notes || undefined)
+                                }
+                              }}
+                              disabled={updatingDelivery === delivery.id}
+                            >
+                              {updatingDelivery === delivery.id ? 'Updating...' : 'Mark as Delivered'}
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </div>

@@ -100,7 +100,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       role: user.role 
     })
 
-    // Create Supabase client for database operations
+    // First check if delivery exists and its current status
     const cookieStore = await cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -113,6 +113,36 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         },
       }
     )
+
+    // Check current delivery status first
+    const { data: currentDelivery, error: fetchError } = await supabase
+      .from('deliveries')
+      .select('status, company_id')
+      .eq('id', deliveryId)
+      .single()
+
+    if (fetchError || !currentDelivery) {
+      return NextResponse.json({
+        success: false,
+        error: 'Delivery not found'
+      }, { status: 404 })
+    }
+
+    // Check if delivery is already delivered (locked)
+    if (currentDelivery.status === 'delivered') {
+      return NextResponse.json({
+        success: false,
+        error: 'Cannot edit delivered deliveries. Delivered records are locked to maintain data integrity.'
+      }, { status: 403 })
+    }
+
+    // Check company access
+    if (currentDelivery.company_id !== user.company_id) {
+      return NextResponse.json({
+        success: false,
+        error: 'Access denied. You can only edit deliveries from your company.'
+      }, { status: 403 })
+    }
 
     // Try to update with user context first
     let updateResult = await supabase
@@ -212,6 +242,36 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
         },
       }
     )
+
+    // Check current delivery status first
+    const { data: currentDelivery, error: fetchError } = await supabase
+      .from('deliveries')
+      .select('status, company_id')
+      .eq('id', deliveryId)
+      .single()
+
+    if (fetchError || !currentDelivery) {
+      return NextResponse.json({
+        success: false,
+        error: 'Delivery not found'
+      }, { status: 404 })
+    }
+
+    // Check if delivery is delivered (locked)
+    if (currentDelivery.status === 'delivered') {
+      return NextResponse.json({
+        success: false,
+        error: 'Cannot delete delivered deliveries. Delivered records are locked to maintain data integrity.'
+      }, { status: 403 })
+    }
+
+    // Check company access
+    if (currentDelivery.company_id !== user.company_id) {
+      return NextResponse.json({
+        success: false,
+        error: 'Access denied. You can only delete deliveries from your company.'
+      }, { status: 403 })
+    }
 
     // Try to delete with user context first
     let deleteResult = await supabase
