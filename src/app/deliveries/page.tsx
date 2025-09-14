@@ -71,6 +71,10 @@ export default function DeliveriesPage() {
   useEffect(() => {
     if (authenticated === true) {
       fetchDeliveries()
+    } else if (authenticated === false) {
+      // User not authenticated, but still show the page with empty state
+      // The New Delivery button will handle authentication when clicked
+      setLoading(false)
     }
   }, [authenticated])
 
@@ -82,12 +86,15 @@ export default function DeliveriesPage() {
       if (data.authenticated) {
         setAuthenticated(true)
       } else {
-        console.log('Not authenticated, redirecting to login...')
-        window.location.href = '/login?redirectTo=' + encodeURIComponent(window.location.pathname)
+        console.log('Not authenticated, but allowing page to load')
+        // Don't redirect immediately - let user try to use New Delivery button
+        // The form itself will handle authentication
+        setAuthenticated(false)
       }
     } catch (error) {
       console.error('Auth check failed:', error)
-      window.location.href = '/login?redirectTo=' + encodeURIComponent(window.location.pathname)
+      // Don't redirect - let the page load and handle auth in the form
+      setAuthenticated(false)
     }
   }
 
@@ -122,8 +129,14 @@ export default function DeliveriesPage() {
     } catch (error) {
       console.error('Failed to fetch deliveries:', error);
       
-      // Fallback to empty state - no mock data
+      // Don't block the UI - just show empty state but allow New Delivery button to work
       setDeliveries([]);
+      
+      // Check if it's a network error vs API error
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        console.error('Network error - API may be down')
+        // Still allow the page to load so the New Delivery button works
+      }
     } finally {
       setLoading(false);
     }
@@ -155,14 +168,14 @@ export default function DeliveriesPage() {
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Checking authentication...</p>
+            <p className="text-gray-600">Loading...</p>
           </div>
         </div>
       </AppLayout>
     );
   }
 
-  if (loading) {
+  if (loading && authenticated === true) {
     return (
       <AppLayout title="Deliveries" description="Track and manage delivery status">
         <div className="p-6">
@@ -309,7 +322,17 @@ export default function DeliveriesPage() {
               <div className="text-center py-12">
                 <Package className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No {selectedTab.replace('_', ' ')} deliveries</h3>
-                <p className="text-gray-500">Deliveries will appear here when they match this status.</p>
+                <p className="text-gray-500 mb-4">
+                  {authenticated === false 
+                    ? "Please log in to view deliveries or create new ones."
+                    : "Deliveries will appear here when they match this status."
+                  }
+                </p>
+                <Link href="/deliveries/new">
+                  <Button variant="primary" leftIcon={<Package className="h-4 w-4" />}>
+                    Create Your First Delivery
+                  </Button>
+                </Link>
               </div>
             ) : (
               <div className="space-y-4">
