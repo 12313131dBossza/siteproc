@@ -36,10 +36,10 @@ const statusConfig = {
     label: 'Pending',
     bgColor: 'bg-yellow-50'
   },
-  in_transit: { 
+  partial: { 
     icon: Truck, 
     color: 'text-blue-600 bg-blue-50 border-blue-200', 
-    label: 'Partial',
+    label: 'In Transit',
     bgColor: 'bg-blue-50'
   },
   delivered: { 
@@ -47,12 +47,6 @@ const statusConfig = {
     color: 'text-green-600 bg-green-50 border-green-200', 
     label: 'Delivered',
     bgColor: 'bg-green-50'
-  },
-  cancelled: { 
-    icon: AlertCircle, 
-    color: 'text-red-600 bg-red-50 border-red-200', 
-    label: 'Cancelled',
-    bgColor: 'bg-red-50'
   }
 }
 
@@ -64,6 +58,7 @@ export default function DeliveriesPage() {
   const [selectedTab, setSelectedTab] = useState<'pending' | 'partial' | 'delivered'>('pending')
   const [authenticated, setAuthenticated] = useState<boolean | null>(null)
   const [updatingDelivery, setUpdatingDelivery] = useState<string | null>(null)
+  const [userRole, setUserRole] = useState<string | null>(null)
 
   // Check authentication first
   useEffect(() => {
@@ -87,6 +82,7 @@ export default function DeliveriesPage() {
       
       if (data.authenticated) {
         setAuthenticated(true)
+        setUserRole(data.user?.role || null)
       } else {
         console.log('Not authenticated, but allowing page to load')
         // Don't redirect immediately - let user try to use New Delivery button
@@ -98,6 +94,11 @@ export default function DeliveriesPage() {
       // Don't redirect - let the page load and handle auth in the form
       setAuthenticated(false)
     }
+  }
+
+  // Check if user has permission to change delivery status
+  const canChangeStatus = () => {
+    return userRole && ['admin', 'manager', 'owner', 'bookkeeper'].includes(userRole.toLowerCase())
   }
 
   const fetchDeliveries = async () => {
@@ -159,12 +160,73 @@ export default function DeliveriesPage() {
 
   const stats = {
     pending: getTabDeliveries('pending').length,
-    in_transit: getTabDeliveries('partial').length,
+    partial: getTabDeliveries('partial').length,
     delivered: getTabDeliveries('delivered').length,
     total: deliveries.length
   }
 
+  const markAsInTransit = async (deliveryId: string) => {
+    if (!canChangeStatus()) {
+      toast.error('Permission denied', {
+        description: 'Only Admin or Manager roles can change delivery status.',
+        duration: 4000,
+      })
+      return
+    }
+
+    setUpdatingDelivery(deliveryId)
+    try {
+      const response = await fetch(`/api/order-deliveries/${deliveryId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: 'partial'
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || 'Failed to update delivery status')
+      }
+
+      // Update the local state
+      setDeliveries(prev => prev.map(delivery => 
+        delivery.id === deliveryId 
+          ? { ...delivery, status: 'partial' as const }
+          : delivery
+      ))
+
+      // Switch to In Transit (partial) tab
+      setSelectedTab('partial')
+      
+      // Show success toast
+      toast.success('Delivery marked as In Transit', {
+        description: 'Status updated successfully.',
+        duration: 3000,
+      })
+      
+    } catch (error) {
+      console.error('Error updating delivery status:', error)
+      toast.error('Failed to update delivery status', {
+        description: 'Please try again or contact support if the issue persists.',
+        duration: 4000,
+      })
+    } finally {
+      setUpdatingDelivery(null)
+    }
+  }
+
   const markAsDelivered = async (deliveryId: string, notes?: string) => {
+    if (!canChangeStatus()) {
+      toast.error('Permission denied', {
+        description: 'Only Admin or Manager roles can change delivery status.',
+        duration: 4000,
+      })
+      return
+    }
+
     setUpdatingDelivery(deliveryId)
     try {
       const response = await fetch(`/api/order-deliveries/${deliveryId}/mark-delivered`, {
@@ -266,7 +328,7 @@ export default function DeliveriesPage() {
       }
     >
       <div className="p-6">
-        {/* Stats Grid */}
+        {/* Stats Grid - Top Counters */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
@@ -294,8 +356,8 @@ export default function DeliveriesPage() {
                 <Truck className="h-6 w-6 text-blue-600" />
               </div>
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-1">{stats.in_transit}</h3>
-            <p className="text-sm text-gray-500">Partial</p>
+            <h3 className="text-2xl font-bold text-gray-900 mb-1">{stats.partial}</h3>
+            <p className="text-sm text-gray-500">In Transit</p>
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
@@ -348,7 +410,7 @@ export default function DeliveriesPage() {
             <nav className="flex space-x-8 px-6">
               {[
                 { key: 'pending', label: 'Pending', count: stats.pending },
-                { key: 'partial', label: 'Partial', count: stats.in_transit },
+                { key: 'partial', label: 'In Transit', count: stats.partial },
                 { key: 'delivered', label: 'Delivered', count: stats.delivered }
               ].map((tab) => (
                 <button
@@ -458,7 +520,22 @@ export default function DeliveriesPage() {
                           <Button variant="ghost" size="sm" leftIcon={<MapPin className="h-4 w-4" />}>
                             Track
                           </Button>
-                          {delivery.status === 'partial' && (
+                          
+                          {/* Mark as In Transit button for Pending deliveries */}
+                          {delivery.status === 'pending' && canChangeStatus() && (
+                            <Button 
+                              variant="primary" 
+                              size="sm" 
+                              leftIcon={<Truck className="h-4 w-4" />}
+                              onClick={() => markAsInTransit(delivery.id)}
+                              disabled={updatingDelivery === delivery.id}
+                            >
+                              {updatingDelivery === delivery.id ? 'Updating...' : 'Mark as In Transit'}
+                            </Button>
+                          )}
+                          
+                          {/* Mark as Delivered button for In Transit (partial) deliveries */}
+                          {delivery.status === 'partial' && canChangeStatus() && (
                             <Button 
                               variant="primary" 
                               size="sm" 
