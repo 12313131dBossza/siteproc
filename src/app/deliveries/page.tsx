@@ -80,9 +80,14 @@ export default function DeliveriesPage() {
       const response = await fetch('/api/auth/session')
       const data = await response.json()
       
+      console.log('Auth session data:', data)
+      
       if (data.authenticated) {
         setAuthenticated(true)
-        setUserRole(data.user?.role || null)
+        // Role is in data.user.profile.role
+        const role = data.user?.profile?.role || null
+        console.log('Setting user role:', role, 'from profile:', data.user?.profile)
+        setUserRole(role)
       } else {
         console.log('Not authenticated, but allowing page to load')
         // Don't redirect immediately - let user try to use New Delivery button
