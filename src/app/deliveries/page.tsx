@@ -395,9 +395,8 @@ export default function DeliveriesPage() {
                 >
                   <option value="all">All Status</option>
                   <option value="pending">Pending</option>
-                  <option value="partial">Partial</option>
+                  <option value="partial">Partial (In Transit)</option>
                   <option value="delivered">Delivered</option>
-                  <option value="cancelled">Cancelled</option>
                 </select>
               </div>
             </div>

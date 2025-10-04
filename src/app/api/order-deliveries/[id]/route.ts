@@ -85,11 +85,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const { status } = body
 
     // Validate status
-    const validStatuses = ['pending', 'in_transit', 'delivered', 'cancelled']
+    const validStatuses = ['pending', 'partial', 'delivered']
     if (!status || !validStatuses.includes(status)) {
       return NextResponse.json({
         success: false,
-        error: 'Invalid status. Must be one of: pending, in_transit, delivered, cancelled'
+        error: 'Invalid status. Must be one of: pending, partial, delivered'
       }, { status: 400 })
     }
 

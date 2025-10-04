@@ -75,7 +75,7 @@ interface Delivery {
   id: string
   order_id: string
   delivery_date: string
-  status: 'pending' | 'partial' | 'delivered' | 'cancelled'
+  status: 'pending' | 'partial' | 'delivered'
   driver_name?: string
   vehicle_number?: string
   notes?: string
@@ -325,7 +325,6 @@ export async function GET(req: NextRequest) {
       pending: formattedDeliveries.filter(d => d.status === 'pending').length,
       partial: formattedDeliveries.filter(d => d.status === 'partial').length,
       delivered: formattedDeliveries.filter(d => d.status === 'delivered').length,
-      cancelled: formattedDeliveries.filter(d => d.status === 'cancelled').length,
   total_value: roundToTwo(formattedDeliveries.reduce((sum, d) => sum + Number(d.total_amount || 0), 0))
     }
 
