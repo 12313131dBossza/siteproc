@@ -75,7 +75,7 @@ interface Delivery {
   id: string
   order_id: string
   delivery_date: string
-  status: 'pending' | 'in_transit' | 'delivered' | 'cancelled'
+  status: 'pending' | 'partial' | 'delivered' | 'cancelled'
   driver_name?: string
   vehicle_number?: string
   notes?: string
@@ -205,7 +205,7 @@ export async function GET(req: NextRequest) {
         error: 'Failed to fetch deliveries from database',
         deliveries: [],
         pagination: { current_page: 1, per_page: 10, total: 0, total_pages: 0, has_next: false, has_prev: false },
-        summary: { total_deliveries: 0, pending: 0, in_transit: 0, delivered: 0, cancelled: 0, total_value: 0 }
+        summary: { total_deliveries: 0, pending: 0, partial: 0, delivered: 0, cancelled: 0, total_value: 0 }
       }, { status: 500 })
     }
 
@@ -323,7 +323,7 @@ export async function GET(req: NextRequest) {
     const summaryStats = {
   total_deliveries: totalCount || formattedDeliveries.length || 0,
       pending: formattedDeliveries.filter(d => d.status === 'pending').length,
-      in_transit: formattedDeliveries.filter(d => d.status === 'in_transit').length,
+      partial: formattedDeliveries.filter(d => d.status === 'partial').length,
       delivered: formattedDeliveries.filter(d => d.status === 'delivered').length,
       cancelled: formattedDeliveries.filter(d => d.status === 'cancelled').length,
   total_value: roundToTwo(formattedDeliveries.reduce((sum, d) => sum + Number(d.total_amount || 0), 0))
@@ -355,7 +355,7 @@ export async function GET(req: NextRequest) {
       error: 'Failed to fetch deliveries',
       deliveries: [],
       pagination: { current_page: 1, per_page: 10, total: 0, total_pages: 0, has_next: false, has_prev: false },
-      summary: { total_deliveries: 0, pending: 0, in_transit: 0, delivered: 0, cancelled: 0, total_value: 0 }
+      summary: { total_deliveries: 0, pending: 0, partial: 0, delivered: 0, cancelled: 0, total_value: 0 }
     }, { status: 500 })
   }
 }

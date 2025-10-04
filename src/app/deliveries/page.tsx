@@ -13,7 +13,7 @@ interface Delivery {
   order_id: string
   driver_name?: string
   vehicle_number?: string
-  status: 'pending' | 'in_transit' | 'delivered' | 'cancelled'
+  status: 'pending' | 'partial' | 'delivered'
   delivery_date: string
   notes?: string
   total_amount: number
@@ -39,7 +39,7 @@ const statusConfig = {
   in_transit: { 
     icon: Truck, 
     color: 'text-blue-600 bg-blue-50 border-blue-200', 
-    label: 'In Transit',
+    label: 'Partial',
     bgColor: 'bg-blue-50'
   },
   delivered: { 
@@ -61,7 +61,7 @@ export default function DeliveriesPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [selectedTab, setSelectedTab] = useState<'pending' | 'in_transit' | 'delivered'>('pending')
+  const [selectedTab, setSelectedTab] = useState<'pending' | 'partial' | 'delivered'>('pending')
   const [authenticated, setAuthenticated] = useState<boolean | null>(null)
   const [updatingDelivery, setUpdatingDelivery] = useState<string | null>(null)
 
@@ -159,7 +159,7 @@ export default function DeliveriesPage() {
 
   const stats = {
     pending: getTabDeliveries('pending').length,
-    in_transit: getTabDeliveries('in_transit').length,
+    in_transit: getTabDeliveries('partial').length,
     delivered: getTabDeliveries('delivered').length,
     total: deliveries.length
   }
@@ -295,7 +295,7 @@ export default function DeliveriesPage() {
               </div>
             </div>
             <h3 className="text-2xl font-bold text-gray-900 mb-1">{stats.in_transit}</h3>
-            <p className="text-sm text-gray-500">In Transit</p>
+            <p className="text-sm text-gray-500">Partial</p>
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
@@ -333,7 +333,7 @@ export default function DeliveriesPage() {
                 >
                   <option value="all">All Status</option>
                   <option value="pending">Pending</option>
-                  <option value="in_transit">In Transit</option>
+                  <option value="partial">Partial</option>
                   <option value="delivered">Delivered</option>
                   <option value="cancelled">Cancelled</option>
                 </select>
@@ -348,7 +348,7 @@ export default function DeliveriesPage() {
             <nav className="flex space-x-8 px-6">
               {[
                 { key: 'pending', label: 'Pending', count: stats.pending },
-                { key: 'in_transit', label: 'In Transit', count: stats.in_transit },
+                { key: 'partial', label: 'Partial', count: stats.in_transit },
                 { key: 'delivered', label: 'Delivered', count: stats.delivered }
               ].map((tab) => (
                 <button
@@ -458,7 +458,7 @@ export default function DeliveriesPage() {
                           <Button variant="ghost" size="sm" leftIcon={<MapPin className="h-4 w-4" />}>
                             Track
                           </Button>
-                          {delivery.status === 'in_transit' && (
+                          {delivery.status === 'partial' && (
                             <Button 
                               variant="primary" 
                               size="sm" 
