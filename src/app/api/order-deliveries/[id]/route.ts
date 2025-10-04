@@ -61,6 +61,76 @@ async function getAuthenticatedUser() {
   }
 }
 
+// GET endpoint - Fetch single delivery
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    // Authentication check
+    const user = await getAuthenticatedUser()
+    if (!user) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Authentication required' 
+      }, { status: 401 })
+    }
+
+    const deliveryId = params.id
+
+    // Create Supabase client
+    const cookieStore = await cookies()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value
+          },
+        },
+      }
+    )
+
+    // Fetch delivery with items
+    const { data: delivery, error: fetchError } = await supabase
+      .from('deliveries')
+      .select(`
+        *,
+        delivery_items (
+          id,
+          product_name,
+          quantity,
+          unit,
+          unit_price,
+          total_price
+        )
+      `)
+      .eq('id', deliveryId)
+      .eq('company_id', user.company_id) // Ensure user can only view their company's deliveries
+      .single()
+
+    if (fetchError || !delivery) {
+      return NextResponse.json({
+        success: false,
+        error: 'Delivery not found'
+      }, { status: 404 })
+    }
+
+    // Format response
+    const formattedDelivery = {
+      ...delivery,
+      items: delivery.delivery_items || []
+    }
+
+    return NextResponse.json(formattedDelivery, { status: 200 })
+
+  } catch (error) {
+    console.error('Delivery fetch error:', error)
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to fetch delivery'
+    }, { status: 500 })
+  }
+}
+
 // PATCH endpoint - Update delivery status
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -82,20 +152,25 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     const deliveryId = params.id
     const body = await req.json()
-    const { status } = body
 
-    // Validate status
-    const validStatuses = ['pending', 'partial', 'delivered']
-    if (!status || !validStatuses.includes(status)) {
-      return NextResponse.json({
-        success: false,
-        error: 'Invalid status. Must be one of: pending, partial, delivered'
-      }, { status: 400 })
+    // Extract fields to update
+    const { status, order_id, driver_name, vehicle_number, delivery_date, notes, items } = body
+
+    // If status is provided, validate it
+    if (status) {
+      const validStatuses = ['pending', 'partial', 'delivered']
+      if (!validStatuses.includes(status)) {
+        return NextResponse.json({
+          success: false,
+          error: 'Invalid status. Must be one of: pending, partial, delivered'
+        }, { status: 400 })
+      }
     }
 
-    console.log('Updating delivery status:', { 
+    console.log('Updating delivery:', { 
       deliveryId, 
-      status, 
+      hasStatus: !!status,
+      hasItems: !!items,
       user_id: user.id, 
       role: user.role 
     })
@@ -144,13 +219,30 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       }, { status: 403 })
     }
 
+    // Build update object with only provided fields
+    const updateData: any = {
+      updated_at: new Date().toISOString()
+    }
+    
+    if (status !== undefined) updateData.status = status
+    if (order_id !== undefined) updateData.order_id = order_id
+    if (driver_name !== undefined) updateData.driver_name = driver_name
+    if (vehicle_number !== undefined) updateData.vehicle_number = vehicle_number
+    if (delivery_date !== undefined) updateData.delivery_date = delivery_date
+    if (notes !== undefined) updateData.notes = notes
+
+    // Calculate total amount from items if provided
+    if (items && Array.isArray(items)) {
+      const total = items.reduce((sum: number, item: any) => {
+        return sum + (item.quantity * item.unit_price)
+      }, 0)
+      updateData.total_amount = total
+    }
+
     // Try to update with user context first
     let updateResult = await supabase
       .from('deliveries')
-      .update({ 
-        status,
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('id', deliveryId)
       .eq('company_id', user.company_id) // Ensure user can only update their company's deliveries
       .select()
@@ -162,10 +254,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         const sbSvc = supabaseService()
         updateResult = await (sbSvc as any)
           .from('deliveries')
-          .update({ 
-            status,
-            updated_at: new Date().toISOString()
-          })
+          .update(updateData)
           .eq('id', deliveryId)
           .select()
           .single()
@@ -178,15 +267,47 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       console.error('Database error updating delivery:', updateResult.error)
       return NextResponse.json({
         success: false,
-        error: 'Failed to update delivery status',
+        error: 'Failed to update delivery',
         details: updateResult.error.message
       }, { status: 500 })
+    }
+
+    // Update delivery items if provided
+    if (items && Array.isArray(items)) {
+      try {
+        // Delete existing items
+        await supabase
+          .from('delivery_items')
+          .delete()
+          .eq('delivery_id', deliveryId)
+
+        // Insert new items
+        const itemsToInsert = items.map((item: any) => ({
+          delivery_id: deliveryId,
+          product_name: item.product_name,
+          quantity: item.quantity,
+          unit: item.unit,
+          unit_price: item.unit_price,
+          total_price: item.quantity * item.unit_price
+        }))
+
+        const { error: itemsError } = await supabase
+          .from('delivery_items')
+          .insert(itemsToInsert)
+
+        if (itemsError) {
+          console.error('Error updating delivery items:', itemsError)
+        }
+      } catch (itemError) {
+        console.error('Error updating delivery items:', itemError)
+        // Don't fail the whole update if items fail
+      }
     }
 
     return NextResponse.json({
       success: true,
       delivery: updateResult.data,
-      message: `Delivery status updated to ${status}`,
+      message: status ? `Delivery status updated to ${status}` : 'Delivery updated successfully',
       user_info: {
         role: user.role,
         permissions: user.permissions

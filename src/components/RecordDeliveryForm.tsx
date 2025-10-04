@@ -19,9 +19,11 @@ interface Project {
 interface RecordDeliveryFormProps {
   onSuccess?: (delivery: any) => void
   onCancel?: () => void
+  initialData?: any
+  deliveryId?: string
 }
 
-export default function RecordDeliveryForm({ onSuccess, onCancel }: RecordDeliveryFormProps) {
+export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, deliveryId }: RecordDeliveryFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [images, setImages] = useState<File[]>([])
@@ -62,6 +64,34 @@ export default function RecordDeliveryForm({ onSuccess, onCancel }: RecordDelive
   useEffect(() => {
     fetchProjects()
   }, [])
+
+  // Load initial data for editing
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        order_id: initialData.order_id || '',
+        driver_name: initialData.driver_name || '',
+        vehicle_number: initialData.vehicle_number || '',
+        delivery_date: initialData.delivery_date ? new Date(initialData.delivery_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        status: initialData.status || 'pending',
+        notes: initialData.notes || '',
+        projectId: '',
+        items: initialData.items && initialData.items.length > 0 
+          ? initialData.items.map((item: any) => ({
+              product_name: item.product_name || '',
+              quantity: item.quantity || 1,
+              unit: item.unit || 'pieces',
+              unit_price: item.unit_price || 0
+            }))
+          : [{
+              product_name: '',
+              quantity: 1,
+              unit: 'pieces',
+              unit_price: 0
+            }]
+      })
+    }
+  }, [initialData])
 
   const addItem = () => {
     setFormData(prev => ({
@@ -152,8 +182,12 @@ export default function RecordDeliveryForm({ onSuccess, onCancel }: RecordDelive
         proof_urls: proofUrls.length > 0 ? proofUrls : undefined
       }
 
-      const response = await fetch('/api/order-deliveries', {
-        method: 'POST',
+      // Use PATCH for editing, POST for creating
+      const url = deliveryId ? `/api/order-deliveries/${deliveryId}` : '/api/order-deliveries'
+      const method = deliveryId ? 'PATCH' : 'POST'
+
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -163,7 +197,7 @@ export default function RecordDeliveryForm({ onSuccess, onCancel }: RecordDelive
       const result = await response.json()
 
       if (!response.ok || !result.success) {
-        const msg = result.error || 'Failed to record delivery'
+        const msg = result.error || `Failed to ${deliveryId ? 'update' : 'record'} delivery`
         const details = result.details ? `: ${result.details}` : ''
         throw new Error(msg + details)
       }
@@ -239,7 +273,7 @@ export default function RecordDeliveryForm({ onSuccess, onCancel }: RecordDelive
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-semibold text-gray-900 flex items-center">
           <Plus className="h-5 w-5 mr-2" />
-          Record New Delivery
+          {deliveryId ? 'Edit Delivery' : 'Record New Delivery'}
         </h3>
         {onCancel && (
           <button
