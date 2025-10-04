@@ -98,7 +98,9 @@ export default function DeliveriesPage() {
 
   // Check if user has permission to change delivery status
   const canChangeStatus = () => {
-    return userRole && ['admin', 'manager', 'owner', 'bookkeeper'].includes(userRole.toLowerCase())
+    const hasPermission = userRole && ['admin', 'manager', 'owner', 'bookkeeper'].includes(userRole.toLowerCase())
+    console.log('canChangeStatus check:', { userRole, hasPermission })
+    return hasPermission
   }
 
   const fetchDeliveries = async () => {
@@ -311,6 +313,11 @@ export default function DeliveriesPage() {
       description="Track and manage delivery status"
       actions={
         <div className="flex gap-2">
+          {userRole && (
+            <span className="px-3 py-2 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg">
+              Role: {userRole}
+            </span>
+          )}
           <Button variant="ghost" leftIcon={<Calendar className="h-4 w-4" />}>
             Schedule
           </Button>
