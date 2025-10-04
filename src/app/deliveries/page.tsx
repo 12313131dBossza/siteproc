@@ -6,6 +6,7 @@ import { Package, Truck, MapPin, Clock, CheckCircle, CheckCircle2, AlertCircle, 
 import { format } from 'date-fns'
 import { cn, formatCurrency } from '@/lib/utils'
 import Link from 'next/link'
+import { toast } from 'sonner'
 
 interface Delivery {
   id: string
@@ -194,17 +195,18 @@ export default function DeliveriesPage() {
       // Switch to delivered tab to show the updated delivery
       setSelectedTab('delivered')
       
-      // Show success message
-      alert('✓ Delivery marked as delivered successfully!\n\n' +
-            'The following updates have been completed:\n' +
-            '• Delivery status changed to Delivered\n' +
-            '• Order status updated (if applicable)\n' +
-            '• Project actuals updated (if linked)\n' +
-            '• Record locked from further editing')
+      // Show success toast
+      toast.success('Delivery marked as delivered', {
+        description: 'Status updated successfully. Order and project actuals have been updated.',
+        duration: 3000,
+      })
       
     } catch (error) {
       console.error('Error marking delivery as delivered:', error)
-      alert('❌ Failed to mark delivery as delivered. Please try again.')
+      toast.error('Failed to mark delivery as delivered', {
+        description: 'Please try again or contact support if the issue persists.',
+        duration: 4000,
+      })
     } finally {
       setUpdatingDelivery(null)
     }
@@ -456,7 +458,7 @@ export default function DeliveriesPage() {
                           <Button variant="ghost" size="sm" leftIcon={<MapPin className="h-4 w-4" />}>
                             Track
                           </Button>
-                          {(delivery.status === 'pending' || delivery.status === 'in_transit') && (
+                          {delivery.status === 'in_transit' && (
                             <Button 
                               variant="primary" 
                               size="sm" 
