@@ -21,9 +21,10 @@ interface RecordDeliveryFormProps {
   onCancel?: () => void
   initialData?: any
   deliveryId?: string
+  isModal?: boolean
 }
 
-export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, deliveryId }: RecordDeliveryFormProps) {
+export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, deliveryId, isModal = false }: RecordDeliveryFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [images, setImages] = useState<File[]>([])
@@ -268,22 +269,24 @@ export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, d
     'Roofing Tiles'
   ]
 
-  return (
-    <div className="bg-white rounded-lg shadow-sm border p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-          <Plus className="h-5 w-5 mr-2" />
-          {deliveryId ? 'Edit Delivery' : 'Record New Delivery'}
-        </h3>
-        {onCancel && (
-          <button
-            onClick={onCancel}
-            className="text-gray-400 hover:text-gray-600"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        )}
-      </div>
+  const formContent = (
+    <>
+      {!isModal && (
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+            <Plus className="h-5 w-5 mr-2" />
+            {deliveryId ? 'Edit Delivery' : 'Record New Delivery'}
+          </h3>
+          {onCancel && (
+            <button
+              onClick={onCancel}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          )}
+        </div>
+      )}
 
       {error && (
         <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3">
@@ -566,6 +569,16 @@ export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, d
           )}
         </div>
       </form>
+    </>
+  )
+
+  if (isModal) {
+    return formContent
+  }
+
+  return (
+    <div className="bg-white rounded-lg shadow-sm border p-6">
+      {formContent}
     </div>
   )
 }

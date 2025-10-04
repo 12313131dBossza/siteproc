@@ -605,6 +605,7 @@ export default function DeliveriesPage() {
             </div>
             <div className="p-6">
               <RecordDeliveryForm
+                isModal={true}
                 onSuccess={(delivery) => {
                   // Add the new delivery to the list
                   setDeliveries(prev => [delivery, ...prev])
