@@ -328,7 +328,7 @@ export default function RecordDeliveryForm({ onSuccess, onCancel }: RecordDelive
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="pending">Pending</option>
-            <option value="partial">Partial</option>
+            <option value="partial">In Transit (Partial)</option>
             <option value="delivered">Delivered</option>
           </select>
         </div>
