@@ -194,9 +194,17 @@ export default function DeliveriesPage() {
       // Switch to delivered tab to show the updated delivery
       setSelectedTab('delivered')
       
+      // Show success message
+      alert('✓ Delivery marked as delivered successfully!\n\n' +
+            'The following updates have been completed:\n' +
+            '• Delivery status changed to Delivered\n' +
+            '• Order status updated (if applicable)\n' +
+            '• Project actuals updated (if linked)\n' +
+            '• Record locked from further editing')
+      
     } catch (error) {
       console.error('Error marking delivery as delivered:', error)
-      alert('Failed to mark delivery as delivered. Please try again.')
+      alert('❌ Failed to mark delivery as delivered. Please try again.')
     } finally {
       setUpdatingDelivery(null)
     }
