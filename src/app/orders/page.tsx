@@ -262,7 +262,7 @@ export default function OrdersPage() {
     }
   };
 
-  const canDecide = userProfile?.role && ['owner', 'admin'].includes(userProfile.role);
+  const canDecide = userProfile?.role && ['owner', 'admin', 'manager'].includes(userProfile.role);
 
   if (loading) {
     return (
