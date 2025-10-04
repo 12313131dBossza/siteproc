@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { AppLayout } from "@/components/app-layout"
 import { Button } from "@/components/ui/Button"
-import { Package, Truck, MapPin, Clock, CheckCircle, CheckCircle2, AlertCircle, Search, Filter, Eye, Calendar, Lock } from 'lucide-react'
+import { Package, Truck, MapPin, Clock, CheckCircle, CheckCircle2, AlertCircle, Search, Filter, Eye, Calendar, Lock, Edit } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn, formatCurrency } from '@/lib/utils'
 import Link from 'next/link'
@@ -528,6 +528,21 @@ export default function DeliveriesPage() {
                           <Button variant="ghost" size="sm" leftIcon={<Eye className="h-4 w-4" />}>
                             View Details
                           </Button>
+                          
+                          {/* Edit button - only show for non-delivered deliveries */}
+                          {delivery.status !== 'delivered' && canChangeStatus() && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              leftIcon={<Edit className="h-4 w-4" />}
+                              onClick={() => {
+                                window.location.href = `/deliveries/${delivery.id}/edit`
+                              }}
+                            >
+                              Edit
+                            </Button>
+                          )}
+                          
                           <Button variant="ghost" size="sm" leftIcon={<MapPin className="h-4 w-4" />}>
                             Track
                           </Button>
