@@ -66,19 +66,31 @@ export async function GET(
 
     // If RLS blocked it, try with a raw query
     if (deliveriesError || !deliveries || deliveries.length === 0) {
-      console.log("⚠️ Primary query failed or returned empty, trying direct query...");
+      console.log("⚠️ Primary query failed or returned empty, trying RPC function...");
+      console.log("🔧 RPC params:", { p_order_uuid: orderId, p_company_id: profile.company_id });
       
-      const { data: directDeliveries, error: directError } = await supabase
-        .rpc('get_order_deliveries', { 
-          p_order_uuid: orderId,
-          p_company_id: profile.company_id 
-        })
-        .catch(() => ({ data: null, error: { message: 'RPC not available' } }));
+      try {
+        const { data: directDeliveries, error: directError } = await supabase
+          .rpc('get_order_deliveries', { 
+            p_order_uuid: orderId,
+            p_company_id: profile.company_id 
+          });
 
-      if (directDeliveries && !directError) {
-        deliveries = directDeliveries;
-        deliveriesError = null;
-        console.log("✅ Direct query succeeded:", deliveries?.length);
+        console.log("🔧 RPC result:", { 
+          success: !directError, 
+          count: directDeliveries?.length || 0,
+          error: directError?.message 
+        });
+
+        if (directDeliveries && !directError) {
+          deliveries = directDeliveries;
+          deliveriesError = null;
+          console.log("✅ RPC query succeeded with", deliveries?.length, "deliveries");
+        } else {
+          console.error("❌ RPC query failed:", directError);
+        }
+      } catch (rpcError) {
+        console.error("❌ RPC call exception:", rpcError);
       }
     }
 
