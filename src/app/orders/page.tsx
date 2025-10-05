@@ -131,10 +131,15 @@ export default function OrdersPage() {
       if (!response.ok) {
         throw new Error('Failed to fetch deliveries');
       }
-      const data = await response.json();
-      console.log('✅ Received data:', data);
-      console.log('📦 Deliveries count:', data.deliveries?.length || 0);
-      setOrderDeliveries(data.deliveries || []);
+      const result = await response.json();
+      console.log('✅ Received result:', result);
+      
+      // Handle wrapped response format: {ok: true, data: {deliveries: [...]}}
+      const data = result.data || result;
+      const deliveries = data.deliveries || [];
+      
+      console.log('📦 Deliveries count:', deliveries.length);
+      setOrderDeliveries(deliveries);
     } catch (error) {
       console.error('❌ Error fetching deliveries:', error);
       toast.error('Failed to load deliveries', {
