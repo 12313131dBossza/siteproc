@@ -132,7 +132,8 @@ export default function OrdersPage() {
       }
 
       const data = await response.json();
-      const fetchedOrders: Order[] = data.orders || [];
+      // API returns {ok: true, data: orders} so we need to extract data
+      const fetchedOrders: Order[] = data.data || data.orders || [];
 
       setOrders(fetchedOrders);
     } catch (error) {
