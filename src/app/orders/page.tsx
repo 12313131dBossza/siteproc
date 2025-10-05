@@ -505,8 +505,17 @@ export default function OrdersPage() {
 
       {/* Decision Modal */}
       {decisionModalOpen && selectedOrder && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setDecisionModalOpen(false);
+              setSelectedOrder(null);
+              setDecisionNotes('');
+            }
+          }}
+        >
+          <div className="bg-white rounded-xl max-w-md w-full p-6 animate-in slide-in-from-bottom-4 duration-300">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
               {decisionAction === 'approve' ? 'Approve' : 'Reject'} Order
             </h3>
@@ -556,8 +565,13 @@ export default function OrdersPage() {
 
       {/* New Order Modal */}
       {showNewOrderModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowNewOrderModal(false);
+          }}
+        >
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
             <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
               <h2 className="text-xl font-semibold text-gray-900">Create New Order</h2>
               <button
@@ -587,9 +601,17 @@ export default function OrdersPage() {
 
       {/* Order Detail Modal */}
       {showDetailModal && selectedOrder && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl max-w-2xl w-full shadow-2xl">
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowDetailModal(false);
+              setSelectedOrder(null);
+            }
+          }}
+        >
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
+            <div className="flex-shrink-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
               <h2 className="text-xl font-semibold text-gray-900">Order Details</h2>
               <button
                 onClick={() => {
@@ -601,9 +623,9 @@ export default function OrdersPage() {
                 <X className="h-6 w-6" />
               </button>
             </div>
-            <div className="p-6">
+            <div className="flex-1 overflow-y-auto p-6">
               {/* Order Information */}
-              <div className="space-y-4 mb-6">
+              <div className="space-y-4">
                 <div className="bg-gray-50 rounded-lg p-4">
                   <h3 className="font-semibold text-lg text-gray-900 mb-2">{selectedOrder.description}</h3>
                   <div className="grid grid-cols-2 gap-4 text-sm">
@@ -661,19 +683,21 @@ export default function OrdersPage() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-200">
+                {/* Cancel button - always visible */}
                 <Button
                   variant="ghost"
                   onClick={() => {
                     setShowDetailModal(false);
                     setSelectedOrder(null);
                   }}
-                  className="flex-1"
+                  className="flex-1 order-last sm:order-first"
                 >
-                  Cancel
+                  Close
                 </Button>
                 
-                {canDecide && selectedOrder.status === 'pending' && (
+                {/* Approve/Reject buttons - show for pending orders */}
+                {selectedOrder.status === 'pending' && (
                   <>
                     <Button
                       variant="danger"
@@ -685,7 +709,7 @@ export default function OrdersPage() {
                       }}
                       className="flex-1"
                     >
-                      Reject
+                      Reject Order
                     </Button>
                     <Button
                       variant="primary"
@@ -697,7 +721,7 @@ export default function OrdersPage() {
                       }}
                       className="flex-1"
                     >
-                      Approve
+                      Approve Order
                     </Button>
                   </>
                 )}
