@@ -49,10 +49,14 @@ function NewOrderForm() {
       const response = await fetch('/api/projects');
       if (response.ok) {
         const data = await response.json();
-        setProjects(data.data || []);
+        // API returns projects array directly, not wrapped in data object
+        setProjects(Array.isArray(data) ? data : []);
+      } else {
+        console.error('Failed to fetch projects:', response.status);
       }
     } catch (error) {
       console.error('Failed to load projects:', error);
+      toast.error('Failed to load projects');
     }
   };
 
