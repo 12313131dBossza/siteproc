@@ -152,14 +152,18 @@ export default function OrdersPage() {
     const approved = orders.filter(o => o.status === 'approved').length;
     const rejected = orders.filter(o => o.status === 'rejected').length;
     
-    const totalValue = orders.reduce((sum, order) => {
-      return sum + (order.amount || 0);
-    }, 0);
+    // Total value: only count APPROVED orders
+    const totalValue = orders
+      .filter(o => o.status === 'approved')
+      .reduce((sum, order) => {
+        return sum + (order.amount || 0);
+      }, 0);
     
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    // This month: only count APPROVED orders from this month
     const thisMonth = orders
-      .filter(o => new Date(o.created_at) >= startOfMonth)
+      .filter(o => o.status === 'approved' && new Date(o.created_at) >= startOfMonth)
       .reduce((sum, o) => sum + (o.amount || 0), 0);
 
     return { total, pending, approved, rejected, totalValue, thisMonth };
