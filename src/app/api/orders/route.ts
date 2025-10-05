@@ -16,11 +16,30 @@ export async function GET(request: NextRequest) {
     const projectId = searchParams.get('project_id')
     const status = searchParams.get('status')
     
-    // Simplified query without complex joins that might fail
+    // Query with delivery progress fields explicitly included
     let query = supabase
       .from('purchase_orders')
       .select(`
-        *,
+        id,
+        project_id,
+        amount,
+        description,
+        category,
+        status,
+        requested_by,
+        requested_at,
+        approved_by,
+        approved_at,
+        rejected_by,
+        rejected_at,
+        rejection_reason,
+        created_at,
+        updated_at,
+        delivery_progress,
+        ordered_qty,
+        delivered_qty,
+        remaining_qty,
+        delivered_value,
         projects!inner(
           id,
           name,
