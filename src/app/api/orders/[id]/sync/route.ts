@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { sbServer } from '@/lib/supabase-server'
 import { syncOrderStatus } from '@/lib/orderSync'
 
 export async function POST(
@@ -8,12 +7,11 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+    const supabase = await sbServer()
 
     // Check authentication
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
