@@ -127,8 +127,10 @@ function NewOrderForm() {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to create order');
+        const errorData = await response.json().catch(() => ({ message: 'Failed to create order' }));
+        const errorMessage = errorData.message || errorData.error || `HTTP ${response.status}: Failed to create order`;
+        console.error('API Error Response:', errorData);
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
@@ -138,7 +140,8 @@ function NewOrderForm() {
       router.push(`/orders/${order.id}`);
     } catch (error) {
       console.error('Error creating order:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to create order');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create order';
+      toast.error(errorMessage, { duration: 5000 });
     } finally {
       setSubmitting(false);
     }

@@ -143,8 +143,18 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('Error creating order:', error)
-      console.error('Error details:', JSON.stringify(error, null, 2))
-      return response.error(`Failed to create order: ${error.message || 'Unknown database error'}`, 500)
+      console.error('Error code:', error.code)
+      console.error('Error message:', error.message)
+      console.error('Error details:', error.details)
+      console.error('Error hint:', error.hint)
+      return NextResponse.json({ 
+        ok: false, 
+        error: `Failed to create order: ${error.message}`,
+        message: `Failed to create order: ${error.message}`,
+        code: error.code,
+        details: error.details,
+        hint: error.hint
+      }, { status: 500 })
     }
 
     // Log activity
