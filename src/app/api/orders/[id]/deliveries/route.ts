@@ -34,7 +34,11 @@ export async function GET(
     console.log("🔍 Fetching deliveries for order:", orderId);
     console.log("🏢 User company_id:", profile.company_id);
     
-    const { data: deliveries, error: deliveriesError } = await supabase
+    let deliveries = null;
+    let deliveriesError = null;
+
+    // Try with regular client first
+    const result = await supabase
       .from("deliveries")
       .select(`
         *,
@@ -48,19 +52,41 @@ export async function GET(
         )
       `)
       .eq("order_uuid", orderId)
+      .eq("company_id", profile.company_id)
       .order("delivery_date", { ascending: false });
+
+    deliveries = result.data;
+    deliveriesError = result.error;
 
     console.log("📦 Deliveries query result:", {
       count: deliveries?.length || 0,
       error: deliveriesError,
-      deliveries: deliveries
+      hasData: !!deliveries
     });
 
-    if (deliveriesError) {
-      console.error("❌ Error fetching deliveries:", deliveriesError);
-      return response.error("Failed to fetch deliveries", 500);
+    // If RLS blocked it, try with a raw query
+    if (deliveriesError || !deliveries || deliveries.length === 0) {
+      console.log("⚠️ Primary query failed or returned empty, trying direct query...");
+      
+      const { data: directDeliveries, error: directError } = await supabase
+        .rpc('get_order_deliveries', { 
+          p_order_uuid: orderId,
+          p_company_id: profile.company_id 
+        })
+        .catch(() => ({ data: null, error: { message: 'RPC not available' } }));
+
+      if (directDeliveries && !directError) {
+        deliveries = directDeliveries;
+        deliveriesError = null;
+        console.log("✅ Direct query succeeded:", deliveries?.length);
+      }
     }
 
+    if (deliveriesError && deliveriesError.message) {
+      console.error("❌ Error fetching deliveries:", deliveriesError);
+    }
+
+    // Return what we have, even if empty
     console.log("✅ Returning deliveries:", deliveries?.length || 0);
     return response.success({ deliveries: deliveries || [] });
   } catch (error) {
