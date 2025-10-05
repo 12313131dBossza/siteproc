@@ -5,7 +5,13 @@ import { sendOrderRequestNotification, sendOrderApprovalNotification, sendOrderR
 // GET /api/orders - List orders for user's company
 export async function GET(request: NextRequest) {
   try {
-    const { profile, supabase } = await getCurrentUserProfile()
+    const { profile, supabase, error: profileError } = await getCurrentUserProfile()
+    
+    if (profileError || !profile) {
+      console.error('Profile error:', profileError)
+      return response.error(profileError || 'Unauthorized', 401)
+    }
+    
     const { searchParams } = new URL(request.url)
     const projectId = searchParams.get('project_id')
     const status = searchParams.get('status')
@@ -74,7 +80,12 @@ export async function GET(request: NextRequest) {
 // POST /api/orders - Create new order request
 export async function POST(request: NextRequest) {
   try {
-    const { profile, supabase } = await getCurrentUserProfile()
+    const { profile, supabase, error: profileError } = await getCurrentUserProfile()
+    
+    if (profileError || !profile) {
+      console.error('Profile error:', profileError)
+      return response.error(profileError || 'Unauthorized', 401)
+    }
     
     const body = await request.json()
     const { project_id, amount, description, category } = body
