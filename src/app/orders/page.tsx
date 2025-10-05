@@ -124,15 +124,19 @@ export default function OrdersPage() {
 
   const fetchDeliveries = async (orderId: string) => {
     setLoadingDeliveries(true);
+    console.log('🚀 Fetching deliveries for order:', orderId);
     try {
       const response = await fetch(`/api/orders/${orderId}/deliveries`);
+      console.log('📡 Response status:', response.status);
       if (!response.ok) {
         throw new Error('Failed to fetch deliveries');
       }
       const data = await response.json();
+      console.log('✅ Received data:', data);
+      console.log('📦 Deliveries count:', data.deliveries?.length || 0);
       setOrderDeliveries(data.deliveries || []);
     } catch (error) {
-      console.error('Error fetching deliveries:', error);
+      console.error('❌ Error fetching deliveries:', error);
       toast.error('Failed to load deliveries', {
         description: error instanceof Error ? error.message : 'An error occurred',
       });
