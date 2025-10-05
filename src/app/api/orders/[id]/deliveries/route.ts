@@ -31,6 +31,9 @@ export async function GET(
 
     // Fetch deliveries for this order with items
     // Note: Using order_uuid (new column) instead of order_id (legacy TEXT field)
+    console.log("🔍 Fetching deliveries for order:", orderId);
+    console.log("🏢 User company_id:", profile.company_id);
+    
     const { data: deliveries, error: deliveriesError } = await supabase
       .from("deliveries")
       .select(`
@@ -47,11 +50,18 @@ export async function GET(
       .eq("order_uuid", orderId)
       .order("delivery_date", { ascending: false });
 
+    console.log("📦 Deliveries query result:", {
+      count: deliveries?.length || 0,
+      error: deliveriesError,
+      deliveries: deliveries
+    });
+
     if (deliveriesError) {
-      console.error("Error fetching deliveries:", deliveriesError);
+      console.error("❌ Error fetching deliveries:", deliveriesError);
       return response.error("Failed to fetch deliveries", 500);
     }
 
+    console.log("✅ Returning deliveries:", deliveries?.length || 0);
     return response.success({ deliveries: deliveries || [] });
   } catch (error) {
     console.error("Unexpected error:", error);
