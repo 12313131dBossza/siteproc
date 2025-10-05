@@ -266,11 +266,18 @@ export default function DeliveriesPage() {
       // Switch to delivered tab to show the updated delivery
       setSelectedTab('delivered')
       
-      // Show success toast
-      toast.success('Delivery marked as delivered', {
-        description: 'Status updated successfully. Order and project actuals have been updated.',
-        duration: 3000,
-      })
+      // Show success toast with order sync info
+      if (result.orderSync) {
+        toast.success('Delivery marked as delivered', {
+          description: `Order status: ${result.orderSync.status.toUpperCase()} (${result.orderSync.percentComplete.toFixed(0)}% complete)`,
+          duration: 4000,
+        })
+      } else {
+        toast.success('Delivery marked as delivered', {
+          description: 'Status updated successfully. Order and project actuals have been updated.',
+          duration: 3000,
+        })
+      }
       
     } catch (error) {
       console.error('Error marking delivery as delivered:', error)

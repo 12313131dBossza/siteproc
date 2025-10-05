@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sbServer } from '@/lib/supabase-server'
+import { syncOrderStatus } from '@/lib/orderSync'
 
 export async function PATCH(
   request: NextRequest,
@@ -71,49 +72,15 @@ export async function PATCH(
       )
     }
 
-    // Try to update the linked order status if it exists
+    // Sync order status automatically using the comprehensive sync function
+    let orderSyncResult = null
     if (delivery.order_id) {
       try {
-        // Check if all deliveries for this order are now delivered
-        const { data: orderDeliveries, error: orderDeliveriesError } = await supabase
-          .from('deliveries')
-          .select('status')
-          .eq('order_id', delivery.order_id)
-
-        if (!orderDeliveriesError && orderDeliveries) {
-          const allDelivered = orderDeliveries.every(d => d.status === 'delivered')
-          const hasDelivered = orderDeliveries.some(d => d.status === 'delivered')
-
-          // Determine new order status
-          let newOrderStatus = 'pending'
-          if (allDelivered) {
-            newOrderStatus = 'completed'
-          } else if (hasDelivered) {
-            newOrderStatus = 'partially_delivered'
-          }
-
-          // Try to update order status (if orders table exists and has these statuses)
-          try {
-            const { error: orderUpdateError } = await supabase
-              .from('orders')
-              .update({
-                status: newOrderStatus,
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', delivery.order_id)
-
-            if (orderUpdateError) {
-              console.warn('Could not update order status:', orderUpdateError)
-              // Don't fail the delivery update if order update fails
-            }
-          } catch (orderError) {
-            console.warn('Orders table may not exist or have different schema:', orderError)
-            // Continue without failing
-          }
-        }
+        orderSyncResult = await syncOrderStatus(supabase, delivery.order_id)
+        console.log('Order synced successfully:', orderSyncResult)
       } catch (orderError) {
-        console.warn('Error updating order status:', orderError)
-        // Don't fail the delivery update if order update fails
+        console.warn('Error syncing order status:', orderError)
+        // Don't fail the delivery update if order sync fails
       }
     }
 
@@ -183,7 +150,10 @@ export async function PATCH(
     return NextResponse.json({
       success: true,
       delivery: updatedDelivery,
-      message: 'Delivery marked as delivered successfully'
+      orderSync: orderSyncResult,
+      message: orderSyncResult 
+        ? `Delivery marked as delivered. Order status: ${orderSyncResult.status.toUpperCase()} (${orderSyncResult.percentComplete.toFixed(0)}% complete)`
+        : 'Delivery marked as delivered successfully'
     })
 
   } catch (error) {
