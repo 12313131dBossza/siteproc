@@ -99,24 +99,12 @@ SELECT
 FROM pg_policies 
 WHERE tablename = 'purchase_orders';
 
--- Step 8: Optional - Copy data from old orders table if it exists
+-- Step 8: Skip copying old data (old table has incompatible schema)
+-- The old orders table doesn't have the amount column, so we start fresh
 DO $$
 BEGIN
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'orders' AND table_schema = 'public') THEN
-    INSERT INTO public.purchase_orders (
-      project_id, amount, description, category, status,
-      requested_by, requested_at, approved_by, approved_at,
-      rejected_by, rejected_at, rejection_reason, created_at, updated_at
-    )
-    SELECT 
-      project_id, amount, description, category, status,
-      requested_by, requested_at, approved_by, approved_at,
-      rejected_by, rejected_at, rejection_reason, created_at, updated_at
-    FROM public.orders
-    WHERE amount IS NOT NULL;  -- Only copy valid records
-    
-    RAISE NOTICE 'Copied existing orders to purchase_orders table';
-  END IF;
+  RAISE NOTICE 'Starting fresh - no data copied from old orders table';
+  RAISE NOTICE 'purchase_orders table is ready for new orders';
 END $$;
 
 SELECT '🎉 Ready to use! Update your API to use "purchase_orders" instead of "orders"' as final_message;
