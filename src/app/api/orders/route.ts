@@ -115,15 +115,35 @@ export async function POST(request: NextRequest) {
       return response.error('Failed to verify project', 500)
     }
 
-    // WORKAROUND: Use raw SQL to bypass PostgREST schema cache issues
-    // This directly inserts into the database without going through PostgREST
-    const { data: order, error } = await supabase.rpc('create_order_direct', {
-      p_project_id: project_id,
-      p_amount: amount,
-      p_description: description.trim(),
-      p_category: category.trim(),
-      p_requested_by: profile.id
-    })
+    // ULTIMATE WORKAROUND: Use service role client to bypass PostgREST cache entirely
+    // Service role bypasses RLS and PostgREST schema cache
+    const { createServerSupabaseClient } = await import('@/lib/server-utils')
+    const adminClient = createServerSupabaseClient()
+    
+    const { data: order, error } = await adminClient
+      .from('orders')
+      .insert({
+        project_id,
+        amount,
+        description: description.trim(),
+        category: category.trim(),
+        status: 'pending',
+        requested_by: profile.id,
+        requested_at: new Date().toISOString()
+      })
+      .select(`
+        id,
+        project_id,
+        amount,
+        description,
+        category,
+        status,
+        requested_by,
+        requested_at,
+        created_at,
+        updated_at
+      `)
+      .single()
 
     if (error) {
       console.error('Error creating order:', error)
