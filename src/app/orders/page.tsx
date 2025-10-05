@@ -27,6 +27,8 @@ import { format } from "date-fns";
 import { cn, formatCurrency } from "@/lib/utils";
 import { createClient } from "@/lib/supabase-client";
 import Link from "next/link";
+import { OrderForm } from "@/components/forms/OrderForm";
+import { toast } from "sonner";
 
 interface Order {
   id: string;
@@ -83,6 +85,8 @@ export default function OrdersPage() {
   const [decisionModalOpen, setDecisionModalOpen] = useState(false);
   const [decisionAction, setDecisionAction] = useState<'approve' | 'reject'>('approve');
   const [decisionNotes, setDecisionNotes] = useState('');
+  const [showNewOrderModal, setShowNewOrderModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
   useEffect(() => {
     fetchUserProfile();
@@ -286,11 +290,13 @@ export default function OrdersPage() {
           <Button variant="ghost" leftIcon={<Download className="h-4 w-4" />}>
             Export
           </Button>
-          <Link href="/orders/new">
-            <Button variant="primary" leftIcon={<Plus className="h-4 w-4" />}>
-              New Order
-            </Button>
-          </Link>
+          <Button 
+            variant="primary" 
+            leftIcon={<Plus className="h-4 w-4" />}
+            onClick={() => setShowNewOrderModal(true)}
+          >
+            New Order
+          </Button>
         </div>
       }
     >
@@ -399,11 +405,13 @@ export default function OrdersPage() {
                     ? "Try adjusting your search criteria"
                     : "Get started by creating your first order"}
                 </p>
-                <Link href="/orders/new">
-                  <Button variant="primary" leftIcon={<Plus className="h-4 w-4" />}>
-                    Create Order
-                  </Button>
-                </Link>
+                <Button 
+                  variant="primary" 
+                  leftIcon={<Plus className="h-4 w-4" />}
+                  onClick={() => setShowNewOrderModal(true)}
+                >
+                  Create Order
+                </Button>
               </div>
             ) : (
               filteredOrders.map((order) => (
@@ -453,7 +461,10 @@ export default function OrdersPage() {
                           variant="ghost"
                           size="sm"
                           leftIcon={<Eye className="h-4 w-4" />}
-                          onClick={() => setSelectedOrder(order)}
+                          onClick={() => {
+                            setSelectedOrder(order);
+                            setShowDetailModal(true);
+                          }}
                         >
                         </Button>
                         {canDecide && order.status === 'pending' && (
@@ -538,6 +549,159 @@ export default function OrdersPage() {
               >
                 {decisionAction === 'approve' ? 'Approve' : 'Reject'}
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* New Order Modal */}
+      {showNewOrderModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-900">Create New Order</h2>
+              <button
+                onClick={() => setShowNewOrderModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="p-6">
+              <OrderForm
+                isModal={true}
+                onSuccess={(order) => {
+                  setShowNewOrderModal(false);
+                  fetchOrders(); // Refresh orders list
+                  toast.success('Order created successfully!', {
+                    description: 'The order has been added to the list.',
+                    duration: 3000,
+                  });
+                }}
+                onCancel={() => setShowNewOrderModal(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Order Detail Modal */}
+      {showDetailModal && selectedOrder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-2xl w-full shadow-2xl">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-900">Order Details</h2>
+              <button
+                onClick={() => {
+                  setShowDetailModal(false);
+                  setSelectedOrder(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="p-6">
+              {/* Order Information */}
+              <div className="space-y-4 mb-6">
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h3 className="font-semibold text-lg text-gray-900 mb-2">{selectedOrder.description}</h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-500">Category:</span>
+                      <span className="ml-2 font-medium text-gray-900">{selectedOrder.category}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Amount:</span>
+                      <span className="ml-2 font-medium text-gray-900">{formatCurrency(selectedOrder.amount)}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Project:</span>
+                      <span className="ml-2 font-medium text-gray-900">{selectedOrder.projects?.name || 'N/A'}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Status:</span>
+                      <span className={cn(
+                        "ml-2 px-2 py-1 rounded-full text-xs font-medium",
+                        getStatusColor(selectedOrder.status)
+                      )}>
+                        {selectedOrder.status}
+                      </span>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-gray-500">Created:</span>
+                      <span className="ml-2 font-medium text-gray-900">
+                        {format(new Date(selectedOrder.created_at), "MMM dd, yyyy 'at' hh:mm a")}
+                      </span>
+                    </div>
+                    {selectedOrder.approved_at && (
+                      <div className="col-span-2">
+                        <span className="text-gray-500">Approved:</span>
+                        <span className="ml-2 font-medium text-green-600">
+                          {format(new Date(selectedOrder.approved_at), "MMM dd, yyyy 'at' hh:mm a")}
+                        </span>
+                      </div>
+                    )}
+                    {selectedOrder.rejected_at && (
+                      <div className="col-span-2">
+                        <span className="text-gray-500">Rejected:</span>
+                        <span className="ml-2 font-medium text-red-600">
+                          {format(new Date(selectedOrder.rejected_at), "MMM dd, yyyy 'at' hh:mm a")}
+                        </span>
+                      </div>
+                    )}
+                    {selectedOrder.rejection_reason && (
+                      <div className="col-span-2">
+                        <span className="text-gray-500">Rejection Reason:</span>
+                        <p className="mt-1 text-gray-900">{selectedOrder.rejection_reason}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setShowDetailModal(false);
+                    setSelectedOrder(null);
+                  }}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                
+                {canDecide && selectedOrder.status === 'pending' && (
+                  <>
+                    <Button
+                      variant="danger"
+                      leftIcon={<XCircle className="h-4 w-4" />}
+                      onClick={() => {
+                        setDecisionAction('reject');
+                        setShowDetailModal(false);
+                        setDecisionModalOpen(true);
+                      }}
+                      className="flex-1"
+                    >
+                      Reject
+                    </Button>
+                    <Button
+                      variant="primary"
+                      leftIcon={<CheckCircle className="h-4 w-4" />}
+                      onClick={() => {
+                        setDecisionAction('approve');
+                        setShowDetailModal(false);
+                        setDecisionModalOpen(true);
+                      }}
+                      className="flex-1"
+                    >
+                      Approve
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>

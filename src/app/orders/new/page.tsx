@@ -147,7 +147,7 @@ function NewOrderForm() {
       const order = result.data || result;
 
       toast.success('Order request submitted successfully!');
-      router.push(`/orders/${order.id}`);
+      router.push('/orders'); // Redirect to orders list instead of detail page
     } catch (error) {
       console.error('Error creating order:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to create order';
