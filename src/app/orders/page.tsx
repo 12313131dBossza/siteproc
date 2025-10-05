@@ -215,31 +215,44 @@ export default function OrdersPage() {
         },
         body: JSON.stringify({
           status: decisionAction === 'approve' ? 'approved' : 'rejected',
+          rejection_reason: decisionAction === 'reject' ? decisionNotes : undefined,
           notes: decisionNotes,
-          po_number: decisionAction === 'approve' ? `PO-${Date.now()}` : undefined,
         }),
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to update order: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to update order: ${response.status}`);
       }
 
-      const data = await response.json();
+      const result = await response.json();
+      const updatedOrder = result.data || result;
       
-      // Update local state
+      // Update local state with the updated order
       setOrders(prev => prev.map(order => 
-        order.id === selectedOrder.id ? data.order : order
+        order.id === selectedOrder.id ? updatedOrder : order
       ));
 
+      // Close modals and clear state
       setDecisionModalOpen(false);
       setSelectedOrder(null);
       setDecisionNotes('');
       
       // Show success message
-      console.log(`Order ${decisionAction}d successfully`);
+      const actionText = decisionAction === 'approve' ? 'approved' : 'rejected';
+      toast.success(`Order ${actionText} successfully!`, {
+        description: `The order has been ${actionText} and moved to the ${actionText} tab.`,
+        duration: 3000,
+      });
+
+      // Refresh the orders list to ensure we have latest data
+      fetchOrders();
     } catch (error) {
       console.error('Error updating order:', error);
-      // Could show error toast here
+      toast.error(error instanceof Error ? error.message : 'Failed to update order', {
+        description: 'Please try again or contact support.',
+        duration: 5000,
+      });
     }
   };
 
