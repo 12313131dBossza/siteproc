@@ -46,16 +46,26 @@ function NewOrderForm() {
 
   const fetchProjects = async () => {
     try {
+      console.log('🔍 Fetching projects from /api/projects...');
       const response = await fetch('/api/projects');
+      console.log('📡 Response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('📦 Projects data received:', data);
+        console.log('📊 Is array?', Array.isArray(data));
+        console.log('📈 Projects count:', data?.length || 0);
+        
         // API returns projects array directly, not wrapped in data object
         setProjects(Array.isArray(data) ? data : []);
+        console.log('✅ Projects set to state:', Array.isArray(data) ? data : []);
       } else {
-        console.error('Failed to fetch projects:', response.status);
+        console.error('❌ Failed to fetch projects:', response.status);
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Error details:', errorData);
       }
     } catch (error) {
-      console.error('Failed to load projects:', error);
+      console.error('💥 Failed to load projects:', error);
       toast.error('Failed to load projects');
     }
   };

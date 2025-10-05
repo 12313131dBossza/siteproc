@@ -28,6 +28,7 @@ export async function GET() {
     }
 
     // Get all projects for this company
+    console.log('🔍 Fetching projects for company_id:', profile.company_id)
     const { data: projects, error } = await supabase
       .from('projects')
       .select('*')
@@ -35,9 +36,12 @@ export async function GET() {
       .order('created_at', { ascending: false })
 
     if (error) {
-      console.error('Projects fetch error:', error)
+      console.error('❌ Projects fetch error:', error)
       throw error
     }
+
+    console.log('✅ Projects found:', projects?.length || 0)
+    console.log('📦 Projects data:', JSON.stringify(projects, null, 2))
 
     // Return projects array directly (not wrapped in data object)
     return NextResponse.json(projects || [])
