@@ -92,7 +92,10 @@ function NewOrderForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedProduct || !formData.qty) return;
+    if (!selectedProduct || !formData.qty || !formData.projectId) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
 
     const qty = parseFloat(formData.qty);
     if (qty <= 0 || qty > selectedProduct.stock) {
@@ -102,14 +105,20 @@ function NewOrderForm() {
 
     setSubmitting(true);
     try {
-    const response = await fetch('/api/orders', {
+      // Calculate total amount
+      const totalAmount = selectedProduct.price * qty;
+      
+      // Prepare description with product details
+      const description = `${selectedProduct.name} (${qty} ${selectedProduct.unit})${formData.notes ? ` - ${formData.notes}` : ''}`;
+      
+      const response = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          product_id: formData.product_id,
-          qty: qty,
-      notes: formData.notes || null,
-      project_id: formData.projectId || null
+          project_id: formData.projectId || null,
+          amount: totalAmount,
+          description: description,
+          category: selectedProduct.category || 'General'
         })
       });
 
@@ -118,7 +127,8 @@ function NewOrderForm() {
         throw new Error(error.error || 'Failed to create order');
       }
 
-  const order = await response.json();
+      const result = await response.json();
+      const order = result.data || result;
 
       toast.success('Order request submitted successfully!');
       router.push(`/orders/${order.id}`);
@@ -183,8 +193,9 @@ function NewOrderForm() {
                   type="select"
                   value={formData.projectId}
                   onChange={(value) => setFormData(prev => ({ ...prev, projectId: value }))}
+                  required
                   options={[
-                    { value: '', label: 'Select a project (optional)...' },
+                    { value: '', label: 'Select an option' },
                     ...projects.map(project => ({
                       value: project.id,
                       label: project.name
@@ -268,7 +279,7 @@ function NewOrderForm() {
                 </Link>
                 <button
                   type="submit"
-                  disabled={!selectedProduct || !formData.qty || submitting}
+                  disabled={!selectedProduct || !formData.qty || !formData.projectId || submitting}
                   className="flex-1 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {submitting ? 'Creating...' : 'Create Order'}
