@@ -82,6 +82,9 @@ export async function POST(request: NextRequest) {
   try {
     const { profile, supabase, error: profileError } = await getCurrentUserProfile()
     
+    // Log for debugging
+    console.log('Profile check:', { profile, profileError })
+    
     if (profileError || !profile) {
       console.error('Profile error:', profileError)
       return response.error(profileError || 'Unauthorized', 401)
