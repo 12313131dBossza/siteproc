@@ -46,6 +46,11 @@ interface Order {
   rejection_reason?: string | null;
   created_at: string;
   updated_at?: string | null;
+  delivery_progress?: "pending_delivery" | "partially_delivered" | "completed";
+  ordered_qty?: number;
+  delivered_qty?: number;
+  remaining_qty?: number;
+  delivered_value?: number;
   projects?: {
     id: string;
     name: string;
@@ -87,6 +92,9 @@ export default function OrdersPage() {
   const [decisionNotes, setDecisionNotes] = useState('');
   const [showNewOrderModal, setShowNewOrderModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showDeliveriesModal, setShowDeliveriesModal] = useState(false);
+  const [orderDeliveries, setOrderDeliveries] = useState<any[]>([]);
+  const [loadingDeliveries, setLoadingDeliveries] = useState(false);
 
   useEffect(() => {
     fetchUserProfile();
@@ -111,6 +119,26 @@ export default function OrdersPage() {
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
+    }
+  };
+
+  const fetchDeliveries = async (orderId: string) => {
+    setLoadingDeliveries(true);
+    try {
+      const response = await fetch(`/api/orders/${orderId}/deliveries`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch deliveries');
+      }
+      const data = await response.json();
+      setOrderDeliveries(data.deliveries || []);
+    } catch (error) {
+      console.error('Error fetching deliveries:', error);
+      toast.error('Failed to load deliveries', {
+        description: error instanceof Error ? error.message : 'An error occurred',
+      });
+      setOrderDeliveries([]);
+    } finally {
+      setLoadingDeliveries(false);
     }
   };
 
@@ -197,9 +225,36 @@ export default function OrdersPage() {
     },
   ];
 
+  const deliveryTabs: TabConfig[] = [
+    {
+      id: "pending_delivery",
+      label: "Pending Delivery",
+      count: orders.filter(o => o.delivery_progress === 'pending_delivery').length,
+      filter: (order) => order.delivery_progress === 'pending_delivery',
+    },
+    {
+      id: "partially_delivered",
+      label: "Partial",
+      count: orders.filter(o => o.delivery_progress === 'partially_delivered').length,
+      filter: (order) => order.delivery_progress === 'partially_delivered',
+    },
+    {
+      id: "completed",
+      label: "Completed Delivery",
+      count: orders.filter(o => o.delivery_progress === 'completed').length,
+      filter: (order) => order.delivery_progress === 'completed',
+    },
+  ];
+
   const filteredOrders = orders.filter((order) => {
-    const matchesTab = activeTab === "all" || !tabs.find(tab => tab.id === activeTab)?.filter || 
-                     tabs.find(tab => tab.id === activeTab)?.filter?.(order);
+    // Check both status tabs and delivery tabs
+    const statusTab = tabs.find(tab => tab.id === activeTab);
+    const deliveryTab = deliveryTabs.find(tab => tab.id === activeTab);
+    
+    const matchesTab = activeTab === "all" || 
+                      (statusTab && statusTab.filter?.(order)) ||
+                      (deliveryTab && deliveryTab.filter?.(order));
+    
     const matchesSearch = !searchQuery || 
                          order.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          order.category?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -274,6 +329,33 @@ export default function OrdersPage() {
       case 'rejected': return 'bg-red-100 text-red-700';
       case 'pending': return 'bg-yellow-100 text-yellow-700';
       default: return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  const getDeliveryProgressIcon = (progress: string) => {
+    switch (progress) {
+      case 'completed': return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'partially_delivered': return <Truck className="h-4 w-4 text-blue-500" />;
+      case 'pending_delivery': return <Package className="h-4 w-4 text-yellow-500" />;
+      default: return <Package className="h-4 w-4 text-gray-400" />;
+    }
+  };
+
+  const getDeliveryProgressColor = (progress: string) => {
+    switch (progress) {
+      case 'completed': return 'bg-green-100 text-green-700';
+      case 'partially_delivered': return 'bg-blue-100 text-blue-700';
+      case 'pending_delivery': return 'bg-yellow-100 text-yellow-700';
+      default: return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  const getDeliveryProgressLabel = (progress: string) => {
+    switch (progress) {
+      case 'completed': return 'Completed';
+      case 'partially_delivered': return 'Partial';
+      case 'pending_delivery': return 'Pending Delivery';
+      default: return 'N/A';
     }
   };
 
@@ -370,31 +452,62 @@ export default function OrdersPage() {
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
           <div className="p-6 border-b border-gray-200">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div className="flex flex-wrap gap-1">
-                {tabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={cn(
-                      "px-4 py-2 rounded-lg font-medium text-sm transition-colors",
-                      activeTab === tab.id
-                        ? "bg-blue-50 text-blue-700 border border-blue-200"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                    )}
-                  >
-                    {tab.label}
-                    {tab.count !== undefined && (
-                      <span className={cn(
-                        "ml-2 px-2 py-0.5 rounded-full text-xs",
+              <div className="space-y-2 w-full sm:w-auto">
+                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Order Status</div>
+                <div className="flex flex-wrap gap-1">
+                  {tabs.map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={cn(
+                        "px-4 py-2 rounded-lg font-medium text-sm transition-colors",
                         activeTab === tab.id
-                          ? "bg-blue-100 text-blue-700"
-                          : "bg-gray-100 text-gray-600"
-                      )}>
-                        {tab.count}
-                      </span>
-                    )}
-                  </button>
-                ))}
+                          ? "bg-blue-50 text-blue-700 border border-blue-200"
+                          : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                      )}
+                    >
+                      {tab.label}
+                      {tab.count !== undefined && (
+                        <span className={cn(
+                          "ml-2 px-2 py-0.5 rounded-full text-xs",
+                          activeTab === tab.id
+                            ? "bg-blue-100 text-blue-700"
+                            : "bg-gray-100 text-gray-600"
+                        )}>
+                          {tab.count}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+                
+                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mt-4">Delivery Progress</div>
+                <div className="flex flex-wrap gap-1">
+                  {deliveryTabs.map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={cn(
+                        "px-4 py-2 rounded-lg font-medium text-sm transition-colors",
+                        activeTab === tab.id
+                          ? "bg-green-50 text-green-700 border border-green-200"
+                          : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                      )}
+                    >
+                      {tab.label}
+                      {tab.count !== undefined && (
+                        <span className={cn(
+                          "ml-2 px-2 py-0.5 rounded-full text-xs",
+                          activeTab === tab.id
+                            ? "bg-green-100 text-green-700"
+                            : "bg-gray-100 text-gray-600"
+                        )}>
+                          {tab.count}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="relative">
@@ -442,12 +555,21 @@ export default function OrdersPage() {
                           <h4 className="font-semibold text-gray-900">{order.description}</h4>
                           <span className="text-sm text-gray-500">({order.category})</span>
                           <span className={cn(
-                            "px-2 py-1 rounded-full text-xs font-medium",
+                            "px-2 py-1 rounded-full text-xs font-medium inline-flex items-center",
                             getStatusColor(order.status)
                           )}>
                             {getStatusIcon(order.status)}
                             <span className="ml-1">{order.status}</span>
                           </span>
+                          {order.delivery_progress && (
+                            <span className={cn(
+                              "px-2 py-1 rounded-full text-xs font-medium inline-flex items-center",
+                              getDeliveryProgressColor(order.delivery_progress)
+                            )}>
+                              {getDeliveryProgressIcon(order.delivery_progress)}
+                              <span className="ml-1">{getDeliveryProgressLabel(order.delivery_progress)}</span>
+                            </span>
+                          )}
                         </div>
                         <p className="text-sm text-gray-600 mb-2">
                           Project: {order.projects?.name || 'N/A'}
@@ -696,6 +818,64 @@ export default function OrdersPage() {
                     )}
                   </div>
                 </div>
+
+                {/* Delivery Progress Section */}
+                {selectedOrder.delivery_progress && (
+                  <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                        <Truck className="h-5 w-5 text-blue-600" />
+                        Delivery Progress
+                      </h4>
+                      <span className={cn(
+                        "px-3 py-1 rounded-full text-xs font-medium inline-flex items-center",
+                        getDeliveryProgressColor(selectedOrder.delivery_progress)
+                      )}>
+                        {getDeliveryProgressIcon(selectedOrder.delivery_progress)}
+                        <span className="ml-1">{getDeliveryProgressLabel(selectedOrder.delivery_progress)}</span>
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div className="bg-white rounded p-2">
+                        <span className="text-gray-500 block">Ordered Qty</span>
+                        <span className="font-semibold text-gray-900 text-lg">
+                          {selectedOrder.ordered_qty?.toFixed(2) || '0.00'}
+                        </span>
+                      </div>
+                      <div className="bg-white rounded p-2">
+                        <span className="text-gray-500 block">Delivered Qty</span>
+                        <span className="font-semibold text-blue-600 text-lg">
+                          {selectedOrder.delivered_qty?.toFixed(2) || '0.00'}
+                        </span>
+                      </div>
+                      <div className="bg-white rounded p-2">
+                        <span className="text-gray-500 block">Remaining Qty</span>
+                        <span className="font-semibold text-orange-600 text-lg">
+                          {selectedOrder.remaining_qty?.toFixed(2) || '0.00'}
+                        </span>
+                      </div>
+                      <div className="bg-white rounded p-2">
+                        <span className="text-gray-500 block">Delivered Value</span>
+                        <span className="font-semibold text-green-600 text-lg">
+                          {formatCurrency(selectedOrder.delivered_value || 0)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <Button
+                        variant="accent"
+                        leftIcon={<Truck className="h-4 w-4" />}
+                        onClick={() => {
+                          fetchDeliveries(selectedOrder.id);
+                          setShowDeliveriesModal(true);
+                        }}
+                        className="w-full"
+                      >
+                        View Deliveries
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Action Buttons */}
@@ -742,6 +922,134 @@ export default function OrdersPage() {
                   </>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Deliveries Modal */}
+      {showDeliveriesModal && selectedOrder && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowDeliveriesModal(false);
+              setOrderDeliveries([]);
+            }
+          }}
+        >
+          <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
+            <div className="flex-shrink-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">Deliveries for Order</h2>
+                <p className="text-sm text-gray-600 mt-1">{selectedOrder.description}</p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowDeliveriesModal(false);
+                  setOrderDeliveries([]);
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6">
+              {loadingDeliveries ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <span className="ml-3 text-gray-600">Loading deliveries...</span>
+                </div>
+              ) : orderDeliveries.length === 0 ? (
+                <div className="text-center py-12">
+                  <Truck className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No deliveries yet</h3>
+                  <p className="text-gray-500">
+                    Deliveries for this order will appear here once they are created.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {orderDeliveries.map((delivery: any) => (
+                    <div key={delivery.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-start gap-3">
+                          <div className={cn(
+                            "p-2 rounded-lg",
+                            delivery.status === 'delivered' ? 'bg-green-100' :
+                            delivery.status === 'in_transit' ? 'bg-blue-100' :
+                            delivery.status === 'cancelled' ? 'bg-red-100' : 'bg-yellow-100'
+                          )}>
+                            <Truck className={cn(
+                              "h-5 w-5",
+                              delivery.status === 'delivered' ? 'text-green-600' :
+                              delivery.status === 'in_transit' ? 'text-blue-600' :
+                              delivery.status === 'cancelled' ? 'text-red-600' : 'text-yellow-600'
+                            )} />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="font-semibold text-gray-900">
+                                {format(new Date(delivery.delivery_date), "MMM dd, yyyy")}
+                              </h4>
+                              <span className={cn(
+                                "px-2 py-1 rounded-full text-xs font-medium",
+                                delivery.status === 'delivered' ? 'bg-green-100 text-green-700' :
+                                delivery.status === 'in_transit' ? 'bg-blue-100 text-blue-700' :
+                                delivery.status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
+                              )}>
+                                {delivery.status}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-600">
+                              Driver: {delivery.driver_name || 'N/A'} • Vehicle: {delivery.vehicle_number || 'N/A'}
+                            </p>
+                            {delivery.notes && (
+                              <p className="text-sm text-gray-500 mt-1">{delivery.notes}</p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-lg font-bold text-gray-900">
+                            {formatCurrency(delivery.total_amount || 0)}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Delivery Items */}
+                      {delivery.delivery_items && delivery.delivery_items.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-gray-200">
+                          <h5 className="text-xs font-semibold text-gray-700 mb-2">Items:</h5>
+                          <div className="space-y-1">
+                            {delivery.delivery_items.map((item: any) => (
+                              <div key={item.id} className="flex justify-between text-sm">
+                                <span className="text-gray-600">
+                                  {item.product_name} ({item.quantity} {item.unit})
+                                </span>
+                                <span className="font-medium text-gray-900">
+                                  {formatCurrency(item.total_price || 0)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="flex-shrink-0 border-t border-gray-200 px-6 py-4">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setShowDeliveriesModal(false);
+                  setOrderDeliveries([]);
+                }}
+                className="w-full"
+              >
+                Close
+              </Button>
             </div>
           </div>
         </div>
