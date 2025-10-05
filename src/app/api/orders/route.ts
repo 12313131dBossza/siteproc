@@ -82,9 +82,6 @@ export async function POST(request: NextRequest) {
   try {
     const { profile, supabase, error: profileError } = await getCurrentUserProfile()
     
-    // Log for debugging
-    console.log('Profile check:', { profile, profileError })
-    
     if (profileError || !profile) {
       console.error('Profile error:', profileError)
       return response.error(profileError || 'Unauthorized', 401)
@@ -146,7 +143,8 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('Error creating order:', error)
-      return response.error('Failed to create order', 500)
+      console.error('Error details:', JSON.stringify(error, null, 2))
+      return response.error(`Failed to create order: ${error.message || 'Unknown database error'}`, 500)
     }
 
     // Log activity
