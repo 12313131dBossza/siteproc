@@ -222,35 +222,34 @@ export default function OrdersPage() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Failed to update order: ${response.status}`);
+        throw new Error(errorData.error || `Failed to update order: ${response.status}`);
       }
 
-      const result = await response.json();
-      const updatedOrder = result.data || result;
+      const data = await response.json();
       
-      // Update local state with the updated order
+      // Update local state
       setOrders(prev => prev.map(order => 
-        order.id === selectedOrder.id ? updatedOrder : order
+        order.id === selectedOrder.id ? data.order : order
       ));
 
-      // Close modals and clear state
       setDecisionModalOpen(false);
       setSelectedOrder(null);
       setDecisionNotes('');
       
-      // Show success message
-      const actionText = decisionAction === 'approve' ? 'approved' : 'rejected';
-      toast.success(`Order ${actionText} successfully!`, {
-        description: `The order has been ${actionText} and moved to the ${actionText} tab.`,
+      // Show success toast
+      toast.success(`Order ${decisionAction}d successfully!`, {
+        description: decisionAction === 'approve' 
+          ? 'The order has been approved.' 
+          : 'The order has been rejected.',
         duration: 3000,
       });
 
-      // Refresh the orders list to ensure we have latest data
+      // Refresh orders list
       fetchOrders();
     } catch (error) {
       console.error('Error updating order:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to update order', {
-        description: 'Please try again or contact support.',
+      toast.error('Failed to update order', {
+        description: error instanceof Error ? error.message : 'An error occurred',
         duration: 5000,
       });
     }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUserProfile, response } from '@/lib/server-utils'
+import { getCurrentUserProfile } from '@/lib/server-utils'
 
-// PATCH /api/orders/[id] - Update order status (approve/reject)
+// PATCH /api/orders/[id] - Approve or reject an order
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -10,7 +10,8 @@ export async function PATCH(
     const { profile, supabase, error: profileError } = await getCurrentUserProfile()
     
     if (profileError || !profile) {
-      return response.error('Unauthorized', 401)
+      console.error('Profile error:', profileError)
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const body = await request.json()
@@ -19,10 +20,10 @@ export async function PATCH(
 
     // Validate status
     if (!['approved', 'rejected'].includes(status)) {
-      return response.error('Invalid status. Must be "approved" or "rejected"', 400)
+      return NextResponse.json({ error: 'Invalid status. Must be approved or rejected' }, { status: 400 })
     }
 
-    // Get the order to verify it exists and belongs to user's company
+    // Get the order first to verify it exists and user has access
     const { data: order, error: fetchError } = await supabase
       .from('purchase_orders')
       .select(`
@@ -38,27 +39,23 @@ export async function PATCH(
       .single()
 
     if (fetchError || !order) {
-      return response.error('Order not found', 404)
+      console.error('Order fetch error:', fetchError)
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
 
     // Prepare update data
     const updateData: any = {
-      status,
+      status: status,
       updated_at: new Date().toISOString()
     }
 
     if (status === 'approved') {
       updateData.approved_by = profile.id
       updateData.approved_at = new Date().toISOString()
-      updateData.rejected_by = null
-      updateData.rejected_at = null
-      updateData.rejection_reason = null
     } else if (status === 'rejected') {
       updateData.rejected_by = profile.id
       updateData.rejected_at = new Date().toISOString()
       updateData.rejection_reason = rejection_reason || notes || 'No reason provided'
-      updateData.approved_by = null
-      updateData.approved_at = null
     }
 
     // Update the order
@@ -77,18 +74,28 @@ export async function PATCH(
       .single()
 
     if (updateError) {
-      console.error('Error updating order:', updateError)
-      return response.error('Failed to update order', 500)
+      console.error('Order update error:', updateError)
+      return NextResponse.json({ 
+        error: 'Failed to update order', 
+        details: updateError.message 
+      }, { status: 500 })
     }
 
-    return response.success(updatedOrder)
+    return NextResponse.json({ 
+      ok: true, 
+      order: updatedOrder,
+      message: `Order ${status} successfully` 
+    })
   } catch (error) {
     console.error('Error in PATCH /api/orders/[id]:', error)
-    return response.error('Internal server error', 500)
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
   }
 }
 
-// GET /api/orders/[id] - Get single order details
+// GET /api/orders/[id] - Get a single order
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -97,7 +104,7 @@ export async function GET(
     const { profile, supabase, error: profileError } = await getCurrentUserProfile()
     
     if (profileError || !profile) {
-      return response.error('Unauthorized', 401)
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const orderId = params.id
@@ -117,12 +124,12 @@ export async function GET(
       .single()
 
     if (error || !order) {
-      return response.error('Order not found', 404)
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
 
-    return response.success(order)
+    return NextResponse.json({ ok: true, data: order })
   } catch (error) {
     console.error('Error in GET /api/orders/[id]:', error)
-    return response.error('Internal server error', 500)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
