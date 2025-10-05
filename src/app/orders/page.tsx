@@ -30,29 +30,24 @@ import Link from "next/link";
 
 interface Order {
   id: string;
-  product_id: string;
-  qty: number;
-  notes?: string | null;
+  project_id: string;
+  amount: number;
+  description: string;
+  category: string;
   status: "pending" | "approved" | "rejected";
-  po_number?: string | null;
+  requested_by: string;
+  requested_at: string;
+  approved_by?: string | null;
+  approved_at?: string | null;
+  rejected_by?: string | null;
+  rejected_at?: string | null;
+  rejection_reason?: string | null;
   created_at: string;
-  decided_at?: string | null;
-  product?: {
+  updated_at?: string | null;
+  projects?: {
     id: string;
     name: string;
-    sku: string;
-    price: number;
-    unit: string;
-  };
-  created_by_profile?: {
-    id: string;
-    full_name: string;
-    email: string;
-  };
-  decided_by_profile?: {
-    id: string;
-    full_name: string;
-    email: string;
+    company_id: string;
   };
 }
 
@@ -154,14 +149,14 @@ export default function OrdersPage() {
     const rejected = orders.filter(o => o.status === 'rejected').length;
     
     const totalValue = orders.reduce((sum, order) => {
-      return sum + (order.product?.price || 0) * order.qty;
+      return sum + (order.amount || 0);
     }, 0);
     
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const thisMonth = orders
       .filter(o => new Date(o.created_at) >= startOfMonth)
-      .reduce((sum, o) => sum + (o.product?.price || 0) * o.qty, 0);
+      .reduce((sum, o) => sum + (o.amount || 0), 0);
 
     return { total, pending, approved, rejected, totalValue, thisMonth };
   };
@@ -198,9 +193,8 @@ export default function OrdersPage() {
     const matchesTab = activeTab === "all" || !tabs.find(tab => tab.id === activeTab)?.filter || 
                      tabs.find(tab => tab.id === activeTab)?.filter?.(order);
     const matchesSearch = !searchQuery || 
-                         order.product?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         order.product?.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         order.notes?.toLowerCase().includes(searchQuery.toLowerCase());
+                         order.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         order.category?.toLowerCase().includes(searchQuery.toLowerCase());
     
     return matchesTab && matchesSearch;
   });
@@ -421,8 +415,8 @@ export default function OrdersPage() {
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-semibold text-gray-900">{order.product?.name}</h4>
-                          <span className="text-sm text-gray-500">({order.product?.sku})</span>
+                          <h4 className="font-semibold text-gray-900">{order.description}</h4>
+                          <span className="text-sm text-gray-500">({order.category})</span>
                           <span className={cn(
                             "px-2 py-1 rounded-full text-xs font-medium",
                             getStatusColor(order.status)
@@ -432,19 +426,15 @@ export default function OrdersPage() {
                           </span>
                         </div>
                         <p className="text-sm text-gray-600 mb-2">
-                          Quantity: {order.qty} {order.product?.unit}
-                          {order.po_number && (
-                            <span className="ml-4 text-blue-600">PO: {order.po_number}</span>
-                          )}
+                          Project: {order.projects?.name || 'N/A'}
                         </p>
-                        {order.notes && (
-                          <p className="text-sm text-gray-500 mb-2">{order.notes}</p>
-                        )}
                         <div className="flex items-center gap-4 text-xs text-gray-500">
                           <span>Created {format(new Date(order.created_at), "MMM dd, yyyy")}</span>
-                          <span>by {order.created_by_profile?.full_name}</span>
-                          {order.decided_by_profile && (
-                            <span>Decided by {order.decided_by_profile.full_name}</span>
+                          {order.approved_at && (
+                            <span>Approved {format(new Date(order.approved_at), "MMM dd, yyyy")}</span>
+                          )}
+                          {order.rejected_at && (
+                            <span>Rejected {format(new Date(order.rejected_at), "MMM dd, yyyy")}</span>
                           )}
                         </div>
                       </div>
@@ -452,10 +442,10 @@ export default function OrdersPage() {
                     <div className="flex items-center gap-3">
                       <div className="text-right">
                         <div className="text-lg font-bold text-gray-900">
-                          {formatCurrency((order.product?.price || 0) * order.qty)}
+                          {formatCurrency(order.amount)}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {formatCurrency(order.product?.price || 0)} per {order.product?.unit}
+                          {order.category}
                         </div>
                       </div>
                       <div className="flex gap-1">
@@ -510,14 +500,12 @@ export default function OrdersPage() {
               {decisionAction === 'approve' ? 'Approve' : 'Reject'} Order
             </h3>
             <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-              <h4 className="font-medium text-gray-900">{selectedOrder.product?.name}</h4>
+              <h4 className="font-medium text-gray-900">{selectedOrder.description}</h4>
               <p className="text-sm text-gray-600">
-                Quantity: {selectedOrder.qty} {selectedOrder.product?.unit} • 
-                Total: {formatCurrency((selectedOrder.product?.price || 0) * selectedOrder.qty)}
+                Category: {selectedOrder.category} • 
+                Total: {formatCurrency(selectedOrder.amount)}
               </p>
-              {selectedOrder.notes && (
-                <p className="text-sm text-gray-500 mt-1">{selectedOrder.notes}</p>
-              )}
+              <p className="text-sm text-gray-500 mt-1">Project: {selectedOrder.projects?.name}</p>
             </div>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
