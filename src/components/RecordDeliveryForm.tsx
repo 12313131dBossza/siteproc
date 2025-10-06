@@ -22,16 +22,19 @@ interface RecordDeliveryFormProps {
   initialData?: any
   deliveryId?: string
   isModal?: boolean
+  preselectedOrderId?: string // UUID of the purchase order
 }
 
-export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, deliveryId, isModal = false }: RecordDeliveryFormProps) {
+export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, deliveryId, isModal = false, preselectedOrderId }: RecordDeliveryFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [images, setImages] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [projects, setProjects] = useState<Project[]>([])
+  const [orders, setOrders] = useState<any[]>([])
   
   const [formData, setFormData] = useState({
+    order_uuid: preselectedOrderId || '',
     order_id: '',
     driver_name: '',
     vehicle_number: '',
@@ -62,14 +65,29 @@ export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, d
     }
   }
 
+  // Fetch orders for dropdown
+  const fetchOrders = async () => {
+    try {
+      const response = await fetch('/api/orders')
+      if (response.ok) {
+        const data = await response.json()
+        setOrders(data.orders || [])
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error)
+    }
+  }
+
   useEffect(() => {
     fetchProjects()
+    fetchOrders()
   }, [])
 
   // Load initial data for editing
   useEffect(() => {
     if (initialData) {
       setFormData({
+        order_uuid: initialData.order_uuid || '',
         order_id: initialData.order_id || '',
         driver_name: initialData.driver_name || '',
         vehicle_number: initialData.vehicle_number || '',
@@ -173,6 +191,7 @@ export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, d
       }
 
       const deliveryData = {
+        order_uuid: formData.order_uuid || undefined,
         order_id: formData.order_id || `ORDER-${Date.now()}`,
         driver_name: formData.driver_name,
         vehicle_number: formData.vehicle_number,
@@ -226,6 +245,7 @@ export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, d
       
       // Reset form
       setFormData({
+        order_uuid: '',
         order_id: '',
         driver_name: '',
         vehicle_number: '',
@@ -295,22 +315,40 @@ export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, d
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Purchase Order Selection */}
+        <div>
+          <label htmlFor="order_uuid" className="block text-sm font-medium text-gray-700 mb-1">
+            Select Purchase Order *
+          </label>
+          <select
+            id="order_uuid"
+            required
+            value={formData.order_uuid}
+            onChange={(e) => {
+              const selectedOrder = orders.find(o => o.id === e.target.value)
+              setFormData(prev => ({ 
+                ...prev, 
+                order_uuid: e.target.value,
+                order_id: selectedOrder?.order_id || ''
+              }))
+            }}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            disabled={!!preselectedOrderId}
+          >
+            <option value="">Select an order...</option>
+            {orders.map(order => (
+              <option key={order.id} value={order.id}>
+                {order.order_id || `Order ${order.id.slice(0, 8)}`} - {order.description} (${order.total_amount})
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-gray-500 mt-1">
+            Select the purchase order this delivery is for
+          </p>
+        </div>
+
         {/* Basic Info */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="order_id" className="block text-sm font-medium text-gray-700 mb-1">
-              Order ID (Optional)
-            </label>
-            <input
-              type="text"
-              id="order_id"
-              value={formData.order_id}
-              onChange={(e) => setFormData(prev => ({ ...prev, order_id: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="AUTO-GENERATED"
-            />
-          </div>
-
           <div>
             <label htmlFor="delivery_date" className="block text-sm font-medium text-gray-700 mb-1">
               Delivery Date *

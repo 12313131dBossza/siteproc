@@ -95,6 +95,13 @@ export default function OrdersPage() {
   const [showDeliveriesModal, setShowDeliveriesModal] = useState(false);
   const [orderDeliveries, setOrderDeliveries] = useState<any[]>([]);
   const [loadingDeliveries, setLoadingDeliveries] = useState(false);
+  const [showQuickDeliveryModal, setShowQuickDeliveryModal] = useState(false);
+  const [quickDeliveryForm, setQuickDeliveryForm] = useState({
+    quantity: '',
+    driver_name: '',
+    vehicle_number: '',
+    notes: ''
+  });
 
   useEffect(() => {
     fetchUserProfile();
@@ -148,6 +155,70 @@ export default function OrdersPage() {
       setOrderDeliveries([]);
     } finally {
       setLoadingDeliveries(false);
+    }
+  };
+
+  const handleQuickDelivery = async () => {
+    if (!selectedOrder) return;
+    
+    try {
+      setLoading(true);
+      
+      // Get the first item from the order
+      const orderItem = selectedOrder.items?.[0];
+      if (!orderItem) {
+        throw new Error('Order has no items');
+      }
+
+      const quantity = parseFloat(quickDeliveryForm.quantity);
+      if (isNaN(quantity) || quantity <= 0) {
+        throw new Error('Please enter a valid quantity');
+      }
+
+      const deliveryData = {
+        order_uuid: selectedOrder.id,
+        order_id: selectedOrder.order_id,
+        driver_name: quickDeliveryForm.driver_name || 'N/A',
+        vehicle_number: quickDeliveryForm.vehicle_number || 'N/A',
+        delivery_date: new Date().toISOString(),
+        status: 'delivered',
+        notes: quickDeliveryForm.notes || `Delivery of ${quantity} ${orderItem.unit}`,
+        items: [{
+          product_name: orderItem.product_name,
+          quantity: quantity,
+          unit: orderItem.unit,
+          unit_price: orderItem.unit_price,
+          total_price: quantity * orderItem.unit_price
+        }]
+      };
+
+      const response = await fetch('/api/deliveries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(deliveryData)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create delivery');
+      }
+
+      toast.success('Delivery created successfully!');
+      
+      // Reset form and close modal
+      setQuickDeliveryForm({ quantity: '', driver_name: '', vehicle_number: '', notes: '' });
+      setShowQuickDeliveryModal(false);
+      
+      // Refresh deliveries and orders
+      fetchDeliveries(selectedOrder.id);
+      fetchOrders();
+      
+    } catch (error) {
+      console.error('Error creating delivery:', error);
+      toast.error('Failed to create delivery', {
+        description: error instanceof Error ? error.message : 'An error occurred'
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -954,16 +1025,23 @@ export default function OrdersPage() {
                 <p className="text-sm text-gray-600 mt-1">{selectedOrder.description}</p>
               </div>
               <div className="flex items-center gap-3">
-                <Link href="/deliveries">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Create Delivery
-                  </Button>
-                </Link>
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => {
+                    setQuickDeliveryForm({
+                      quantity: selectedOrder.remaining_qty?.toString() || '',
+                      driver_name: '',
+                      vehicle_number: '',
+                      notes: ''
+                    });
+                    setShowQuickDeliveryModal(true);
+                  }}
+                >
+                  <Plus className="h-4 w-4" />
+                  Quick Delivery
+                </Button>
                 <button
                   onClick={() => {
                     setShowDeliveriesModal(false);
@@ -986,14 +1064,23 @@ export default function OrdersPage() {
                   <Truck className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No deliveries yet</h3>
                   <p className="text-gray-500 mb-6">
-                    Deliveries for this order will appear here once they are created.
+                    Click the button below to create a delivery for this order.
                   </p>
-                  <Link href="/deliveries">
-                    <Button className="gap-2">
-                      <Plus className="h-4 w-4" />
-                      Create First Delivery
-                    </Button>
-                  </Link>
+                  <Button 
+                    className="gap-2"
+                    onClick={() => {
+                      setQuickDeliveryForm({
+                        quantity: selectedOrder.remaining_qty?.toString() || '',
+                        driver_name: '',
+                        vehicle_number: '',
+                        notes: ''
+                      });
+                      setShowQuickDeliveryModal(true);
+                    }}
+                  >
+                    <Plus className="h-4 w-4" />
+                    Create Delivery
+                  </Button>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -1077,6 +1164,141 @@ export default function OrdersPage() {
               >
                 Close
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Delivery Modal */}
+      {showQuickDeliveryModal && selectedOrder && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowQuickDeliveryModal(false);
+            }
+          }}
+        >
+          <div className="bg-white rounded-xl max-w-md w-full shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
+            <div className="flex-shrink-0 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between rounded-t-xl">
+              <div>
+                <h2 className="text-xl font-semibold text-white">Quick Delivery</h2>
+                <p className="text-sm text-blue-100 mt-1">{selectedOrder.description}</p>
+              </div>
+              <button
+                onClick={() => setShowQuickDeliveryModal(false)}
+                className="text-white/80 hover:text-white transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              {/* Order Info */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Product:</span>
+                  <span className="font-medium text-gray-900">{selectedOrder.items?.[0]?.product_name}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Ordered:</span>
+                  <span className="font-medium text-gray-900">{selectedOrder.ordered_qty?.toFixed(2)} {selectedOrder.items?.[0]?.unit}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Already Delivered:</span>
+                  <span className="font-medium text-green-600">{selectedOrder.delivered_qty?.toFixed(2) || '0.00'} {selectedOrder.items?.[0]?.unit}</span>
+                </div>
+                <div className="flex justify-between text-sm border-t border-blue-300 pt-2">
+                  <span className="text-gray-600 font-semibold">Remaining:</span>
+                  <span className="font-bold text-orange-600">{selectedOrder.remaining_qty?.toFixed(2) || '0.00'} {selectedOrder.items?.[0]?.unit}</span>
+                </div>
+              </div>
+
+              {/* Delivery Form */}
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Quantity to Deliver * <span className="text-xs text-gray-500">(max: {selectedOrder.remaining_qty?.toFixed(2)})</span>
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    max={selectedOrder.remaining_qty || 0}
+                    value={quickDeliveryForm.quantity}
+                    onChange={(e) => setQuickDeliveryForm(prev => ({ ...prev, quantity: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter quantity"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Driver Name (optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={quickDeliveryForm.driver_name}
+                    onChange={(e) => setQuickDeliveryForm(prev => ({ ...prev, driver_name: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="e.g., John Doe"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Vehicle Number (optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={quickDeliveryForm.vehicle_number}
+                    onChange={(e) => setQuickDeliveryForm(prev => ({ ...prev, vehicle_number: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="e.g., TRK-123"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Notes (optional)
+                  </label>
+                  <textarea
+                    value={quickDeliveryForm.notes}
+                    onChange={(e) => setQuickDeliveryForm(prev => ({ ...prev, notes: e.target.value }))}
+                    rows={2}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Optional delivery notes..."
+                  />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4 border-t border-gray-200">
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowQuickDeliveryModal(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleQuickDelivery}
+                  disabled={!quickDeliveryForm.quantity || parseFloat(quickDeliveryForm.quantity) <= 0 || loading}
+                  className="flex-1 gap-2"
+                >
+                  {loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Truck className="h-4 w-4" />
+                      Create Delivery
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         </div>
