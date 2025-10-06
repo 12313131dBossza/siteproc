@@ -1,66 +1,57 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUserProfile, validateRole, logActivity, getProjectSummary, response } from '@/lib/server-utils'
+import { sbServer } from '@/lib/supabase-server'
 
-// GET /api/projects/[id] - Get specific project with summary
+// GET /api/projects/[id] - Get specific project
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const { profile, supabase } = await getCurrentUserProfile()
+    const supabase = await sbServer()
     
-    // Get project
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Get user's company
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('company_id')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile?.company_id) {
+      return NextResponse.json({ error: 'No company associated' }, { status: 400 })
+    }
+
+    // Get project - only select fields that exist
     const { data: project, error } = await supabase
       .from('projects')
-      .select(`
-        id,
-        name,
-        project_number,
-        budget,
-        status,
-        company_id,
-        created_by,
-        created_at,
-        updated_at
-      `)
+      .select('*')
       .eq('id', params.id)
       .eq('company_id', profile.company_id)
       .single()
 
     if (error) {
+      console.error('❌ Error fetching project:', error)
       if (error.code === 'PGRST116') {
-        return response.error('Project not found', 404)
+        return NextResponse.json({ error: 'Project not found' }, { status: 404 })
       }
-      console.error('Error fetching project:', error)
-      return response.error('Failed to fetch project', 500)
+      return NextResponse.json({ error: 'Failed to fetch project', details: error.message }, { status: 500 })
     }
 
-    // Get project summary
-    const summary = await getProjectSummary(project.id, profile.company_id)
-    const projectWithSummary = {
+    // Map project_number to code for frontend compatibility
+    const projectWithCode = {
       ...project,
-      code: project.project_number, // Map for frontend compatibility
-      summary: {
-        totalOrders: summary.totalOrders,
-        approvedOrders: summary.approvedOrders,
-        pendingOrders: summary.pendingOrders,
-        rejectedOrders: summary.rejectedOrders,
-        totalExpenses: summary.totalExpenses,
-        approvedExpenses: summary.approvedExpenses,
-        pendingExpenses: summary.pendingExpenses,
-        totalDeliveries: summary.totalDeliveries,
-        completedDeliveries: summary.completedDeliveries,
-        pendingDeliveries: summary.pendingDeliveries,
-        totalSpent: summary.totalSpent,
-        budgetRemaining: project.budget - summary.totalSpent,
-        budgetUsedPercent: project.budget > 0 ? (summary.totalSpent / project.budget) * 100 : 0
-      }
+      code: project.project_number
     }
 
-    return response.success(projectWithSummary)
-  } catch (error) {
-    console.error('Error in GET /api/projects/[id]:', error)
-    return response.error('Internal server error', 500)
+    console.log('✅ Project fetched:', projectWithCode.id, projectWithCode.name)
+    return NextResponse.json({ data: projectWithCode })
+  } catch (error: any) {
+    console.error('❌ Error in GET /api/projects/[id]:', error)
+    return NextResponse.json({ error: 'Internal server error', details: error.message }, { status: 500 })
   }
 }
 
