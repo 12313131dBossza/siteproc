@@ -57,18 +57,21 @@ export function AddItemModal({ isOpen, onClose, projectId, type, onSuccess }: Ad
           ...orderForm,
           project_id: projectId,
         };
+        console.log('Creating order:', body);
       } else if (type === 'expense') {
         endpoint = `/api/expenses`;
         body = {
           ...expenseForm,
           project_id: projectId,
         };
+        console.log('Creating expense:', body);
       } else if (type === 'delivery') {
         endpoint = `/api/deliveries`;
         body = {
           ...deliveryForm,
           project_id: projectId,
         };
+        console.log('Creating delivery:', body);
       }
 
       const res = await fetch(endpoint, {
@@ -77,9 +80,11 @@ export function AddItemModal({ isOpen, onClose, projectId, type, onSuccess }: Ad
         body: JSON.stringify(body),
       });
 
+      const responseData = await res.json().catch(() => ({ error: 'Invalid response from server' }));
+      console.log('API Response:', responseData);
+
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ error: 'Failed to create item' }));
-        throw new Error(errorData.error || errorData.details || 'Failed to create item');
+        throw new Error(responseData.error || responseData.details || `Failed to create ${type} (${res.status})`);
       }
 
       // Success!
@@ -91,7 +96,8 @@ export function AddItemModal({ isOpen, onClose, projectId, type, onSuccess }: Ad
       setExpenseForm({ vendor: '', category: 'materials', amount: 0, description: '', status: 'pending' });
       setDeliveryForm({ delivery_date: new Date().toISOString().split('T')[0], status: 'pending', notes: '' });
     } catch (err: any) {
-      setError(err.message);
+      console.error('Form submission error:', err);
+      setError(err.message || 'Failed to create item');
     } finally {
       setLoading(false);
     }
