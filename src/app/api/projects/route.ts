@@ -98,10 +98,13 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('Insert error:', error)
+      console.error('❌ PROJECT INSERT ERROR:', error)
+      console.error('Attempted to insert:', projectData)
       return NextResponse.json({ 
         error: 'Failed to create project', 
-        details: error.message 
+        details: error.message,
+        hint: error.hint,
+        code: error.code
       }, { status: 500 })
     }
 

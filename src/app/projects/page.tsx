@@ -80,7 +80,9 @@ export default function ProjectsPage() {
       load();
     } else {
       const e = await res.json().catch(()=>({}));
-      alert(e.error || "Failed to create project");
+      console.error('Project creation failed:', e);
+      const errorMsg = e.details ? `${e.error}: ${e.details}` : (e.error || "Failed to create project");
+      alert(errorMsg);
     }
   }
 

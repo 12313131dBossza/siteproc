@@ -1,6 +1,7 @@
 "use client"
 import React, { useEffect, useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import { AppLayout } from '@/components/app-layout'
 
 class Boundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; message: string }> {
   state = { hasError: false, message: '' }
@@ -154,8 +155,9 @@ export default function ProjectDetailPage() {
   const variance = Number(rollup?.variance || 0)
 
   return (
-    <Boundary>
-    <div className="max-w-7xl mx-auto p-6 space-y-6">
+    <AppLayout>
+      <Boundary>
+        <div className="max-w-7xl mx-auto p-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-start gap-4">
@@ -337,8 +339,9 @@ export default function ProjectDetailPage() {
           <div className="pt-2 border-t mt-4 text-xs text-gray-400">Bulk assignment UI upgrade in progress; previous textarea method removed.</div>
         </div>
       )}
-    </div>
-    </Boundary>
+        </div>
+      </Boundary>
+    </AppLayout>
   )
 }
 
