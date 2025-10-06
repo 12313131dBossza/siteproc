@@ -70,8 +70,12 @@ export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, d
     try {
       const response = await fetch('/api/orders')
       if (response.ok) {
-        const data = await response.json()
-        setOrders(data.orders || [])
+        const result = await response.json()
+        console.log('📦 Fetched orders:', result)
+        // API returns {ok: true, data: [...]} format
+        const ordersList = result.data || result.orders || result || []
+        console.log('📋 Orders list:', ordersList)
+        setOrders(ordersList)
       }
     } catch (error) {
       console.error('Error fetching orders:', error)
@@ -326,10 +330,11 @@ export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, d
             value={formData.order_uuid}
             onChange={(e) => {
               const selectedOrder = orders.find(o => o.id === e.target.value)
+              const generatedOrderId = selectedOrder ? `ORD-${Date.now()}` : ''
               setFormData(prev => ({ 
                 ...prev, 
                 order_uuid: e.target.value,
-                order_id: selectedOrder?.order_id || ''
+                order_id: generatedOrderId
               }))
             }}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -338,12 +343,12 @@ export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, d
             <option value="">Select an order...</option>
             {orders.map(order => (
               <option key={order.id} value={order.id}>
-                {order.order_id || `Order ${order.id.slice(0, 8)}`} - {order.description} (${order.total_amount})
+                {order.description || 'Unnamed Order'} - ${order.amount || '0.00'} ({order.status || 'pending'})
               </option>
             ))}
           </select>
           <p className="text-xs text-gray-500 mt-1">
-            Select the purchase order this delivery is for
+            {orders.length === 0 ? 'Loading orders...' : `Select the purchase order this delivery is for (${orders.length} orders available)`}
           </p>
         </div>
 
