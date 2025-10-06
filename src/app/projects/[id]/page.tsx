@@ -32,20 +32,35 @@ export default function ProjectDetailPage() {
     try {
       console.log('Project detail: loading project:', id);
       const [p, r] = await Promise.all([
-        fetch(`/api/projects/${id}`, { headers: { 'Accept': 'application/json' } }).then(r=>{
+        fetch(`/api/projects/${id}`, { headers: { 'Accept': 'application/json' } }).then(async r=>{
           console.log('Project detail: project response status:', r.status);
-          return r.json();
+          const json = await r.json();
+          console.log('Project detail: project response body:', json);
+          if (!r.ok) throw new Error(json.error || `HTTP ${r.status}`);
+          return json;
         }),
-        fetch(`/api/projects/${id}/rollup`, { headers: { 'Accept': 'application/json' } }).then(r=>{
+        fetch(`/api/projects/${id}/rollup`, { headers: { 'Accept': 'application/json' } }).then(async r=>{
           console.log('Project detail: rollup response status:', r.status);
-          return r.json();
+          const json = await r.json();
+          console.log('Project detail: rollup response body:', json);
+          if (!r.ok) throw new Error(json.error || `HTTP ${r.status}`);
+          return json;
         })
       ])
-      console.log('Project detail: project data:', p);
-      console.log('Project detail: rollup data:', r);
-      if (p?.error) throw new Error(p.error)
-      setProject(p.data)
-      setRollup(r.data)
+      console.log('Project detail: about to set project from:', p);
+      console.log('Project detail: about to set rollup from:', r);
+      
+      // Handle both wrapped and unwrapped responses
+      const projectData = p.data || p;
+      const rollupData = r.data || r;
+      
+      console.log('Project detail: setting project to:', projectData);
+      console.log('Project detail: setting rollup to:', rollupData);
+      
+      if (!projectData) throw new Error('No project data received');
+      
+      setProject(projectData)
+      setRollup(rollupData)
     } catch (e:any) {
       console.error('Project detail: load error:', e);
       setError(e?.message || 'Failed to load project')
