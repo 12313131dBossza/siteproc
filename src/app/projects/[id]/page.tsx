@@ -140,16 +140,23 @@ export default function ProjectDetailPage() {
 
   if (!id) return null
   if (!project) return (
-    <div className="p-6">
+    <AppLayout>
+      <div className="p-6">
       {error ? (
         <div className="rounded border border-red-200 bg-red-50 text-red-700 p-3">
           <div className="font-medium mb-1">Couldn’t load project</div>
           <div className="text-sm">{error}</div>
         </div>
       ) : (
-        <div>Loading…</div>
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="text-center space-y-3">
+              <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+              <div className="text-gray-600">Loading project details...</div>
+            </div>
+          </div>
       )}
-    </div>
+      </div>
+    </AppLayout>
   )
 
   const variance = Number(rollup?.variance || 0)
