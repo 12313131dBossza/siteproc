@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase-server';
+import { sbServer } from '@/lib/supabase-server';
 import { getCurrentUserProfile } from '@/lib/server-utils';
 
 // GET /api/activity - List activity logs with filters and pagination
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const supabase = createClient();
+    const supabase = await sbServer();
 
     // Get query parameters
     const searchParams = request.nextUrl.searchParams;
@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = createClient();
+    const supabase = await sbServer();
     const body = await request.json();
     const {
       type,
@@ -230,7 +230,7 @@ export async function logActivity(params: {
   company_id?: string;
 }) {
   try {
-    const supabase = createClient();
+    const supabase = await sbServer();
     
     // Get user and company if not provided
     let userId = params.user_id;
