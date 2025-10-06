@@ -2,6 +2,8 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { AppLayout } from '@/components/app-layout'
+import { AddItemModal } from '@/components/AddItemModal'
+import { Plus } from 'lucide-react'
 
 class Boundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; message: string }> {
   state = { hasError: false, message: '' }
@@ -17,6 +19,8 @@ export default function ProjectDetailPage() {
   const [project, setProject] = useState<any>(null)
   const [rollup, setRollup] = useState<any>(null)
   const [tab, setTab] = useState<'overview'|'orders'|'expenses'|'deliveries'>('overview')
+  // Modal state for adding items
+  const [showAddModal, setShowAddModal] = useState<'order' | 'expense' | 'delivery' | null>(null)
   // Assignment textarea state (kept for fallback bulk paste modal later)
   const [assign, setAssign] = useState({ orders: '', expenses: '', deliveries: '' })
   // Loaded items for each tab
@@ -206,9 +210,18 @@ export default function ProjectDetailPage() {
             <option value="on_hold">On Hold</option>
             <option value="closed">Closed</option>
           </select>
-          <button onClick={()=>load()} className="h-9 px-3 rounded-lg border bg-white hover:bg-gray-50 text-sm shadow-sm">Refresh</button>
-          <button onClick={()=>createTestOrder()} disabled={saving} className="h-9 px-3 rounded-lg border bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 text-sm shadow-sm">
-            {saving ? 'Creating...' : 'Create Test Order'}
+          <button onClick={()=>load()} className="h-9 px-3 rounded-lg border bg-white hover:bg-gray-50 text-sm shadow-sm flex items-center gap-2">
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Refresh
+          </button>
+          <button 
+            onClick={() => setShowAddModal('order')} 
+            className="h-9 px-3 rounded-lg border bg-blue-600 text-white hover:bg-blue-700 text-sm shadow-sm flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Quick Add
           </button>
         </div>
       </div>
@@ -363,25 +376,16 @@ export default function ProjectDetailPage() {
       )}
 
       {tab!=='overview' && (
-        <div className="bg-white border rounded p-4 space-y-4">
+        <div className="bg-white border rounded-lg p-6 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-medium capitalize">{tab}</h2>
-            <div className="flex items-center gap-2">
-              <button onClick={()=>setTab(tab)} disabled className="text-xs text-gray-400 border rounded px-2 py-1 cursor-default">Linked</button>
-              {tab==='orders' && (
-                <button
-                  onClick={async ()=>{
-                    try {
-                      const res = await fetch(`/api/projects/${id}/test-order`, { method: 'POST' });
-                      if (!res.ok) throw new Error('Failed to create test order');
-                      // Reload orders tab
-                      setTab('orders');
-                    } catch (e) { alert((e as any)?.message || 'Failed'); }
-                  }}
-                  className="text-xs text-blue-600 border border-blue-200 rounded px-2 py-1 hover:bg-blue-50"
-                >Create test order</button>
-              )}
-            </div>
+            <h2 className="text-lg font-semibold capitalize">{tab}</h2>
+            <button
+              onClick={() => setShowAddModal(tab === 'orders' ? 'order' : tab === 'expenses' ? 'expense' : 'delivery')}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm"
+            >
+              <Plus className="h-4 w-4" />
+              Add {tab === 'orders' ? 'Order' : tab === 'expenses' ? 'Expense' : 'Delivery'}
+            </button>
           </div>
           {loadingTab && <div className="text-sm text-gray-500">Loading {tab}…</div>}
           {!loadingTab && tab==='expenses' && (
@@ -412,7 +416,24 @@ export default function ProjectDetailPage() {
                   </tbody>
                 </table>
               </div>
-            ) : <div className="text-sm text-gray-500">No expenses linked yet.</div>
+            ) : (
+              <div className="text-center py-12">
+                <div className="text-gray-400 mb-3">
+                  <svg className="h-16 w-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <h3 className="text-sm font-medium text-gray-900 mb-1">No expenses yet</h3>
+                <p className="text-sm text-gray-500 mb-4">Get started by adding your first expense to this project.</p>
+                <button
+                  onClick={() => setShowAddModal('expense')}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Expense
+                </button>
+              </div>
+            )
           )}
           {!loadingTab && tab==='orders' && (
             orders.length? (
@@ -444,7 +465,24 @@ export default function ProjectDetailPage() {
                   </tbody>
                 </table>
               </div>
-            ) : <div className="text-sm text-gray-500">No orders linked yet.</div>
+            ) : (
+              <div className="text-center py-12">
+                <div className="text-gray-400 mb-3">
+                  <svg className="h-16 w-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                  </svg>
+                </div>
+                <h3 className="text-sm font-medium text-gray-900 mb-1">No orders yet</h3>
+                <p className="text-sm text-gray-500 mb-4">Create your first purchase order for this project.</p>
+                <button
+                  onClick={() => setShowAddModal('order')}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Order
+                </button>
+              </div>
+            )
           )}
           {!loadingTab && tab==='deliveries' && (
             deliveries.length? (
@@ -474,13 +512,45 @@ export default function ProjectDetailPage() {
                   </tbody>
                 </table>
               </div>
-            ) : <div className="text-sm text-gray-500">No deliveries linked yet.</div>
+            ) : (
+              <div className="text-center py-12">
+                <div className="text-gray-400 mb-3">
+                  <svg className="h-16 w-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                  </svg>
+                </div>
+                <h3 className="text-sm font-medium text-gray-900 mb-1">No deliveries yet</h3>
+                <p className="text-sm text-gray-500 mb-4">Track deliveries for this project.</p>
+                <button
+                  onClick={() => setShowAddModal('delivery')}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Delivery
+                </button>
+              </div>
+            )
           )}
-          <div className="pt-2 border-t mt-4 text-xs text-gray-400">Bulk assignment UI upgrade in progress; previous textarea method removed.</div>
         </div>
       )}
         </div>
       </Boundary>
+
+      {/* Add Item Modal */}
+      {showAddModal && (
+        <AddItemModal
+          isOpen={!!showAddModal}
+          onClose={() => setShowAddModal(null)}
+          projectId={id}
+          type={showAddModal}
+          onSuccess={() => {
+            // Reload data
+            load();
+            // Show success message
+            alert(`${showAddModal.charAt(0).toUpperCase() + showAddModal.slice(1)} added successfully!`);
+          }}
+        />
+      )}
     </AppLayout>
   )
 }
