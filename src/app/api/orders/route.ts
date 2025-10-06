@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUserProfile, validateRole, logActivity, getCompanyAdminEmails, response } from '@/lib/server-utils'
+import { getCurrentUserProfile, validateRole, getCompanyAdminEmails, response } from '@/lib/server-utils'
+import { logActivity } from '@/app/api/activity/route'
 import { sendOrderRequestNotification, sendOrderApprovalNotification, sendOrderRejectionNotification } from '@/lib/email'
 
 // GET /api/orders - List orders for user's company
@@ -152,14 +153,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Log activity
-    await logActivity(
-      profile.company_id,
-      profile.id,
-      'order',
-      order.id,
-      'create',
-      { projectId: project_id, amount, description, category }
-    )
+    try {
+      await logActivity({
+        type: 'order',
+        action: 'created',
+        title: `Purchase Order Created`,
+        description: `Order for ${description}`,
+        entity_type: 'order',
+        entity_id: order.id,
+        metadata: { projectId: project_id, amount, description, category },
+        status: 'success',
+        amount: amount
+      })
+    } catch (logError) {
+      console.error('Failed to log activity:', logError)
+    }
 
     // Send notification to admins
     try {

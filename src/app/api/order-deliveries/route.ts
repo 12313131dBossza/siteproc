@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { randomUUID } from 'crypto'
 import { createServerClient } from '@supabase/ssr'
 import { supabaseService } from '@/lib/supabase'
+import { logActivity } from '@/app/api/activity/route'
 import { cookies } from 'next/headers'
 
 export const runtime = 'nodejs'
@@ -688,6 +689,30 @@ export async function POST(req: NextRequest) {
         unit_price: typeof it.unit_price === 'string' ? Number(it.unit_price) : it.unit_price,
         total_price: typeof it.total_price === 'string' ? Number(it.total_price) : it.total_price,
       }))
+    }
+
+    // Log activity for delivery creation
+    try {
+      await logActivity({
+        type: 'delivery',
+        action: 'created',
+        title: `Delivery Created`,
+        description: `Delivery #${newDelivery.id} for Order ${body.order_id} - ${body.items.length} item(s)`,
+        entity_type: 'delivery',
+        entity_id: newDelivery.id,
+        metadata: {
+          order_id: body.order_id,
+          order_uuid: body.order_uuid,
+          items_count: body.items.length,
+          driver_name: body.driver_name,
+          vehicle_number: body.vehicle_number,
+          status: body.status || 'pending'
+        },
+        status: 'success',
+        amount: totalAmount
+      })
+    } catch (logError) {
+      console.error('Failed to log delivery activity:', logError)
     }
 
     return NextResponse.json({

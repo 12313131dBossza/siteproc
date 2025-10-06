@@ -1,6 +1,7 @@
 import { sbServer } from '@/lib/supabase-server';
 import { createServiceClient } from '@/lib/supabase-service';
 import { sendExpenseNotifications } from '@/lib/notifications';
+import { logActivity } from '@/app/api/activity/route';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
@@ -149,6 +150,28 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     } catch (emailError) {
       console.error('Failed to send expense approval notification:', emailError);
       // Don't fail the request if email fails
+    }
+
+    // Log activity for expense approval/rejection
+    try {
+      await logActivity({
+        type: 'expense',
+        action: action === 'approve' ? 'approved' : 'rejected',
+        title: `Expense ${action === 'approve' ? 'Approved' : 'Rejected'}`,
+        description: `${expense.vendor || expense.description || 'Expense'} - ${expense.category || 'uncategorized'}`,
+        entity_type: 'expense',
+        entity_id: expenseId,
+        metadata: {
+          vendor: expense.vendor,
+          category: expense.category,
+          notes: notes,
+          previous_status: expense.status || 'pending'
+        },
+        status: 'success',
+        amount: expense.amount
+      })
+    } catch (logError) {
+      console.error('Failed to log expense approval activity:', logError)
     }
     
     return NextResponse.json({

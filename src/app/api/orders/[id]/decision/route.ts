@@ -1,5 +1,6 @@
 import { sbServer } from '@/lib/supabase-server';
 import { sendOrderNotifications } from '@/lib/notifications';
+import { logActivity } from '@/app/api/activity/route';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(
@@ -112,6 +113,22 @@ export async function POST(
     } catch (emailError) {
       console.error('Failed to send order decision notification:', emailError);
       // Don't fail the request if email fails
+    }
+
+    // Log activity for approval/rejection
+    try {
+      await logActivity({
+        type: 'order',
+        action: action === 'approve' ? 'approved' : 'rejected',
+        title: `Purchase Order ${action === 'approve' ? 'Approved' : 'Rejected'}`,
+        description: `Order ${po_number || orderId} was ${action === 'approve' ? 'approved' : 'rejected'}`,
+        entity_type: 'order',
+        entity_id: orderId,
+        metadata: { po_number, previous_status: 'pending' },
+        status: 'success'
+      });
+    } catch (logError) {
+      console.error('Failed to log activity:', logError);
     }
 
     return NextResponse.json(updatedOrder);

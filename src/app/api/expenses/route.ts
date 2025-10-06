@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sbServer } from '@/lib/supabase-server'
+import { logActivity } from '@/app/api/activity/route'
 
 // GET /api/expenses - List expenses for user's company
 export async function GET(request: NextRequest) {
@@ -153,6 +154,28 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('Expense created successfully:', expense)
+
+    // Log activity for expense creation
+    try {
+      await logActivity({
+        type: 'expense',
+        action: expense.status === 'approved' ? 'approved' : 'created',
+        title: `Expense ${expense.status === 'approved' ? 'Auto-Approved' : 'Created'}`,
+        description: `${expense.vendor || expense.description} - ${expense.category}`,
+        entity_type: 'expense',
+        entity_id: expense.id,
+        metadata: {
+          vendor: expense.vendor,
+          category: expense.category,
+          project_id: expense.project_id,
+          auto_approved: expense.status === 'approved'
+        },
+        status: 'success',
+        amount: expense.amount
+      })
+    } catch (logError) {
+      console.error('Failed to log expense activity:', logError)
+    }
 
     // Return properly formatted response
     return NextResponse.json({
