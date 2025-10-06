@@ -74,19 +74,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No company associated' }, { status: 400 })
     }
 
-    // Create project - ensure all required fields are present
+    // Create project - only include fields that exist in the database
     const projectData = {
       name: body.name || 'Untitled Project',
       project_number: body.code || body.project_number || `PRJ-${Date.now()}`,
-      description: body.description || '',
       status: body.status || 'active',
       company_id: profile.company_id,
       created_by: user.id,
       start_date: body.start_date || new Date().toISOString(),
       end_date: body.end_date || null,
-      budget: parseFloat(body.budget) || 0,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      budget: parseFloat(body.budget) || 0
     }
 
     console.log('Creating project with data:', projectData)
