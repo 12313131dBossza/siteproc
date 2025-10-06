@@ -21,48 +21,111 @@ import {
   XCircle,
   TrendingUp,
   Users,
-  BarChart3
+  BarChart3,
+  FolderOpen
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 interface ActivityItem {
   id: string;
-  type: 'delivery' | 'expense' | 'change-order' | 'user' | 'order' | 'payment';
+  type: 'delivery' | 'expense' | 'change_order' | 'user' | 'order' | 'payment' | 'project' | 'product' | 'other';
   action: string;
   title: string;
   description: string;
-  timestamp: string;
-  user: {
-    name: string;
-    email: string;
-    avatar?: string;
-  };
-  status?: 'success' | 'pending' | 'failed' | 'warning';
-  amount?: number;
+  created_at: string;
+  user_name: string | null;
+  user_email: string | null;
+  status?: 'success' | 'pending' | 'failed' | 'warning' | null;
+  amount?: number | null;
   metadata?: Record<string, any>;
 }
 
 interface ActivityStats {
+  total: number;
   total_today: number;
   total_week: number;
   unique_users: number;
   most_active_type: string;
+  by_type: Record<string, number>;
+  by_status: Record<string, number>;
 }
 
 function useActivity() {
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<ActivityStats>({
+    total: 0,
     total_today: 0,
     total_week: 0,
     unique_users: 0,
-    most_active_type: ''
+    most_active_type: '',
+    by_type: {},
+    by_status: {}
+  });
+
+  const fetchActivities = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await fetch('/api/activity?limit=100');
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch activities: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.ok && result.data) {
+        setActivities(result.data);
+        setStats(result.stats || {
+          total: 0,
+          total_today: 0,
+          total_week: 0,
+          unique_users: 0,
+          most_active_type: '',
+          by_type: {},
+          by_status: {}
+        });
+      } else {
+        throw new Error(result.error || 'Failed to fetch activities');
+      }
+    } catch (err: any) {
+      console.error('Error fetching activities:', err);
+      setError(err.message);
+      // Set empty data on error
+      setActivities([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchActivities();
+  }, []);
+
+  return { activities, loading, stats, error, refetch: fetchActivities };
+}
+
+// Legacy mock data for fallback (keeping structure for reference)
+function useMockActivities_DEPRECATED() {
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<ActivityStats>({
+    total: 0,
+    total_today: 0,
+    total_week: 0,
+    unique_users: 0,
+    most_active_type: '',
+    by_type: {},
+    by_status: {}
   });
 
   useEffect(() => {
     setTimeout(() => {
-      const mockActivities: ActivityItem[] = [
+      const mockActivities_OLD: any[] = [
         {
           id: '1',
           type: 'delivery',
@@ -190,7 +253,7 @@ function useActivity() {
 }
 
 export default function ActivityPage() {
-  const { activities, loading, stats } = useActivity();
+  const { activities, loading, stats, error } = useActivity();
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -200,8 +263,8 @@ export default function ActivityPage() {
 
   const filteredActivities = activities.filter(activity => {
     const matchesSearch = activity.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         activity.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         activity.user.name.toLowerCase().includes(searchTerm.toLowerCase());
+                         (activity.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (activity.user_name || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = typeFilter === 'all' || activity.type === typeFilter;
     const matchesStatus = statusFilter === 'all' || activity.status === statusFilter;
     
@@ -210,13 +273,13 @@ export default function ActivityPage() {
     let matchesTab = true;
     if (selectedTab === 'today') {
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      matchesTab = new Date(activity.timestamp) >= today;
+      matchesTab = new Date(activity.created_at) >= today;
     } else if (selectedTab === 'week') {
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      matchesTab = new Date(activity.timestamp) >= weekAgo;
+      matchesTab = new Date(activity.created_at) >= weekAgo;
     } else if (selectedTab === 'month') {
       const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      matchesTab = new Date(activity.timestamp) >= monthAgo;
+      matchesTab = new Date(activity.created_at) >= monthAgo;
     }
     
     return matchesSearch && matchesType && matchesStatus && matchesTab;
@@ -226,12 +289,15 @@ export default function ActivityPage() {
     const icons = {
       delivery: Package,
       expense: DollarSign,
+      change_order: FileEdit,
       'change-order': FileEdit,
       user: User,
       order: BarChart3,
-      payment: CheckCircle
+      payment: CheckCircle,
+      project: FolderOpen,
+      product: Package
     };
-    const Icon = icons[type as keyof typeof icons] || Activity;
+    const Icon = icons[type.replace('-', '_') as keyof typeof icons] || Activity;
     return <Icon className="h-4 w-4" />;
   };
 
@@ -239,12 +305,15 @@ export default function ActivityPage() {
     const colors = {
       delivery: 'bg-blue-50 text-blue-600 border-blue-200',
       expense: 'bg-green-50 text-green-600 border-green-200',
+      change_order: 'bg-purple-50 text-purple-600 border-purple-200',
       'change-order': 'bg-purple-50 text-purple-600 border-purple-200',
       user: 'bg-orange-50 text-orange-600 border-orange-200',
       order: 'bg-indigo-50 text-indigo-600 border-indigo-200',
-      payment: 'bg-emerald-50 text-emerald-600 border-emerald-200'
+      payment: 'bg-emerald-50 text-emerald-600 border-emerald-200',
+      project: 'bg-cyan-50 text-cyan-600 border-cyan-200',
+      product: 'bg-pink-50 text-pink-600 border-pink-200'
     };
-    return colors[type as keyof typeof colors] || 'bg-gray-50 text-gray-600 border-gray-200';
+    return colors[type.replace('-', '_') as keyof typeof colors] || 'bg-gray-50 text-gray-600 border-gray-200';
   };
 
   const getStatusIcon = (status?: string) => {
@@ -385,10 +454,12 @@ export default function ActivityPage() {
                   <option value="all">All Types</option>
                   <option value="delivery">Deliveries</option>
                   <option value="expense">Expenses</option>
-                  <option value="change-order">Change Orders</option>
+                  <option value="change_order">Change Orders</option>
                   <option value="order">Orders</option>
+                  <option value="project">Projects</option>
                   <option value="user">Users</option>
                   <option value="payment">Payments</option>
+                  <option value="product">Products</option>
                 </select>
                 <select
                   value={statusFilter}
@@ -479,11 +550,17 @@ export default function ActivityPage() {
                             <div className="flex items-center gap-4">
                               <div className="flex items-center gap-2">
                                 <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                                  <span className="text-xs font-semibold text-blue-600">{getInitials(activity.user.name)}</span>
+                                  <span className="text-xs font-semibold text-blue-600">
+                                    {getInitials(activity.user_name || 'System')}
+                                  </span>
                                 </div>
                                 <div>
-                                  <span className="text-sm font-medium text-gray-900">{activity.user.name}</span>
-                                  <div className="text-xs text-gray-500">{activity.user.email}</div>
+                                  <span className="text-sm font-medium text-gray-900">
+                                    {activity.user_name || 'System'}
+                                  </span>
+                                  <div className="text-xs text-gray-500">
+                                    {activity.user_email || 'system@siteproc.com'}
+                                  </div>
                                 </div>
                               </div>
                               
@@ -495,7 +572,7 @@ export default function ActivityPage() {
                             </div>
                             
                             <div className="text-sm text-gray-500">
-                              {format(new Date(activity.timestamp), 'MMM dd, yyyy • HH:mm')}
+                              {format(new Date(activity.created_at), 'MMM dd, yyyy • HH:mm')}
                             </div>
                           </div>
                         </div>
@@ -563,11 +640,13 @@ export default function ActivityPage() {
                     <h4 className="font-medium text-gray-900 mb-2">User Information</h4>
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                        <span className="text-sm font-semibold text-blue-600">{getInitials(selectedActivity.user.name)}</span>
+                        <span className="text-sm font-semibold text-blue-600">
+                          {getInitials(selectedActivity.user_name || 'System')}
+                        </span>
                       </div>
                       <div>
-                        <div className="font-medium">{selectedActivity.user.name}</div>
-                        <div className="text-sm text-gray-500">{selectedActivity.user.email}</div>
+                        <div className="font-medium">{selectedActivity.user_name || 'System'}</div>
+                        <div className="text-sm text-gray-500">{selectedActivity.user_email || 'system@siteproc.com'}</div>
                       </div>
                     </div>
                   </div>
@@ -577,9 +656,9 @@ export default function ActivityPage() {
                   <div>
                     <h4 className="font-medium text-gray-900 mb-2">Timestamp</h4>
                     <div className="text-sm text-gray-600">
-                      {format(new Date(selectedActivity.timestamp), 'EEEE, MMMM dd, yyyy')}
+                      {format(new Date(selectedActivity.created_at), 'EEEE, MMMM dd, yyyy')}
                       <br />
-                      {format(new Date(selectedActivity.timestamp), 'HH:mm:ss')}
+                      {format(new Date(selectedActivity.created_at), 'HH:mm:ss')}
                     </div>
                   </div>
 

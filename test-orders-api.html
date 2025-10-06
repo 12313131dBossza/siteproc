@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Orders API</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+        pre { background: #f4f4f4; padding: 15px; overflow: auto; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Test Orders API</h1>
+    <button onclick="testAPI()">Fetch Orders</button>
+    <div id="result"></div>
+
+    <script>
+        async function testAPI() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<p>Loading...</p>';
+            
+            try {
+                const response = await fetch('/api/orders');
+                const data = await response.json();
+                
+                console.log('Response status:', response.status);
+                console.log('Response data:', data);
+                
+                if (response.ok) {
+                    const orders = data.data || data.orders || data || [];
+                    resultDiv.innerHTML = `
+                        <h2 class="success">✅ Success!</h2>
+                        <p><strong>Status:</strong> ${response.status}</p>
+                        <p><strong>Orders found:</strong> ${orders.length}</p>
+                        <h3>Full Response:</h3>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                        <h3>Orders List:</h3>
+                        <pre>${JSON.stringify(orders, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <h2 class="error">❌ Error</h2>
+                        <p><strong>Status:</strong> ${response.status}</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <h2 class="error">❌ Error</h2>
+                    <p>${error.message}</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
