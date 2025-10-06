@@ -5,9 +5,9 @@ import { getCurrentUserProfile } from '@/lib/server-utils';
 // GET /api/activity - List activity logs with filters and pagination
 export async function GET(request: NextRequest) {
   try {
-    const { user, profile, error: authError } = await getCurrentUserProfile();
+    const { user, profile, error } = await getCurrentUserProfile();
 
-    if (authError || !profile || !user) {
+    if (error || !profile || !user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -20,9 +20,9 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '50');
-    const type = searchParams.get('type');
-    const action = searchParams.get('action');
-    const status = searchParams.get('status');
+    const type = searchParams.get('type'); // delivery, expense, order, etc.
+    const action = searchParams.get('action'); // created, updated, approved, etc.
+    const status = searchParams.get('status'); // success, pending, failed, warning
     const userId = searchParams.get('user_id');
     const entityType = searchParams.get('entity_type');
     const entityId = searchParams.get('entity_id');
@@ -38,14 +38,30 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false });
 
     // Apply filters
-    if (type) query = query.eq('type', type);
-    if (action) query = query.eq('action', action);
-    if (status) query = query.eq('status', status);
-    if (userId) query = query.eq('user_id', userId);
-    if (entityType) query = query.eq('entity_type', entityType);
-    if (entityId) query = query.eq('entity_id', entityId);
-    if (startDate) query = query.gte('created_at', startDate);
-    if (endDate) query = query.lte('created_at', endDate);
+    if (type) {
+      query = query.eq('type', type);
+    }
+    if (action) {
+      query = query.eq('action', action);
+    }
+    if (status) {
+      query = query.eq('status', status);
+    }
+    if (userId) {
+      query = query.eq('user_id', userId);
+    }
+    if (entityType) {
+      query = query.eq('entity_type', entityType);
+    }
+    if (entityId) {
+      query = query.eq('entity_id', entityId);
+    }
+    if (startDate) {
+      query = query.gte('created_at', startDate);
+    }
+    if (endDate) {
+      query = query.lte('created_at', endDate);
+    }
     if (search) {
       query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%,user_name.ilike.%${search}%`);
     }
@@ -54,12 +70,12 @@ export async function GET(request: NextRequest) {
     const offset = (page - 1) * limit;
     query = query.range(offset, offset + limit - 1);
 
-    const { data: activities, error: queryError, count } = await query;
+    const { data: activities, error, count } = await query;
 
-    if (queryError) {
-      console.error('Error fetching activities:', queryError);
+    if (error) {
+      console.error('Error fetching activities:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch activities', details: queryError.message },
+        { error: 'Failed to fetch activities', details: error.message },
         { status: 500 }
       );
     }
@@ -124,16 +140,16 @@ export async function GET(request: NextRequest) {
 // POST /api/activity - Create new activity log
 export async function POST(request: NextRequest) {
   try {
-    const { user, profile, error: authError } = await getCurrentUserProfile();
+    const supabase = createClient();
+    const profile = await getCurrentUserProfile();
 
-    if (authError || !profile || !user) {
+    if (!profile) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
-    const supabase = createClient();
     const body = await request.json();
     const {
       type,
@@ -173,15 +189,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get user details
+    const { data: { user } } = await supabase.auth.getUser();
+
     // Insert activity log
-    const { data: activity, error: insertError } = await supabase
+    const { data: activity, error } = await supabase
       .from('activity_logs')
       .insert({
         type,
         action,
         title,
         description: description || null,
-        user_id: user.id,
+        user_id: user?.id || null,
         user_name: profile.full_name,
         user_email: profile.email,
         company_id: profile.company_id,
@@ -194,10 +213,10 @@ export async function POST(request: NextRequest) {
       .select()
       .single();
 
-    if (insertError) {
-      console.error('Error creating activity:', insertError);
+    if (error) {
+      console.error('Error creating activity:', error);
       return NextResponse.json(
-        { error: 'Failed to create activity', details: insertError.message },
+        { error: 'Failed to create activity', details: error.message },
         { status: 500 }
       );
     }
@@ -239,28 +258,28 @@ export async function logActivity(params: {
     let userEmail = null;
     
     if (!userId || !companyId) {
-      const { user, profile, error: authError } = await getCurrentUserProfile();
-      if (!authError && profile && user) {
-        userId = userId || user.id;
+      const profile = await getCurrentUserProfile();
+      if (profile) {
+        userId = userId || profile.user_id;
         companyId = companyId || profile.company_id;
         userName = profile.full_name;
         userEmail = profile.email;
       }
     } else {
       // Get user details if we have user_id but not name/email
-      const { data: userProfile } = await supabase
+      const { data: profile } = await supabase
         .from('profiles')
         .select('full_name, email')
-        .eq('id', userId)
+        .eq('user_id', userId)
         .single();
       
-      if (userProfile) {
-        userName = userProfile.full_name;
-        userEmail = userProfile.email;
+      if (profile) {
+        userName = profile.full_name;
+        userEmail = profile.email;
       }
     }
 
-    const { data, error: insertError } = await supabase
+    const { data, error } = await supabase
       .from('activity_logs')
       .insert({
         type: params.type,
@@ -280,8 +299,8 @@ export async function logActivity(params: {
       .select()
       .single();
 
-    if (insertError) {
-      console.error('Error logging activity:', insertError);
+    if (error) {
+      console.error('Error logging activity:', error);
       return null;
     }
 
