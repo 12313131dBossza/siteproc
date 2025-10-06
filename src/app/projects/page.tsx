@@ -13,7 +13,9 @@ interface Project {
   code?: string | null;
   status: "active" | "on_hold" | "closed";
   budget: number;
-  rollup?: { actual_expenses?: number; variance?: number; };
+  actual_expenses?: number; // Auto-calculated by triggers
+  variance?: number; // Auto-calculated by triggers
+  rollup?: { actual_expenses?: number; variance?: number; }; // Fallback from rollup API
   created_at?: string;
 }
 
@@ -95,7 +97,7 @@ export default function ProjectsPage() {
 
   const stats = useMemo(() => {
     const totalBudget = projects.reduce((sum, p) => sum + Number(p.budget), 0);
-    const totalActual = projects.reduce((sum, p) => sum + Number(p.rollup?.actual_expenses || 0), 0);
+    const totalActual = projects.reduce((sum, p) => sum + Number(p.actual_expenses ?? p.rollup?.actual_expenses ?? 0), 0);
     const totalVariance = totalBudget - totalActual;
     const activeCount = projects.filter(p => p.status === "active").length;
     return { totalBudget, totalActual, totalVariance, activeCount, totalCount: projects.length };

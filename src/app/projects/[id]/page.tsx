@@ -213,11 +213,20 @@ export default function ProjectDetailPage() {
         </div>
       </div>
 
-      {/* KPIs */}
+      {/* KPIs with Auto-Calc */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         <KPI title="Budget" value={fmtCurrency.format(Number(project.budget||0))} />
-        <KPI title="Actual (Expenses)" value={fmtCurrency.format(Number(rollup?.actual_expenses||0))} />
-        <KPI title="Variance" value={fmtCurrency.format(variance)} emphasize={variance<0? 'bad':'good'} />
+        <KPI 
+          title="Actual Expenses" 
+          value={fmtCurrency.format(Number(project.actual_expenses || rollup?.actual_expenses || 0))} 
+          subtitle="Auto-synced" 
+        />
+        <KPI 
+          title="Variance" 
+          value={fmtCurrency.format(Number(project.variance !== undefined ? project.variance : variance))} 
+          emphasize={variance<0? 'bad':'good'} 
+          subtitle={variance < 0 ? "Over budget" : variance > 0 ? "Under budget" : "Exact"}
+        />
         <KPI title="# Orders" value={String(rollup?.counts?.orders||0)} />
         <KPI title="# Expenses" value={String(rollup?.counts?.expenses||0)} />
         <KPI title="# Deliveries" value={String(rollup?.counts?.deliveries||0)} />
@@ -241,7 +250,116 @@ export default function ProjectDetailPage() {
       </div>
 
       {tab==='overview' && (
-        <div className="bg-white border rounded p-4">Budget vs Actual chart coming soon.</div>
+        <div className="space-y-6">
+          {/* Budget Progress */}
+          <div className="bg-white border rounded-lg p-6">
+            <h3 className="text-lg font-semibold mb-4">Budget Utilization</h3>
+            <div className="space-y-4">
+              {/* Progress Bar */}
+              <div>
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-gray-600">Spent</span>
+                  <span className="font-medium">
+                    {project.budget > 0 
+                      ? `${Math.round((Number(project.actual_expenses || 0) / Number(project.budget)) * 100)}%`
+                      : '0%'
+                    }
+                  </span>
+                </div>
+                <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+                  <div 
+                    className={`h-full transition-all duration-500 ${
+                      variance < 0 
+                        ? 'bg-red-500' 
+                        : variance < (Number(project.budget) * 0.2)
+                        ? 'bg-yellow-500'
+                        : 'bg-green-500'
+                    }`}
+                    style={{ 
+                      width: `${Math.min(100, Math.round((Number(project.actual_expenses || 0) / Number(project.budget || 1)) * 100))}%` 
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Stats Grid */}
+              <div className="grid grid-cols-3 gap-4 pt-4 border-t">
+                <div>
+                  <div className="text-xs text-gray-500 mb-1">Budgeted</div>
+                  <div className="text-lg font-semibold text-gray-900">
+                    {fmtCurrency.format(Number(project.budget || 0))}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500 mb-1">Spent (Auto-synced)</div>
+                  <div className="text-lg font-semibold text-blue-600">
+                    {fmtCurrency.format(Number(project.actual_expenses || 0))}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500 mb-1">Remaining</div>
+                  <div className={`text-lg font-semibold ${variance < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                    {fmtCurrency.format(Math.abs(variance))}
+                    {variance < 0 && ' over'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Status Message */}
+              {variance < 0 ? (
+                <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <span className="text-red-500 text-lg">⚠️</span>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-red-900">Over Budget</div>
+                    <div className="text-xs text-red-700 mt-0.5">
+                      This project has exceeded its budget by {fmtCurrency.format(Math.abs(variance))}. 
+                      Consider revising the budget or reducing expenses.
+                    </div>
+                  </div>
+                </div>
+              ) : variance < (Number(project.budget) * 0.2) ? (
+                <div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <span className="text-yellow-500 text-lg">⚡</span>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-yellow-900">Approaching Budget Limit</div>
+                    <div className="text-xs text-yellow-700 mt-0.5">
+                      Less than 20% budget remaining. Monitor expenses closely.
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-start gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <span className="text-green-500 text-lg">✓</span>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-green-900">On Track</div>
+                    <div className="text-xs text-green-700 mt-0.5">
+                      Budget is healthy with {fmtCurrency.format(variance)} remaining.
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Quick Stats */}
+          <div className="bg-white border rounded-lg p-6">
+            <h3 className="text-lg font-semibold mb-4">Project Activity</h3>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="text-center p-4 bg-blue-50 rounded-lg">
+                <div className="text-3xl font-bold text-blue-600">{rollup?.counts?.orders || 0}</div>
+                <div className="text-sm text-gray-600 mt-1">Orders</div>
+              </div>
+              <div className="text-center p-4 bg-purple-50 rounded-lg">
+                <div className="text-3xl font-bold text-purple-600">{rollup?.counts?.expenses || 0}</div>
+                <div className="text-sm text-gray-600 mt-1">Expenses</div>
+              </div>
+              <div className="text-center p-4 bg-green-50 rounded-lg">
+                <div className="text-3xl font-bold text-green-600">{rollup?.counts?.deliveries || 0}</div>
+                <div className="text-sm text-gray-600 mt-1">Deliveries</div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {tab!=='overview' && (
@@ -367,12 +485,19 @@ export default function ProjectDetailPage() {
   )
 }
 
-function KPI({ title, value, emphasize }: { title: string; value: string; emphasize?: 'good'|'bad' }) {
+function KPI({ title, value, emphasize, subtitle }: { title: string; value: string; emphasize?: 'good'|'bad'; subtitle?: string }) {
   const color = emphasize==='good'? 'text-green-600' : emphasize==='bad'? 'text-red-600' : 'text-gray-900'
   return (
     <div className="bg-white border rounded p-4">
       <div className="text-gray-500 text-sm">{title}</div>
       <div className={`text-xl font-semibold ${color}`}>{value}</div>
+      {subtitle && (
+        <div className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+          {emphasize === 'good' && <span className="text-green-500">✓</span>}
+          {emphasize === 'bad' && <span className="text-red-500">⚠</span>}
+          {subtitle}
+        </div>
+      )}
     </div>
   )
 }
