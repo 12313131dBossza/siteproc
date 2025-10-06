@@ -1,31 +1,11 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useMemo } from "react";
 import { AppLayout } from "@/components/app-layout";
 import { Button } from "@/components/ui/Button";
 import { useRouter } from "next/navigation";
-import { 
-  FolderOpen,
-  Plus,
-  Search,
-  Filter,
-  MoreHorizontal,
-  Calendar,
-  DollarSign,
-  Users,
-  Clock,
-  CheckCircle,
-  AlertCircle,
-  TrendingUp,
-  TrendingDown,
-  BarChart3,
-  MapPin,
-  Eye,
-  Edit,
-  X
-} from "lucide-react";
-import { format } from "date-fns";
-import { cn, formatCurrency, formatNumber } from "@/lib/utils";
+import { FolderOpen, Plus, Search, DollarSign, Clock, CheckCircle, AlertCircle, TrendingUp, TrendingDown, BarChart3, Eye, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Project {
   id: string;
@@ -33,10 +13,7 @@ interface Project {
   code?: string | null;
   status: "active" | "on_hold" | "closed";
   budget: number;
-  rollup?: {
-    actual_expenses?: number;
-    variance?: number;
-  };
+  rollup?: { actual_expenses?: number; variance?: number; };
   created_at?: string;
 }
 
@@ -53,31 +30,25 @@ export default function ProjectsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | undefined>();
   const [searchTerm, setSearchTerm] = useState("");
-  const [modal, setModal] = useState(false);
-  const [form, setForm] = useState({ name: '', budget: 0, code: '', status: 'active' });
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [form, setForm] = useState({ name: "", budget: 0, code: "", status: "active" });
   const router = useRouter();
 
   async function load() {
     setLoading(true);
     setError(undefined);
     try {
-      const res = await fetch('/api/projects', { headers: { 'Accept': 'application/json' } });
+      const res = await fetch("/api/projects", { headers: { Accept: "application/json" } });
       const json = await res.json().catch(()=>({}));
       if (res.ok) {
         const projectsData = Array.isArray(json) ? json : (json.data || []);
-        // Fetch rollup data for each project
         const projectsWithRollup = await Promise.all(
           projectsData.map(async (project: Project) => {
             try {
               const rollupRes = await fetch(`/api/projects/${project.id}/rollup`);
               const rollupData = await rollupRes.json();
-              return {
-                ...project,
-                rollup: rollupData.data
-              };
-            } catch {
-              return project;
-            }
+              return { ...project, rollup: rollupData.data };
+            } catch { return project; }
           })
         );
         setProjects(projectsWithRollup);
@@ -87,7 +58,7 @@ export default function ProjectsPage() {
       }
     } catch (e: any) {
       setProjects([]);
-      setError(e?.message || 'Failed to load projects');
+      setError(e?.message || "Failed to load projects");
     }
     setLoading(false);
   }
@@ -95,136 +66,92 @@ export default function ProjectsPage() {
   useEffect(() => { load(); }, []);
 
   async function createProject() {
-    const res = await fetch('/api/projects', { 
-      method: 'POST', 
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, 
+    const res = await fetch("/api/projects", { 
+      method: "POST", 
+      headers: { "Content-Type": "application/json", Accept: "application/json" }, 
       body: JSON.stringify(form) 
     });
     if (res.ok) {
       const j = await res.json().catch(()=>({}));
       const created = j?.id ? j : (j?.data);
       if (created) setProjects(prev => [created, ...prev]);
-      setModal(false);
-      setForm({ name: '', budget: 0, code: '', status: 'active' });
+      setShowCreateModal(false);
+      setForm({ name: "", budget: 0, code: "", status: "active" });
       load();
     } else {
       const e = await res.json().catch(()=>({}));
-      alert(e.error || 'Failed to create project');
+      alert(e.error || "Failed to create project");
     }
   }
 
+  const filteredProjects = useMemo(() => {
+    let filtered = projects;
+    if (activeTab !== "all") filtered = filtered.filter(p => p.status === activeTab);
+    if (searchTerm) filtered = filtered.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.code?.toLowerCase().includes(searchTerm.toLowerCase()));
+    return filtered;
+  }, [projects, activeTab, searchTerm]);
+
+  const stats = useMemo(() => {
+    const totalBudget = projects.reduce((sum, p) => sum + Number(p.budget), 0);
+    const totalActual = projects.reduce((sum, p) => sum + Number(p.rollup?.actual_expenses || 0), 0);
+    const totalVariance = totalBudget - totalActual;
+    const activeCount = projects.filter(p => p.status === "active").length;
+    return { totalBudget, totalActual, totalVariance, activeCount, totalCount: projects.length };
+  }, [projects]);
+
+  const formatCurrency = (amount: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount);
+
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold">Projects</h1>
-        <button onClick={() => setModal(true)} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">New Project</button>
-      </div>
-
-      {error && (
-        <div className="mb-4 rounded border border-red-200 bg-red-50 text-red-700 p-3">
-          <div className="font-medium mb-1">Couldn’t load projects</div>
-          <div className="text-sm">{error}</div>
-          <div className="text-xs mt-2 text-red-600/80">If this is a new environment, make sure the database migration for projects has been applied (sql/projects.sql) and you’re signed in.</div>
-        </div>
-      )}
-
-      {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {Array.from({ length: 4 }).map((_,i)=> (
-            <div key={i} className="animate-pulse bg-white border rounded-lg p-5">
-              <div className="h-5 w-40 bg-gray-200 rounded mb-2" />
-              <div className="h-3 w-24 bg-gray-100 rounded mb-4" />
-              <div className="grid grid-cols-3 gap-3">
-                <div className="h-4 bg-gray-100 rounded" />
-                <div className="h-4 bg-gray-100 rounded" />
-                <div className="h-4 bg-gray-100 rounded" />
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : projects.length === 0 ? (
-        <div className="text-gray-600 border border-dashed rounded-lg p-8 text-center">
-          <div className="text-lg font-medium mb-1">No projects yet</div>
-          <div className="text-sm mb-4">Create your first project to track budget, actuals, and deliveries.</div>
-          <button onClick={()=>setModal(true)} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded">Create a Project</button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {projects.map(p => <ProjectCard key={p.id} p={p} />)}
-        </div>
-      )}
-
-      {modal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md">
-            <h2 className="text-xl font-semibold mb-4">New Project</h2>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm text-gray-600">Name</label>
-                <input value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} className="w-full border rounded px-3 py-2" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm text-gray-600">Budget</label>
-                  <input type="number" min={0} value={form.budget} onChange={e=>setForm(f=>({...f,budget:Number(e.target.value)}))} className="w-full border rounded px-3 py-2" />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-600">Code</label>
-                  <input value={form.code} onChange={e=>setForm(f=>({...f,code:e.target.value}))} className="w-full border rounded px-3 py-2" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm text-gray-600">Status</label>
-                <select value={form.status} onChange={e=>setForm(f=>({...f,status:e.target.value}))} className="w-full border rounded px-3 py-2">
-                  <option value="active">Active</option>
-                  <option value="on_hold">On Hold</option>
-                  <option value="closed">Closed</option>
-                </select>
-              </div>
-            </div>
-            <div className="mt-6 flex justify-end gap-2">
-              <button onClick={()=>setModal(false)} className="px-4 py-2 border rounded">Cancel</button>
-              <button onClick={createProject} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded">Create</button>
-            </div>
+    <AppLayout>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Projects</h1>
+            <p className="text-gray-500 mt-1">Manage project budgets and track expenses</p>
           </div>
+          <Button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            New Project
+          </Button>
         </div>
-      )}
-    </div>
-  )
+
+        {error && (<div className="mb-4 rounded border border-red-200 bg-red-50 text-red-700 p-3"><div className="font-medium mb-1">Couldn not load projects</div><div className="text-sm">{error}</div></div>)}
+
+        {!loading && projects.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-white rounded-lg border border-gray-200 p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-500">Total Budget</p><p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(stats.totalBudget)}</p></div><div className="bg-blue-100 rounded-full p-3"><BarChart3 className="h-6 w-6 text-blue-600" /></div></div></div>
+            <div className="bg-white rounded-lg border border-gray-200 p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-500">Total Actual</p><p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(stats.totalActual)}</p></div><div className="bg-green-100 rounded-full p-3"><DollarSign className="h-6 w-6 text-green-600" /></div></div></div>
+            <div className="bg-white rounded-lg border border-gray-200 p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-500">Total Variance</p><p className={cn("text-2xl font-bold mt-1", stats.totalVariance >= 0 ? "text-green-600" : "text-red-600")}>{formatCurrency(stats.totalVariance)}</p></div><div className={cn("rounded-full p-3", stats.totalVariance >= 0 ? "bg-green-100" : "bg-red-100")}>{stats.totalVariance >= 0 ? <TrendingUp className="h-6 w-6 text-green-600" /> : <TrendingDown className="h-6 w-6 text-red-600" />}</div></div></div>
+            <div className="bg-white rounded-lg border border-gray-200 p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-500">Active Projects</p><p className="text-2xl font-bold text-gray-900 mt-1">{stats.activeCount}</p><p className="text-xs text-gray-500 mt-1">of {stats.totalCount} total</p></div><div className="bg-indigo-100 rounded-full p-3"><FolderOpen className="h-6 w-6 text-indigo-600" /></div></div></div>
+          </div>
+        )}
+
+        <div className="bg-white rounded-lg border border-gray-200 p-4"><div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"><div className="flex items-center gap-2 overflow-x-auto">{tabs.map((tab) => (<button key={tab.id} onClick={() => setActiveTab(tab.id)} className={cn("flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap transition-colors", activeTab === tab.id ? "bg-blue-100 text-blue-700 font-medium" : "text-gray-600 hover:bg-gray-100")}><tab.icon className="h-4 w-4" />{tab.label}<span className="ml-1 text-xs px-2 py-0.5 rounded-full bg-white/50">{tab.id === "all" ? projects.length : projects.filter(p => p.status === tab.id).length}</span></button>))}</div><div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" /><input type="text" placeholder="Search projects..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" /></div></div></div>
+
+        {loading ? (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">{Array.from({ length: 6 }).map((_, i) => (<div key={i} className="animate-pulse bg-white border border-gray-200 rounded-lg p-6"><div className="h-5 w-40 bg-gray-200 rounded mb-2" /><div className="h-3 w-24 bg-gray-100 rounded mb-4" /><div className="grid grid-cols-3 gap-3"><div className="h-4 bg-gray-100 rounded" /><div className="h-4 bg-gray-100 rounded" /><div className="h-4 bg-gray-100 rounded" /></div></div>))}</div>) : filteredProjects.length === 0 ? (<div className="text-center py-12 bg-white rounded-lg border border-gray-200"><FolderOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" /><h3 className="text-lg font-medium text-gray-900 mb-2">{searchTerm ? "No projects found" : "No projects yet"}</h3><p className="text-gray-500 mb-4">{searchTerm ? "Try adjusting your search criteria" : "Create your first project to track budget, actuals, and deliveries"}</p>{!searchTerm && (<Button onClick={() => setShowCreateModal(true)} className="mx-auto"><Plus className="h-4 w-4 mr-2" />Create Project</Button>)}</div>) : (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">{filteredProjects.map(p => (<ProjectCard key={p.id} project={p} formatCurrency={formatCurrency} />))}</div>)}
+
+        {showCreateModal && (<div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"><div className="bg-white rounded-xl p-6 w-full max-w-md"><div className="flex items-center justify-between mb-4"><h2 className="text-xl font-semibold">New Project</h2><button onClick={() => setShowCreateModal(false)} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button></div><div className="space-y-4"><div><label className="block text-sm font-medium text-gray-700 mb-1">Project Name *</label><input value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" placeholder="e.g., Main Building Construction" /></div><div className="grid grid-cols-2 gap-3"><div><label className="block text-sm font-medium text-gray-700 mb-1">Budget *</label><div className="relative"><DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" /><input type="number" min={0} value={form.budget} onChange={e => setForm(f => ({...f, budget: Number(e.target.value)}))} className="w-full pl-10 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" placeholder="50000" /></div></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Code</label><input value={form.code} onChange={e => setForm(f => ({...f, code: e.target.value}))} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" placeholder="PRJ-001" /></div></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Status</label><select value={form.status} onChange={e => setForm(f => ({...f, status: e.target.value}))} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"><option value="active">Active</option><option value="on_hold">On Hold</option><option value="closed">Closed</option></select></div></div><div className="mt-6 flex justify-end gap-3"><Button onClick={() => setShowCreateModal(false)} variant="ghost">Cancel</Button><Button onClick={createProject} disabled={!form.name || form.budget <= 0}>Create Project</Button></div></div></div>)}
+      </div>
+    </AppLayout>
+  );
 }
 
-function ProjectCard({ p }: { p: Project }) {
-  const [rollup, setRollup] = useState<any>(null)
-  useEffect(() => {
-  fetch(`/api/projects/${p.id}/rollup`).then(r=>r.json()).then(j=>setRollup(j.data)).catch(()=>setRollup(null))
-  }, [p.id])
-
-  const varianceColor = useMemo(() => {
-    const v = Number(rollup?.variance || 0)
-    return v >= 0 ? 'text-green-600' : 'text-red-600'
-  }, [rollup])
+function ProjectCard({ project, formatCurrency }: { project: Project; formatCurrency: (n: number) => string }) {
+  const router = useRouter();
+  const variance = (project.rollup?.variance !== undefined) ? project.rollup.variance : Number(project.budget) - Number(project.rollup?.actual_expenses || 0);
+  const variancePercentage = Number(project.budget) > 0 ? (variance / Number(project.budget)) * 100 : 0;
 
   return (
-  <a href={`/projects/${p.id}`} className="block bg-white border rounded-lg p-5 hover:shadow-md transition">
-      <div className="flex items-center justify-between mb-2">
-        <div className="font-semibold text-lg">{p.name}</div>
-        <span className="text-xs px-2 py-1 rounded-full border bg-gray-50">{p.status}</span>
+    <div onClick={() => router.push(`/projects/${project.id}`)} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg hover:border-blue-300 transition-all cursor-pointer group">
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex-1">
+          <h3 className="font-semibold text-lg text-gray-900 group-hover:text-blue-600 transition-colors">{project.name}</h3>
+          {project.code && (<p className="text-sm text-gray-500 mt-1">Code: {project.code}</p>)}
+        </div>
+        <span className={cn("px-3 py-1 text-xs font-medium rounded-full", project.status === "active" && "bg-green-100 text-green-800", project.status === "on_hold" && "bg-yellow-100 text-yellow-800", project.status === "closed" && "bg-gray-100 text-gray-800")}>{project.status === "on_hold" ? "On Hold" : project.status.charAt(0).toUpperCase() + project.status.slice(1)}</span>
       </div>
-      {p.code && <div className="text-xs text-gray-500 mb-3">Code: {p.code}</div>}
-      <div className="grid grid-cols-3 gap-3 text-sm">
-        <div>
-          <div className="text-gray-500">Budget</div>
-          <div>${Number(p.budget).toFixed(2)}</div>
-        </div>
-        <div>
-          <div className="text-gray-500">Actual</div>
-          <div>${Number(rollup?.actual_expenses || 0).toFixed(2)}</div>
-        </div>
-        <div>
-          <div className="text-gray-500">Variance</div>
-          <div className={varianceColor}>${Number(rollup?.variance || 0).toFixed(2)}</div>
-        </div>
-      </div>
-    </a>
-  )
+      <div className="space-y-3"><div className="grid grid-cols-3 gap-4"><div><p className="text-xs text-gray-500 mb-1">Budget</p><p className="text-sm font-semibold text-gray-900">{formatCurrency(Number(project.budget))}</p></div><div><p className="text-xs text-gray-500 mb-1">Actual</p><p className="text-sm font-semibold text-gray-900">{formatCurrency(Number(project.rollup?.actual_expenses || 0))}</p></div><div><p className="text-xs text-gray-500 mb-1">Variance</p><p className={cn("text-sm font-semibold", variance >= 0 ? "text-green-600" : "text-red-600")}>{formatCurrency(variance)}</p></div></div><div className="pt-3 border-t border-gray-100"><div className="flex items-center justify-between"><div className="flex items-center gap-2"><div className={cn("h-2 w-2 rounded-full", variance >= 0 ? "bg-green-500" : "bg-red-500")} /><span className="text-xs text-gray-500">{variance >= 0 ? "On Budget" : "Over Budget"}</span></div><span className={cn("text-xs font-medium", variancePercentage >= 0 ? "text-green-600" : "text-red-600")}>{variancePercentage >= 0 ? "+" : ""}{variancePercentage.toFixed(1)}%</span></div></div></div>
+      <div className="mt-4 flex items-center justify-between text-xs text-gray-500"><span>Click to view details</span><Eye className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" /></div>
+    </div>
+  );
 }
