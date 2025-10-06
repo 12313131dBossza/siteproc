@@ -43,8 +43,14 @@ export async function GET() {
     console.log('✅ Projects found:', projects?.length || 0)
     console.log('📦 Projects data:', JSON.stringify(projects, null, 2))
 
+    // Map project_number to code for frontend compatibility
+    const projectsWithCode = projects?.map(p => ({
+      ...p,
+      code: p.project_number
+    })) || []
+
     // Return projects array directly (not wrapped in data object)
-    return NextResponse.json(projects || [])
+    return NextResponse.json(projectsWithCode)
   } catch (error) {
     console.error('Error in GET /api/projects:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -74,16 +80,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No company associated' }, { status: 400 })
     }
 
-    // Create project - only include fields that exist in the database
-    const projectData = {
+    // Create project - only include REQUIRED fields
+    // Start with minimal data - name, company, user, budget
+    const projectData: any = {
       name: body.name || 'Untitled Project',
-      project_number: body.code || body.project_number || `PRJ-${Date.now()}`,
-      status: body.status || 'active',
       company_id: profile.company_id,
       created_by: user.id,
-      start_date: body.start_date || new Date().toISOString(),
-      end_date: body.end_date || null,
       budget: parseFloat(body.budget) || 0
+    }
+
+    // Only add optional fields if they're provided
+    if (body.code || body.project_number) {
+      projectData.project_number = body.code || body.project_number
+    }
+    
+    if (body.status) {
+      projectData.status = body.status
     }
 
     console.log('Creating project with data:', projectData)

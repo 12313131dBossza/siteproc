@@ -15,11 +15,11 @@ export async function GET(
       .select(`
         id,
         name,
-        description,
+        project_number,
         budget,
-        start_date,
-        end_date,
         status,
+        company_id,
+        created_by,
         created_at,
         updated_at
       `)
@@ -39,6 +39,7 @@ export async function GET(
     const summary = await getProjectSummary(project.id, profile.company_id)
     const projectWithSummary = {
       ...project,
+      code: project.project_number, // Map for frontend compatibility
       summary: {
         totalOrders: summary.totalOrders,
         approvedOrders: summary.approvedOrders,
@@ -77,7 +78,7 @@ export async function PUT(
     }
 
     const body = await request.json()
-    const { name, description, budget, start_date, end_date, status } = body
+    const { name, budget, status, project_number } = body
 
     // Validate budget if provided
     if (budget !== undefined && (typeof budget !== 'number' || budget <= 0)) {
@@ -93,10 +94,8 @@ export async function PUT(
     // Build update object
     const updates: any = {}
     if (name !== undefined) updates.name = name.trim()
-    if (description !== undefined) updates.description = description?.trim() || null
+    if (project_number !== undefined) updates.project_number = project_number?.trim() || null
     if (budget !== undefined) updates.budget = budget
-    if (start_date !== undefined) updates.start_date = start_date
-    if (end_date !== undefined) updates.end_date = end_date
     if (status !== undefined) updates.status = status
     updates.updated_at = new Date().toISOString()
 
