@@ -1,17 +1,99 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { supabaseService } from '@/lib/supabase'
-import { getSessionProfile } from '@/lib/auth'
+import { NextRequest, NextResponse } from 'next/server';
+import { sbServer } from '@/lib/supabase-server';
 
 export const runtime = 'nodejs'
 
-export async function GET(req: NextRequest, ctx: any) {
-  const session = await getSessionProfile()
-  if (!session.user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
-  if (!session.companyId) return NextResponse.json({ error: 'no_company' }, { status: 400 })
-  const id = ctx?.params?.id
-  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
-  const { data, error } = await (supabaseService() as any).from('quotes').select('*').eq('company_id', session.companyId).eq('id', id).single()
-  if (error || !data) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  // map to bid shape
-  return NextResponse.json({ id: data.id, contractor: null, amount: data.total, status: data.status, submitted: data.created_at })
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const supabase = await sbServer();
+    
+    const { data: bid, error } = await supabase
+      .from('bids')
+      .select('*')
+      .eq('id', params.id)
+      .single();
+
+    if (error) throw error;
+
+    if (!bid) {
+      return NextResponse.json(
+        { error: 'Bid not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(bid);
+  } catch (error: any) {
+    console.error('Error fetching bid:', error);
+    return NextResponse.json(
+      { error: error.message || 'Failed to fetch bid' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const supabase = await sbServer();
+    const body = await request.json();
+
+    const { data: bid, error } = await supabase
+      .from('bids')
+      .update({
+        vendor_name: body.vendor_name,
+        vendor_email: body.vendor_email,
+        project_id: body.project_id || null,
+        item_description: body.item_description,
+        quantity: body.quantity,
+        unit_price: body.unit_price,
+        total_amount: body.total_amount,
+        valid_until: body.valid_until,
+        status: body.status,
+        notes: body.notes,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', params.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return NextResponse.json(bid);
+  } catch (error: any) {
+    console.error('Error updating bid:', error);
+    return NextResponse.json(
+      { error: error.message || 'Failed to update bid' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const supabase = await sbServer();
+
+    const { error } = await supabase
+      .from('bids')
+      .delete()
+      .eq('id', params.id);
+
+    if (error) throw error;
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error('Error deleting bid:', error);
+    return NextResponse.json(
+      { error: error.message || 'Failed to delete bid' },
+      { status: 500 }
+    );
+  }
 }
