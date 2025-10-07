@@ -26,6 +26,10 @@ export async function GET(request: NextRequest) {
         amount,
         description,
         category,
+        vendor,
+        product_name,
+        quantity,
+        unit_price,
         status,
         requested_by,
         requested_at,
@@ -83,11 +87,44 @@ export async function POST(request: NextRequest) {
     }
     
     const body = await request.json()
-    const { project_id, amount, description, category } = body
+    console.log('📥 Order creation request body:', body)
+    
+    // Support both formats: old (description/category) and new (vendor/product_name/qty/unit_price)
+    let orderData: any = {}
+    
+    if (body.vendor && body.product_name && body.qty && body.unit_price) {
+      // New format from AddItemModal
+      const totalAmount = body.qty * body.unit_price
+      orderData = {
+        project_id: body.project_id,
+        amount: totalAmount,
+        description: `${body.product_name} (${body.qty} units @ $${body.unit_price})`,
+        category: body.vendor,
+        vendor: body.vendor,
+        product_name: body.product_name,
+        quantity: body.qty,
+        unit_price: body.unit_price
+      }
+      console.log('✅ Using new format (vendor/product/qty/price)')
+    } else if (body.amount && body.description && body.category) {
+      // Old format (backwards compatibility)
+      orderData = {
+        project_id: body.project_id,
+        amount: body.amount,
+        description: body.description,
+        category: body.category
+      }
+      console.log('✅ Using old format (amount/description/category)')
+    } else {
+      console.error('❌ Invalid order data:', body)
+      return response.error('Either (vendor, product_name, qty, unit_price) or (amount, description, category) are required', 400)
+    }
 
+    const { project_id, amount } = orderData
+    
     // Validate required fields
-    if (!project_id || !amount || !description || !category) {
-      return response.error('project_id, amount, description, and category are required', 400)
+    if (!project_id) {
+      return response.error('project_id is required', 400)
     }
 
     if (typeof amount !== 'number' || amount <= 0) {
@@ -111,23 +148,37 @@ export async function POST(request: NextRequest) {
     }
 
     // Create order using fresh purchase_orders table (bypasses stuck cache)
+    const insertData: any = {
+      project_id,
+      amount,
+      description: orderData.description,
+      category: orderData.category,
+      status: 'pending',
+      requested_by: profile.id,
+      requested_at: new Date().toISOString()
+    }
+    
+    // Add new fields if they exist
+    if (orderData.vendor) insertData.vendor = orderData.vendor
+    if (orderData.product_name) insertData.product_name = orderData.product_name
+    if (orderData.quantity) insertData.quantity = orderData.quantity
+    if (orderData.unit_price) insertData.unit_price = orderData.unit_price
+    
+    console.log('📝 Inserting order data:', insertData)
+    
     const { data: order, error } = await supabase
       .from('purchase_orders')
-      .insert({
-        project_id,
-        amount,
-        description: description.trim(),
-        category: category.trim(),
-        status: 'pending',
-        requested_by: profile.id,
-        requested_at: new Date().toISOString()
-      })
+      .insert(insertData)
       .select(`
         id,
         project_id,
         amount,
         description,
         category,
+        vendor,
+        product_name,
+        quantity,
+        unit_price,
         status,
         requested_by,
         requested_at,

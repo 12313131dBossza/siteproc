@@ -451,17 +451,25 @@ export default function ProjectDetailPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {orders.map(o=> (
-                      <tr key={o.id} className="hover:bg-blue-50/50">
-                        <td className="p-2 font-medium">{o.product?.name || '—'}</td>
-                        <td className="p-2">{o.vendor || o.product?.vendor || '—'}</td>
-                        <td className="p-2 text-right">{o.qty ?? '—'}</td>
-                        <td className="p-2 text-right tabular-nums">{o.product?.price && o.qty ? fmtCurrency.format(Number(o.product.price)*Number(o.qty)) : '—'}</td>
-                        <td className="p-2"><span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-indigo-50 text-indigo-700 border border-indigo-200">{o.status}</span></td>
-                        <td className="p-2 text-xs">{o.created_at ? new Date(o.created_at).toLocaleDateString() : '—'}</td>
-                        <td className="p-2 text-xs text-gray-500 font-mono">{o.id.slice(0,8)}…</td>
-                      </tr>
-                    ))}
+                    {orders.map(o=> {
+                      // Support both old and new field formats
+                      const productName = o.product_name || o.product?.name || o.description || '—'
+                      const vendor = o.vendor || o.category || o.product?.vendor || '—'
+                      const quantity = o.quantity || o.qty || '—'
+                      const amount = o.amount || (o.unit_price && o.quantity ? o.unit_price * o.quantity : 0)
+                      
+                      return (
+                        <tr key={o.id} className="hover:bg-blue-50/50">
+                          <td className="p-2 font-medium">{productName}</td>
+                          <td className="p-2">{vendor}</td>
+                          <td className="p-2 text-right">{quantity}</td>
+                          <td className="p-2 text-right tabular-nums">{amount ? fmtCurrency.format(Number(amount)) : '—'}</td>
+                          <td className="p-2"><span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-indigo-50 text-indigo-700 border border-indigo-200">{o.status}</span></td>
+                          <td className="p-2 text-xs">{o.created_at ? new Date(o.created_at).toLocaleDateString() : '—'}</td>
+                          <td className="p-2 text-xs text-gray-500 font-mono">{o.id.slice(0,8)}…</td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>

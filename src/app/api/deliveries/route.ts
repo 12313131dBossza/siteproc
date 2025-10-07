@@ -21,10 +21,82 @@ async function uploadDataUrl(sb: ReturnType<typeof supabaseService>, path: strin
   return url
 }
 
+// Simple handler for project-based deliveries (from AddItemModal)
+async function handleProjectDelivery(body: any, session: any) {
+  const { project_id, delivery_date, status, notes } = body
+  
+  // Validate required fields
+  if (!project_id) {
+    return NextResponse.json({ error: 'project_id is required' }, { status: 400 })
+  }
+  
+  const sb = supabaseService()
+  
+  // Verify project exists and user has access
+  const { data: project, error: projectError } = await (sb as any)
+    .from('projects')
+    .select('id, name, company_id')
+    .eq('id', project_id)
+    .eq('company_id', session.companyId)
+    .single()
+  
+  if (projectError || !project) {
+    console.error('Project verification error:', projectError)
+    return NextResponse.json({ error: 'Project not found or access denied' }, { status: 404 })
+  }
+  
+  // Create simple delivery
+  const { data: delivery, error } = await (sb as any)
+    .from('deliveries')
+    .insert({
+      company_id: session.companyId,
+      project_id: project_id,
+      status: status || 'pending',
+      notes: notes || '',
+      delivered_at: delivery_date || new Date().toISOString(),
+      logged_by: session.user.id
+    })
+    .select('*')
+    .single()
+  
+  if (error || !delivery) {
+    console.error('Delivery creation error:', error)
+    return NextResponse.json({ error: error?.message || 'Failed to create delivery' }, { status: 500 })
+  }
+  
+  console.log('✅ Created project delivery:', delivery.id)
+  
+  // Log activity
+  await audit(
+    session.companyId as string,
+    session.user.id,
+    'delivery',
+    delivery.id as string,
+    'create',
+    { project_id, status: delivery.status }
+  )
+  
+  // Broadcast update
+  await broadcastDashboardUpdated(session.companyId!)
+  
+  return NextResponse.json({ ok: true, data: delivery }, { status: 201 })
+}
+
 export async function POST(req: NextRequest) {
   const session = await getSessionProfile()
   if (!session.user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
   if (!session.companyId) return NextResponse.json({ error: 'no_company' }, { status: 400 })
+  
+  const body = await req.json()
+  console.log('📥 Delivery creation request:', body)
+  
+  // Check if this is a simple project-based delivery (from AddItemModal)
+  if (body.project_id && !body.job_id) {
+    console.log('✅ Creating simple project-based delivery')
+    return handleProjectDelivery(body, session)
+  }
+  
+  // Original job-based delivery flow
   // 'foreman' legacy role mapped to 'viewer' minimum permission for creation; adjust if stricter needed
   enforceRole('viewer', session)
   const payload = await parseJson(req, deliveryCreateSchema)
