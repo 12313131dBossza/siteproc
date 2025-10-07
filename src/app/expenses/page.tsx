@@ -563,17 +563,26 @@ export default function ExpensesPage() {
 
         {/* Add Expense Modal */}
         {isModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-xl max-w-md w-full p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Expense</h3>
-              <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto scale-100 animate-modal-pop">
+              <div className="flex items-center justify-between p-6 border-b sticky top-0 bg-white">
+                <h3 className="text-xl font-semibold text-gray-900">Add New Expense</h3>
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  aria-label="Close modal"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+              <form onSubmit={handleSubmit} className="p-6 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Vendor</label>
-                  <input type="text" value={newExpense.vendor} onChange={(e) => setNewExpense(v => ({ ...v, vendor: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Vendor <span className="text-red-500">*</span></label>
+                  <input type="text" value={newExpense.vendor} onChange={(e) => setNewExpense(v => ({ ...v, vendor: e.target.value }))} className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required placeholder="Enter vendor/supplier name" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                  <select value={newExpense.category} onChange={(e) => setNewExpense(v => ({ ...v, category: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Category <span className="text-red-500">*</span></label>
+                  <select value={newExpense.category} onChange={(e) => setNewExpense(v => ({ ...v, category: e.target.value }))} className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
                     <option value="">Select category</option>
                     <option value="labor">Labor</option>
                     <option value="materials">Materials</option>
@@ -584,29 +593,28 @@ export default function ExpensesPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Amount</label>
-                  <input type="number" step="0.01" value={newExpense.amount} onChange={(e) => setNewExpense(v => ({ ...v, amount: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Amount <span className="text-red-500">*</span></label>
+                  <input type="number" step="0.01" value={newExpense.amount} onChange={(e) => setNewExpense(v => ({ ...v, amount: e.target.value }))} className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required placeholder="0.00" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                  <textarea value={newExpense.description} onChange={(e) => setNewExpense(v => ({ ...v, description: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" rows={3} required />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Description <span className="text-red-500">*</span></label>
+                  <textarea value={newExpense.description} onChange={(e) => setNewExpense(v => ({ ...v, description: e.target.value }))} className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" rows={3} required placeholder="Optional description" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Project</label>
-                  <select value={newExpense.project_id} onChange={(e) => setNewExpense((v: any) => ({ ...v, project_id: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Project <span className="text-red-500">*</span></label>
+                  <select value={newExpense.project_id} onChange={(e) => setNewExpense((v: any) => ({ ...v, project_id: e.target.value }))} className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
                     <option value="">{projectsLoading ? 'Loading projects...' : 'Select project'}</option>
                     {projects.map((p) => (
                       <option key={p.id} value={p.id}>{p.name}</option>
                     ))}
                   </select>
                 </div>
-                <div className="flex gap-2 pt-4">
-                  <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)} className="flex-1">
-                    Cancel
-                  </Button>
-                  <Button type="submit" variant="primary" className="flex-1">
+                <div className="flex gap-3 pt-4 border-t">
+                  <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50 transition-colors">Cancel</button>
+                  <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                     Add Expense
-                  </Button>
+                  </button>
                 </div>
               </form>
             </div>

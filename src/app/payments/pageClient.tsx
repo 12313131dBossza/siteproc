@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useCompanyId } from '@/lib/useCompanyId';
 import { Plus, Search, DollarSign, Edit, Trash2, X } from 'lucide-react';
+import { AppLayout } from '@/components/app-layout';
+import { Button } from '@/components/ui/Button';
 
 interface Payment {
   id: string;
@@ -205,14 +207,13 @@ export default function PaymentsPageClient() {
   }, { total: 0, paid: 0, unpaid: 0, partial: 0 });
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Payments</h1>
-          <p className="text-sm text-gray-500 mt-1">Track and manage all payments</p>
-        </div>
-        <button
+    <AppLayout
+      title="Payments"
+      description="Track and manage all payments across projects"
+      actions={
+        <Button
+          variant="primary"
+          leftIcon={<Plus className="h-4 w-4" />}
           onClick={() => {
             setEditingPayment(null);
             setForm({
@@ -229,12 +230,12 @@ export default function PaymentsPageClient() {
             });
             setShowModal(true);
           }}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
-          <Plus className="h-4 w-4" />
           Add Payment
-        </button>
-      </div>
+        </Button>
+      }
+    >
+      <div className="space-y-6 p-6">
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -545,6 +546,7 @@ export default function PaymentsPageClient() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </AppLayout>
   );
 }

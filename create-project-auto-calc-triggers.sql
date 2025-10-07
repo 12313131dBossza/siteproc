@@ -15,7 +15,7 @@ BEGIN
         SELECT 1 FROM information_schema.columns 
         WHERE table_name = 'projects' AND column_name = 'actual_expenses'
     ) THEN
-        ALTER TABLE projects ADD COLUMN actual_expenses NUMERIC(12, 2) DEFAULT 0;
+        ALTER TABLE projects ADD COLUMN actual_expenses NUMERIC(20, 2) DEFAULT 0;
         RAISE NOTICE '✅ Added actual_expenses column to projects table';
     ELSE
         RAISE NOTICE '⏭️  actual_expenses column already exists';
@@ -26,7 +26,7 @@ BEGIN
         SELECT 1 FROM information_schema.columns 
         WHERE table_name = 'projects' AND column_name = 'variance'
     ) THEN
-        ALTER TABLE projects ADD COLUMN variance NUMERIC(12, 2) DEFAULT 0;
+        ALTER TABLE projects ADD COLUMN variance NUMERIC(20, 2) DEFAULT 0;
         RAISE NOTICE '✅ Added variance column to projects table';
     ELSE
         RAISE NOTICE '⏭️  variance column already exists';
@@ -37,9 +37,9 @@ END $$;
 CREATE OR REPLACE FUNCTION recalculate_project_totals(p_project_id UUID)
 RETURNS VOID AS $$
 DECLARE
-    v_total_expenses NUMERIC(12, 2);
-    v_budget NUMERIC(12, 2);
-    v_variance NUMERIC(12, 2);
+    v_total_expenses NUMERIC(20, 2);
+    v_budget NUMERIC(20, 2);
+    v_variance NUMERIC(20, 2);
 BEGIN
     -- Get current budget
     SELECT budget INTO v_budget
@@ -59,8 +59,7 @@ BEGIN
     UPDATE projects
     SET 
         actual_expenses = v_total_expenses,
-        variance = v_variance,
-        updated_at = NOW()
+        variance = v_variance
     WHERE id = p_project_id;
 
     RAISE NOTICE '✅ Recalculated project % - Budget: %, Actual: %, Variance: %', 

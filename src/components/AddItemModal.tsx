@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { X, Plus, Package, DollarSign, Truck } from 'lucide-react';
+import { X, Plus, Package, DollarSign, Truck, Upload, FileText, Image as ImageIcon } from 'lucide-react';
 
 interface AddItemModalProps {
   isOpen: boolean;
@@ -14,6 +14,9 @@ interface AddItemModalProps {
 export function AddItemModal({ isOpen, onClose, projectId, type, onSuccess }: AddItemModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadedFileUrl, setUploadedFileUrl] = useState<string>('');
   
   // Order form fields
   const [orderForm, setOrderForm] = useState({
@@ -37,10 +40,58 @@ export function AddItemModal({ isOpen, onClose, projectId, type, onSuccess }: Ad
   const [deliveryForm, setDeliveryForm] = useState({
     delivery_date: new Date().toISOString().split('T')[0],
     status: 'pending',
-    notes: ''
+    notes: '',
+    proof_url: ''
   });
 
   if (!isOpen) return null;
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+    if (!allowedTypes.includes(file.type)) {
+      setError('Invalid file type. Only images (JPEG, PNG, GIF, WebP) and PDFs are allowed.');
+      return;
+    }
+
+    // Validate file size (10MB max)
+    if (file.size > 10 * 1024 * 1024) {
+      setError('File too large. Maximum size is 10MB.');
+      return;
+    }
+
+    setSelectedFile(file);
+    setError(undefined);
+
+    // Upload immediately
+    setUploadingFile(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Upload failed');
+      }
+
+      setUploadedFileUrl(data.url);
+      setDeliveryForm({ ...deliveryForm, proof_url: data.url });
+    } catch (err: any) {
+      setError(err.message || 'Failed to upload file');
+      setSelectedFile(null);
+    } finally {
+      setUploadingFile(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,6 +120,7 @@ export function AddItemModal({ isOpen, onClose, projectId, type, onSuccess }: Ad
         endpoint = `/api/deliveries`;
         body = {
           ...deliveryForm,
+          proof_url: uploadedFileUrl || deliveryForm.proof_url,
           project_id: projectId,
         };
         console.log('Creating delivery:', body);
@@ -348,6 +400,70 @@ export function AddItemModal({ isOpen, onClose, projectId, type, onSuccess }: Ad
                   placeholder="Delivery instructions, items, etc."
                   rows={4}
                 />
+              </div>
+
+              {/* Proof of Delivery Upload */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Proof of Delivery (Optional)
+                </label>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 transition-colors">
+                  <input
+                    type="file"
+                    id="pod-upload"
+                    accept="image/*,.pdf"
+                    onChange={handleFileChange}
+                    className="hidden"
+                    disabled={uploadingFile}
+                  />
+                  <label
+                    htmlFor="pod-upload"
+                    className="flex flex-col items-center justify-center cursor-pointer"
+                  >
+                    {uploadingFile ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        <p className="text-sm text-gray-600">Uploading...</p>
+                      </div>
+                    ) : selectedFile ? (
+                      <div className="flex items-center gap-3 w-full">
+                        {selectedFile.type.startsWith('image/') ? (
+                          <ImageIcon className="h-8 w-8 text-blue-600" />
+                        ) : (
+                          <FileText className="h-8 w-8 text-red-600" />
+                        )}
+                        <div className="flex-1 text-left">
+                          <p className="text-sm font-medium text-gray-900">{selectedFile.name}</p>
+                          <p className="text-xs text-gray-500">
+                            {(selectedFile.size / 1024).toFixed(1)} KB • ✅ Uploaded
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setSelectedFile(null);
+                            setUploadedFileUrl('');
+                            setDeliveryForm({ ...deliveryForm, proof_url: '' });
+                          }}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <X className="h-5 w-5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload className="h-8 w-8 text-gray-400 mb-2" />
+                        <p className="text-sm text-gray-600">
+                          Click to upload image or PDF
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          PNG, JPG, GIF, WebP or PDF (max 10MB)
+                        </p>
+                      </>
+                    )}
+                  </label>
+                </div>
               </div>
             </>
           )}

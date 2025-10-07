@@ -23,7 +23,7 @@ async function uploadDataUrl(sb: ReturnType<typeof supabaseService>, path: strin
 
 // Simple handler for project-based deliveries (from AddItemModal)
 async function handleProjectDelivery(body: any, session: any) {
-  const { project_id, delivery_date, status, notes } = body
+  const { project_id, delivery_date, status, notes, proof_url } = body
   
   // Validate required fields
   if (!project_id) {
@@ -45,7 +45,7 @@ async function handleProjectDelivery(body: any, session: any) {
     return NextResponse.json({ error: 'Project not found or access denied' }, { status: 404 })
   }
   
-  // Create simple delivery
+  // Create simple delivery with optional proof_url
   const { data: delivery, error } = await (sb as any)
     .from('deliveries')
     .insert({
@@ -53,8 +53,8 @@ async function handleProjectDelivery(body: any, session: any) {
       project_id: project_id,
       status: status || 'pending',
       notes: notes || '',
-      delivered_at: delivery_date || new Date().toISOString(),
-      logged_by: session.user.id
+      proof_url: proof_url || null,
+      delivered_at: delivery_date || new Date().toISOString()
     })
     .select('*')
     .single()
