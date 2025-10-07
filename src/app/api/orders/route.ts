@@ -149,6 +149,7 @@ export async function POST(request: NextRequest) {
 
     // Create order using fresh purchase_orders table (bypasses stuck cache)
     const insertData: any = {
+      company_id: profile.company_id, // Required by purchase_orders table
       project_id,
       amount,
       description: orderData.description,

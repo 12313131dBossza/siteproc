@@ -52,7 +52,7 @@ export function AddItemModal({ isOpen, onClose, projectId, type, onSuccess }: Ad
       let body: any = {};
 
       if (type === 'order') {
-        endpoint = `/api/purchase-orders`;
+        endpoint = `/api/orders`;
         body = {
           ...orderForm,
           project_id: projectId,
