@@ -1,4 +1,4 @@
-import { supabaseService } from '@/lib/supabase';
+import { sbServer } from '@/lib/supabase-server';
 import { NextRequest, NextResponse } from 'next/server';
 
 // GET /api/users/[id] - Get single user details
@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = supabaseService();
+    const supabase = await sbServer();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
@@ -51,7 +51,7 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = supabaseService();
+    const supabase = await sbServer();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
@@ -149,7 +149,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = supabaseService();
+    const supabase = await sbServer();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {

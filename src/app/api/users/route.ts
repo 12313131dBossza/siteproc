@@ -1,10 +1,10 @@
-import { supabaseService } from '@/lib/supabase';
+import { sbServer } from '@/lib/supabase-server';
 import { NextRequest, NextResponse } from 'next/server';
 
 // GET /api/users - List all users in company
 export async function GET(request: NextRequest) {
   try {
-    const supabase = supabaseService();
+    const supabase = await sbServer();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
 // POST /api/users - Invite new user
 export async function POST(request: NextRequest) {
   try {
-    const supabase = supabaseService();
+    const supabase = await sbServer();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
