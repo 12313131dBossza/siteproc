@@ -31,13 +31,13 @@ import { toast } from 'sonner';
 
 interface UserData {
   id: string;
-  name: string;
+  full_name: string;
   email: string;
-  role: 'owner' | 'admin' | 'member';
+  role: 'owner' | 'admin' | 'manager' | 'accountant' | 'viewer';
   status: 'active' | 'pending' | 'inactive';
-  joined: string;
-  lastActive: string;
-  avatar?: string;
+  created_at: string;
+  last_login: string | null;
+  avatar_url?: string;
   phone?: string;
   department?: string;
 }
@@ -47,60 +47,61 @@ function useUsers() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // TODO: Replace with real API call to /api/users
     setTimeout(() => {
       setUsers([
         { 
           id: '1', 
-          name: 'John Doe', 
+          full_name: 'John Doe', 
           email: 'john@company.com', 
           role: 'owner', 
           status: 'active',
-          joined: '2024-01-15', 
-          lastActive: '2025-01-30',
+          created_at: '2024-01-15T00:00:00Z', 
+          last_login: '2025-01-30T10:30:00Z',
           department: 'Management',
           phone: '+1 (555) 123-4567'
         },
         { 
           id: '2', 
-          name: 'Jane Smith', 
+          full_name: 'Jane Smith', 
           email: 'jane@company.com', 
           role: 'admin', 
           status: 'active',
-          joined: '2024-02-20', 
-          lastActive: '2025-01-29',
+          created_at: '2024-02-20T00:00:00Z', 
+          last_login: '2025-01-29T15:45:00Z',
           department: 'Operations',
           phone: '+1 (555) 234-5678'
         },
         { 
           id: '3', 
-          name: 'Bob Wilson', 
+          full_name: 'Bob Wilson', 
           email: 'bob@company.com', 
-          role: 'member', 
+          role: 'manager', 
           status: 'active',
-          joined: '2024-03-10', 
-          lastActive: '2025-01-28',
+          created_at: '2024-03-10T00:00:00Z', 
+          last_login: '2025-01-28T09:15:00Z',
           department: 'Construction',
           phone: '+1 (555) 345-6789'
         },
         { 
           id: '4', 
-          name: 'Alice Brown', 
+          full_name: 'Alice Brown', 
           email: 'alice@company.com', 
-          role: 'member', 
+          role: 'accountant', 
           status: 'pending',
-          joined: '2024-04-05', 
-          lastActive: '2025-01-25',
-          department: 'Engineering',
+          created_at: '2024-04-05T00:00:00Z', 
+          last_login: '2025-01-25T11:20:00Z',
+          department: 'Finance',
           phone: '+1 (555) 456-7890'
         },
         { 
           id: '5', 
-          name: 'Mike Johnson', 
+          full_name: 'Mike Johnson', 
           email: 'mike@company.com', 
-          role: 'admin', 
-          status: 'inactive',
-          joined: '2024-05-12', 
-          lastActive: '2024-12-15',
+          role: 'viewer', 
+          status: 'active',
+          created_at: '2024-05-12T00:00:00Z', 
+          last_login: '2025-01-27T14:30:00Z',
           department: 'Safety',
           phone: '+1 (555) 567-8901'
         }
@@ -130,7 +131,7 @@ export default function UsersPage() {
   });
 
   const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.department?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
@@ -154,9 +155,11 @@ export default function UsersPage() {
     const configs = {
       owner: { icon: Crown, color: 'text-purple-600 bg-purple-50 border-purple-200', label: 'Owner' },
       admin: { icon: Shield, color: 'text-blue-600 bg-blue-50 border-blue-200', label: 'Admin' },
-      member: { icon: User, color: 'text-gray-600 bg-gray-50 border-gray-200', label: 'Member' }
+      manager: { icon: Users, color: 'text-green-600 bg-green-50 border-green-200', label: 'Manager' },
+      accountant: { icon: Settings, color: 'text-orange-600 bg-orange-50 border-orange-200', label: 'Accountant' },
+      viewer: { icon: Eye, color: 'text-gray-600 bg-gray-50 border-gray-200', label: 'Viewer' }
     };
-    return configs[role as keyof typeof configs] || configs.member;
+    return configs[role as keyof typeof configs] || configs.viewer;
   };
 
   const getStatusConfig = (status: string) => {
@@ -168,17 +171,18 @@ export default function UsersPage() {
     return configs[status as keyof typeof configs] || configs.pending;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // TODO: Replace with real API call to POST /api/users
     const newUser: UserData = {
       id: Date.now().toString(),
-      name: formData.name,
+      full_name: formData.name,
       email: formData.email,
       role: formData.role as any,
       status: 'pending',
-      joined: new Date().toISOString(),
-      lastActive: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      last_login: null,
       department: formData.department,
       phone: formData.phone
     };
@@ -192,7 +196,7 @@ export default function UsersPage() {
   const handleEditUser = (user: UserData) => {
     setSelectedUser(user);
     setFormData({
-      name: user.name,
+      name: user.full_name,
       email: user.email,
       role: user.role,
       department: user.department || '',
@@ -289,7 +293,7 @@ export default function UsersPage() {
         {/* Role Distribution */}
         <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Role Distribution</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <div className="rounded-xl border border-purple-200 bg-purple-50 p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Crown className="h-5 w-5 text-purple-600" />
@@ -306,13 +310,29 @@ export default function UsersPage() {
               <div className="text-2xl font-bold text-blue-800">{roleCounts.admin || 0}</div>
               <div className="text-sm text-blue-600">Manage operations</div>
             </div>
+            <div className="rounded-xl border border-green-200 bg-green-50 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Users className="h-5 w-5 text-green-600" />
+                <span className="font-medium text-green-800">Manager</span>
+              </div>
+              <div className="text-2xl font-bold text-green-800">{roleCounts.manager || 0}</div>
+              <div className="text-sm text-green-600">Operational tasks</div>
+            </div>
+            <div className="rounded-xl border border-orange-200 bg-orange-50 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Settings className="h-5 w-5 text-orange-600" />
+                <span className="font-medium text-orange-800">Accountant</span>
+              </div>
+              <div className="text-2xl font-bold text-orange-800">{roleCounts.accountant || 0}</div>
+              <div className="text-sm text-orange-600">Financial focus</div>
+            </div>
             <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
               <div className="flex items-center gap-2 mb-2">
-                <User className="h-5 w-5 text-gray-600" />
-                <span className="font-medium text-gray-800">Member</span>
+                <Eye className="h-5 w-5 text-gray-600" />
+                <span className="font-medium text-gray-800">Viewer</span>
               </div>
-              <div className="text-2xl font-bold text-gray-800">{roleCounts.member || 0}</div>
-              <div className="text-sm text-gray-600">Basic access only</div>
+              <div className="text-2xl font-bold text-gray-800">{roleCounts.viewer || 0}</div>
+              <div className="text-sm text-gray-600">Read-only access</div>
             </div>
           </div>
         </div>
@@ -342,7 +362,9 @@ export default function UsersPage() {
                   <option value="all">All Roles</option>
                   <option value="owner">Owner</option>
                   <option value="admin">Admin</option>
-                  <option value="member">Member</option>
+                  <option value="manager">Manager</option>
+                  <option value="accountant">Accountant</option>
+                  <option value="viewer">Viewer</option>
                 </select>
                 <select
                   value={statusFilter}
@@ -405,10 +427,10 @@ export default function UsersPage() {
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center gap-3">
                           <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                            <span className="text-sm font-semibold text-blue-600">{getInitials(user.name)}</span>
+                            <span className="text-sm font-semibold text-blue-600">{getInitials(user.full_name)}</span>
                           </div>
                           <div>
-                            <h3 className="font-semibold text-gray-900">{user.name}</h3>
+                            <h3 className="font-semibold text-gray-900">{user.full_name}</h3>
                             <p className="text-sm text-gray-500">{user.email}</p>
                           </div>
                         </div>
@@ -457,8 +479,8 @@ export default function UsersPage() {
                         )}
 
                         <div className="text-xs text-gray-500 space-y-1">
-                          <div>Joined: {format(new Date(user.joined), 'MMM dd, yyyy')}</div>
-                          <div>Last active: {format(new Date(user.lastActive), 'MMM dd, yyyy')}</div>
+                          <div>Joined: {format(new Date(user.created_at), 'MMM dd, yyyy')}</div>
+                          <div>Last active: {user.last_login ? format(new Date(user.last_login), 'MMM dd, yyyy') : 'Never'}</div>
                         </div>
 
                         {user.status === 'pending' && (
@@ -519,7 +541,9 @@ export default function UsersPage() {
                     required
                   >
                     <option value="">Select role</option>
-                    <option value="member">Member - Basic access</option>
+                    <option value="viewer">Viewer - Read-only access</option>
+                    <option value="accountant">Accountant - Financial management</option>
+                    <option value="manager">Manager - Operational tasks</option>
                     <option value="admin">Admin - Manage operations</option>
                     <option value="owner">Owner - Full access</option>
                   </select>
@@ -581,10 +605,10 @@ export default function UsersPage() {
               <div className="flex items-start justify-between mb-6">
                 <div className="flex items-center gap-3">
                   <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-                    <span className="text-lg font-bold text-blue-600">{getInitials(selectedUser.name)}</span>
+                    <span className="text-lg font-bold text-blue-600">{getInitials(selectedUser.full_name)}</span>
                   </div>
                   <div>
-                    <h3 className="text-xl font-semibold text-gray-900">{selectedUser.name}</h3>
+                    <h3 className="text-xl font-semibold text-gray-900">{selectedUser.full_name}</h3>
                     <p className="text-gray-600">{selectedUser.email}</p>
                   </div>
                 </div>
@@ -628,12 +652,12 @@ export default function UsersPage() {
 
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Joined:</span>
-                  <span className="text-sm font-medium">{format(new Date(selectedUser.joined), 'MMM dd, yyyy')}</span>
+                  <span className="text-sm font-medium">{format(new Date(selectedUser.created_at), 'MMM dd, yyyy')}</span>
                 </div>
 
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Last Active:</span>
-                  <span className="text-sm font-medium">{format(new Date(selectedUser.lastActive), 'MMM dd, yyyy')}</span>
+                  <span className="text-sm font-medium">{selectedUser.last_login ? format(new Date(selectedUser.last_login), 'MMM dd, yyyy') : 'Never'}</span>
                 </div>
               </div>
 
