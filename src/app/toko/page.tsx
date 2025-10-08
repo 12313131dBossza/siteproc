@@ -93,8 +93,18 @@ export default function TokoPage() {
   const fetchProducts = async () => {
     try {
       const response = await fetch('/api/products');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       const data = await response.json();
-      setProducts(data || []);
+      
+      // Check if data is an array
+      if (!Array.isArray(data)) {
+        console.error('API returned non-array data:', data);
+        throw new Error('Invalid data format from API');
+      }
+      
+      setProducts(data);
       
       // Calculate stats from real data
       const statsData: ProductStats = {
@@ -103,7 +113,7 @@ export default function TokoPage() {
         low_stock_items: data.filter((p: Product) => p.stock_quantity <= p.min_stock_level).length,
         total_value: data.reduce((sum: number, p: Product) => sum + (p.price * p.stock_quantity), 0),
         top_category: data.length > 0 ? data[0].category : '',
-        monthly_orders: data.reduce((sum: number, p: Product) => sum + p.total_orders, 0)
+        monthly_orders: data.reduce((sum: number, p: Product) => sum + (p.total_orders || 0), 0)
       };
       
       setStats(statsData);
