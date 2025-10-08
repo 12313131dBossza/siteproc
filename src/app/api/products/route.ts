@@ -26,15 +26,21 @@ export async function GET(request: NextRequest) {
       query = query.eq('category', category);
     }
 
-    if (lowStock === 'true') {
-      query = query.filter('stock_quantity', 'lte', 'min_stock_level');
-    }
-
+    // Note: lowStock filter requires comparing two columns, which Supabase doesn't support directly
+    // We'll filter in JavaScript instead
     const { data: products, error } = await query;
 
     if (error) throw error;
 
-    return NextResponse.json(products || []);
+    // Apply low stock filter in JavaScript
+    let filteredProducts = products || [];
+    if (lowStock === 'true' && filteredProducts.length > 0) {
+      filteredProducts = filteredProducts.filter((p: any) => 
+        (p.stock_quantity || 0) <= (p.min_stock_level || 0)
+      );
+    }
+
+    return NextResponse.json(filteredProducts);
   } catch (error: any) {
     console.error('Error fetching products:', error);
     return NextResponse.json(

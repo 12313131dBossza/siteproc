@@ -47,67 +47,23 @@ function useUsers() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // TODO: Replace with real API call to /api/users
-    setTimeout(() => {
-      setUsers([
-        { 
-          id: '1', 
-          full_name: 'John Doe', 
-          email: 'john@company.com', 
-          role: 'owner', 
-          status: 'active',
-          created_at: '2024-01-15T00:00:00Z', 
-          last_login: '2025-01-30T10:30:00Z',
-          department: 'Management',
-          phone: '+1 (555) 123-4567'
-        },
-        { 
-          id: '2', 
-          full_name: 'Jane Smith', 
-          email: 'jane@company.com', 
-          role: 'admin', 
-          status: 'active',
-          created_at: '2024-02-20T00:00:00Z', 
-          last_login: '2025-01-29T15:45:00Z',
-          department: 'Operations',
-          phone: '+1 (555) 234-5678'
-        },
-        { 
-          id: '3', 
-          full_name: 'Bob Wilson', 
-          email: 'bob@company.com', 
-          role: 'manager', 
-          status: 'active',
-          created_at: '2024-03-10T00:00:00Z', 
-          last_login: '2025-01-28T09:15:00Z',
-          department: 'Construction',
-          phone: '+1 (555) 345-6789'
-        },
-        { 
-          id: '4', 
-          full_name: 'Alice Brown', 
-          email: 'alice@company.com', 
-          role: 'accountant', 
-          status: 'pending',
-          created_at: '2024-04-05T00:00:00Z', 
-          last_login: '2025-01-25T11:20:00Z',
-          department: 'Finance',
-          phone: '+1 (555) 456-7890'
-        },
-        { 
-          id: '5', 
-          full_name: 'Mike Johnson', 
-          email: 'mike@company.com', 
-          role: 'viewer', 
-          status: 'active',
-          created_at: '2024-05-12T00:00:00Z', 
-          last_login: '2025-01-27T14:30:00Z',
-          department: 'Safety',
-          phone: '+1 (555) 567-8901'
+    async function fetchUsers() {
+      try {
+        const response = await fetch('/api/users');
+        if (!response.ok) {
+          throw new Error('Failed to fetch users');
         }
-      ]);
-      setLoading(false);
-    }, 500);
+        const data = await response.json();
+        setUsers(data);
+      } catch (error) {
+        console.error('Error fetching users:', error);
+        setUsers([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchUsers();
   }, []);
 
   return { users, loading, setUsers };
