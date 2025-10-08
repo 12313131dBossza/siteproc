@@ -641,8 +641,16 @@ export default function TokoPage() {
 
         {/* Add/Edit Product Modal */}
         {isModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-xl max-w-3xl w-full p-6 max-h-[90vh] overflow-y-auto">
+          <div 
+            className="fixed inset-0 bg-gradient-to-br from-gray-900/80 via-gray-900/70 to-blue-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setIsModalOpen(false);
+                setSelectedProduct(null);
+              }
+            }}
+          >
+            <div className="bg-white rounded-2xl max-w-3xl w-full p-6 max-h-[90vh] overflow-y-auto shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h3 className="text-xl font-semibold text-gray-900">
@@ -935,8 +943,15 @@ export default function TokoPage() {
 
         {/* Product Details Modal */}
         {isDetailsModalOpen && selectedProduct && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+          <div 
+            className="fixed inset-0 bg-gradient-to-br from-gray-900/80 via-gray-900/70 to-blue-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setIsDetailsModalOpen(false);
+              }
+            }}
+          >
+            <div className="bg-white rounded-2xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
               <div className="flex items-start justify-between mb-6">
                 <div>
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">{selectedProduct.name}</h3>
@@ -1037,11 +1052,31 @@ export default function TokoPage() {
 
         {/* Inventory Adjustment Modal */}
         {isAdjustModalOpen && selectedProduct && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-xl max-w-md w-full p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Adjust Inventory: {selectedProduct.name}
-              </h3>
+          <div 
+            className="fixed inset-0 bg-gradient-to-br from-gray-900/80 via-gray-900/70 to-purple-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setIsAdjustModalOpen(false);
+                setSelectedProduct(null);
+              }
+            }}
+          >
+            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in slide-in-from-bottom-4 zoom-in-95 duration-300">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Adjust Inventory: {selectedProduct.name}
+                </h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setIsAdjustModalOpen(false);
+                    setSelectedProduct(null);
+                  }}
+                >
+                  <XCircle className="w-5 h-5" />
+                </Button>
+              </div>
               <div className="mb-4 p-4 bg-blue-50 rounded-lg">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Current Stock:</span>
