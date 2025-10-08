@@ -95,6 +95,6 @@ COMMENT ON TABLE bids IS 'Vendor quotations that can be converted to orders';
 -- ('Acme Corp', 'Acme Corporation', 'contact@acmecorp.com', '(555) 111-2222', 'Real Estate', 'active'),
 -- ('BuildCo', 'BuildCo Development', 'info@buildco.com', '(555) 222-3333', 'Construction', 'active');
 
-RAISE NOTICE '✅ Contractors, Clients, and Bids tables created successfully';
-RAISE NOTICE '📊 Created 3 tables with indexes and constraints';
-RAISE NOTICE '🔗 Tables ready for CRUD operations via API routes';
+-- ✅ Contractors, Clients, and Bids tables created successfully
+-- 📊 Created 3 tables with indexes and constraints
+-- 🔗 Tables ready for CRUD operations via API routes

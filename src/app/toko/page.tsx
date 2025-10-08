@@ -37,8 +37,15 @@ interface Product {
   unit: string;
   stock_quantity: number;
   min_stock_level: number;
+  reorder_point?: number;
+  reorder_quantity?: number;
+  stock_status?: string;
+  last_restock_date?: string;
   supplier_id?: string;
   supplier_name?: string;
+  supplier_email?: string;
+  supplier_phone?: string;
+  lead_time_days?: number;
   description?: string;
   status: 'active' | 'inactive' | 'discontinued';
   last_ordered?: string;
@@ -67,6 +74,8 @@ export default function TokoPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
+  const [alerts, setAlerts] = useState<any[]>([]);
   const [stats, setStats] = useState<ProductStats>({
     total_products: 0,
     active_products: 0,
@@ -78,11 +87,31 @@ export default function TokoPage() {
 
   useEffect(() => {
     fetchProducts();
+    fetchAlerts();
   }, []);
 
   const fetchProducts = async () => {
     try {
-      // Mock data - replace with actual API call
+      const response = await fetch('/api/products');
+      const data = await response.json();
+      setProducts(data || []);
+      
+      // Calculate stats from real data
+      const statsData: ProductStats = {
+        total_products: data.length,
+        active_products: data.filter((p: Product) => p.status === 'active').length,
+        low_stock_items: data.filter((p: Product) => p.stock_quantity <= p.min_stock_level).length,
+        total_value: data.reduce((sum: number, p: Product) => sum + (p.price * p.stock_quantity), 0),
+        top_category: data.length > 0 ? data[0].category : '',
+        monthly_orders: data.reduce((sum: number, p: Product) => sum + p.total_orders, 0)
+      };
+      
+      setStats(statsData);
+    } catch (error) {
+      console.error('Failed to fetch products:', error);
+      toast.error('Failed to load products');
+      
+      // Fallback to mock data if API fails
       const mockProducts: Product[] = [
         {
           id: '1',
@@ -184,11 +213,18 @@ export default function TokoPage() {
       };
       
       setStats(statsData);
+      setProducts(mockProducts);
+    }
+    setLoading(false);
+  };
+
+  const fetchAlerts = async () => {
+    try {
+      const response = await fetch('/api/inventory/alerts?resolved=false');
+      const data = await response.json();
+      setAlerts(data || []);
     } catch (error) {
-      console.error('Failed to fetch products:', error);
-      toast.error('Failed to load products');
-    } finally {
-      setLoading(false);
+      console.error('Failed to fetch alerts:', error);
     }
   };
 
@@ -231,9 +267,109 @@ export default function TokoPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle product creation/update
-    setIsModalOpen(false);
-    toast.success('Product saved successfully');
+    const formData = new FormData(e.target as HTMLFormElement);
+    
+    const productData = {
+      name: formData.get('name'),
+      category: formData.get('category'),
+      price: parseFloat(formData.get('price') as string),
+      unit: formData.get('unit'),
+      stock_quantity: parseInt(formData.get('stock_quantity') as string),
+      min_stock_level: parseInt(formData.get('min_stock_level') as string),
+      reorder_point: parseInt(formData.get('reorder_point') as string) || 15,
+      reorder_quantity: parseInt(formData.get('reorder_quantity') as string) || 50,
+      description: formData.get('description'),
+      status: formData.get('status'),
+      supplier_name: formData.get('supplier_name'),
+      supplier_email: formData.get('supplier_email'),
+      supplier_phone: formData.get('supplier_phone'),
+      lead_time_days: parseInt(formData.get('lead_time_days') as string) || 7
+    };
+
+    try {
+      const url = selectedProduct 
+        ? `/api/products/${selectedProduct.id}`
+        : '/api/products';
+      
+      const method = selectedProduct ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(productData)
+      });
+
+      if (!response.ok) throw new Error('Failed to save product');
+
+      toast.success(`Product ${selectedProduct ? 'updated' : 'created'} successfully`);
+      setIsModalOpen(false);
+      setSelectedProduct(null);
+      fetchProducts();
+      fetchAlerts();
+    } catch (error) {
+      console.error('Error saving product:', error);
+      toast.error('Failed to save product');
+    }
+  };
+
+  const handleInventoryAdjust = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedProduct) return;
+
+    const formData = new FormData(e.target as HTMLFormElement);
+    const transaction_type = formData.get('transaction_type') as string;
+    const quantity = parseInt(formData.get('quantity') as string);
+    const unit_cost = parseFloat(formData.get('unit_cost') as string) || 0;
+    const notes = formData.get('notes') as string;
+
+    // Determine if it's addition or subtraction
+    const quantity_change = ['purchase', 'return', 'adjustment'].includes(transaction_type) && quantity > 0
+      ? quantity
+      : -Math.abs(quantity);
+
+    try {
+      const response = await fetch(`/api/products/${selectedProduct.id}/adjust`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          transaction_type,
+          quantity_change,
+          unit_cost: unit_cost || null,
+          notes
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to adjust inventory');
+      }
+
+      toast.success('Inventory adjusted successfully');
+      setIsAdjustModalOpen(false);
+      fetchProducts();
+      fetchAlerts();
+    } catch (error: any) {
+      console.error('Error adjusting inventory:', error);
+      toast.error(error.message || 'Failed to adjust inventory');
+    }
+  };
+
+  const handleDelete = async (productId: string) => {
+    if (!confirm('Are you sure you want to delete this product?')) return;
+
+    try {
+      const response = await fetch(`/api/products/${productId}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) throw new Error('Failed to delete product');
+
+      toast.success('Product deleted successfully');
+      fetchProducts();
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      toast.error('Failed to delete product');
+    }
   };
 
   if (loading) {
@@ -479,6 +615,21 @@ export default function TokoPage() {
                             Last ordered: {format(new Date(product.last_ordered), 'MMM dd, yyyy')}
                           </div>
                         )}
+
+                        <div className="pt-3 border-t border-gray-200">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="w-full"
+                            leftIcon={<Package className="w-4 h-4" />}
+                            onClick={() => {
+                              setSelectedProduct(product);
+                              setIsAdjustModalOpen(true);
+                            }}
+                          >
+                            Adjust Stock
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -500,7 +651,8 @@ export default function TokoPage() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
                     <input 
-                      type="text" 
+                      type="text"
+                      name="name"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
                       defaultValue={selectedProduct?.name}
                       required 
@@ -508,7 +660,8 @@ export default function TokoPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                    <select 
+                    <select
+                      name="category"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       defaultValue={selectedProduct?.category}
                       required
@@ -517,12 +670,21 @@ export default function TokoPage() {
                       {categories.map(category => (
                         <option key={category} value={category}>{category}</option>
                       ))}
+                      <option value="Steel & Metal">Steel & Metal</option>
+                      <option value="Concrete & Cement">Concrete & Cement</option>
+                      <option value="Electrical">Electrical</option>
+                      <option value="Tiles & Flooring">Tiles & Flooring</option>
+                      <option value="Paint & Finishes">Paint & Finishes</option>
+                      <option value="Plumbing">Plumbing</option>
+                      <option value="Tools">Tools</option>
+                      <option value="Safety Equipment">Safety Equipment</option>
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
                     <input 
-                      type="number" 
+                      type="number"
+                      name="price"
                       step="0.01" 
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       defaultValue={selectedProduct?.price}
@@ -532,7 +694,8 @@ export default function TokoPage() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
                     <input 
-                      type="text" 
+                      type="text"
+                      name="unit"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       defaultValue={selectedProduct?.unit}
                       placeholder="e.g., pcs, kg, liters"
@@ -542,7 +705,8 @@ export default function TokoPage() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Stock Quantity</label>
                     <input 
-                      type="number" 
+                      type="number"
+                      name="stock_quantity"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       defaultValue={selectedProduct?.stock_quantity}
                       required 
@@ -551,16 +715,83 @@ export default function TokoPage() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Min Stock Level</label>
                     <input 
-                      type="number" 
+                      type="number"
+                      name="min_stock_level"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       defaultValue={selectedProduct?.min_stock_level}
                       required 
                     />
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Reorder Point</label>
+                    <input 
+                      type="number"
+                      name="reorder_point"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      defaultValue={selectedProduct?.reorder_point || 15}
+                      placeholder="Stock level to trigger reorder"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Reorder Quantity</label>
+                    <input 
+                      type="number"
+                      name="reorder_quantity"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      defaultValue={selectedProduct?.reorder_quantity || 50}
+                      placeholder="Suggested order quantity"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-3 mt-4">Supplier Information</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Supplier Name</label>
+                      <input 
+                        type="text"
+                        name="supplier_name"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        defaultValue={selectedProduct?.supplier_name}
+                        placeholder="Supplier company name"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Supplier Email</label>
+                      <input 
+                        type="email"
+                        name="supplier_email"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        defaultValue={selectedProduct?.supplier_email}
+                        placeholder="supplier@example.com"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Supplier Phone</label>
+                      <input 
+                        type="text"
+                        name="supplier_phone"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        defaultValue={selectedProduct?.supplier_phone}
+                        placeholder="(555) 123-4567"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Lead Time (Days)</label>
+                      <input 
+                        type="number"
+                        name="lead_time_days"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        defaultValue={selectedProduct?.lead_time_days || 7}
+                        placeholder="Delivery time in days"
+                      />
+                    </div>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                  <textarea 
+                  <textarea
+                    name="description"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
                     rows={3}
                     defaultValue={selectedProduct?.description}
@@ -568,7 +799,8 @@ export default function TokoPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                  <select 
+                  <select
+                    name="status"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     defaultValue={selectedProduct?.status || 'active'}
                   >
@@ -696,6 +928,92 @@ export default function TokoPage() {
                   )}
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Inventory Adjustment Modal */}
+        {isAdjustModalOpen && selectedProduct && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl max-w-md w-full p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Adjust Inventory: {selectedProduct.name}
+              </h3>
+              <div className="mb-4 p-4 bg-blue-50 rounded-lg">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Current Stock:</span>
+                  <span className="text-lg font-bold text-gray-900">
+                    {selectedProduct.stock_quantity} {selectedProduct.unit}
+                  </span>
+                </div>
+              </div>
+              <form onSubmit={handleInventoryAdjust} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Transaction Type</label>
+                  <select 
+                    name="transaction_type"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  >
+                    <option value="purchase">Purchase (Add Stock)</option>
+                    <option value="sale">Sale (Remove Stock)</option>
+                    <option value="adjustment">Adjustment</option>
+                    <option value="return">Return (Add Stock)</option>
+                    <option value="damaged">Damaged (Remove Stock)</option>
+                    <option value="theft">Theft (Remove Stock)</option>
+                    <option value="count">Stock Count Correction</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+                  <input 
+                    type="number" 
+                    name="quantity"
+                    min="1"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter quantity"
+                    required 
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    For removals (sale, damaged, theft), enter positive number
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Unit Cost (Optional)</label>
+                  <input 
+                    type="number" 
+                    name="unit_cost"
+                    step="0.01"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Cost per unit"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                  <textarea 
+                    name="notes"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                    rows={3}
+                    placeholder="Add notes about this transaction..."
+                  />
+                </div>
+                <div className="flex gap-2 pt-4">
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    onClick={() => {
+                      setIsAdjustModalOpen(false);
+                      setSelectedProduct(null);
+                    }} 
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" variant="primary" className="flex-1">
+                    Adjust Inventory
+                  </Button>
+                </div>
+              </form>
             </div>
           </div>
         )}
