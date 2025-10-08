@@ -642,116 +642,215 @@ export default function TokoPage() {
         {/* Add/Edit Product Modal */}
         {isModalOpen && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                {selectedProduct ? 'Edit Product' : 'Add New Product'}
-              </h3>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
-                    <input 
-                      type="text"
-                      name="name"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                      defaultValue={selectedProduct?.name}
-                      required 
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                    <select
-                      name="category"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      defaultValue={selectedProduct?.category}
-                      required
-                    >
-                      <option value="">Select category</option>
-                      {categories.map(category => (
-                        <option key={category} value={category}>{category}</option>
-                      ))}
-                      <option value="Steel & Metal">Steel & Metal</option>
-                      <option value="Concrete & Cement">Concrete & Cement</option>
-                      <option value="Electrical">Electrical</option>
-                      <option value="Tiles & Flooring">Tiles & Flooring</option>
-                      <option value="Paint & Finishes">Paint & Finishes</option>
-                      <option value="Plumbing">Plumbing</option>
-                      <option value="Tools">Tools</option>
-                      <option value="Safety Equipment">Safety Equipment</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
-                    <input 
-                      type="number"
-                      name="price"
-                      step="0.01" 
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      defaultValue={selectedProduct?.price}
-                      required 
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
-                    <input 
-                      type="text"
-                      name="unit"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      defaultValue={selectedProduct?.unit}
-                      placeholder="e.g., pcs, kg, liters"
-                      required 
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Stock Quantity</label>
-                    <input 
-                      type="number"
-                      name="stock_quantity"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      defaultValue={selectedProduct?.stock_quantity}
-                      required 
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Min Stock Level</label>
-                    <input 
-                      type="number"
-                      name="min_stock_level"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      defaultValue={selectedProduct?.min_stock_level}
-                      required 
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Reorder Point</label>
-                    <input 
-                      type="number"
-                      name="reorder_point"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      defaultValue={selectedProduct?.reorder_point || 15}
-                      placeholder="Stock level to trigger reorder"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Reorder Quantity</label>
-                    <input 
-                      type="number"
-                      name="reorder_quantity"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      defaultValue={selectedProduct?.reorder_quantity || 50}
-                      placeholder="Suggested order quantity"
-                    />
+            <div className="bg-white rounded-xl max-w-3xl w-full p-6 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900">
+                    {selectedProduct ? 'Edit Product' : 'Add New Product'}
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {selectedProduct ? 'Update product information and inventory settings' : 'Fill in the details to add a new product to your inventory'}
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setSelectedProduct(null);
+                  }}
+                >
+                  <XCircle className="w-5 h-5" />
+                </Button>
+              </div>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Basic Information Section */}
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <Package className="w-5 h-5 text-blue-600" />
+                    Basic Information
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Product Name <span className="text-red-500">*</span>
+                      </label>
+                      <input 
+                        type="text"
+                        name="name"
+                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" 
+                        defaultValue={selectedProduct?.name}
+                        placeholder="Enter product name"
+                        required 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Category <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        name="category"
+                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        defaultValue={selectedProduct?.category}
+                        required
+                      >
+                        <option value="">Select category</option>
+                        {Array.from(new Set([...categories, 'Steel & Metal', 'Concrete & Cement', 'Electrical', 'Tiles & Flooring', 'Paint & Finishes', 'Plumbing', 'Tools', 'Safety Equipment', 'Hardware', 'Wood & Lumber'])).map(category => (
+                          <option key={category} value={category}>{category}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Status <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        name="status"
+                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        defaultValue={selectedProduct?.status || 'active'}
+                      >
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                        <option value="discontinued">Discontinued</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-3 mt-4">Supplier Information</h4>
+
+                {/* Pricing & Units Section */}
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <DollarSign className="w-5 h-5 text-green-600" />
+                    Pricing & Units
+                  </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Price <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                        <input 
+                          type="number"
+                          name="price"
+                          step="0.01"
+                          min="0"
+                          className="w-full pl-8 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                          defaultValue={selectedProduct?.price}
+                          placeholder="0.00"
+                          required 
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Unit <span className="text-red-500">*</span>
+                      </label>
+                      <input 
+                        type="text"
+                        name="unit"
+                        list="unit-suggestions"
+                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        defaultValue={selectedProduct?.unit}
+                        placeholder="e.g., pcs, kg, liters"
+                        required 
+                      />
+                      <datalist id="unit-suggestions">
+                        <option value="pcs" />
+                        <option value="kg" />
+                        <option value="liters" />
+                        <option value="meters" />
+                        <option value="sqm" />
+                        <option value="bags" />
+                        <option value="boxes" />
+                        <option value="rolls" />
+                        <option value="sets" />
+                        <option value="pairs" />
+                      </datalist>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Inventory Management Section */}
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                  <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5 text-blue-600" />
+                    Inventory Management
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Stock Quantity <span className="text-red-500">*</span>
+                      </label>
+                      <input 
+                        type="number"
+                        name="stock_quantity"
+                        min="0"
+                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white"
+                        defaultValue={selectedProduct?.stock_quantity || 0}
+                        placeholder="Current stock quantity"
+                        required 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Min Stock Level <span className="text-red-500">*</span>
+                      </label>
+                      <input 
+                        type="number"
+                        name="min_stock_level"
+                        min="0"
+                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white"
+                        defaultValue={selectedProduct?.min_stock_level || 10}
+                        placeholder="Minimum before alert"
+                        required 
+                      />
+                      <p className="mt-1 text-xs text-gray-500">Alert triggers when stock reaches this level</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Reorder Point
+                      </label>
+                      <input 
+                        type="number"
+                        name="reorder_point"
+                        min="0"
+                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white"
+                        defaultValue={selectedProduct?.reorder_point || 15}
+                        placeholder="Stock level to trigger reorder"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">Suggests reordering at this level</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Reorder Quantity
+                      </label>
+                      <input 
+                        type="number"
+                        name="reorder_quantity"
+                        min="0"
+                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white"
+                        defaultValue={selectedProduct?.reorder_quantity || 50}
+                        placeholder="Suggested order quantity"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">Recommended quantity to order</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Supplier Information Section */}
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <Users className="w-5 h-5 text-purple-600" />
+                    Supplier Information
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2">
                       <label className="block text-sm font-medium text-gray-700 mb-1">Supplier Name</label>
                       <input 
                         type="text"
                         name="supplier_name"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                         defaultValue={selectedProduct?.supplier_name}
                         placeholder="Supplier company name"
                       />
@@ -761,7 +860,7 @@ export default function TokoPage() {
                       <input 
                         type="email"
                         name="supplier_email"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                         defaultValue={selectedProduct?.supplier_email}
                         placeholder="supplier@example.com"
                       />
@@ -769,47 +868,46 @@ export default function TokoPage() {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Supplier Phone</label>
                       <input 
-                        type="text"
+                        type="tel"
                         name="supplier_phone"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                         defaultValue={selectedProduct?.supplier_phone}
                         placeholder="(555) 123-4567"
                       />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Lead Time (Days)</label>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Lead Time (Days)
+                      </label>
                       <input 
                         type="number"
                         name="lead_time_days"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        min="0"
+                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                         defaultValue={selectedProduct?.lead_time_days || 7}
-                        placeholder="Delivery time in days"
+                        placeholder="Expected delivery time in days"
                       />
+                      <p className="mt-1 text-xs text-gray-500">How many days from order to delivery</p>
                     </div>
                   </div>
                 </div>
+
+                {/* Description Section */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Description
+                  </label>
                   <textarea
                     name="description"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                    rows={3}
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" 
+                    rows={4}
                     defaultValue={selectedProduct?.description}
+                    placeholder="Enter product description, specifications, or notes..."
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                  <select
-                    name="status"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    defaultValue={selectedProduct?.status || 'active'}
-                  >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                    <option value="discontinued">Discontinued</option>
-                  </select>
-                </div>
-                <div className="flex gap-2 pt-4">
+
+                {/* Form Actions */}
+                <div className="flex gap-3 pt-6 border-t border-gray-200">
                   <Button 
                     type="button" 
                     variant="ghost" 
@@ -821,7 +919,12 @@ export default function TokoPage() {
                   >
                     Cancel
                   </Button>
-                  <Button type="submit" variant="primary" className="flex-1">
+                  <Button 
+                    type="submit" 
+                    variant="primary" 
+                    className="flex-1"
+                    leftIcon={selectedProduct ? <Edit className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                  >
                     {selectedProduct ? 'Update Product' : 'Add Product'}
                   </Button>
                 </div>
