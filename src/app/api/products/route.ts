@@ -12,10 +12,28 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get('category');
     const lowStock = searchParams.get('lowStock');
 
+    // Get current user
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Get user's company_id from profile
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('company_id')
+      .eq('id', user.id)
+      .single();
+
     let query = supabase
       .from('products')
       .select('*')
       .order('created_at', { ascending: false });
+
+    // Filter by company if user has one
+    if (profile?.company_id) {
+      query = query.eq('company_id', profile.company_id);
+    }
 
     // Apply filters
     if (status && status !== 'all') {
@@ -55,6 +73,19 @@ export async function POST(request: NextRequest) {
     const supabase = await sbServer();
     const body = await request.json();
 
+    // Get current user
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Get user's company_id from profile
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('company_id')
+      .eq('id', user.id)
+      .single();
+
     const { data: product, error } = await supabase
       .from('products')
       .insert({
@@ -72,6 +103,7 @@ export async function POST(request: NextRequest) {
         supplier_email: body.supplier_email,
         supplier_phone: body.supplier_phone,
         lead_time_days: body.lead_time_days || 7,
+        company_id: profile?.company_id || null,
         created_at: new Date().toISOString()
       })
       .select()
