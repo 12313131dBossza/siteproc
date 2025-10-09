@@ -87,9 +87,9 @@ export default function UsersPage() {
   });
 
   const filteredUsers = users.filter(user => {
-    const matchesSearch = user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.department?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (user.full_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (user.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (user.department || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
     const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
     const matchesTab = selectedTab === 'all' || user.status === selectedTab;
