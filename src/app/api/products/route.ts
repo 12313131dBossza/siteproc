@@ -30,9 +30,11 @@ export async function GET(request: NextRequest) {
       .select('*')
       .order('created_at', { ascending: false });
 
-    // Filter by company if user has one
+    // Filter by company if user has one, otherwise show products with null company_id
     if (profile?.company_id) {
       query = query.eq('company_id', profile.company_id);
+    } else {
+      query = query.is('company_id', null);
     }
 
     // Apply filters
