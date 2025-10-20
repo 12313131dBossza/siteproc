@@ -1,7 +1,12 @@
+/**
+ * API endpoint for updating delivery status
+ * PATCH /api/deliveries/[id]
+ */
+
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseService } from '@/lib/supabase'
-import { getSessionProfile, enforceRole } from '@/lib/auth'
 import { audit } from '@/lib/audit'
+import { getSessionProfile, enforceRole } from '@/lib/auth'
 import { broadcastDeliveryUpdated, broadcastDashboardUpdated } from '@/lib/realtime'
 import {
   isValidStatusTransition,
@@ -10,45 +15,6 @@ import {
 } from '@/lib/delivery-sync'
 
 export const runtime = 'nodejs'
-
-export async function GET(_req: NextRequest, context: any) {
-  try {
-  const session = await getSessionProfile()
-  if (!session.user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
-  if (!session.companyId) return NextResponse.json({ error: 'no_company' }, { status: 400 })
-  const companyId = session.companyId
-    const id = context?.params?.id
-    const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-    if (!uuidRe.test(String(id))) {
-      return NextResponse.json({ error: 'Invalid id format (expected UUID)' }, { status: 400 })
-    }
-
-    const sb = supabaseService()
-    const { data: delivery, error } = await sb
-      .from('deliveries')
-      .select('*')
-      .eq('company_id', companyId)
-      .eq('id', id)
-      .single()
-
-    if (error || !delivery) return NextResponse.json({ error: error?.message || 'Not found' }, { status: 404 })
-
-    const [itemsRes, photosRes] = await Promise.all([
-      sb.from('delivery_items').select('id,description,qty,unit,sku,partial').eq('company_id', companyId).eq('delivery_id', id),
-      sb.from('photos').select('id,url').eq('company_id', companyId).eq('entity', 'delivery').eq('entity_id', id),
-    ])
-
-    const base: any = delivery || {}
-    const body = {
-      ...base,
-      items: (itemsRes.data as any[]) || [],
-      photos: (photosRes.data as any[]) || [],
-    }
-    return NextResponse.json(body)
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'failed' }, { status: 500 })
-  }
-}
 
 export async function PATCH(
   req: NextRequest,
@@ -63,12 +29,8 @@ export async function PATCH(
       return NextResponse.json({ error: 'No company' }, { status: 400 })
     }
 
-    // Enforce manager role for status changes
-    try {
-      enforceRole('manager', session)
-    } catch (e) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
-    }
+    // Enforce editor role for status changes
+    enforceRole('editor', session)
 
     const deliveryId = params.id
     const body = await req.json()
@@ -87,7 +49,15 @@ export async function PATCH(
     // Step 1: Get current delivery
     const { data: currentDelivery, error: fetchError } = await (sb as any)
       .from('deliveries')
-      .select(`*`)
+      .select(`
+        id,
+        company_id,
+        order_id,
+        project_id,
+        status,
+        created_at,
+        updated_at
+      `)
       .eq('id', deliveryId)
       .eq('company_id', session.companyId)
       .single()
@@ -103,7 +73,10 @@ export async function PATCH(
     let updateData: Record<string, any> = {}
     if (status && status !== currentDelivery.status) {
       // Check if delivery is locked (already delivered)
-      if (currentDelivery.status === 'delivered' && session.role !== 'admin') {
+      if (
+        currentDelivery.status === 'delivered' &&
+        session.userRole !== 'admin'
+      ) {
         return NextResponse.json(
           {
             error: 'Delivered records are locked and cannot be modified',
@@ -114,7 +87,7 @@ export async function PATCH(
       }
 
       // Validate state transition
-      if (!isValidStatusTransition(currentDelivery.status as DeliveryStatus, status as DeliveryStatus)) {
+      if (!isValidStatusTransition(currentDelivery.status, status)) {
         return NextResponse.json(
           {
             error: `Cannot transition from ${currentDelivery.status} to ${status}`,
@@ -234,11 +207,7 @@ export async function DELETE(
     }
 
     // Only admins can delete
-    try {
-      enforceRole('admin', session)
-    } catch (e) {
-      return NextResponse.json({ error: 'Only admins can delete deliveries' }, { status: 403 })
-    }
+    enforceRole('admin', session)
 
     const deliveryId = params.id
     const sb = supabaseService()
