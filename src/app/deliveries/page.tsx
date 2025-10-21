@@ -2,12 +2,14 @@
 import { useState, useEffect } from 'react'
 import { AppLayout } from "@/components/app-layout"
 import { Button } from "@/components/ui/Button"
-import { Package, Truck, MapPin, Clock, CheckCircle, CheckCircle2, AlertCircle, Search, Filter, Eye, Calendar, Lock, Edit, X } from 'lucide-react'
+import { Package, Truck, MapPin, Clock, CheckCircle, CheckCircle2, AlertCircle, Search, Filter, Eye, Calendar, Lock, Edit, X, Upload } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn, formatCurrency } from '@/lib/utils'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import RecordDeliveryForm from '@/components/RecordDeliveryForm'
+import { DeliveryStatusTransitionModal } from '@/components/DeliveryStatusTransitionModal'
+import { useToast } from '@/components/ui/Toast'
 
 interface Delivery {
   id: string
@@ -61,6 +63,9 @@ export default function DeliveriesPage() {
   const [updatingDelivery, setUpdatingDelivery] = useState<string | null>(null)
   const [userRole, setUserRole] = useState<string | null>(null)
   const [showNewDeliveryModal, setShowNewDeliveryModal] = useState(false)
+  const [statusTransitionModal, setStatusTransitionModal] = useState<{ open: boolean; deliveryId?: string }>({ open: false })
+  const [podUploadModal, setPodUploadModal] = useState<{ open: boolean; deliveryId?: string }>({ open: false })
+  const [uploadingFile, setUploadingFile] = useState<string | null>(null)
 
   // Check authentication first
   useEffect(() => {
@@ -287,6 +292,44 @@ export default function DeliveriesPage() {
       })
     } finally {
       setUpdatingDelivery(null)
+    }
+  }
+
+  const handlePodUpload = async (deliveryId: string, file: File) => {
+    setUploadingFile(deliveryId)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const res = await fetch(`/api/deliveries/${deliveryId}/upload-proof`, {
+        method: 'POST',
+        body: formData
+      })
+
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || `HTTP ${res.status}`)
+      }
+
+      const { proof_url } = await res.json()
+      
+      // Update the delivery with proof URL
+      setDeliveries(prev => prev.map(d =>
+        d.id === deliveryId ? { ...d, proof_url } : d
+      ))
+
+      toast.success('POD uploaded successfully', {
+        description: `${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`,
+        duration: 3000,
+      })
+    } catch (err: any) {
+      console.error('POD upload error:', err)
+      toast.error('Failed to upload POD', {
+        description: err.message || 'Please try again',
+        duration: 4000,
+      })
+    } finally {
+      setUploadingFile(null)
     }
   }
 
@@ -538,53 +581,37 @@ export default function DeliveriesPage() {
                             View Details
                           </Button>
                           
-                          {/* Edit button - only show for non-delivered deliveries */}
-                          {delivery.status !== 'delivered' && canChangeStatus() && (
+                          {/* POD Upload button for delivered deliveries */}
+                          {delivery.status === 'delivered' && canChangeStatus() && (
                             <Button 
                               variant="ghost" 
                               size="sm" 
-                              leftIcon={<Edit className="h-4 w-4" />}
-                              onClick={() => {
-                                window.location.href = `/deliveries/${delivery.id}/edit`
-                              }}
+                              leftIcon={<Upload className="h-4 w-4" />}
+                              onClick={() => setPodUploadModal({ open: true, deliveryId: delivery.id })}
                             >
-                              Edit
+                              Upload POD
                             </Button>
                           )}
                           
-                          <Button variant="ghost" size="sm" leftIcon={<MapPin className="h-4 w-4" />}>
-                            Track
-                          </Button>
-                          
-                          {/* Mark as In Transit button for Pending deliveries */}
-                          {delivery.status === 'pending' && canChangeStatus() && (
+                          {/* Status transition button - for pending or partial */}
+                          {(delivery.status === 'pending' || delivery.status === 'partial') && canChangeStatus() && (
                             <Button 
                               variant="primary" 
                               size="sm" 
-                              leftIcon={<Truck className="h-4 w-4" />}
-                              onClick={() => markAsInTransit(delivery.id)}
+                              leftIcon={delivery.status === 'pending' ? <Truck className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+                              onClick={() => setStatusTransitionModal({ open: true, deliveryId: delivery.id })}
                               disabled={updatingDelivery === delivery.id}
                             >
-                              {updatingDelivery === delivery.id ? 'Updating...' : 'Mark as In Transit'}
+                              {delivery.status === 'pending' ? 'Change Status' : 'Complete'}
                             </Button>
                           )}
                           
-                          {/* Mark as Delivered button for In Transit (partial) deliveries */}
-                          {delivery.status === 'partial' && canChangeStatus() && (
-                            <Button 
-                              variant="primary" 
-                              size="sm" 
-                              leftIcon={<CheckCircle2 className="h-4 w-4" />}
-                              onClick={() => {
-                                const notes = prompt('Add any delivery notes (optional):')
-                                if (notes !== null) { // User didn't cancel
-                                  markAsDelivered(delivery.id, notes || undefined)
-                                }
-                              }}
-                              disabled={updatingDelivery === delivery.id}
-                            >
-                              {updatingDelivery === delivery.id ? 'Updating...' : 'Mark as Delivered'}
-                            </Button>
+                          {/* Lock indicator for delivered */}
+                          {delivery.status === 'delivered' && (
+                            <div className="flex items-center gap-1 px-2 py-1 text-xs text-gray-500">
+                              <Lock className="h-3.5 w-3.5" />
+                              Locked
+                            </div>
                           )}
                         </div>
                       </div>
@@ -628,6 +655,80 @@ export default function DeliveriesPage() {
                 }}
                 onCancel={() => setShowNewDeliveryModal(false)}
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Status Transition Modal */}
+      {statusTransitionModal.deliveryId && (
+        <DeliveryStatusTransitionModal
+          isOpen={statusTransitionModal.open}
+          onClose={() => setStatusTransitionModal({ open: false })}
+          deliveryId={statusTransitionModal.deliveryId}
+          currentStatus={deliveries.find(d => d.id === statusTransitionModal.deliveryId)?.status || 'pending'}
+          items={(deliveries.find(d => d.id === statusTransitionModal.deliveryId)?.items || []).map(item => ({
+            description: item.product_name,
+            qty: item.quantity,
+            unit: item.unit
+          }))}
+          onSuccess={(updated) => {
+            // Update delivery in list
+            setDeliveries(prev => prev.map(d => d.id === updated.id ? { ...d, ...updated } : d))
+            // Show success
+            toast.success(`Delivery status updated to ${updated.status}`, {
+              description: 'Changes will sync to orders and projects.',
+              duration: 3000,
+            })
+            // Refresh list to get latest data
+            fetchDeliveries()
+          }}
+        />
+      )}
+
+      {/* POD Upload Modal */}
+      {podUploadModal.open && podUploadModal.deliveryId && (
+        <div className="fixed inset-0 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-md w-full shadow-2xl">
+            <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900">Upload Proof of Delivery</h2>
+              <button
+                onClick={() => setPodUploadModal({ open: false })}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                <p className="text-sm font-medium text-gray-900 mb-1">Drop file here or click to browse</p>
+                <p className="text-xs text-gray-500 mb-3">PNG, JPG, GIF, or PDF (max 5MB)</p>
+                <input
+                  type="file"
+                  accept="image/*,.pdf"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      handlePodUpload(podUploadModal.deliveryId!, file)
+                      setPodUploadModal({ open: false })
+                    }
+                  }}
+                  disabled={uploadingFile === podUploadModal.deliveryId}
+                  className="hidden"
+                  id={`pod-file-input-${podUploadModal.deliveryId}`}
+                />
+                <label htmlFor={`pod-file-input-${podUploadModal.deliveryId}`}>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    disabled={uploadingFile === podUploadModal.deliveryId}
+                    onClick={() => document.getElementById(`pod-file-input-${podUploadModal.deliveryId}`)?.click()}
+                  >
+                    {uploadingFile === podUploadModal.deliveryId ? 'Uploading...' : 'Select File'}
+                  </Button>
+                </label>
+              </div>
             </div>
           </div>
         </div>
