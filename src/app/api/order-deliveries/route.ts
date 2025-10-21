@@ -130,16 +130,30 @@ function roundToTwo(num: number): number {
 // GET endpoint - Fetch deliveries from database with role-based access
 export async function GET(req: NextRequest) {
   try {
+    console.log('[GET /api/order-deliveries] Request started')
+    console.log('[GET /api/order-deliveries] Headers:', {
+      origin: req.headers.get('origin'),
+      referer: req.headers.get('referer'),
+      userAgent: req.headers.get('user-agent')?.substring(0, 50)
+    })
+    
     // Authentication check
+    console.log('[GET /api/order-deliveries] Calling getAuthenticatedUser()...')
     const user = await getAuthenticatedUser()
+    
     if (!user) {
+      console.error('[GET /api/order-deliveries] Auth failed - no user returned')
       return NextResponse.json({ 
         success: false, 
-        error: 'Authentication required' 
+        error: 'Authentication required',
+        debug: 'getAuthenticatedUser() returned null'
       }, { status: 401 })
     }
 
+    console.log('[GET /api/order-deliveries] User authenticated:', { email: user.email, role: user.role })
+
     if (!user.permissions.canView) {
+      console.error('[GET /api/order-deliveries] Permission denied - cannot view:', user.role)
       return NextResponse.json({ 
         success: false, 
         error: 'Insufficient permissions to view deliveries' 
