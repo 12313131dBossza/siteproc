@@ -29,71 +29,78 @@ function getRolePermissions(role: string): UserPermissions {
 
 // Authentication helper
 async function getAuthenticatedUser() {
-  const cookieStore = await cookies()
-  
-  // Debug: Log all cookies to see what's available
-  const allCookies = cookieStore.getAll()
-  console.log('[getAuthenticatedUser] Available cookies:', allCookies.map(c => c.name).join(', '))
-  
-  // Try to get the auth session cookie
-  const authCookie = cookieStore.get('sb-auth-token') || 
-                     cookieStore.get('sb-vrkgtygzcokqoeeutvxd-auth-token') ||
-                     Array.from(allCookies).find(c => c.name.includes('auth-token'))
-  
-  console.log('[getAuthenticatedUser] Auth cookie found:', !!authCookie)
-  
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll()
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options)
-            })
-          } catch (error) {
-            console.error('[getAuthenticatedUser] Error setting cookies:', error)
+  try {
+    const cookieStore = await cookies()
+    
+    const allCookies = cookieStore.getAll()
+    console.log('[getAuthenticatedUser] Cookies available:', allCookies.length, allCookies.map(c => c.name))
+    
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll()
+          },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) => {
+                cookieStore.set(name, value, options)
+              })
+            } catch (error) {
+              console.error('[getAuthenticatedUser] Error setting cookies:', error)
+            }
           }
-        }
-      },
+        },
+      }
+    )
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError) {
+      console.error('[getAuthenticatedUser] Auth error:', authError.message)
     }
-  )
+    
+    if (!user) {
+      console.log('[getAuthenticatedUser] No user found, returning null')
+      return null
+    }
 
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-  
-  console.log('[getAuthenticatedUser] Auth result:', { 
-    userExists: !!user, 
-    userEmail: user?.email,
-    authError: authError?.message 
-  })
-  
-  if (authError || !user) {
-    console.error('[getAuthenticatedUser] Auth failed:', authError?.message || 'No user')
+    console.log('[getAuthenticatedUser] User found:', user.email)
+
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role, company_id, full_name')
+      .eq('id', user.id)
+      .single()
+
+    if (profileError || !profile) {
+      console.error('[getAuthenticatedUser] Profile error:', profileError?.message)
+      
+      // If profile doesn't exist, return user with default role
+      console.log('[getAuthenticatedUser] Returning user without profile, using default role')
+      return {
+        id: user.id,
+        email: user.email,
+        role: 'member',
+        company_id: null,
+        full_name: user.email,
+        permissions: getRolePermissions('member')
+      }
+    }
+
+    return {
+      id: user.id,
+      email: user.email,
+      role: profile.role,
+      company_id: profile.company_id,
+      full_name: profile.full_name,
+      permissions: getRolePermissions(profile.role)
+    }
+  } catch (error) {
+    console.error('[getAuthenticatedUser] Exception:', error)
     return null
-  }
-
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('role, company_id, full_name')
-    .eq('id', user.id)
-    .single()
-
-  if (profileError || !profile) {
-    console.error('[getAuthenticatedUser] Profile fetch failed:', profileError?.message || 'No profile')
-    return null
-  }
-
-  return {
-    id: user.id,
-    email: user.email,
-    role: profile.role,
-    company_id: profile.company_id,
-    full_name: profile.full_name,
-    permissions: getRolePermissions(profile.role)
   }
 }
 
@@ -131,18 +138,13 @@ function roundToTwo(num: number): number {
 export async function GET(req: NextRequest) {
   try {
     console.log('[GET /api/order-deliveries] Request started')
-    console.log('[GET /api/order-deliveries] Headers:', {
-      origin: req.headers.get('origin'),
-      referer: req.headers.get('referer'),
-      userAgent: req.headers.get('user-agent')?.substring(0, 50)
-    })
     
     // Authentication check
-    console.log('[GET /api/order-deliveries] Calling getAuthenticatedUser()...')
+    console.log('[GET /api/order-deliveries] Calling getAuthenticatedUser()')
     const user = await getAuthenticatedUser()
     
     if (!user) {
-      console.error('[GET /api/order-deliveries] Auth failed - no user returned')
+      console.error('[GET /api/order-deliveries] Auth failed - no user')
       return NextResponse.json({ 
         success: false, 
         error: 'Authentication required',
@@ -150,10 +152,10 @@ export async function GET(req: NextRequest) {
       }, { status: 401 })
     }
 
-    console.log('[GET /api/order-deliveries] User authenticated:', { email: user.email, role: user.role })
+    console.log('[GET /api/order-deliveries] User authenticated:', user.email, 'role:', user.role)
 
     if (!user.permissions.canView) {
-      console.error('[GET /api/order-deliveries] Permission denied - cannot view:', user.role)
+      console.error('[GET /api/order-deliveries] Permission denied:', user.role)
       return NextResponse.json({ 
         success: false, 
         error: 'Insufficient permissions to view deliveries' 
