@@ -27,6 +27,9 @@ export async function middleware(req: NextRequest) {
   const isProtectedRoute = protectedRoutes.some(route => url.pathname.startsWith(route))
   
   if (isProtectedRoute) {
+    console.log('[middleware] Checking protected route:', url.pathname)
+    console.log('[middleware] Request cookies:', req.cookies.getAll().map(c => c.name).join(', '))
+    
     // Create Supabase client to check authentication
     const response = NextResponse.next()
     const supabase = createServerClient(
@@ -35,9 +38,12 @@ export async function middleware(req: NextRequest) {
       {
         cookies: {
           getAll() {
-            return req.cookies.getAll()
+            const cookies = req.cookies.getAll()
+            console.log('[middleware-cookies] getAll() called, returning:', cookies.map(c => c.name).join(', '))
+            return cookies
           },
           setAll(cookiesToSet) {
+            console.log('[middleware-cookies] setAll() called with:', cookiesToSet.map(c => c.name).join(', '))
             cookiesToSet.forEach(({ name, value, options }) => {
               req.cookies.set(name, value)
               response.cookies.set(name, value, options)
@@ -48,18 +54,23 @@ export async function middleware(req: NextRequest) {
     )
 
     // Check if user is authenticated
+    console.log('[middleware] Calling supabase.auth.getUser()')
     const { data: { user }, error } = await supabase.auth.getUser()
+    
+    console.log('[middleware] Auth result:', { userExists: !!user, error: error?.message })
     
     if (error || !user) {
       // User is not authenticated, redirect to login with redirectTo
+      console.log('[middleware] User not authenticated, redirecting to login')
       const redirectTo = encodeURIComponent(url.pathname + url.search)
       const loginUrl = new URL('/login', url.origin)
       loginUrl.searchParams.set('redirectTo', redirectTo)
       
-      log({ level: 'info', event: 'auth_redirect', originalPath: url.pathname, redirectTo })
+      log({ level: 'info', event: 'auth_redirect', originalPath: url.pathname, redirectTo, error: error?.message })
       return NextResponse.redirect(loginUrl)
     }
 
+    console.log('[middleware] User authenticated, allowing through:', user.email)
     return response
   }
 
