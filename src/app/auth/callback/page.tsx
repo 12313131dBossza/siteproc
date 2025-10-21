@@ -96,6 +96,10 @@ function CallbackContent() {
             const destination = redirectTo ? decodeURIComponent(redirectTo) : '/dashboard';
             
             console.log('[callback] Redirecting to:', destination);
+            
+            // Small delay to ensure cookies are set in browser before navigation
+            await new Promise(r => setTimeout(r, 500));
+            
             router.replace(destination);
           } else {
             console.error('[callback] Session set failed:', responseData);
@@ -155,6 +159,10 @@ function CallbackContent() {
               const destination = redirectTo ? decodeURIComponent(redirectTo) : '/dashboard';
               
               console.log('[callback] Redirecting to:', destination);
+              
+              // Small delay to ensure cookies are set in browser before navigation
+              await new Promise(r => setTimeout(r, 500));
+              
               router.replace(destination);
             } else {
               console.error('[callback] PKCE exchange failed:', responseData);

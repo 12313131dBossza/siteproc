@@ -23,6 +23,12 @@ const protectedRoutes = ['/dashboard', '/jobs', '/suppliers', '/settings', '/adm
 export async function middleware(req: NextRequest) {
   const url = new URL(req.url)
   
+  // Skip middleware for auth callback routes - they need to set session
+  if (url.pathname.startsWith('/auth/callback')) {
+    console.log('[middleware] Skipping auth for callback route:', url.pathname)
+    return NextResponse.next()
+  }
+  
   // Handle authentication for protected routes
   const isProtectedRoute = protectedRoutes.some(route => url.pathname.startsWith(route))
   
