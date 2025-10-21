@@ -30,28 +30,62 @@ function getRolePermissions(role: string): UserPermissions {
 // Authentication helper
 async function getAuthenticatedUser() {
   const cookieStore = await cookies()
+  
+  // Debug: Log all cookies to see what's available
+  const allCookies = cookieStore.getAll()
+  console.log('[getAuthenticatedUser] Available cookies:', allCookies.map(c => c.name).join(', '))
+  
+  // Try to get the auth session cookie
+  const authCookie = cookieStore.get('sb-auth-token') || 
+                     cookieStore.get('sb-vrkgtygzcokqoeeutvxd-auth-token') ||
+                     Array.from(allCookies).find(c => c.name.includes('auth-token'))
+  
+  console.log('[getAuthenticatedUser] Auth cookie found:', !!authCookie)
+  
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
+        getAll() {
+          return cookieStore.getAll()
         },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options)
+            })
+          } catch (error) {
+            console.error('[getAuthenticatedUser] Error setting cookies:', error)
+          }
+        }
       },
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  
+  console.log('[getAuthenticatedUser] Auth result:', { 
+    userExists: !!user, 
+    userEmail: user?.email,
+    authError: authError?.message 
+  })
+  
+  if (authError || !user) {
+    console.error('[getAuthenticatedUser] Auth failed:', authError?.message || 'No user')
+    return null
+  }
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('role, company_id, full_name')
     .eq('id', user.id)
     .single()
 
-  if (!profile) return null
+  if (profileError || !profile) {
+    console.error('[getAuthenticatedUser] Profile fetch failed:', profileError?.message || 'No profile')
+    return null
+  }
 
   return {
     id: user.id,
