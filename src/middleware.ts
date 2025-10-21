@@ -18,7 +18,7 @@ const WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS || 60_000)
 const MAX_HITS = Number(process.env.RATE_LIMIT_MAX || 20)
 
 // Protected routes that require authentication
-const protectedRoutes = ['/dashboard', '/jobs', '/suppliers', '/settings', '/admin']
+const protectedRoutes = ['/dashboard', '/jobs', '/suppliers', '/settings', '/admin', '/deliveries', '/orders', '/projects']
 
 export async function middleware(req: NextRequest) {
   const url = new URL(req.url)

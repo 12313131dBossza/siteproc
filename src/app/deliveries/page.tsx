@@ -130,7 +130,10 @@ export default function DeliveriesPage() {
 
       if (!response.ok) {
         if (response.status === 401) {
-          console.log('Unauthorized - redirecting to login')
+          console.log('Unauthorized (401) - session expired, refreshing page to trigger middleware redirect')
+          // Session expired - the middleware will handle the redirect
+          // Give it a moment to process
+          await new Promise(r => setTimeout(r, 500))
           window.location.href = '/login?redirectTo=' + encodeURIComponent(window.location.pathname)
           return
         }
