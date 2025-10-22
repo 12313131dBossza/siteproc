@@ -133,8 +133,8 @@ export default function ExpensesPage() {
         throw new Error(`Failed to fetch expenses: ${response.status}`);
       }
 
-      const data = await response.json();
-      const fetchedExpenses: Expense[] = data.expenses || [];
+      const json = await response.json();
+      const fetchedExpenses: Expense[] = json.data || json.expenses || [];
 
       setExpenses(fetchedExpenses);
     } catch (error) {

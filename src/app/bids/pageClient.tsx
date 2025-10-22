@@ -74,8 +74,9 @@ export default function BidsPageClient() {
       const res = await fetch('/api/projects');
       if (!res.ok) throw new Error('Failed to fetch projects');
       
-      const data = await res.json();
-      setProjects(data || []);
+      const json = await res.json();
+      const projectsData = Array.isArray(json) ? json : (json.data || []);
+      setProjects(projectsData);
     } catch (error) {
       console.error('Error fetching projects:', error);
     }
