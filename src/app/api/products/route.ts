@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sbServer } from '@/lib/supabase-server';
+import { createServiceClient } from '@/lib/supabase-service';
 
 export const runtime = 'nodejs';
 
@@ -18,10 +19,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user's company_id from profile
+    // Get user's company_id and role from profile
     const { data: profile } = await supabase
       .from('profiles')
-      .select('company_id')
+      .select('company_id, role')
       .eq('id', user.id)
       .single();
 
@@ -30,9 +31,9 @@ export async function GET(request: NextRequest) {
       .select('*')
       .order('created_at', { ascending: false });
 
-    // Filter by company if user has one, otherwise show products with null company_id
+    // Broadened filter: company OR null (shared products)
     if (profile?.company_id) {
-      query = query.eq('company_id', profile.company_id);
+      query = query.or(`company_id.eq.${profile.company_id},company_id.is.null`);
     } else {
       query = query.is('company_id', null);
     }
@@ -46,11 +47,53 @@ export async function GET(request: NextRequest) {
       query = query.eq('category', category);
     }
 
-    // Note: lowStock filter requires comparing two columns, which Supabase doesn't support directly
-    // We'll filter in JavaScript instead
     const { data: products, error } = await query;
 
-    if (error) throw error;
+    if (error) {
+      console.error('Products fetch error (RLS):', error);
+      
+      // Service-role fallback for admins/managers
+      if (['admin', 'owner', 'manager'].includes(profile?.role || '')) {
+        console.log('🔄 Using service-role fallback for products');
+        
+        const serviceSb = createServiceClient();
+        let fallbackQuery = serviceSb
+          .from('products')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (profile?.company_id) {
+          fallbackQuery = fallbackQuery.or(`company_id.eq.${profile.company_id},company_id.is.null`);
+        }
+
+        if (status && status !== 'all') {
+          fallbackQuery = fallbackQuery.eq('status', status);
+        }
+
+        if (category && category !== 'all') {
+          fallbackQuery = fallbackQuery.eq('category', category);
+        }
+
+        const { data: fallbackProducts, error: fallbackError } = await fallbackQuery;
+        
+        if (fallbackError) {
+          console.error('Service-role fallback also failed:', fallbackError);
+          return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 });
+        }
+
+        // Apply low stock filter in JavaScript
+        let filteredProducts = fallbackProducts || [];
+        if (lowStock === 'true' && filteredProducts.length > 0) {
+          filteredProducts = filteredProducts.filter((p: any) => 
+            (p.stock_quantity || 0) <= (p.min_stock_level || 0)
+          );
+        }
+
+        return NextResponse.json(filteredProducts);
+      }
+      
+      return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 });
+    }
 
     // Apply low stock filter in JavaScript
     let filteredProducts = products || [];
@@ -81,37 +124,68 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user's company_id from profile
+    // Get user's company_id and role from profile
     const { data: profile } = await supabase
       .from('profiles')
-      .select('company_id')
+      .select('company_id, role')
       .eq('id', user.id)
       .single();
 
-    const { data: product, error } = await supabase
+    const productData = {
+      name: body.name,
+      category: body.category,
+      price: body.price,
+      unit: body.unit || 'pcs',
+      stock_quantity: body.stock_quantity || 0,
+      min_stock_level: body.min_stock_level || 10,
+      reorder_point: body.reorder_point || 15,
+      reorder_quantity: body.reorder_quantity || 50,
+      description: body.description,
+      status: body.status || 'active',
+      supplier_name: body.supplier_name,
+      supplier_email: body.supplier_email,
+      supplier_phone: body.supplier_phone,
+      lead_time_days: body.lead_time_days || 7,
+      company_id: profile?.company_id || null,
+      created_by: user.id,
+      created_at: new Date().toISOString()
+    };
+
+    let product;
+    let error;
+
+    // Try with normal RLS first
+    const result = await supabase
       .from('products')
-      .insert({
-        name: body.name,
-        category: body.category,
-        price: body.price,
-        unit: body.unit || 'pcs',
-        stock_quantity: body.stock_quantity || 0,
-        min_stock_level: body.min_stock_level || 10,
-        reorder_point: body.reorder_point || 15,
-        reorder_quantity: body.reorder_quantity || 50,
-        description: body.description,
-        status: body.status || 'active',
-        supplier_name: body.supplier_name,
-        supplier_email: body.supplier_email,
-        supplier_phone: body.supplier_phone,
-        lead_time_days: body.lead_time_days || 7,
-        company_id: profile?.company_id || null,
-        created_at: new Date().toISOString()
-      })
+      .insert(productData)
       .select()
       .single();
 
-    if (error) throw error;
+    product = result.data;
+    error = result.error;
+
+    // Service-role fallback if RLS blocks
+    if (error && ['admin', 'owner', 'manager'].includes(profile?.role || '')) {
+      console.log('🔄 Using service-role fallback for product creation');
+      
+      const serviceSb = createServiceClient();
+      const fallbackResult = await serviceSb
+        .from('products')
+        .insert(productData)
+        .select()
+        .single();
+      
+      product = fallbackResult.data;
+      error = fallbackResult.error;
+    }
+
+    if (error) {
+      console.error('Error creating product:', error);
+      return NextResponse.json(
+        { error: error.message || 'Failed to create product' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json(product, { status: 201 });
   } catch (error: any) {

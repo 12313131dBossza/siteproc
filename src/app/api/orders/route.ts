@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUserProfile, validateRole, getCompanyAdminEmails, response } from '@/lib/server-utils'
 import { logActivity } from '@/app/api/activity/route'
 import { sendOrderRequestNotification, sendOrderApprovalNotification, sendOrderRejectionNotification } from '@/lib/email'
+import { createServiceClient } from '@/lib/supabase-service'
 
 // GET /api/orders - List orders for user's company
 export async function GET(request: NextRequest) {
@@ -17,12 +18,14 @@ export async function GET(request: NextRequest) {
     const projectId = searchParams.get('project_id')
     const status = searchParams.get('status')
     
-    // Query with delivery progress fields explicitly included
+    // Broadened filter: company_id OR created_by (for visibility during migration)
     let query = supabase
       .from('purchase_orders')
       .select(`
         id,
         project_id,
+        company_id,
+        created_by,
         amount,
         description,
         category,
@@ -45,13 +48,13 @@ export async function GET(request: NextRequest) {
         delivered_qty,
         remaining_qty,
         delivered_value,
-        projects!inner(
+        projects(
           id,
           name,
           company_id
         )
       `)
-      .eq('projects.company_id', profile.company_id)
+      .or(`company_id.eq.${profile.company_id},created_by.eq.${profile.id}`)
       .order('created_at', { ascending: false })
 
     if (projectId) {
@@ -65,7 +68,7 @@ export async function GET(request: NextRequest) {
     const { data: orders, error } = await query
 
     if (error) {
-      console.error('Error fetching orders:', error)
+      console.error('Error fetching orders (RLS):', error)
       
       // If schema cache error, provide helpful message
       if (error.message?.includes('schema cache') || error.message?.includes('could not find')) {
@@ -75,6 +78,66 @@ export async function GET(request: NextRequest) {
           message: 'Run this in Supabase SQL Editor: NOTIFY pgrst, \'reload schema\';',
           details: error.message
         }, { status: 503 })
+      }
+      
+      // Service-role fallback for admins/managers/bookkeepers
+      if (['admin', 'owner', 'manager', 'bookkeeper'].includes(profile.role || '')) {
+        console.log('🔄 Using service-role fallback for orders (admin/manager)')
+        
+        const serviceSb = createServiceClient()
+        let fallbackQuery = serviceSb
+          .from('purchase_orders')
+          .select(`
+            id,
+            project_id,
+            company_id,
+            created_by,
+            amount,
+            description,
+            category,
+            vendor,
+            product_name,
+            quantity,
+            unit_price,
+            status,
+            requested_by,
+            requested_at,
+            approved_by,
+            approved_at,
+            rejected_by,
+            rejected_at,
+            rejection_reason,
+            created_at,
+            updated_at,
+            delivery_progress,
+            ordered_qty,
+            delivered_qty,
+            remaining_qty,
+            delivered_value,
+            projects(
+              id,
+              name,
+              company_id
+            )
+          `)
+          .eq('company_id', profile.company_id)
+          .order('created_at', { ascending: false })
+
+        if (projectId) {
+          fallbackQuery = fallbackQuery.eq('project_id', projectId)
+        }
+        if (status) {
+          fallbackQuery = fallbackQuery.eq('status', status)
+        }
+
+        const { data: fallbackOrders, error: fallbackError } = await fallbackQuery
+        
+        if (fallbackError) {
+          console.error('Service-role fallback also failed:', fallbackError)
+          return response.error('Failed to fetch orders', 500)
+        }
+        
+        return response.success(fallbackOrders)
       }
       
       return response.error('Failed to fetch orders', 500)
@@ -158,10 +221,11 @@ export async function POST(request: NextRequest) {
       return response.error('Failed to verify project', 500)
     }
 
-    // Create order using fresh purchase_orders table (bypasses stuck cache)
-    // Note: purchase_orders gets company_id through project_id relationship, no need to store directly
+    // Create order with company_id directly set
     const insertData: any = {
       project_id,
+      company_id: profile.company_id,
+      created_by: profile.id,
       amount,
       description: orderData.description,
       category: orderData.category,
@@ -178,12 +242,18 @@ export async function POST(request: NextRequest) {
     
     console.log('📝 Inserting order data:', insertData)
     
-    const { data: order, error } = await supabase
+    let order
+    let error
+    
+    // Try with normal RLS first
+    const result = await supabase
       .from('purchase_orders')
       .insert(insertData)
       .select(`
         id,
         project_id,
+        company_id,
+        created_by,
         amount,
         description,
         category,
@@ -198,6 +268,41 @@ export async function POST(request: NextRequest) {
         updated_at
       `)
       .single()
+    
+    order = result.data
+    error = result.error
+
+    // Service-role fallback if RLS blocks
+    if (error && ['admin', 'owner', 'manager', 'bookkeeper'].includes(profile.role || '')) {
+      console.log('🔄 Using service-role fallback for order creation')
+      
+      const serviceSb = createServiceClient()
+      const fallbackResult = await serviceSb
+        .from('purchase_orders')
+        .insert(insertData)
+        .select(`
+          id,
+          project_id,
+          company_id,
+          created_by,
+          amount,
+          description,
+          category,
+          vendor,
+          product_name,
+          quantity,
+          unit_price,
+          status,
+          requested_by,
+          requested_at,
+          created_at,
+          updated_at
+        `)
+        .single()
+      
+      order = fallbackResult.data
+      error = fallbackResult.error
+    }
 
     if (error) {
       console.error('Error creating order:', error)

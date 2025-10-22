@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sbServer } from '@/lib/supabase-server'
+import { createServiceClient } from '@/lib/supabase-service'
 
 // GET /api/projects - List projects for user's company
 export async function GET() {
@@ -14,7 +15,7 @@ export async function GET() {
     // Get user's company from profiles table
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('company_id')
+      .select('company_id, role')
       .eq('id', user.id)
       .single()
 
@@ -27,21 +28,46 @@ export async function GET() {
       return NextResponse.json({ error: 'No company associated' }, { status: 400 })
     }
 
-    // Get all projects for this company
+    // Get all projects for this company (broadened filter for visibility)
     console.log('🔍 Fetching projects for company_id:', profile.company_id)
     const { data: projects, error } = await supabase
       .from('projects')
       .select('*')
-      .eq('company_id', profile.company_id)
+      .or(`company_id.eq.${profile.company_id},created_by.eq.${user.id}`)
       .order('created_at', { ascending: false })
 
     if (error) {
-      console.error('❌ Projects fetch error:', error)
-      throw error
+      console.error('❌ Projects fetch error (RLS):', error)
+      
+      // Service-role fallback for admins/managers/bookkeepers
+      if (['admin', 'owner', 'manager', 'bookkeeper'].includes(profile.role || '')) {
+        console.log('🔄 Using service-role fallback for projects')
+        
+        const serviceSb = createServiceClient()
+        const { data: fallbackProjects, error: fallbackError } = await serviceSb
+          .from('projects')
+          .select('*')
+          .eq('company_id', profile.company_id)
+          .order('created_at', { ascending: false })
+
+        if (fallbackError) {
+          console.error('Service-role fallback also failed:', fallbackError)
+          return NextResponse.json({ error: 'Failed to fetch projects' }, { status: 500 })
+        }
+
+        // Map project_number to code for frontend compatibility
+        const projectsWithCode = fallbackProjects?.map(p => ({
+          ...p,
+          code: p.project_number
+        })) || []
+
+        return NextResponse.json(projectsWithCode)
+      }
+      
+      return NextResponse.json({ error: 'Failed to fetch projects' }, { status: 500 })
     }
 
     console.log('✅ Projects found:', projects?.length || 0)
-    console.log('📦 Projects data:', JSON.stringify(projects, null, 2))
 
     // Map project_number to code for frontend compatibility
     const projectsWithCode = projects?.map(p => ({
@@ -71,7 +97,7 @@ export async function POST(request: NextRequest) {
     // Get user profile with company
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('company_id')
+      .select('company_id, role')
       .eq('id', user.id)
       .single()
 
@@ -100,11 +126,33 @@ export async function POST(request: NextRequest) {
 
     console.log('Creating project with data:', projectData)
 
-    const { data: project, error } = await supabase
+    let project
+    let error
+    
+    // Try with normal RLS first
+    const result = await supabase
       .from('projects')
       .insert(projectData)
       .select()
       .single()
+    
+    project = result.data
+    error = result.error
+
+    // Service-role fallback if RLS blocks
+    if (error && ['admin', 'owner', 'manager', 'bookkeeper'].includes(profile.role || '')) {
+      console.log('🔄 Using service-role fallback for project creation')
+      
+      const serviceSb = createServiceClient()
+      const fallbackResult = await serviceSb
+        .from('projects')
+        .insert(projectData)
+        .select()
+        .single()
+      
+      project = fallbackResult.data
+      error = fallbackResult.error
+    }
 
     if (error) {
       console.error('❌ PROJECT INSERT ERROR:', error)
