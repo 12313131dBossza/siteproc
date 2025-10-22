@@ -38,9 +38,26 @@ export async function POST(request: NextRequest) {
     const supabase = await sbServer()
     const body = await request.json()
 
+    // Get the user's profile to get their company_id
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('company_id')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile?.company_id) {
+      return NextResponse.json({ error: 'No company associated with user' }, { status: 400 })
+    }
+
     const { data: bid, error } = await supabase
       .from('bids')
       .insert([{
+        company_id: profile.company_id,
         vendor_name: body.vendor_name,
         vendor_email: body.vendor_email,
         project_id: body.project_id || null,
