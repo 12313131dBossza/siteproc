@@ -26,8 +26,8 @@ export async function GET(req: Request) {
   let query = supabase
     .from('change_orders')
     .select(`
-      id, order_id, proposed_qty, reason, description, status, 
-      created_at, decided_by, decided_at, created_by
+      id, job_id, cost_delta, description, status, 
+      created_at, approved_by, approved_at, created_by, approver_email
     `)
     .eq('company_id', me.company_id)
     .order('created_at', { ascending: false })
