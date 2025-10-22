@@ -118,18 +118,29 @@ export async function POST(request: NextRequest) {
     const supabase = await sbServer();
     const body = await request.json();
 
+    console.log('📦 Product creation attempt - body:', JSON.stringify(body, null, 2));
+
     // Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
+      console.error('❌ Auth error:', authError);
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    console.log('✅ User authenticated:', user.id);
+
     // Get user's company_id and role from profile
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('company_id, role')
       .eq('id', user.id)
       .single();
+
+    if (profileError) {
+      console.error('❌ Profile fetch error:', profileError);
+    }
+
+    console.log('👤 Profile:', JSON.stringify(profile, null, 2));
 
     const productData = {
       name: body.name,
@@ -151,10 +162,13 @@ export async function POST(request: NextRequest) {
       created_at: new Date().toISOString()
     };
 
+    console.log('📝 Product data to insert:', JSON.stringify(productData, null, 2));
+
     let product;
     let error;
 
     // Try with normal RLS first
+    console.log('🔐 Attempting insert with RLS...');
     const result = await supabase
       .from('products')
       .insert(productData)
@@ -164,9 +178,15 @@ export async function POST(request: NextRequest) {
     product = result.data;
     error = result.error;
 
+    if (error) {
+      console.error('❌ RLS insert failed:', JSON.stringify(error, null, 2));
+    } else {
+      console.log('✅ RLS insert succeeded:', product?.id);
+    }
+
     // Service-role fallback if RLS blocks
     if (error && ['admin', 'owner', 'manager'].includes(profile?.role || '')) {
-      console.log('🔄 Using service-role fallback for product creation');
+      console.log('🔄 Using service-role fallback for product creation (role:', profile?.role, ')');
       
       const serviceSb = createServiceClient();
       const fallbackResult = await serviceSb
@@ -177,21 +197,36 @@ export async function POST(request: NextRequest) {
       
       product = fallbackResult.data;
       error = fallbackResult.error;
+
+      if (error) {
+        console.error('❌ Service-role fallback also failed:', JSON.stringify(error, null, 2));
+      } else {
+        console.log('✅ Service-role fallback succeeded:', product?.id);
+      }
     }
 
     if (error) {
-      console.error('Error creating product:', error);
+      console.error('❌ Final error creating product:', error);
       return NextResponse.json(
-        { error: error.message || 'Failed to create product' },
+        { 
+          error: error.message || 'Failed to create product',
+          details: error.details || 'No details available',
+          hint: error.hint || 'No hint available',
+          code: error.code || 'No code'
+        },
         { status: 500 }
       );
     }
 
+    console.log('✅ Product created successfully:', product?.id);
     return NextResponse.json(product, { status: 201 });
   } catch (error: any) {
-    console.error('Error creating product:', error);
+    console.error('❌ Unexpected error creating product:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to create product' },
+      { 
+        error: error.message || 'Failed to create product',
+        stack: error.stack
+      },
       { status: 500 }
     );
   }
