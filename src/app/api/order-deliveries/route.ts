@@ -779,7 +779,9 @@ export async function POST(req: NextRequest) {
     console.error('Delivery creation error:', error)
     return NextResponse.json({
       success: false,
-      error: 'Failed to create delivery'
+      error: 'Failed to create delivery',
+      details: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
     }, { status: 500 })
   }
 }
