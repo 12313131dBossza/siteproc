@@ -86,9 +86,9 @@ export async function GET(request: NextRequest) {
       description: e.description || e.memo || '',
       status: e.status || 'pending',
       created_at: e.created_at,
-      approved_at: e.approved_at || e.decided_at,
-      approved_by: e.approved_by || e.decided_by,
-      project_id: e.project_id,
+      approved_at: e.approved_at,
+      approved_by: e.approved_by,
+      project_id: e.job_id, // Map job_id to project_id for frontend
       receipt_url: e.receipt_url
     }))
 
@@ -132,11 +132,9 @@ export async function POST(request: NextRequest) {
       memo: body.memo || body.description || '',
       status: 'pending',
       company_id: profile.company_id,
-      project_id: body.project_id || null,
+      job_id: body.project_id || null, // Form sends project_id, but table uses job_id
       spent_at: spendDate,
-      spent_on: spendDate,
       user_id: user.id,
-      tax: body.tax ? Number(body.tax) : 0,
       receipt_url: body.receipt_url || null,
     }
 
@@ -191,7 +189,7 @@ export async function POST(request: NextRequest) {
       description: expense.description,
       status: expense.status,
       created_at: expense.created_at,
-      project_id: expense.project_id
+      project_id: expense.job_id // Map job_id back to project_id for frontend
     })
   } catch (error) {
     console.error('Error creating expense:', error)
