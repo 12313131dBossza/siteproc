@@ -61,7 +61,7 @@ export async function GET() {
           code: p.project_number
         })) || []
 
-        return NextResponse.json(projectsWithCode)
+        return NextResponse.json({ success: true, data: projectsWithCode })
       }
       
       return NextResponse.json({ error: 'Failed to fetch projects' }, { status: 500 })
@@ -75,8 +75,8 @@ export async function GET() {
       code: p.project_number
     })) || []
 
-    // Return projects array directly (not wrapped in data object)
-    return NextResponse.json(projectsWithCode)
+    // Return in consistent format for dashboard
+    return NextResponse.json({ success: true, data: projectsWithCode })
   } catch (error) {
     console.error('Error in GET /api/projects:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
       receipt_url: e.receipt_url
     }))
 
-    return NextResponse.json({ expenses: formatted })
+    return NextResponse.json({ success: true, data: formatted })
   } catch (error) {
     console.error('Error in GET /api/expenses:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
