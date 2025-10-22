@@ -8,15 +8,14 @@ import { cn } from '@/lib/utils'
 
 type ChangeOrder = {
   id: string
-  order_id: string
-  proposed_qty: number
-  reason: string | null
+  job_id: string | null
+  cost_delta: number
   description: string | null
   status: 'pending' | 'approved' | 'rejected'
   created_at: string
-  decided_by?: string
-  decided_at?: string
+  approved_at?: string
   created_by?: string
+  approver_email?: string | null
 }
 
 const statusConfig = {
@@ -99,21 +98,23 @@ export default function ChangeOrdersPage() {
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
-              <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
-                {order.order_id.slice(0, 8)}...
-              </span>
+              {order.job_id && (
+                <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
+                  Job: {order.job_id.slice(0, 8)}...
+                </span>
+              )}
               <div className={cn("flex items-center gap-1.5 px-2 py-1 rounded-full border text-xs font-medium", color)}>
                 <StatusIcon className="w-3.5 h-3.5" />
                 {label}
               </div>
             </div>
             <div className="text-lg font-semibold text-gray-900 mb-1">
-              Quantity Change: {order.proposed_qty}
+              Cost Change: ${order.cost_delta.toLocaleString()}
             </div>
-            {(order.reason || order.description) && (
+            {order.description && (
               <div className="text-gray-600 mb-3">
-                <span className="text-sm font-medium text-gray-500">Reason: </span>
-                {order.reason || order.description}
+                <span className="text-sm font-medium text-gray-500">Description: </span>
+                {order.description}
               </div>
             )}
           </div>
@@ -122,8 +123,8 @@ export default function ChangeOrdersPage() {
         <div className="flex items-center justify-between">
           <div className="text-sm text-gray-500">
             <div>Requested: {formatDateTime(order.created_at)}</div>
-            {order.decided_at && (
-              <div>Decided: {formatDateTime(order.decided_at)}</div>
+            {order.approved_at && (
+              <div>Decided: {formatDateTime(order.approved_at)}</div>
             )}
           </div>
           
