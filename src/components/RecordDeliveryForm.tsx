@@ -55,30 +55,56 @@ export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, d
   // Fetch projects for dropdown
   const fetchProjects = async () => {
     try {
-      const response = await fetch('/api/projects')
+      console.log('[fetchProjects] Starting fetch...')
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout
+      
+      const response = await fetch('/api/projects', { signal: controller.signal })
+      clearTimeout(timeoutId)
+      
+      console.log('[fetchProjects] Response status:', response.status)
+      
       if (response.ok) {
         const data = await response.json()
-        setProjects(data)
+        console.log('[fetchProjects] Success, data:', data)
+        setProjects(Array.isArray(data) ? data : [])
+      } else {
+        console.error('[fetchProjects] Failed response:', response.status)
+        setProjects([])
       }
     } catch (error) {
-      console.error('Error fetching projects:', error)
+      console.error('[fetchProjects] Error:', error)
+      setProjects([])
     }
   }
 
   // Fetch orders for dropdown
   const fetchOrders = async () => {
     try {
-      const response = await fetch('/api/orders')
+      console.log('[fetchOrders] Starting fetch...')
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout
+      
+      const response = await fetch('/api/orders', { signal: controller.signal })
+      clearTimeout(timeoutId)
+      
+      console.log('[fetchOrders] Response status:', response.status)
+      
       if (response.ok) {
         const result = await response.json()
-        console.log('📦 Fetched orders:', result)
+        console.log('[fetchOrders] Success, data:', result)
         // API returns {ok: true, data: [...]} format
         const ordersList = result.data || result.orders || result || []
-        console.log('📋 Orders list:', ordersList)
-        setOrders(ordersList)
+        console.log('[fetchOrders] Orders list:', ordersList)
+        setOrders(Array.isArray(ordersList) ? ordersList : [])
+      } else {
+        console.error('[fetchOrders] Failed response:', response.status, response.statusText)
+        setOrders([])
       }
     } catch (error) {
-      console.error('Error fetching orders:', error)
+      console.error('[fetchOrders] Error:', error)
+      // Set empty array instead of staying in loading state
+      setOrders([])
     }
   }
 
