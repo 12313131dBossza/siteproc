@@ -25,7 +25,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   const up = await supabase
     .from('change_orders')
-    .update({ status: 'rejected', decided_by: uid, decided_at: new Date().toISOString() })
+    .update({ status: 'rejected', approved_at: new Date().toISOString() })
     .eq('id', coId)
   if (up.error) return NextResponse.json({ error: up.error.message }, { status: 400 })
 
