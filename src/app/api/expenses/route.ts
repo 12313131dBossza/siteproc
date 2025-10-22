@@ -62,6 +62,22 @@ export async function GET(request: NextRequest) {
       } catch {}
     }
 
+    // As a final diagnostic fallback for admins, if still empty, show last N expenses across all companies
+    if (rows.length === 0 && role && ['admin','owner','bookkeeper'].includes(role)) {
+      try {
+        const svc = supabaseService()
+        const { data: svcAll, error: svcAllErr } = await svc
+          .from('expenses')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(50)
+        if (!svcAllErr && svcAll && svcAll.length > 0) {
+          rows = svcAll as any[]
+          usedFallback = true
+        }
+      } catch {}
+    }
+
     const formatted = rows.map((e: any) => ({
       id: e.id,
       vendor: e.vendor || (e.description ? String(e.description).slice(0, 50) : 'Expense'),
