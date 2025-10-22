@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
       memo: body.memo || body.description || '',
       status: 'pending',
       company_id: profile.company_id,
-      job_id: body.project_id || null, // Form sends project_id, but table uses job_id
+      job_id: null, // Note: job_id references 'jobs' table, not 'projects'. Keep null for now.
       spent_at: spendDate,
       user_id: user.id,
       receipt_url: body.receipt_url || null,
