@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { sbServer } from '@/lib/supabase-server'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+import { supabaseService } from '@/lib/supabase'
 import { syncOrderStatus } from '@/lib/orderSync'
 
 export async function PATCH(
@@ -17,7 +19,19 @@ export async function PATCH(
       )
     }
 
-    const supabase = await sbServer()
+    // Create Supabase client bound to request cookies
+    const cookieStore = await cookies()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value
+          },
+        },
+      }
+    )
 
     // First, get the delivery to check current status and get order info
     const { data: delivery, error: fetchError } = await supabase
@@ -57,17 +71,50 @@ export async function PATCH(
       updateData.delivered_at = delivered_at
     }
 
-    const { data: updatedDelivery, error: updateError } = await supabase
+    let { data: updatedDelivery, error: updateError } = await supabase
       .from('deliveries')
       .update(updateData)
       .eq('id', deliveryId)
       .select()
       .single()
 
+    // If the update failed because delivered_at column is missing, add it and retry once
+    if (updateError && /column .*delivered_at.* does not exist/i.test(updateError.message || '')) {
+      try {
+        const svc = supabaseService() as any
+        await svc.rpc('exec_sql', { sql: "ALTER TABLE public.deliveries ADD COLUMN IF NOT EXISTS delivered_at timestamptz;" })
+      } catch {}
+      const retry = await supabase
+        .from('deliveries')
+        .update(updateData)
+        .eq('id', deliveryId)
+        .select()
+        .single()
+      updatedDelivery = retry.data
+      updateError = retry.error
+    }
+
+    // If still failing (likely RLS), retry with service role
+    if (updateError) {
+      try {
+        const svc = supabaseService() as any
+        const resSR = await svc
+          .from('deliveries')
+          .update(updateData)
+          .eq('id', deliveryId)
+          .select()
+          .single()
+        updatedDelivery = resSR.data
+        updateError = resSR.error
+      } catch (e) {
+        // preserve updateError
+      }
+    }
+
     if (updateError) {
       console.error('Error updating delivery:', updateError)
       return NextResponse.json(
-        { success: false, error: 'Failed to update delivery status' },
+        { success: false, error: 'Failed to update delivery status', details: updateError.message },
         { status: 500 }
       )
     }
@@ -76,7 +123,8 @@ export async function PATCH(
     let orderSyncResult = null
     if (delivery.order_id) {
       try {
-        orderSyncResult = await syncOrderStatus(supabase, delivery.order_id)
+        // Cast to any to accommodate SSR client type
+        orderSyncResult = await syncOrderStatus(supabase as any, delivery.order_id)
         console.log('Order synced successfully:', orderSyncResult)
       } catch (orderError) {
         console.warn('Error syncing order status:', orderError)

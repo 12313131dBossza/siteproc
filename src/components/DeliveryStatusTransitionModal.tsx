@@ -59,18 +59,31 @@ export function DeliveryStatusTransitionModal({
 
     setLoading(true)
     try {
-      const payload: Record<string, any> = {
-        status: newStatus,
-        driver_name: driverName || null,
-        vehicle_number: vehicleNumber || null,
-        signer_name: signerName || null,
-        signature_url: signatureUrl || null
+      let url = ''
+      let method = 'PATCH'
+      let body: any = {}
+
+      if (newStatus === 'partial') {
+        // Move to In Transit
+        url = `/api/order-deliveries/${deliveryId}`
+        body = {
+          status: 'partial',
+          driver_name: driverName || null,
+          vehicle_number: vehicleNumber || null
+        }
+      } else {
+        // Complete (Delivered)
+        url = `/api/order-deliveries/${deliveryId}/mark-delivered`
+        body = {
+          notes: signerName ? `Signed by ${signerName}${driverName ? `; Driver ${driverName}` : ''}` : null,
+          delivered_at: new Date().toISOString()
+        }
       }
 
-      const res = await fetch(`/api/deliveries/${deliveryId}`, {
-        method: 'PATCH',
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(body)
       })
 
       if (!res.ok) {
@@ -78,7 +91,8 @@ export function DeliveryStatusTransitionModal({
         throw new Error(errData.error || `HTTP ${res.status}`)
       }
 
-      const { data: updated } = await res.json()
+      const json = await res.json()
+      const updated = json?.delivery || json?.data || json
       toast({
         title: `Delivery status updated to ${newStatus}`,
         variant: 'success'
@@ -96,10 +110,7 @@ export function DeliveryStatusTransitionModal({
       onClose()
     } catch (err: any) {
       console.error('Error updating delivery:', err)
-      toast({
-        title: err.message || 'Failed to update delivery status',
-        variant: 'error'
-      })
+      toast({ title: 'Failed to update delivery status', variant: 'error' })
     } finally {
       setLoading(false)
     }
