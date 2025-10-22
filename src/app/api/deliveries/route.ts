@@ -219,10 +219,24 @@ export async function GET(req: NextRequest) {
   if (!session.companyId) return NextResponse.json({ error: 'no_company' }, { status: 400 })
     const url = new URL(req.url)
     const jobId = url.searchParams.get('job_id')
-    if (!jobId) return NextResponse.json({ error: 'job_id required' }, { status: 400 })
     const limit = Math.min(Number(url.searchParams.get('limit') || 50), 200)
     const cursor = url.searchParams.get('cursor')
     const sb = supabaseService()
+    
+    // If no job_id, return all deliveries for company (for dashboard)
+    if (!jobId) {
+      const { data, error } = await (sb as any)
+        .from('deliveries')
+        .select('*')
+        .eq('company_id', session.companyId)
+        .order('created_at', { ascending: false })
+        .limit(limit)
+      
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ success: true, data: data || [] })
+    }
+    
+    // Original job-specific query
     let q = sb
       .from('deliveries')
       .select('id,job_id,po_id,status,delivered_at,created_at')

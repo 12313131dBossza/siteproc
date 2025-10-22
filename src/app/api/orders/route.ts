@@ -137,13 +137,13 @@ export async function GET(request: NextRequest) {
           return response.error('Failed to fetch orders', 500)
         }
         
-        return response.success(fallbackOrders)
+        return NextResponse.json({ success: true, data: fallbackOrders })
       }
       
       return response.error('Failed to fetch orders', 500)
     }
 
-    return response.success(orders)
+    return NextResponse.json({ success: true, data: orders })
   } catch (error) {
     console.error('Error in GET /api/orders:', error)
     return response.error('Internal server error', 500)
