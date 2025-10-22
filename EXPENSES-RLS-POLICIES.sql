@@ -11,9 +11,9 @@ do $$
 declare r record;
 begin
   for r in (
-    select polname from pg_policies where schemaname='public' and tablename='expenses'
+    select policyname from pg_policies where schemaname='public' and tablename='expenses'
   ) loop
-    execute format('drop policy if exists %I on public.expenses;', r.polname);
+    execute format('drop policy if exists %I on public.expenses;', r.policyname);
   end loop;
 end $$;
 
