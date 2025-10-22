@@ -210,12 +210,19 @@ export async function GET(req: NextRequest) {
       .select(`*, delivery_items (*)`)
       .order('created_at', { ascending: false })
     
-    // Company filtering - ensures users only see their company's deliveries
-    if (supportsCompany) {
-      query = query.eq('company_id', user.company_id)
+    // Company filtering - ensures users only see their company's deliveries when available
+    const filterByCompany = supportsCompany && !!user.company_id
+    if (filterByCompany) {
+      // Include deliveries with matching company OR those created by the user (regardless of company_id)
+      // This ensures users always see what they created, even if company assignment was missing/mismatched
+      const orExpr = `company_id.eq.${user.company_id},created_by.eq.${user.id}`
+      query = query.or(orExpr)
+      console.log(`🔍 Fetching deliveries for company: ${user.company_id} OR created_by=${user.id}`)
+    } else {
+      // Fallback: show deliveries created by the current user if company_id is unavailable
+      query = query.eq('created_by', user.id)
+      console.log(`🔍 Fetching deliveries by creator fallback: ${user.id} (email: ${user.email})`)
     }
-    
-    console.log(`🔍 Fetching deliveries for company: ${user.company_id} (user: ${user.email})`)
 
     // Apply status filter
     if (status && status !== 'all') {
@@ -230,14 +237,20 @@ export async function GET(req: NextRequest) {
     // Get total count for pagination
     let totalCount = 0
     try {
-      const c = await supabase
-        .from('deliveries')
-        .select('*', { count: 'exact', head: true })
-      const c2 = supportsCompany ? await supabase
-        .from('deliveries')
-        .select('*', { count: 'exact', head: true })
-        .eq('company_id', user.company_id) : null
-      totalCount = (supportsCompany ? (c2?.count || 0) : (c.count || 0))
+      if (filterByCompany) {
+        const orExpr = `company_id.eq.${user.company_id},created_by.eq.${user.id}`
+        const c2 = await supabase
+          .from('deliveries')
+          .select('*', { count: 'exact', head: true })
+          .or(orExpr)
+        totalCount = c2.count ?? 0
+      } else {
+        const c3 = await supabase
+          .from('deliveries')
+          .select('*', { count: 'exact', head: true })
+          .eq('created_by', user.id)
+        totalCount = c3.count || 0
+      }
     } catch {
       // Best effort; will compute from page data
       totalCount = 0
