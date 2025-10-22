@@ -584,11 +584,15 @@ export async function POST(req: NextRequest) {
       try {
         const sbSvc = supabaseService()
         let withJobSR: any = { ...deliveryData }
-        // Only set job_id if it looks like a UUID; otherwise, leave it undefined for first try
+        // Only set job_id if client supplied a valid UUID. Otherwise, prefer omitting it to avoid FK violations.
         const maybeId = body.job_id || body.order_id
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-        if (maybeId && uuidRegex.test(String(maybeId))) {
+        const clientProvidedValidJobId = !!maybeId && uuidRegex.test(String(maybeId))
+        if (clientProvidedValidJobId) {
           withJobSR.job_id = maybeId
+        } else {
+          // Ensure we don't carry a bogus job_id into inserts
+          delete (withJobSR as any).job_id
         }
 
         // If FK exists and requires a valid job row, try to create a placeholder job (best-effort)
@@ -603,6 +607,10 @@ export async function POST(req: NextRequest) {
               if (!tErr) { withJobSR.job_id = jobId; break }
             }
           } catch {}
+          // If we couldn't create a placeholder, avoid sending job_id at all
+          if (!withJobSR.job_id) {
+            delete (withJobSR as any).job_id
+          }
         }
 
         let res3 = await (sbSvc as any)
@@ -618,9 +626,12 @@ export async function POST(req: NextRequest) {
           // If the error is due to UUID syntax (e.g. job_id uuid), retry with a generated UUID
           const msg = res3.error.message || ''
           if (/invalid input syntax for type uuid/i.test(msg) || /job_id.*uuid/i.test(msg) || (/job_id/i.test(msg) && /not-null|null value/i.test(msg))) {
+            // Last resort: try again explicitly without job_id to avoid FK/UUID issues (if column allows NULL)
+            const payload = { ...withJobSR }
+            delete (payload as any).job_id
             const retry = await (sbSvc as any)
               .from('deliveries')
-              .insert([{ ...withJobSR, job_id: randomUUID() }])
+              .insert([payload])
               .select()
               .single()
             if (!retry.error && retry.data) {
