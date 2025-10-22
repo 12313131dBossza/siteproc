@@ -32,6 +32,8 @@ export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, d
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [projects, setProjects] = useState<Project[]>([])
   const [orders, setOrders] = useState<any[]>([])
+  const [loadingOrders, setLoadingOrders] = useState(true)
+  const [loadingProjects, setLoadingProjects] = useState(true)
   
   const [formData, setFormData] = useState({
     order_uuid: preselectedOrderId || '',
@@ -55,6 +57,7 @@ export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, d
   // Fetch projects for dropdown
   const fetchProjects = async () => {
     try {
+      setLoadingProjects(true)
       console.log('[fetchProjects] Starting fetch...')
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout
@@ -75,12 +78,15 @@ export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, d
     } catch (error) {
       console.error('[fetchProjects] Error:', error)
       setProjects([])
+    } finally {
+      setLoadingProjects(false)
     }
   }
 
   // Fetch orders for dropdown
   const fetchOrders = async () => {
     try {
+      setLoadingOrders(true)
       console.log('[fetchOrders] Starting fetch...')
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout
@@ -105,6 +111,8 @@ export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, d
       console.error('[fetchOrders] Error:', error)
       // Set empty array instead of staying in loading state
       setOrders([])
+    } finally {
+      setLoadingOrders(false)
     }
   }
 
@@ -374,7 +382,12 @@ export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, d
             ))}
           </select>
           <p className="text-xs text-gray-500 mt-1">
-            {orders.length === 0 ? 'Loading orders...' : `Select the purchase order this delivery is for (${orders.length} orders available)`}
+            {loadingOrders 
+              ? 'Loading orders...' 
+              : orders.length === 0 
+                ? 'No orders found. Create an order first or run QUICK-TEST-SETUP.sql to create test data.'
+                : `Select the purchase order this delivery is for (${orders.length} orders available)`
+            }
           </p>
         </div>
 
