@@ -34,6 +34,7 @@ export default function ProjectsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [form, setForm] = useState({ name: "", budget: 0, code: "", status: "active" });
+  const [isCreating, setIsCreating] = useState(false);
   const router = useRouter();
 
   async function load() {
@@ -68,23 +69,31 @@ export default function ProjectsPage() {
   useEffect(() => { load(); }, []);
 
   async function createProject() {
-    const res = await fetch("/api/projects", { 
-      method: "POST", 
-      headers: { "Content-Type": "application/json", Accept: "application/json" }, 
-      body: JSON.stringify(form) 
-    });
-    if (res.ok) {
-      const j = await res.json().catch(()=>({}));
-      const created = j?.id ? j : (j?.data);
-      if (created) setProjects(prev => [created, ...prev]);
-      setShowCreateModal(false);
-      setForm({ name: "", budget: 0, code: "", status: "active" });
-      load();
-    } else {
-      const e = await res.json().catch(()=>({}));
-      console.error('Project creation failed:', e);
-      const errorMsg = e.details ? `${e.error}: ${e.details}` : (e.error || "Failed to create project");
-      alert(errorMsg);
+    // Prevent double submission
+    if (isCreating) return;
+    
+    setIsCreating(true);
+    try {
+      const res = await fetch("/api/projects", { 
+        method: "POST", 
+        headers: { "Content-Type": "application/json", Accept: "application/json" }, 
+        body: JSON.stringify(form) 
+      });
+      if (res.ok) {
+        const j = await res.json().catch(()=>({}));
+        const created = j?.id ? j : (j?.data);
+        if (created) setProjects(prev => [created, ...prev]);
+        setShowCreateModal(false);
+        setForm({ name: "", budget: 0, code: "", status: "active" });
+        load();
+      } else {
+        const e = await res.json().catch(()=>({}));
+        console.error('Project creation failed:', e);
+        const errorMsg = e.details ? `${e.error}: ${e.details}` : (e.error || "Failed to create project");
+        alert(errorMsg);
+      }
+    } finally {
+      setIsCreating(false);
     }
   }
 
@@ -134,7 +143,7 @@ export default function ProjectsPage() {
 
         {loading ? (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">{Array.from({ length: 6 }).map((_, i) => (<div key={i} className="animate-pulse bg-white border border-gray-200 rounded-lg p-6"><div className="h-5 w-40 bg-gray-200 rounded mb-2" /><div className="h-3 w-24 bg-gray-100 rounded mb-4" /><div className="grid grid-cols-3 gap-3"><div className="h-4 bg-gray-100 rounded" /><div className="h-4 bg-gray-100 rounded" /><div className="h-4 bg-gray-100 rounded" /></div></div>))}</div>) : filteredProjects.length === 0 ? (<div className="text-center py-12 bg-white rounded-lg border border-gray-200"><FolderOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" /><h3 className="text-lg font-medium text-gray-900 mb-2">{searchTerm ? "No projects found" : "No projects yet"}</h3><p className="text-gray-500 mb-4">{searchTerm ? "Try adjusting your search criteria" : "Create your first project to track budget, actuals, and deliveries"}</p>{!searchTerm && (<Button onClick={() => setShowCreateModal(true)} className="mx-auto"><Plus className="h-4 w-4 mr-2" />Create Project</Button>)}</div>) : (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">{filteredProjects.map(p => (<ProjectCard key={p.id} project={p} formatCurrency={formatCurrency} />))}</div>)}
 
-        {showCreateModal && (<div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"><div className="bg-white rounded-xl p-6 w-full max-w-md"><div className="flex items-center justify-between mb-4"><h2 className="text-xl font-semibold">New Project</h2><button onClick={() => setShowCreateModal(false)} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button></div><div className="space-y-4"><div><label className="block text-sm font-medium text-gray-700 mb-1">Project Name *</label><input value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" placeholder="e.g., Main Building Construction" /></div><div className="grid grid-cols-2 gap-3"><div><label className="block text-sm font-medium text-gray-700 mb-1">Budget *</label><div className="relative"><DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" /><input type="number" min={0} value={form.budget} onChange={e => setForm(f => ({...f, budget: Number(e.target.value)}))} className="w-full pl-10 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" placeholder="50000" /></div></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Code</label><input value={form.code} onChange={e => setForm(f => ({...f, code: e.target.value}))} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" placeholder="PRJ-001" /></div></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Status</label><select value={form.status} onChange={e => setForm(f => ({...f, status: e.target.value}))} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"><option value="active">Active</option><option value="on_hold">On Hold</option><option value="closed">Closed</option></select></div></div><div className="mt-6 flex justify-end gap-3"><Button onClick={() => setShowCreateModal(false)} variant="ghost">Cancel</Button><Button onClick={createProject} disabled={!form.name || form.budget <= 0}>Create Project</Button></div></div></div>)}
+        {showCreateModal && (<div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"><div className="bg-white rounded-xl p-6 w-full max-w-md"><div className="flex items-center justify-between mb-4"><h2 className="text-xl font-semibold">New Project</h2><button onClick={() => setShowCreateModal(false)} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button></div><div className="space-y-4"><div><label className="block text-sm font-medium text-gray-700 mb-1">Project Name *</label><input value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" placeholder="e.g., Main Building Construction" /></div><div className="grid grid-cols-2 gap-3"><div><label className="block text-sm font-medium text-gray-700 mb-1">Budget *</label><div className="relative"><DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" /><input type="number" min={0} value={form.budget} onChange={e => setForm(f => ({...f, budget: Number(e.target.value)}))} className="w-full pl-10 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" placeholder="50000" /></div></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Code</label><input value={form.code} onChange={e => setForm(f => ({...f, code: e.target.value}))} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" placeholder="PRJ-001" /></div></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Status</label><select value={form.status} onChange={e => setForm(f => ({...f, status: e.target.value}))} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"><option value="active">Active</option><option value="on_hold">On Hold</option><option value="closed">Closed</option></select></div></div><div className="mt-6 flex justify-end gap-3"><Button onClick={() => setShowCreateModal(false)} variant="ghost" disabled={isCreating}>Cancel</Button><Button onClick={createProject} disabled={!form.name || form.budget <= 0 || isCreating}>{isCreating ? "Creating..." : "Create Project"}</Button></div></div></div>)}
       </div>
     </AppLayout>
   );
