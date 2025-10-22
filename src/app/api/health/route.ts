@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
 
     // Test 2: Check if tables exist and are accessible
     console.log('[health] Testing table access...');
-    const tablesToCheck = ['profiles', 'orders', 'projects', 'deliveries'];
+    const tablesToCheck = ['profiles', 'purchase_orders', 'projects', 'deliveries'];
     const tableStatus: any = {};
 
     for (const table of tablesToCheck) {
@@ -98,23 +98,23 @@ export async function GET(request: NextRequest) {
 
     diagnostics.database.tables = tableStatus;
 
-    // Test 3: Orders endpoint
-    console.log('[health] Testing orders query...');
+    // Test 3: Orders endpoint (purchase_orders)
+    console.log('[health] Testing purchase_orders query...');
     try {
       const { data: ordersData, error: ordersError, count: ordersCount } = await supabase
-        .from('orders')
+        .from('purchase_orders')
         .select('id, description, amount, status', { count: 'exact' })
         .limit(5);
       
-      diagnostics.endpoints.orders = {
+      diagnostics.endpoints.purchase_orders = {
         success: !ordersError,
         count: ordersCount || 0,
         error: ordersError?.message,
         sample_count: ordersData?.length || 0
       };
-      console.log('[health] Orders:', diagnostics.endpoints.orders);
+      console.log('[health] Purchase Orders:', diagnostics.endpoints.purchase_orders);
     } catch (e: any) {
-      diagnostics.endpoints.orders = { error: e.message };
+      diagnostics.endpoints.purchase_orders = { error: e.message };
     }
 
     // Test 4: Projects endpoint
