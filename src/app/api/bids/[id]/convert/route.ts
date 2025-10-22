@@ -45,14 +45,18 @@ export async function POST(
       .from('purchase_orders')
       .insert([{
         company_id: profile.company_id,
+        created_by: user.id,
+        project_id: bid.project_id,
+        amount: bid.total_amount,
+        description: bid.item_description,
+        category: bid.vendor_name,
         vendor: bid.vendor_name,
-        product: bid.item_description,
+        product_name: bid.item_description,
         quantity: bid.quantity,
         unit_price: bid.unit_price,
-        total: bid.total_amount,
-        project_id: bid.project_id,
         status: 'pending',
-        notes: `Converted from bid ${bid.id}. ${bid.notes || ''}`
+        requested_by: user.id,
+        requested_at: new Date().toISOString()
       }])
       .select()
       .single();
