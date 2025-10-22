@@ -15,18 +15,26 @@ export async function GET(request: NextRequest) {
       .select('company_id, role')
       .eq('id', user.id)
       .single()
-    if (profileError) return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
-    if (!profile?.company_id) return NextResponse.json({ expenses: [] }, { status: 200 })
+  if (profileError) return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
 
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search')
     const status = searchParams.get('status')
 
+    const companyId = profile?.company_id as string | null
+    const userId = user.id
     let query = supabase
       .from('expenses')
       .select('*')
-      .eq('company_id', profile.company_id)
       .order('created_at', { ascending: false })
+
+    if (companyId) {
+      // Include both company expenses and any explicitly user-owned items
+      query = query.or(`company_id.eq.${companyId},user_id.eq.${userId}`)
+    } else {
+      // No company on profile: still show user's own expenses
+      query = query.eq('user_id', userId)
+    }
 
     if (search) query = query.ilike('memo', `%${search}%`)
     if (status) query = query.eq('status', status)
@@ -34,7 +42,27 @@ export async function GET(request: NextRequest) {
     const { data: expenses, error } = await query
     if (error) return NextResponse.json({ error: 'Failed to fetch expenses', details: error.message }, { status: 500 })
 
-    const formatted = (expenses || []).map((e: any) => ({
+    let usedFallback = false
+    let rows = expenses || []
+
+    // Admin/bookkeeper/owner fallback: if nothing visible but company exists, fetch via service role (company-scoped)
+    const role = profile?.role as string | null
+    if (rows.length === 0 && companyId && role && ['admin','owner','bookkeeper'].includes(role)) {
+      try {
+        const svc = supabaseService()
+        const { data: svcData, error: svcErr } = await svc
+          .from('expenses')
+          .select('*')
+          .eq('company_id', companyId)
+          .order('created_at', { ascending: false })
+        if (!svcErr && svcData) {
+          rows = svcData as any[]
+          usedFallback = true
+        }
+      } catch {}
+    }
+
+    const formatted = rows.map((e: any) => ({
       id: e.id,
       vendor: e.vendor || (e.description ? String(e.description).slice(0, 50) : 'Expense'),
       category: e.category || 'other',
@@ -48,7 +76,7 @@ export async function GET(request: NextRequest) {
       receipt_url: e.receipt_url
     }))
 
-    return NextResponse.json({ expenses: formatted })
+    return NextResponse.json({ expenses: formatted, debug: usedFallback ? 'svc-fallback' : undefined })
   } catch (error) {
     console.error('Error in GET /api/expenses:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
