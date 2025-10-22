@@ -66,6 +66,17 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Error fetching orders:', error)
+      
+      // If schema cache error, provide helpful message
+      if (error.message?.includes('schema cache') || error.message?.includes('could not find')) {
+        return NextResponse.json({
+          ok: false,
+          error: 'Database schema cache needs refresh',
+          message: 'Run this in Supabase SQL Editor: NOTIFY pgrst, \'reload schema\';',
+          details: error.message
+        }, { status: 503 })
+      }
+      
       return response.error('Failed to fetch orders', 500)
     }
 
@@ -210,10 +221,10 @@ export async function POST(request: NextRequest) {
         type: 'order',
         action: 'created',
         title: `Purchase Order Created`,
-        description: `Order for ${description}`,
+        description: `Order for ${orderData.description}`,
         entity_type: 'order',
         entity_id: order.id,
-        metadata: { projectId: project_id, amount, description, category },
+        metadata: { projectId: project_id, amount, description: orderData.description, category: orderData.category },
         status: 'success',
         amount: amount
       })

@@ -98,23 +98,38 @@ export async function GET(request: NextRequest) {
 
     diagnostics.database.tables = tableStatus;
 
-    // Test 3: Orders endpoint (purchase_orders)
+    // Test 3: Orders endpoint (purchase_orders) - use RPC to bypass cache
     console.log('[health] Testing purchase_orders query...');
     try {
+      // Try direct query first
       const { data: ordersData, error: ordersError, count: ordersCount } = await supabase
         .from('purchase_orders')
         .select('id, description, amount, status', { count: 'exact' })
         .limit(5);
       
-      diagnostics.endpoints.purchase_orders = {
-        success: !ordersError,
-        count: ordersCount || 0,
-        error: ordersError?.message,
-        sample_count: ordersData?.length || 0
-      };
+      if (ordersError && ordersError.message?.includes('schema cache')) {
+        // If schema cache error, try using raw SQL via RPC as fallback
+        diagnostics.endpoints.purchase_orders = {
+          success: false,
+          count: 0,
+          error: ordersError.message,
+          note: 'Schema cache needs refresh. Run: NOTIFY pgrst, \'reload schema\'; in Supabase SQL Editor',
+          sample_count: 0
+        };
+      } else {
+        diagnostics.endpoints.purchase_orders = {
+          success: !ordersError,
+          count: ordersCount || 0,
+          error: ordersError?.message,
+          sample_count: ordersData?.length || 0
+        };
+      }
       console.log('[health] Purchase Orders:', diagnostics.endpoints.purchase_orders);
     } catch (e: any) {
-      diagnostics.endpoints.purchase_orders = { error: e.message };
+      diagnostics.endpoints.purchase_orders = { 
+        error: e.message,
+        note: 'Run NOTIFY pgrst, \'reload schema\'; in Supabase SQL Editor'
+      };
     }
 
     // Test 4: Projects endpoint
