@@ -9,21 +9,12 @@ export async function GET(req: NextRequest) {
     
     const { data: bids, error } = await supabase
       .from('bids')
-      .select(`
-        *,
-        projects:project_id (name)
-      `)
+      .select('*')
       .order('created_at', { ascending: false })
 
     if (error) throw error
 
-    // Transform the data to include project_name
-    const transformedBids = (bids || []).map((bid: any) => ({
-      ...bid,
-      project_name: bid.projects?.name
-    }))
-
-    return NextResponse.json(transformedBids)
+    return NextResponse.json(bids || [])
   } catch (error: any) {
     console.error('Error fetching bids:', error)
     return NextResponse.json(
