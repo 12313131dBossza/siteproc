@@ -27,7 +27,7 @@ export async function GET(req: Request) {
     .from('change_orders')
     .select(`
       id, job_id, cost_delta, description, status, 
-      created_at, approved_by, approved_at, created_by, approver_email
+      created_at, approved_at, created_by, approver_email
     `)
     .eq('company_id', me.company_id)
     .order('created_at', { ascending: false })
