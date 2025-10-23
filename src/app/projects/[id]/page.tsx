@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { AppLayout } from '@/components/app-layout'
 import { AddItemModal } from '@/components/AddItemModal'
 import { Plus } from 'lucide-react'
+import { format } from '@/lib/date-format'
 
 class Boundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; message: string }> {
   state = { hasError: false, message: '' }
@@ -197,8 +198,8 @@ export default function ProjectDetailPage() {
               {project.code && <span className="text-xs px-2 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-100">{project.code}</span>}
             </div>
             <div className="flex flex-wrap gap-3 text-xs text-gray-500">
-              <div>Created: {project?.created_at ? new Date(project.created_at).toLocaleDateString() : '—'}</div>
-              <div>Updated: {project?.updated_at ? new Date(project.updated_at).toLocaleDateString() : '—'}</div>
+              <div>Created: {project?.created_at ? format(project.created_at, 'MMM dd, yyyy') : '—'}</div>
+              <div>Updated: {project?.updated_at ? format(project.updated_at, 'MMM dd, yyyy') : '—'}</div>
               <div>ID: <span className="font-mono">{project?.id ? project.id.slice(0,8)+'…' : '—'}</span></div>
             </div>
           </div>
@@ -409,7 +410,7 @@ export default function ProjectDetailPage() {
                         <td className="p-2 capitalize">{e.category}</td>
                         <td className="p-2 text-right tabular-nums">{fmtCurrency.format(Number(e.amount||0))}</td>
                         <td className="p-2"><span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-green-50 text-green-700 border border-green-200">{e.status}</span></td>
-                        <td className="p-2 text-xs">{e.created_at ? new Date(e.created_at).toLocaleDateString() : '—'}</td>
+                        <td className="p-2 text-xs">{e.created_at ? format(e.created_at, 'MMM dd, yyyy') : '—'}</td>
                         <td className="p-2 text-xs text-gray-500 font-mono">{e.id.slice(0,8)}…</td>
                       </tr>
                     ))}
@@ -465,7 +466,7 @@ export default function ProjectDetailPage() {
                           <td className="p-2 text-right">{quantity}</td>
                           <td className="p-2 text-right tabular-nums">{amount ? fmtCurrency.format(Number(amount)) : '—'}</td>
                           <td className="p-2"><span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-indigo-50 text-indigo-700 border border-indigo-200">{o.status}</span></td>
-                          <td className="p-2 text-xs">{o.created_at ? new Date(o.created_at).toLocaleDateString() : '—'}</td>
+                          <td className="p-2 text-xs">{o.created_at ? format(o.created_at, 'MMM dd, yyyy') : '—'}</td>
                           <td className="p-2 text-xs text-gray-500 font-mono">{o.id.slice(0,8)}…</td>
                         </tr>
                       )
@@ -514,7 +515,7 @@ export default function ProjectDetailPage() {
                         <td className="p-2 text-xs leading-tight max-w-[240px]">{Array.isArray(d.items)&&d.items.length? d.items.map((it:any)=>`${it.product_name}(${it.quantity})`).slice(0,4).join(', ')+(d.items.length>4?'…':'') : '—'}</td>
                         <td className="p-2"><span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-amber-50 text-amber-700 border border-amber-200">{d.status || '—'}</span></td>
                         <td className="p-2 text-right tabular-nums">{d.total_amount != null ? fmtCurrency.format(Number(d.total_amount||0)) : '—'}</td>
-                        <td className="p-2 text-xs">{d.delivery_date ? new Date(d.delivery_date).toLocaleDateString() : (d.created_at ? new Date(d.created_at).toLocaleDateString() : '—')}</td>
+                        <td className="p-2 text-xs">{d.delivery_date ? format(d.delivery_date, 'MMM dd, yyyy') : (d.created_at ? format(d.created_at, 'MMM dd, yyyy') : '—')}</td>
                         <td className="p-2">
                           {d.proof_url ? (
                             <a

@@ -1,5 +1,8 @@
 'use client'
 
+import { useEffect } from 'react'
+import { AlertTriangle, RefreshCw } from 'lucide-react'
+
 export default function GlobalError({
   error,
   reset,
@@ -7,15 +10,64 @@ export default function GlobalError({
   error: Error & { digest?: string }
   reset: () => void
 }) {
+  useEffect(() => {
+    // Log the error to error reporting service
+    console.error('Global application error:', error)
+    // TODO: Send to error tracking service
+    // if (typeof window !== 'undefined' && window.Sentry) {
+    //   window.Sentry.captureException(error, { level: 'fatal' })
+    // }
+  }, [error])
+
   return (
     <html>
-      <body style={{ padding: 16, color: '#eee', background: '#111', fontFamily: 'sans-serif' }}>
-        <h2>Something went wrong</h2>
-        <p style={{ opacity: 0.8 }}>An unexpected error occurred in the app shell.</p>
-        {error?.message ? (
-          <pre style={{ whiteSpace: 'pre-wrap', background: '#222', padding: 12, borderRadius: 6 }}>{error.message}</pre>
-        ) : null}
-        <button onClick={() => reset()} style={{ marginTop: 12 }}>Try again</button>
+      <body>
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 px-4">
+          <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 text-center">
+            <div className="flex justify-center mb-6">
+              <div className="p-4 bg-red-100 rounded-full">
+                <AlertTriangle className="h-12 w-12 text-red-600" />
+              </div>
+            </div>
+            
+            <h1 className="text-2xl font-bold text-gray-900 mb-3">
+              Critical Application Error
+            </h1>
+            
+            <p className="text-gray-600 mb-6">
+              We encountered a critical error that requires reloading the application. 
+              Your work has been saved automatically.
+            </p>
+
+            {process.env.NODE_ENV === 'development' && error.message && (
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg text-left">
+                <p className="text-xs font-mono text-gray-700 break-words">
+                  {error.message}
+                </p>
+                {error.digest && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    Error ID: {error.digest}
+                  </p>
+                )}
+              </div>
+            )}
+            
+            <button
+              onClick={() => reset()}
+              className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <RefreshCw className="h-5 w-5" />
+              Reload Application
+            </button>
+
+            <p className="text-xs text-gray-500 mt-6">
+              If this problem persists, please clear your browser cache or{' '}
+              <a href="mailto:support@siteproc.com" className="text-blue-600 hover:underline">
+                contact support
+              </a>
+            </p>
+          </div>
+        </div>
       </body>
     </html>
   )

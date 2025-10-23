@@ -6,6 +6,7 @@ import { Suspense } from 'react'
 import { ToastProvider } from '@/components/ui/Toast'
 import { Toaster } from 'sonner'
 import PWAInitializer from '@/components/PWAInitializer'
+import { Footer } from '@/components/Footer'
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -84,6 +85,8 @@ export default function RootLayout({
           </nav>
           
           {children}
+          
+          <Footer />
           
           {/* PWA Initializer */}
           <PWAInitializer />

@@ -25,7 +25,7 @@ import {
   MoreVertical,
   Send
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format } from '@/lib/date-format';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 

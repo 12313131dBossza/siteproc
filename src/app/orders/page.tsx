@@ -23,7 +23,7 @@ import {
   TrendingUp,
   DollarSign
 } from "lucide-react";
-import { format } from "date-fns";
+import { format } from "@/lib/date-format";
 import { cn, formatCurrency } from "@/lib/utils";
 import { createClient } from "@/lib/supabase-client";
 import Link from "next/link";

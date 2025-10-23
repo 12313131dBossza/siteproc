@@ -17,7 +17,7 @@ import {
   Calendar
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { format } from 'date-fns'
+import { format } from '@/lib/date-format'
 import { formatCurrency } from '@/lib/utils'
 import { getStatusLabel, getStatusBadgeClasses } from '@/lib/orderSync'
 

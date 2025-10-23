@@ -24,7 +24,7 @@ import {
   XCircle,
   AlertTriangle
 } from "lucide-react";
-import { format } from "date-fns";
+import { format } from "@/lib/date-format";
 import { cn, formatCurrency } from "@/lib/utils";
 import { createClient } from '@/lib/supabase-client';
 import { toast } from 'sonner';

@@ -5,6 +5,7 @@ import { useCompanyId } from '@/lib/useCompanyId';
 import { Plus, Search, DollarSign, Edit, Trash2, X } from 'lucide-react';
 import { AppLayout } from '@/components/app-layout';
 import { Button } from '@/components/ui/Button';
+import { format } from '@/lib/date-format';
 
 interface Payment {
   id: string;
@@ -337,7 +338,7 @@ export default function PaymentsPageClient() {
                       {formatCurrency(payment.amount)}
                     </td>
                     <td className="p-3 text-sm text-gray-600">
-                      {new Date(payment.payment_date).toLocaleDateString()}
+                      {format(payment.payment_date, 'MMM dd, yyyy')}
                     </td>
                     <td className="p-3 text-sm capitalize text-gray-600">
                       {payment.payment_method}

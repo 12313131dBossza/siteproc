@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { AppLayout } from "@/components/app-layout"
 import { Button } from "@/components/ui/Button"
 import { Package, Truck, MapPin, Clock, CheckCircle, CheckCircle2, AlertCircle, Search, Filter, Eye, Calendar, Lock, Edit, X, Upload } from 'lucide-react'
-import { format } from 'date-fns'
+import { format } from '@/lib/date-format'
 import { cn, formatCurrency } from '@/lib/utils'
 import Link from 'next/link'
 import { toast } from 'sonner'

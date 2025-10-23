@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Plus, Search, Edit, Trash2, X, FileText, CheckCircle, XCircle, Clock, DollarSign, Calendar, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format } from '@/lib/date-format';
 
 interface Bid {
   id: string;
