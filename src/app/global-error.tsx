@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { AlertTriangle, RefreshCw } from 'lucide-react'
+import * as Sentry from '@sentry/nextjs'
 
 export default function GlobalError({
   error,
@@ -11,12 +12,22 @@ export default function GlobalError({
   reset: () => void
 }) {
   useEffect(() => {
-    // Log the error to error reporting service
+    // Log the error to Sentry with fatal level
     console.error('Global application error:', error)
-    // TODO: Send to error tracking service
-    // if (typeof window !== 'undefined' && window.Sentry) {
-    //   window.Sentry.captureException(error, { level: 'fatal' })
-    // }
+    Sentry.captureException(error, {
+      level: 'fatal',
+      tags: {
+        component: 'global-error-boundary',
+        digest: error.digest,
+      },
+      contexts: {
+        errorBoundary: {
+          componentStack: error.stack,
+          errorDigest: error.digest,
+          isCritical: true,
+        },
+      },
+    })
   }, [error])
 
   return (

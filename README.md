@@ -107,6 +107,7 @@ SiteProc is a **comprehensive construction management platform** designed specif
 | **[Supabase](https://supabase.com/)** | PostgreSQL database + Authentication + Storage |
 | **[Tailwind CSS](https://tailwindcss.com/)** | Utility-first styling |
 | **[date-fns-tz](https://github.com/marnusw/date-fns-tz)** | Timezone-aware date formatting |
+| **[Sentry](https://sentry.io/)** | Error tracking and performance monitoring |
 | **[Lucide Icons](https://lucide.dev/)** | Modern icon library |
 | **[Sonner](https://sonner.emilkowal.ski/)** | Toast notifications |
 | **[Vercel](https://vercel.com/)** | Deployment platform |
