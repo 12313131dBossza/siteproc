@@ -1,6 +1,5 @@
 'use client'
 
-import { Button } from '@/components/ui/button'
 import { AlertTriangle } from 'lucide-react'
 
 export default function TestErrorPage() {
@@ -58,9 +57,12 @@ export default function TestErrorPage() {
             <p className="text-sm text-gray-600 mb-3">
               Throws a standard synchronous error that will be caught by the error boundary.
             </p>
-            <Button onClick={throwError} variant="destructive">
+            <button 
+              onClick={throwError} 
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+            >
               Throw Sync Error
-            </Button>
+            </button>
           </div>
 
           <div className="border border-gray-200 rounded-lg p-4">
@@ -70,9 +72,12 @@ export default function TestErrorPage() {
             <p className="text-sm text-gray-600 mb-3">
               Throws an async error with a delay to test async error handling.
             </p>
-            <Button onClick={throwAsyncError} variant="destructive">
+            <button 
+              onClick={throwAsyncError} 
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+            >
               Throw Async Error
-            </Button>
+            </button>
           </div>
 
           <div className="border border-gray-200 rounded-lg p-4">
@@ -82,9 +87,12 @@ export default function TestErrorPage() {
             <p className="text-sm text-gray-600 mb-3">
               Logs an error to the console (may or may not be captured depending on Sentry config).
             </p>
-            <Button onClick={throwConsoleError} variant="outline">
+            <button 
+              onClick={throwConsoleError} 
+              className="px-4 py-2 bg-gray-200 text-gray-900 rounded-lg hover:bg-gray-300 transition-colors font-medium border border-gray-300"
+            >
               Log Console Error
-            </Button>
+            </button>
           </div>
         </div>
 
