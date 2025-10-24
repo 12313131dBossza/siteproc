@@ -57,6 +57,10 @@ export default withSentryConfig(
     silent: true,
     org: process.env.SENTRY_ORG,
     project: process.env.SENTRY_PROJECT,
+    
+    // TEMPORARY: Disable until SENTRY_ORG is corrected
+    disableServerWebpackPlugin: true,
+    disableClientWebpackPlugin: true,
   },
   {
     // For all available options, see:
