@@ -181,6 +181,13 @@ async function processOfflineQueue() {
     const store = transaction.objectStore('queue')
     
     const queuedRequests = await store.getAll()
+    
+    // Ensure queuedRequests is an array
+    if (!queuedRequests || !Array.isArray(queuedRequests)) {
+      console.log('[SW] No queued requests or invalid format')
+      return
+    }
+    
     console.log('[SW] Found queued requests:', queuedRequests.length)
     
     for (const requestData of queuedRequests) {
