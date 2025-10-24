@@ -204,12 +204,12 @@ export default function PrivacyPage() {
             <h3>7.1 Access and Portability</h3>
             <p>
               You have the right to access your data and export it in a machine-readable format (CSV, JSON). 
-              Use the Settings > Export Data feature or contact support.
+              Use the Settings &gt; Export Data feature or contact support.
             </p>
 
             <h3>7.2 Correction and Update</h3>
             <p>
-              You can update your account information at any time through Settings > Profile.
+              You can update your account information at any time through Settings &gt; Profile.
             </p>
 
             <h3>7.3 Deletion</h3>
