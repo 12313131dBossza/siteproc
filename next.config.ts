@@ -57,12 +57,6 @@ export default withSentryConfig(
     silent: true,
     org: process.env.SENTRY_ORG,
     project: process.env.SENTRY_PROJECT,
-    
-    // TEMPORARY: Disable webpack plugins to allow deployment
-    // TODO: Fix SENTRY_ORG value (must be org slug, not number "12")
-    // Once fixed, remove these two lines:
-    disableServerWebpackPlugin: true,
-    disableClientWebpackPlugin: true,
   },
   {
     // For all available options, see:
