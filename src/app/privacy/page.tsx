@@ -215,7 +215,7 @@ export default function PrivacyPage() {
             <h3>7.3 Deletion</h3>
             <p>
               You can request deletion of your account and data by contacting support@siteproc.com or using 
-              Settings > Delete Account.
+              Settings &gt; Delete Account.
             </p>
 
             <h3>7.4 Marketing Communications</h3>
@@ -259,7 +259,7 @@ export default function PrivacyPage() {
             <ul>
               <li><strong>Right to Access:</strong> Request a copy of your data</li>
               <li><strong>Right to Rectification:</strong> Correct inaccurate data</li>
-              <li><strong>Right to Erasure:</strong> Request deletion ("right to be forgotten")</li>
+              <li><strong>Right to Erasure:</strong> Request deletion (&quot;right to be forgotten&quot;)</li>
               <li><strong>Right to Restriction:</strong> Limit how we use your data</li>
               <li><strong>Right to Data Portability:</strong> Export your data</li>
               <li><strong>Right to Object:</strong> Object to processing for marketing or legitimate interests</li>
@@ -274,7 +274,7 @@ export default function PrivacyPage() {
             <ul>
               <li><strong>Right to Know:</strong> Know what data we collect, use, and share</li>
               <li><strong>Right to Delete:</strong> Request deletion of your data</li>
-              <li><strong>Right to Opt-Out:</strong> Opt out of "sale" of personal information (we do not sell data)</li>
+              <li><strong>Right to Opt-Out:</strong> Opt out of &quot;sale&quot; of personal information (we do not sell data)</li>
               <li><strong>Right to Non-Discrimination:</strong> Not be discriminated against for exercising rights</li>
             </ul>
             <p>
@@ -288,7 +288,7 @@ export default function PrivacyPage() {
             <ul>
               <li>Email notification to your registered email address</li>
               <li>Prominent notice on the Service</li>
-              <li>Update to the "Last updated" date at the top</li>
+              <li>Update to the &quot;Last updated&quot; date at the top</li>
             </ul>
             <p>
               Your continued use of the Service after changes constitutes acceptance of the updated policy.
