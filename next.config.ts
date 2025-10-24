@@ -1,5 +1,5 @@
 import type { NextConfig } from 'next'
-import { withSentryConfig } from "@sentry/nextjs";
+// import { withSentryConfig } from "@sentry/nextjs"; // DISABLED until SENTRY_ORG is fixed
 
 // Production hardening: security & caching headers
 // Adjust domains / policies as branding & CDN choices evolve.
@@ -45,8 +45,12 @@ const nextConfig: NextConfig = {
   },
 }
 
-// Sentry configuration
+// Sentry configuration - TEMPORARILY DISABLED
+// Uncomment when SENTRY_ORG environment variable is fixed in Vercel
 // https://docs.sentry.io/platforms/javascript/guides/nextjs/
+export default nextConfig
+
+/*
 export default withSentryConfig(
   nextConfig,
   {
@@ -93,3 +97,4 @@ export default withSentryConfig(
     automaticVercelMonitors: true,
   }
 );
+*/
