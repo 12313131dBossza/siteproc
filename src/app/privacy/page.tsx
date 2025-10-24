@@ -220,8 +220,8 @@ export default function PrivacyPage() {
 
             <h3>7.4 Marketing Communications</h3>
             <p>
-              You can opt out of marketing emails by clicking "Unsubscribe" in any marketing email or updating 
-              your preferences in Settings > Notifications.
+              You can opt out of marketing emails by clicking &quot;Unsubscribe&quot; in any marketing email or updating 
+              your preferences in Settings &gt; Notifications.
             </p>
 
             <h3>7.5 Do Not Track</h3>
