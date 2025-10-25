@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import * as Sentry from '@sentry/nextjs'
+import { BrowserTracing, Replay } from '@sentry/nextjs'
 
 export function SentryInitializer() {
   useEffect(() => {
@@ -15,8 +16,8 @@ export function SentryInitializer() {
         environment: process.env.NODE_ENV || 'production',
         
         integrations: [
-          new Sentry.BrowserTracing(),
-          new Sentry.Replay({
+          new BrowserTracing(),
+          new Replay({
             maskAllText: false,
             blockAllMedia: false,
           }),
