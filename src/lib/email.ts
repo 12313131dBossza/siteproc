@@ -8,11 +8,15 @@ function provider(): Provider {
 }
 
 function getFromEnv() {
+  // For Resend, use their verified domain for testing
+  if (provider() === 'resend') {
+    return process.env.RESEND_FROM || 'onboarding@resend.dev'
+  }
+  
   // Generic first, then provider-specific, then fallback
   return (
     process.env.EMAIL_FROM ||
     (provider() === 'sendgrid' ? process.env.SENDGRID_FROM : undefined) ||
-    (provider() === 'resend' ? process.env.RESEND_FROM : undefined) ||
     'no-reply@siteproc.local'
   )
 }
