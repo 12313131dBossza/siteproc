@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { sbServer } from '@/lib/supabase-server'
 import { supabaseService } from '@/lib/supabase'
 import { logActivity } from '@/app/api/activity/route'
+import { sendExpenseSubmissionNotification } from '@/lib/email'
+import { getCompanyAdminEmails } from '@/lib/server-utils'
 
 // GET /api/expenses - List expenses for user's company
 export async function GET(request: NextRequest) {
@@ -180,6 +182,32 @@ export async function POST(request: NextRequest) {
         amount: expense.amount
       })
     } catch {}
+
+    // Send email notification to admins (only if pending approval)
+    if (expense.status === 'pending') {
+      try {
+        const adminEmails = await getCompanyAdminEmails(profile.company_id)
+        const submitterName = profile.full_name || user.email || 'User'
+        
+        if (adminEmails.length > 0) {
+          await sendExpenseSubmissionNotification({
+            expenseId: expense.id,
+            vendor: expense.vendor || 'Vendor',
+            category: expense.category,
+            amount: expense.amount,
+            description: expense.description || '',
+            submittedBy: submitterName,
+            submittedByEmail: user.email || '',
+            companyName: profile.company?.name || 'Your Company',
+            approverName: adminEmails[0],
+            dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL}/expenses`
+          })
+        }
+      } catch (emailError) {
+        console.error('Failed to send expense submission notification:', emailError)
+        // Don't fail the request if email fails
+      }
+    }
 
     return NextResponse.json({
       id: expense.id,

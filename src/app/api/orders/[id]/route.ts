@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUserProfile } from '@/lib/server-utils'
+import { sendOrderApprovalNotification, sendOrderRejectionNotification } from '@/lib/email'
 
 // PATCH /api/orders/[id] - Approve or reject an order
 export async function PATCH(
@@ -32,6 +33,11 @@ export async function PATCH(
           id,
           name,
           company_id
+        ),
+        creator:profiles!created_by(
+          id,
+          full_name,
+          email
         )
       `)
       .eq('id', orderId)
@@ -79,6 +85,50 @@ export async function PATCH(
         error: 'Failed to update order', 
         details: updateError.message 
       }, { status: 500 })
+    }
+
+    // Send email notification to the order creator
+    try {
+      const creatorEmail = (order as any).creator?.email
+      const creatorName = (order as any).creator?.full_name || 'User'
+      const projectName = (order as any).projects?.name || 'Unknown Project'
+      const approverName = profile.full_name || profile.email || 'Admin'
+      const dashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL}/projects/${(order as any).projects?.id}`
+
+      if (creatorEmail) {
+        if (status === 'approved') {
+          await sendOrderApprovalNotification({
+            orderId: orderId,
+            projectName: projectName,
+            companyName: profile.company?.name || 'Your Company',
+            requesterName: creatorName,
+            requesterEmail: creatorEmail,
+            amount: order.amount,
+            description: order.description || 'No description',
+            category: order.category || 'general',
+            approverName: approverName,
+            approvalNotes: notes || undefined,
+            dashboardUrl: dashboardUrl
+          })
+        } else if (status === 'rejected') {
+          await sendOrderRejectionNotification({
+            orderId: orderId,
+            projectName: projectName,
+            companyName: profile.company?.name || 'Your Company',
+            requesterName: creatorName,
+            requesterEmail: creatorEmail,
+            amount: order.amount,
+            description: order.description || 'No description',
+            category: order.category || 'general',
+            rejectedBy: approverName,
+            rejectionReason: rejection_reason || notes || 'No reason provided',
+            dashboardUrl: dashboardUrl
+          })
+        }
+      }
+    } catch (emailError) {
+      console.error('Failed to send order decision notification:', emailError)
+      // Don't fail the request if email fails
     }
 
     return NextResponse.json({ 
