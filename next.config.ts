@@ -1,5 +1,5 @@
 import type { NextConfig } from 'next'
-// import { withSentryConfig } from "@sentry/nextjs"; // DISABLED until SENTRY_ORG is fixed
+import { withSentryConfig } from "@sentry/nextjs";
 
 // Production hardening: security & caching headers
 // Adjust domains / policies as branding & CDN choices evolve.
@@ -45,12 +45,8 @@ const nextConfig: NextConfig = {
   },
 }
 
-// Sentry configuration - TEMPORARILY DISABLED
-// Uncomment when SENTRY_ORG environment variable is fixed in Vercel
+// Sentry configuration
 // https://docs.sentry.io/platforms/javascript/guides/nextjs/
-export default nextConfig
-
-/*
 export default withSentryConfig(
   nextConfig,
   {
@@ -61,22 +57,13 @@ export default withSentryConfig(
     silent: true,
     org: process.env.SENTRY_ORG,
     project: process.env.SENTRY_PROJECT,
-    
-    // TEMPORARY: Disable until SENTRY_ORG is corrected
-    disableServerWebpackPlugin: true,
-    disableClientWebpackPlugin: true,
   },
   {
     // For all available options, see:
     // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
 
-    // DISABLE source maps completely until Sentry org slug is fixed
-    sourcemaps: {
-      disable: true,
-    },
-
     // Upload a larger set of source maps for prettier stack traces (increases build time)
-    widenClientFileUpload: false,
+    widenClientFileUpload: true,
 
     // Transpiles SDK to be compatible with IE11 (increases bundle size)
     transpileClientSDK: false,
@@ -97,4 +84,3 @@ export default withSentryConfig(
     automaticVercelMonitors: true,
   }
 );
-*/
