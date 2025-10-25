@@ -16,11 +16,6 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   
-  // Enable instrumentation for Sentry
-  experimental: {
-    instrumentationHook: true,
-  },
-  
   eslint: { ignoreDuringBuilds: true }, // TEMP: allow deploy; re-enable after typing cleanup
   typescript: { ignoreBuildErrors: true }, // TEMP: unblock build; remove after fixing types
   async headers() {
