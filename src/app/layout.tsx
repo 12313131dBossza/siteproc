@@ -7,6 +7,7 @@ import { ToastProvider } from '@/components/ui/Toast'
 import { Toaster } from 'sonner'
 import PWAInitializer from '@/components/PWAInitializer'
 import { Footer } from '@/components/Footer'
+import { SentryInitializer } from '@/components/SentryInitializer'
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -67,6 +68,7 @@ export default function RootLayout({
         <link rel="icon" type="image/png" href="/icons/icon-192.png" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <SentryInitializer />
         <ToastProvider>
           <Toaster position="top-right" />
           
