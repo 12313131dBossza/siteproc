@@ -1,5 +1,6 @@
 import type { NextConfig } from 'next'
-import { withSentryConfig } from "@sentry/nextjs";
+// Sentry withSentryConfig removed to prevent build errors
+// Sentry initialization happens via SentryInitializer component instead
 
 // Production hardening: security & caching headers
 // Adjust domains / policies as branding & CDN choices evolve.
@@ -51,41 +52,9 @@ const nextConfig: NextConfig = {
   },
 }
 
-// Sentry configuration
-// https://docs.sentry.io/platforms/javascript/guides/nextjs/
-// NOTE: Build-time plugins completely disabled to prevent deployment errors
-// Runtime error tracking still works via client/server configs and SentryInitializer
-export default withSentryConfig(
-  nextConfig,
-  {
-    // For all available options, see:
-    // https://github.com/getsentry/sentry-webpack-plugin#options
-
-    // Completely disable all Sentry CLI operations during build
-    silent: true,
-    org: process.env.SENTRY_ORG,
-    project: process.env.SENTRY_PROJECT,
-    
-    // Disable ALL Sentry CLI operations
-    disableSourcemapUpload: true,
-    sourcemaps: {
-      disable: true,
-    },
-  },
-  {
-    // For all available options, see:
-    // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
-
-    // Disable all build-time Sentry operations
-    widenClientFileUpload: false,
-    transpileClientSDK: false,
-    tunnelRoute: "/monitoring",
-    hideSourceMaps: true,
-    disableLogger: true,
-    automaticVercelMonitors: false,
-    
-    // Disable all runtime instrumentation that happens at build time
-    disableServerWebpackPlugin: true,
-    disableClientWebpackPlugin: true,
-  }
-);
+// Export without Sentry wrapper to prevent build-time errors
+// Sentry error tracking is handled by:
+// - SentryInitializer component (client-side)
+// - instrumentation.ts (server-side)
+// - sentry.client.config.ts, sentry.server.config.ts, sentry.edge.config.ts
+export default nextConfig;
