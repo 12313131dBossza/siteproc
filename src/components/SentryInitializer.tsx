@@ -2,7 +2,6 @@
 
 import { useEffect } from 'react'
 import * as Sentry from '@sentry/nextjs'
-import { BrowserTracing, Replay } from '@sentry/nextjs'
 
 export function SentryInitializer() {
   useEffect(() => {
@@ -15,13 +14,8 @@ export function SentryInitializer() {
         replaysOnErrorSampleRate: 1.0,
         environment: process.env.NODE_ENV || 'production',
         
-        integrations: [
-          new BrowserTracing(),
-          new Replay({
-            maskAllText: false,
-            blockAllMedia: false,
-          }),
-        ],
+        // Don't add integrations - they can cause constructor errors
+        // Sentry will use default integrations automatically
         
         // Filter out common noise
         ignoreErrors: [
