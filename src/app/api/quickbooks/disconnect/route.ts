@@ -22,13 +22,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user's company
-    const { data: member, error: memberError } = await supabase
-      .from('members')
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
       .select('company_id, role')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single();
 
-    if (memberError || !member) {
+    if (profileError || !profile) {
       return NextResponse.json(
         { error: 'User not associated with a company' },
         { status: 400 }
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check permissions
-    if (!['admin', 'owner'].includes(member.role)) {
+    if (profile.role !== 'admin') {
       return NextResponse.json(
         { error: 'Insufficient permissions' },
         { status: 403 }
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     const { data: connection, error: connError } = await supabase
       .from('quickbooks_connections')
       .select('*')
-      .eq('company_id', member.company_id)
+      .eq('company_id', profile.company_id)
       .eq('is_active', true)
       .single();
 

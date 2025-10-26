@@ -22,24 +22,24 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get user's company from members table
-    const { data: member, error: memberError } = await supabase
-      .from('members')
+    // Get user's company from profiles table
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
       .select('company_id, role')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single();
 
-    if (memberError || !member) {
+    if (profileError || !profile) {
       return NextResponse.json(
         { error: 'User not associated with a company' },
         { status: 400 }
       );
     }
 
-    // Check if user has permission (admin or owner only)
-    if (!['admin', 'owner'].includes(member.role)) {
+    // Check if user has permission (admin only)
+    if (profile.role !== 'admin') {
       return NextResponse.json(
-        { error: 'Insufficient permissions. Admin or Owner role required.' },
+        { error: 'Insufficient permissions. Admin role required.' },
         { status: 403 }
       );
     }
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
     // Store state in session (you can also use cookies)
     // For now, we'll encode company_id in the state
     const stateData = JSON.stringify({
-      companyId: member.company_id,
+      companyId: profile.company_id,
       userId: user.id,
       timestamp: Date.now(),
       random: state,

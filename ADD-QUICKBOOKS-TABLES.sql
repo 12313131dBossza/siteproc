@@ -66,7 +66,7 @@ CREATE POLICY "Users can view their company's QB connection"
 ON quickbooks_connections FOR SELECT
 USING (
   company_id IN (
-    SELECT company_id FROM members WHERE user_id = auth.uid()
+    SELECT company_id FROM profiles WHERE id = auth.uid()
   )
 );
 
@@ -75,9 +75,9 @@ CREATE POLICY "Admin members can manage QB connections"
 ON quickbooks_connections FOR ALL
 USING (
   company_id IN (
-    SELECT company_id FROM members 
-    WHERE user_id = auth.uid() 
-    AND role IN ('owner', 'admin')
+    SELECT company_id FROM profiles 
+    WHERE id = auth.uid() 
+    AND role = 'admin'
   )
 );
 
@@ -88,7 +88,7 @@ USING (
   connection_id IN (
     SELECT id FROM quickbooks_connections
     WHERE company_id IN (
-      SELECT company_id FROM members WHERE user_id = auth.uid()
+      SELECT company_id FROM profiles WHERE id = auth.uid()
     )
   )
 );

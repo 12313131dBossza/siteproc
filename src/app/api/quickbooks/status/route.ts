@@ -22,13 +22,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Get user's company
-    const { data: member, error: memberError } = await supabase
-      .from('members')
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
       .select('company_id')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single();
 
-    if (memberError || !member) {
+    if (profileError || !profile) {
       return NextResponse.json(
         { error: 'User not associated with a company' },
         { status: 400 }
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get connection status
-    const status = await getConnectionStatus(member.company_id);
+    const status = await getConnectionStatus(profile.company_id);
 
     return NextResponse.json(status);
 
