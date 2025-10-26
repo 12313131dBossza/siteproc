@@ -63,6 +63,27 @@ export default function QuickBooksDiagnosePage() {
     }
   };
 
+  const openAuthDebug = async () => {
+    try {
+      const res = await fetch('/api/quickbooks/authorize/debug');
+      if (!res.ok) throw new Error('Failed to fetch auth debug');
+      const data = await res.json();
+      const msg = [
+        'Auth URL (copy into new tab to test redirect):',
+        data.url,
+        '',
+        'Resolved Params:',
+        JSON.stringify(data.params, null, 2),
+        '',
+        'Env snapshot:',
+        JSON.stringify(data.env, null, 2),
+      ].join('\n');
+      alert(msg);
+    } catch (e) {
+      alert((e as Error).message);
+    }
+  };
+
   const StatusBadge = ({ status }: { status: boolean }) => (
     <span className={`px-2 py-1 rounded text-xs font-semibold ${
       status 
@@ -274,6 +295,12 @@ export default function QuickBooksDiagnosePage() {
             className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
           >
             🔄 Refresh Diagnostics
+          </button>
+          <button
+            onClick={openAuthDebug}
+            className="px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-semibold"
+          >
+            🔗 Show Auth URL (debug)
           </button>
           <a
             href="/admin/quickbooks"
