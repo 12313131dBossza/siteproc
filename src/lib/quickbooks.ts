@@ -6,10 +6,22 @@
 import { createClient } from '@/lib/supabase/server';
 
 // Environment variables
-const QB_CLIENT_ID = process.env.QUICKBOOKS_CLIENT_ID!;
-const QB_CLIENT_SECRET = process.env.QUICKBOOKS_CLIENT_SECRET!;
+const QB_ENVIRONMENT = (process.env.QUICKBOOKS_ENVIRONMENT || 'sandbox').toLowerCase();
+
+// Support separate credentials for sandbox (development) vs production.
+// Backwards-compatible: QUICKBOOKS_CLIENT_ID / SECRET are used for sandbox.
+// If QUICKBOOKS_ENVIRONMENT === 'production', use *_PROD variants when available.
+const QB_CLIENT_ID =
+  QB_ENVIRONMENT === 'production'
+    ? (process.env.QUICKBOOKS_CLIENT_ID_PROD || process.env.QUICKBOOKS_CLIENT_ID)!
+    : process.env.QUICKBOOKS_CLIENT_ID!;
+
+const QB_CLIENT_SECRET =
+  QB_ENVIRONMENT === 'production'
+    ? (process.env.QUICKBOOKS_CLIENT_SECRET_PROD || process.env.QUICKBOOKS_CLIENT_SECRET)!
+    : process.env.QUICKBOOKS_CLIENT_SECRET!;
+
 const QB_REDIRECT_URI = process.env.QUICKBOOKS_REDIRECT_URI!;
-const QB_ENVIRONMENT = process.env.QUICKBOOKS_ENVIRONMENT || 'sandbox';
 const QB_AUTH_ENDPOINT = process.env.QUICKBOOKS_AUTHORIZATION_ENDPOINT!;
 const QB_TOKEN_ENDPOINT = process.env.QUICKBOOKS_TOKEN_ENDPOINT!;
 const QB_REVOKE_ENDPOINT = process.env.QUICKBOOKS_REVOKE_ENDPOINT!;
