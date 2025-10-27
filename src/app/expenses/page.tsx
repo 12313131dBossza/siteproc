@@ -106,10 +106,11 @@ export default function ExpensesPage() {
         return;
       }
       if (!res.ok) throw new Error(`projects ${res.status}`);
-      const projects = await res.json();
-      setProjects(projects.map((p: any) => ({ id: p.id, name: p.name })));
-      if (projects.length === 1) {
-        setNewExpense(v => ({ ...v, project_id: projects[0].id } as any));
+      const json = await res.json();
+      const projectsData = json.data || json || [];
+      setProjects(projectsData.map((p: any) => ({ id: p.id, name: p.name })));
+      if (projectsData.length === 1) {
+        setNewExpense(v => ({ ...v, project_id: projectsData[0].id } as any));
       }
     } catch (e) {
       console.error('Failed to load projects', e);

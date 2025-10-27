@@ -28,24 +28,34 @@ const QB_REVOKE_ENDPOINT = process.env.QUICKBOOKS_REVOKE_ENDPOINT!;
 const QB_API_BASE = process.env.QUICKBOOKS_API_BASE!;
 
 // OAuth Scopes
-const QB_SCOPES = [
+const DEFAULT_SCOPES = [
   'com.intuit.quickbooks.accounting',
   'openid',
   'profile',
   'email',
-].join(' ');
+];
+
+const QB_SCOPES = (process.env.QUICKBOOKS_SCOPES || DEFAULT_SCOPES.join(' '));
+const QB_PROMPT = process.env.QUICKBOOKS_PROMPT; // e.g., 'consent' or 'login'
 
 /**
  * Generate authorization URL for OAuth flow
  */
-export function getAuthorizationUrl(state: string): string {
+export function getAuthorizationUrl(
+  state: string,
+  opts?: { scopes?: string[]; prompt?: string }
+): string {
+  const scopes = opts?.scopes?.length ? opts.scopes.join(' ') : QB_SCOPES;
   const params = new URLSearchParams({
     client_id: QB_CLIENT_ID,
-    scope: QB_SCOPES,
+    scope: scopes,
     redirect_uri: QB_REDIRECT_URI,
     response_type: 'code',
     state,
   });
+
+  const prompt = opts?.prompt ?? QB_PROMPT;
+  if (prompt) params.set('prompt', prompt);
 
   return `${QB_AUTH_ENDPOINT}?${params.toString()}`;
 }

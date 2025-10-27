@@ -66,6 +66,8 @@ export default function DeliveriesPage() {
   const [statusTransitionModal, setStatusTransitionModal] = useState<{ open: boolean; deliveryId?: string }>({ open: false })
   const [podUploadModal, setPodUploadModal] = useState<{ open: boolean; deliveryId?: string }>({ open: false })
   const [uploadingFile, setUploadingFile] = useState<string | null>(null)
+  const [selectedDelivery, setSelectedDelivery] = useState<Delivery | null>(null)
+  const [showDeliveryDetailModal, setShowDeliveryDetailModal] = useState(false)
 
   // Check authentication first
   useEffect(() => {
@@ -580,7 +582,15 @@ export default function DeliveriesPage() {
                           )}
                         </div>
                         <div className="flex gap-2">
-                          <Button variant="ghost" size="sm" leftIcon={<Eye className="h-4 w-4" />}>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            leftIcon={<Eye className="h-4 w-4" />}
+                            onClick={() => {
+                              setSelectedDelivery(delivery)
+                              setShowDeliveryDetailModal(true)
+                            }}
+                          >
                             View Details
                           </Button>
                           
@@ -732,6 +742,117 @@ export default function DeliveriesPage() {
                   </Button>
                 </label>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delivery Detail Modal */}
+      {showDeliveryDetailModal && selectedDelivery && (
+        <div className="fixed inset-0 flex items-center justify-center p-4 z-50" onClick={() => setShowDeliveryDetailModal(false)}>
+          <div className="absolute inset-0 bg-black/50" />
+          <div className="bg-white rounded-xl max-w-2xl w-full shadow-2xl relative z-10" onClick={(e) => e.stopPropagation()}>
+            <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-900">Delivery Details</h2>
+              <button
+                onClick={() => setShowDeliveryDetailModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="p-6 space-y-6 max-h-[calc(90vh-120px)] overflow-y-auto">
+              {/* Status Badge */}
+              <div className="flex items-center gap-3">
+                <div className={cn("inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border", statusConfig[selectedDelivery.status].color)}>
+                  {statusConfig[selectedDelivery.status].label}
+                </div>
+                <span className="text-sm text-gray-500">
+                  {format(new Date(selectedDelivery.delivery_date), 'MMM d, yyyy')}
+                </span>
+              </div>
+
+              {/* Delivery Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</label>
+                  <p className="mt-1 text-sm font-mono text-gray-900">{selectedDelivery.order_id || 'N/A'}</p>
+                </div>
+                {selectedDelivery.driver_name && (
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Driver</label>
+                    <p className="mt-1 text-sm text-gray-900">{selectedDelivery.driver_name}</p>
+                  </div>
+                )}
+                {selectedDelivery.vehicle_number && (
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Vehicle</label>
+                    <p className="mt-1 text-sm text-gray-900">{selectedDelivery.vehicle_number}</p>
+                  </div>
+                )}
+                <div>
+                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Delivery Date</label>
+                  <p className="mt-1 text-sm text-gray-900">{format(new Date(selectedDelivery.delivery_date), 'MMMM d, yyyy')}</p>
+                </div>
+              </div>
+
+              {/* Items */}
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider block mb-3">Items Delivered</label>
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
+                        <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Quantity</th>
+                        <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Unit Price</th>
+                        <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {selectedDelivery.items.map((item, idx) => (
+                        <tr key={idx}>
+                          <td className="px-4 py-3 text-sm text-gray-900">{item.product_name}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600 text-right">{item.quantity} {item.unit}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600 text-right">{formatCurrency(item.unit_price)}</td>
+                          <td className="px-4 py-3 text-sm font-medium text-gray-900 text-right">{formatCurrency(item.total_price)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="bg-gray-50 border-t border-gray-200">
+                      <tr>
+                        <td colSpan={3} className="px-4 py-3 text-sm font-medium text-gray-900 text-right">Total Amount:</td>
+                        <td className="px-4 py-3 text-base font-bold text-gray-900 text-right">{formatCurrency(selectedDelivery.total_amount)}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+
+              {/* Notes */}
+              {selectedDelivery.notes && (
+                <div>
+                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wider block mb-2">Notes</label>
+                  <p className="text-sm text-gray-700 bg-gray-50 rounded-lg p-3">{selectedDelivery.notes}</p>
+                </div>
+              )}
+
+              {/* Metadata */}
+              <div className="pt-4 border-t border-gray-200">
+                <div className="grid grid-cols-2 gap-4 text-xs text-gray-500">
+                  <div>
+                    <span className="font-medium">Created:</span> {format(new Date(selectedDelivery.created_at), 'MMM d, yyyy h:mm a')}
+                  </div>
+                  <div>
+                    <span className="font-medium">Last Updated:</span> {format(new Date(selectedDelivery.updated_at), 'MMM d, yyyy h:mm a')}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="border-t border-gray-200 px-6 py-4 flex justify-end">
+              <Button variant="ghost" onClick={() => setShowDeliveryDetailModal(false)}>
+                Close
+              </Button>
             </div>
           </div>
         </div>

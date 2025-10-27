@@ -70,7 +70,10 @@ export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, d
       if (response.ok) {
         const data = await response.json()
         console.log('[fetchProjects] Success, data:', data)
-        setProjects(Array.isArray(data) ? data : [])
+        // API returns {success: true, data: [...]} format
+        const projectsList = data.data || data || []
+        console.log('[fetchProjects] Projects list:', projectsList)
+        setProjects(Array.isArray(projectsList) ? projectsList : [])
       } else {
         console.error('[fetchProjects] Failed response:', response.status)
         setProjects([])
