@@ -65,14 +65,114 @@ interface RecentActivity {
   status?: string;
 }
 
+interface ChartData {
+  budgetTrends: { month: string; budget: number; actual: number; }[];
+  expenseBreakdown: { name: string; value: number; color: string; }[];
+  projectProgress: { name: string; progress: number; status: 'on_track' | 'at_risk' | 'behind'; }[];
+}
+
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
+  const [chartData, setChartData] = useState<ChartData>({
+    budgetTrends: [],
+    expenseBreakdown: [],
+    projectProgress: [],
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchDashboardData();
   }, []);
+
+  // Helper function to calculate budget trends by month
+  const calculateBudgetTrends = (projects: any[], expenses: any[]) => {
+    const now = new Date();
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const trends = [];
+
+    // Get last 6 months
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthName = monthNames[date.getMonth()];
+      
+      // Calculate total budget up to this month
+      const budget = projects.reduce((sum, p) => sum + (p.budget || 0), 0) * ((6 - i) / 6);
+      
+      // Calculate actual expenses up to this month
+      const actual = expenses
+        .filter((e: any) => {
+          const expenseDate = new Date(e.created_at);
+          return expenseDate <= new Date(date.getFullYear(), date.getMonth() + 1, 0);
+        })
+        .reduce((sum, e) => sum + (e.amount || 0), 0);
+
+      trends.push({ month: monthName, budget, actual });
+    }
+
+    return trends;
+  };
+
+  // Helper function to calculate expense breakdown by category
+  const calculateExpenseBreakdown = (expenses: any[]) => {
+    const categories: { [key: string]: number } = {
+      Materials: 0,
+      Labor: 0,
+      Equipment: 0,
+      Subcontractors: 0,
+      Other: 0,
+    };
+
+    // Sum expenses by category
+    expenses.forEach((expense: any) => {
+      const category = expense.category || 'Other';
+      const amount = expense.amount || 0;
+      
+      if (categories.hasOwnProperty(category)) {
+        categories[category] += amount;
+      } else {
+        categories.Other += amount;
+      }
+    });
+
+    const colors = {
+      Materials: '#3b82f6',
+      Labor: '#10b981',
+      Equipment: '#f59e0b',
+      Subcontractors: '#ef4444',
+      Other: '#8b5cf6',
+    };
+
+    return Object.entries(categories)
+      .filter(([_, value]) => value > 0)
+      .map(([name, value]) => ({
+        name,
+        value,
+        color: colors[name as keyof typeof colors],
+      }));
+  };
+
+  // Helper function to calculate project progress
+  const calculateProjectProgress = (projects: any[]) => {
+    return projects
+      .filter((p: any) => p.status === 'active')
+      .slice(0, 5) // Show top 5 active projects
+      .map((p: any) => {
+        const budget = p.budget || 1;
+        const spent = p.summary?.totalSpent || 0;
+        const progress = Math.min((spent / budget) * 100, 100);
+        
+        let status: 'on_track' | 'at_risk' | 'behind' = 'on_track';
+        if (progress > 100) status = 'behind';
+        else if (progress > 90) status = 'at_risk';
+
+        return {
+          name: p.name || 'Unknown Project',
+          progress,
+          status,
+        };
+      });
+  };
 
   const fetchDashboardData = async () => {
     try {
@@ -227,7 +327,18 @@ export default function DashboardPage() {
       recentActivityItems.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
       setStats(calculatedStats);
-      setRecentActivity(recentActivityItems.slice(0, 4));
+      setRecentActivity(recentActivityItems.slice(0, 10));
+
+      // Calculate chart data from real project/expense data
+      const budgetTrendsData = calculateBudgetTrends(projectData, expenseData);
+      const expenseBreakdownData = calculateExpenseBreakdown(expenseData);
+      const projectProgressData = calculateProjectProgress(projectData);
+
+      setChartData({
+        budgetTrends: budgetTrendsData,
+        expenseBreakdown: expenseBreakdownData,
+        projectProgress: projectProgressData,
+      });
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error);
       
@@ -478,39 +589,13 @@ export default function DashboardPage() {
 
         {/* Analytics Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
-          <BudgetTrendChart 
-            data={[
-              { month: 'Jan', budget: stats.projects.totalBudget * 0.08, actual: stats.projects.totalSpent * 0.08 },
-              { month: 'Feb', budget: stats.projects.totalBudget * 0.16, actual: stats.projects.totalSpent * 0.15 },
-              { month: 'Mar', budget: stats.projects.totalBudget * 0.24, actual: stats.projects.totalSpent * 0.23 },
-              { month: 'Apr', budget: stats.projects.totalBudget * 0.32, actual: stats.projects.totalSpent * 0.31 },
-              { month: 'May', budget: stats.projects.totalBudget * 0.40, actual: stats.projects.totalSpent * 0.42 },
-              { month: 'Jun', budget: stats.projects.totalBudget * 0.48, actual: stats.projects.totalSpent * 0.48 },
-            ]}
-          />
-          
-          <ExpenseBreakdownChart 
-            data={[
-              { name: 'Materials', value: stats.projects.totalSpent * 0.4, color: '#3b82f6' },
-              { name: 'Labor', value: stats.projects.totalSpent * 0.3, color: '#10b981' },
-              { name: 'Equipment', value: stats.projects.totalSpent * 0.15, color: '#f59e0b' },
-              { name: 'Subcontractors', value: stats.projects.totalSpent * 0.1, color: '#ef4444' },
-              { name: 'Other', value: stats.projects.totalSpent * 0.05, color: '#8b5cf6' },
-            ]}
-          />
+          <BudgetTrendChart data={chartData.budgetTrends} />
+          <ExpenseBreakdownChart data={chartData.expenseBreakdown} />
         </div>
 
         {/* Project Progress Chart */}
         <div className="mb-4 md:mb-6">
-          <ProjectProgressChart 
-            data={[
-              { name: 'Foundation', progress: 85, status: 'on_track' },
-              { name: 'Framing', progress: 65, status: 'on_track' },
-              { name: 'Electrical', progress: 45, status: 'at_risk' },
-              { name: 'Plumbing', progress: 30, status: 'behind' },
-              { name: 'HVAC', progress: 20, status: 'at_risk' },
-            ]}
-          />
+          <ProjectProgressChart data={chartData.projectProgress} />
         </div>
 
         {/* Main Content Grid */}
