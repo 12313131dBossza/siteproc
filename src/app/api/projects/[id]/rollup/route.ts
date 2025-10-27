@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
+import { createServiceClient } from '@/lib/supabase-service'
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   const cookieStore = await cookies()
@@ -9,6 +10,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     { cookies: { get(name: string) { return cookieStore.get(name)?.value } } as any }
   )
+  const serviceSupabase = createServiceClient()
   const id = params.id
   console.log('Rollup API: fetching rollup for project ID:', id)
 
@@ -38,9 +40,10 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     const actual_expenses = (exp.data || []).reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0)
 
     // committed_orders: prefer total_estimated, else qty*unit_price if present, else 0
-    const ord = await supabase
+    // Use service client to bypass RLS for counting
+    const ord = await serviceSupabase
       .from('purchase_orders')
-      .select('total_estimated, qty, unit_price', { count: 'exact' })
+      .select('total_estimated, qty, unit_price, company_id', { count: 'exact' })
       .eq('project_id', id)
     console.log('Rollup API: orders query result - count:', ord.count, 'error:', ord.error)
     console.log('Rollup API: orders data sample:', ord.data?.slice(0, 2))
