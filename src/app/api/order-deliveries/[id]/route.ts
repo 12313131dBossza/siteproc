@@ -317,6 +317,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         await logActivity({
           type: 'delivery',
           action: 'updated',
+          title: `Delivery ${statusLabels[status] || status}`,
           description: `Delivery status changed to ${statusLabels[status] || status}${driver_name ? ` (Driver: ${driver_name})` : ''}`,
           metadata: {
             delivery_id: deliveryId,

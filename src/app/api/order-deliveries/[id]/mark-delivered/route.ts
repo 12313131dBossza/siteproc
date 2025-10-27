@@ -138,6 +138,7 @@ export async function PATCH(
       await logActivity({
         type: 'delivery',
         action: 'updated',
+        title: 'Delivery Completed',
         description: `Delivery marked as delivered${notes ? `: ${notes}` : ''}`,
         metadata: {
           delivery_id: deliveryId,
