@@ -1,9 +1,9 @@
 "use client";
 
 import { SidebarNav } from "./sidebar-nav";
-import { Bell, Search, Menu, X, Plus } from "lucide-react";
-import { useState } from "react";
+import { Bell, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { NotificationBell } from "./NotificationBell";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -13,43 +13,25 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children, title, description, actions }: AppLayoutProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Mobile sidebar backdrop */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <div
-        className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-300 lg:relative lg:translate-x-0",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        )}
-      >
+      {/* Desktop Sidebar - Hidden on mobile */}
+      <div className="hidden md:block">
         <SidebarNav />
       </div>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden w-full">
         {/* Top header */}
         <header className="bg-white border-b border-gray-200 shadow-sm">
-          <div className="flex h-16 items-center gap-2 md:gap-4 px-4 md:px-6">
-            {/* Mobile menu button */}
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="lg:hidden -ml-2 p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </button>
+          <div className="flex h-14 md:h-16 items-center gap-2 md:gap-4 px-4 md:px-6">
+            {/* Logo/Brand for mobile */}
+            <div className="md:hidden font-bold text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              SiteProc
+            </div>
 
-            {/* Search */}
-            <div className="flex-1 max-w-md hidden sm:block">
+            {/* Search - Desktop only */}
+            <div className="flex-1 max-w-md hidden md:block">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
@@ -62,10 +44,7 @@ export function AppLayout({ children, title, description, actions }: AppLayoutPr
 
             {/* Right side actions */}
             <div className="flex items-center gap-2 md:gap-3 ml-auto">
-              <button className="relative p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
-                <Bell className="h-5 w-5" />
-                <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full animate-pulse" />
-              </button>
+              <NotificationBell />
             </div>
           </div>
 
@@ -73,8 +52,8 @@ export function AppLayout({ children, title, description, actions }: AppLayoutPr
           {title && (
             <div className="px-4 md:px-6 py-3 md:py-4 border-t border-gray-100 bg-gradient-to-r from-gray-50 to-white">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div>
-                  <h1 className="text-xl md:text-2xl font-bold text-gray-900">{title}</h1>
+                <div className="w-full sm:w-auto">
+                  <h1 className="text-lg md:text-2xl font-bold text-gray-900">{title}</h1>
                   {description && (
                     <p className="mt-1 text-xs md:text-sm text-gray-600">{description}</p>
                   )}
@@ -85,8 +64,8 @@ export function AppLayout({ children, title, description, actions }: AppLayoutPr
           )}
         </header>
 
-        {/* Page content */}
-        <main className="flex-1 overflow-y-auto bg-gray-50">
+        {/* Page content - Add padding bottom for mobile nav */}
+        <main className="flex-1 overflow-y-auto bg-gray-50 pb-16 md:pb-0">
           {children}
         </main>
       </div>

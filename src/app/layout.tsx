@@ -69,12 +69,13 @@ export default function RootLayout({
         <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
         <link rel="icon" type="image/png" href="/icons/icon-192.png" />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased pb-0 md:pb-0`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <SentryInitializer />
         <ToastProvider>
           <Toaster position="top-right" />
           
-          <nav className="w-full p-3 flex justify-between items-center border-b border-black/10 dark:border-white/10">
+          {/* Simple top bar - Desktop only */}
+          <nav className="hidden md:flex w-full p-3 justify-between items-center border-b border-black/10 dark:border-white/10 bg-white">
             <Link href="/" className="font-semibold">SiteProc</Link>
             <Suspense>
               <div className="flex items-center gap-4">
@@ -91,10 +92,8 @@ export default function RootLayout({
             </Suspense>
           </nav>
           
-          {/* Main content with padding for mobile bottom nav */}
-          <div className="pb-16 md:pb-0">
-            {children}
-          </div>
+          {/* Main content */}
+          {children}
           
           {/* Footer - hidden on mobile */}
           <div className="hidden md:block">
