@@ -20,6 +20,16 @@ import {
 } from 'lucide-react';
 import { format } from '@/lib/date-format';
 import { cn } from '@/lib/utils';
+import { 
+  exportProjectReportPDF, 
+  exportPaymentReportPDF, 
+  exportDeliveryReportPDF 
+} from '@/lib/export-reports-pdf';
+import { 
+  exportProjectReportCSV, 
+  exportPaymentReportCSV, 
+  exportDeliveryReportCSV 
+} from '@/lib/export-reports-csv';
 
 type ReportType = 'projects' | 'payments' | 'deliveries';
 
@@ -95,85 +105,22 @@ export default function ReportsPage() {
   }, [activeTab]);
 
   const exportToCSV = (type: ReportType) => {
-    let data: any[] = [];
-    let filename = '';
-    let headers: string[] = [];
-
     if (type === 'projects' && projectsData) {
-      data = projectsData.data;
-      filename = 'project-financial-report.csv';
-      headers = ['Project Name', 'Status', 'Budget', 'Actual', 'Variance', 'Variance %', 'Budget Status', 'Created Date'];
-      
-      const csvContent = [
-        headers.join(','),
-        ...data.map(p => [
-          `"${p.name}"`,
-          p.status,
-          p.budget.toFixed(2),
-          p.actual.toFixed(2),
-          p.variance.toFixed(2),
-          p.variance_percentage.toFixed(2) + '%',
-          p.budget_status,
-          format(new Date(p.created_at), 'yyyy-MM-dd')
-        ].join(','))
-      ].join('\n');
-
-      downloadCSV(csvContent, filename);
+      exportProjectReportCSV(projectsData);
     } else if (type === 'payments' && paymentsData) {
-      data = paymentsData.data;
-      filename = 'payment-summary-report.csv';
-      headers = ['Vendor', 'Category', 'Amount', 'Status', 'Description', 'Age (Days)', 'Overdue', 'Created Date'];
-      
-      const csvContent = [
-        headers.join(','),
-        ...data.map((p: PaymentReport) => [
-          `"${p.vendor}"`,
-          p.category,
-          p.amount.toFixed(2),
-          p.status,
-          `"${p.description || ''}"`,
-          p.age_days,
-          p.is_overdue ? 'Yes' : 'No',
-          format(new Date(p.created_at), 'yyyy-MM-dd')
-        ].join(','))
-      ].join('\n');
-
-      downloadCSV(csvContent, filename);
+      exportPaymentReportCSV(paymentsData);
     } else if (type === 'deliveries' && deliveriesData) {
-      data = deliveriesData.data;
-      filename = 'delivery-summary-report.csv';
-      headers = ['Order ID', 'Driver', 'Vehicle', 'Status', 'Amount', 'Delivery Date', 'Age (Days)', 'Delayed', 'Created Date'];
-      
-      const csvContent = [
-        headers.join(','),
-        ...data.map((d: DeliveryReport) => [
-          d.order_id,
-          `"${d.driver_name}"`,
-          d.vehicle_number,
-          d.status,
-          d.amount.toFixed(2),
-          d.delivery_date ? format(new Date(d.delivery_date), 'yyyy-MM-dd') : 'N/A',
-          d.age_days,
-          d.is_delayed ? 'Yes' : 'No',
-          format(new Date(d.created_at), 'yyyy-MM-dd')
-        ].join(','))
-      ].join('\n');
-
-      downloadCSV(csvContent, filename);
+      exportDeliveryReportCSV(deliveriesData);
     }
   };
 
-  const downloadCSV = (content: string, filename: string) => {
-    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    if (link.download !== undefined) {
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', filename);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+  const exportToPDF = (type: ReportType) => {
+    if (type === 'projects' && projectsData) {
+      exportProjectReportPDF(projectsData);
+    } else if (type === 'payments' && paymentsData) {
+      exportPaymentReportPDF(paymentsData);
+    } else if (type === 'deliveries' && deliveriesData) {
+      exportDeliveryReportPDF(deliveriesData);
     }
   };
 
@@ -193,14 +140,24 @@ export default function ReportsPage() {
             <h1 className="text-3xl font-bold text-gray-900">Reports</h1>
             <p className="text-gray-500 mt-1">Financial and operational insights</p>
           </div>
-          <Button
-            onClick={() => exportToCSV(activeTab)}
-            disabled={loading}
-            className="flex items-center gap-2"
-          >
-            <Download className="h-4 w-4" />
-            Export to CSV
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={() => exportToPDF(activeTab)}
+              disabled={loading}
+              className="flex items-center gap-2 bg-red-600 hover:bg-red-700"
+            >
+              <FileText className="h-4 w-4" />
+              Export PDF
+            </Button>
+            <Button
+              onClick={() => exportToCSV(activeTab)}
+              disabled={loading}
+              className="flex items-center gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Export CSV
+            </Button>
+          </div>
         </div>
 
         {/* Tabs */}
