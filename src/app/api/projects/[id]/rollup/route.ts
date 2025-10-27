@@ -39,7 +39,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
     // committed_orders: prefer total_estimated, else qty*unit_price if present, else 0
     const ord = await supabase
-      .from('orders')
+      .from('purchase_orders')
       .select('total_estimated, qty, unit_price', { count: 'exact' })
       .eq('project_id', id)
     console.log('Rollup API: orders query result - count:', ord.count, 'error:', ord.error)
