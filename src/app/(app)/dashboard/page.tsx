@@ -3,6 +3,9 @@
 import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/app-layout";
 import { Button } from "@/components/ui/Button";
+import { BudgetTrendChart } from "@/components/dashboard/BudgetTrendChart";
+import { ExpenseBreakdownChart } from "@/components/dashboard/ExpenseBreakdownChart";
+import { ProjectProgressChart } from "@/components/dashboard/ProjectProgressChart";
 import {
   LayoutDashboard,
   TrendingUp,
@@ -471,6 +474,43 @@ export default function DashboardPage() {
               <BarChart3 className="h-6 w-6 md:h-8 md:w-8 text-purple-400" />
             </div>
           </div>
+        </div>
+
+        {/* Analytics Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
+          <BudgetTrendChart 
+            data={[
+              { month: 'Jan', budget: stats.projects.totalBudget * 0.08, actual: stats.projects.totalSpent * 0.08 },
+              { month: 'Feb', budget: stats.projects.totalBudget * 0.16, actual: stats.projects.totalSpent * 0.15 },
+              { month: 'Mar', budget: stats.projects.totalBudget * 0.24, actual: stats.projects.totalSpent * 0.23 },
+              { month: 'Apr', budget: stats.projects.totalBudget * 0.32, actual: stats.projects.totalSpent * 0.31 },
+              { month: 'May', budget: stats.projects.totalBudget * 0.40, actual: stats.projects.totalSpent * 0.42 },
+              { month: 'Jun', budget: stats.projects.totalBudget * 0.48, actual: stats.projects.totalSpent * 0.48 },
+            ]}
+          />
+          
+          <ExpenseBreakdownChart 
+            data={[
+              { name: 'Materials', value: stats.expenses.thisMonth * 0.4, color: '#3b82f6' },
+              { name: 'Labor', value: stats.expenses.thisMonth * 0.3, color: '#10b981' },
+              { name: 'Equipment', value: stats.expenses.thisMonth * 0.15, color: '#f59e0b' },
+              { name: 'Subcontractors', value: stats.expenses.thisMonth * 0.1, color: '#ef4444' },
+              { name: 'Other', value: stats.expenses.thisMonth * 0.05, color: '#8b5cf6' },
+            ]}
+          />
+        </div>
+
+        {/* Project Progress Chart */}
+        <div className="mb-4 md:mb-6">
+          <ProjectProgressChart 
+            data={[
+              { name: 'Foundation', progress: 85, status: 'on_track' },
+              { name: 'Framing', progress: 65, status: 'on_track' },
+              { name: 'Electrical', progress: 45, status: 'at_risk' },
+              { name: 'Plumbing', progress: 30, status: 'behind' },
+              { name: 'HVAC', progress: 20, status: 'at_risk' },
+            ]}
+          />
         </div>
 
         {/* Main Content Grid */}
