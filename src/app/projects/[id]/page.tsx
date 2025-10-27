@@ -84,7 +84,11 @@ export default function ProjectDetailPage() {
           // Reuse expenses API and filter client-side by project_id (added to API response)
             const res = await fetch('/api/expenses')
             const j = await res.json().catch(()=>({}))
-            if (!aborted) setExpenses((j.expenses||[]).filter((e:any)=>e.project_id===id))
+            const expensesList = j.data || j.expenses || []
+            console.log('All expenses:', expensesList)
+            const filtered = expensesList.filter((e:any)=>e.project_id===id)
+            console.log('Filtered expenses for project', id, ':', filtered)
+            if (!aborted) setExpenses(filtered)
     } else if (tab==='orders') {
       console.log('Project detail: fetching orders for project:', id);
       const res = await fetch(`/api/orders?projectId=${encodeURIComponent(id)}`)
