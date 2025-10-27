@@ -373,13 +373,13 @@ export default function OrdersPage() {
   if (loading) {
     return (
       <AppLayout title="Orders" description="Manage product orders and procurement">
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="p-4 md:p-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="bg-white rounded-xl border border-gray-200 p-6 animate-pulse">
-                <div className="h-6 bg-gray-200 rounded mb-2" />
-                <div className="h-8 bg-gray-200 rounded mb-2" />
-                <div className="h-4 bg-gray-200 rounded" />
+              <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 md:p-6 animate-pulse">
+                <div className="h-5 md:h-6 bg-gray-200 rounded mb-2" />
+                <div className="h-6 md:h-8 bg-gray-200 rounded mb-2" />
+                <div className="h-3 md:h-4 bg-gray-200 rounded" />
               </div>
             ))}
           </div>
@@ -393,7 +393,7 @@ export default function OrdersPage() {
       title="Orders"
       description="Manage product orders and procurement"
       actions={
-        <div className="flex gap-2">
+        <div className="hidden md:flex gap-2">
           <Button variant="ghost" leftIcon={<Download className="h-4 w-4" />}>
             Export
           </Button>
@@ -407,53 +407,53 @@ export default function OrdersPage() {
         </div>
       }
     >
-      <div className="p-6">
+      <div className="p-4 md:p-6">
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-blue-50 rounded-lg">
-                <ShoppingCart className="h-6 w-6 text-blue-600" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
+          <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-3 md:mb-4">
+              <div className="p-2 md:p-3 bg-blue-50 rounded-lg">
+                <ShoppingCart className="h-5 w-5 md:h-6 md:w-6 text-blue-600" />
               </div>
-              <TrendingUp className="h-4 w-4 text-green-500" />
+              <TrendingUp className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-1">{stats.total}</h3>
-            <p className="text-sm text-gray-500">Total Orders</p>
+            <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-1">{stats.total}</h3>
+            <p className="text-xs md:text-sm text-gray-500">Total Orders</p>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-yellow-50 rounded-lg">
-                <Clock className="h-6 w-6 text-yellow-600" />
+          <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-3 md:mb-4">
+              <div className="p-2 md:p-3 bg-yellow-50 rounded-lg">
+                <Clock className="h-5 w-5 md:h-6 md:w-6 text-yellow-600" />
               </div>
               <span className="text-xs text-yellow-600 font-medium">{stats.pending}</span>
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-1">{stats.pending}</h3>
-            <p className="text-sm text-gray-500">Pending Approval</p>
+            <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-1">{stats.pending}</h3>
+            <p className="text-xs md:text-sm text-gray-500">Pending Approval</p>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-green-50 rounded-lg">
-                <CheckCircle className="h-6 w-6 text-green-600" />
+          <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-3 md:mb-4">
+              <div className="p-2 md:p-3 bg-green-50 rounded-lg">
+                <CheckCircle className="h-5 w-5 md:h-6 md:w-6 text-green-600" />
               </div>
               <span className="text-xs text-green-600 font-medium">{stats.approved}</span>
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-1">{stats.approved}</h3>
-            <p className="text-sm text-gray-500">Approved</p>
+            <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-1">{stats.approved}</h3>
+            <p className="text-xs md:text-sm text-gray-500">Approved</p>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-purple-50 rounded-lg">
-                <DollarSign className="h-6 w-6 text-purple-600" />
+          <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-3 md:mb-4">
+              <div className="p-2 md:p-3 bg-purple-50 rounded-lg">
+                <DollarSign className="h-5 w-5 md:h-6 md:w-6 text-purple-600" />
               </div>
               <span className="text-xs text-purple-600 font-medium">
                 {((stats.thisMonth / (stats.totalValue || 1)) * 100).toFixed(0)}%
               </span>
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-1">{formatCurrency(stats.totalValue)}</h3>
-            <p className="text-sm text-gray-500">Total Value</p>
+            <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-1">{formatCurrency(stats.totalValue)}</h3>
+            <p className="text-xs md:text-sm text-gray-500">Total Value</p>
           </div>
         </div>
 
