@@ -523,11 +523,16 @@ export async function POST(req: NextRequest) {
     if (body.order_id && uuidRegex.test(String(body.order_id))) {
       deliveryData.order_id = body.order_id
     }
-    // If proof_urls array is provided, attempt to store it on a jsonb column (add if missing)
-    if (Array.isArray(body.proof_urls) && body.proof_urls.length > 0) {
-      // Optimistic assignment; if DB lacks the column, the insert will fail and we retry after adding the column
+    
+    // Handle proof of delivery - support both single proof_url and array proof_urls
+    if (body.proof_url) {
+      // Single URL from modal - store as array
+      deliveryData.proof_urls = [body.proof_url]
+    } else if (Array.isArray(body.proof_urls) && body.proof_urls.length > 0) {
+      // Array format
       deliveryData.proof_urls = body.proof_urls
     }
+    
     // If client sent job_id and it looks like a UUID, include it; otherwise defer to fallbacks
     if (body.job_id && uuidRegex.test(String(body.job_id))) {
       deliveryData.job_id = body.job_id
