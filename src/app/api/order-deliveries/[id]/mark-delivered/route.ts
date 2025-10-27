@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { supabaseService } from '@/lib/supabase'
 import { syncOrderStatus } from '@/lib/orderSync'
+import { logActivity } from '@/lib/activity-logger'
 
 export async function PATCH(
   request: NextRequest,
@@ -130,6 +131,26 @@ export async function PATCH(
         console.warn('Error syncing order status:', orderError)
         // Don't fail the delivery update if order sync fails
       }
+    }
+
+    // Log activity for marking delivery as delivered
+    try {
+      await logActivity({
+        type: 'delivery',
+        action: 'updated',
+        description: `Delivery marked as delivered${notes ? `: ${notes}` : ''}`,
+        metadata: {
+          delivery_id: deliveryId,
+          order_id: delivery.order_id,
+          status: 'delivered',
+          notes: notes || null,
+          delivered_at: delivered_at || new Date().toISOString()
+        }
+      })
+      console.log('✅ Delivery activity logged successfully for status: delivered')
+    } catch (activityError) {
+      console.error('⚠️ Failed to log delivery activity:', activityError)
+      // Don't fail the delivery update if activity logging fails
     }
 
     // Try to update project actuals if delivery is linked to a project

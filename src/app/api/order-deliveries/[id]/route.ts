@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { supabaseService } from '@/lib/supabase'
 import { cookies } from 'next/headers'
+import { logActivity } from '@/lib/activity-logger'
 
 export const runtime = 'nodejs'
 
@@ -301,6 +302,34 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       } catch (itemError) {
         console.error('Error updating delivery items:', itemError)
         // Don't fail the whole update if items fail
+      }
+    }
+
+    // Log activity for delivery status changes
+    if (status) {
+      try {
+        const statusLabels: Record<string, string> = {
+          'pending': 'Pending',
+          'partial': 'In Transit',
+          'delivered': 'Delivered'
+        }
+        
+        await logActivity({
+          type: 'delivery',
+          action: 'updated',
+          description: `Delivery status changed to ${statusLabels[status] || status}${driver_name ? ` (Driver: ${driver_name})` : ''}`,
+          metadata: {
+            delivery_id: deliveryId,
+            status: status,
+            previous_status: currentDelivery.status,
+            driver_name: driver_name || null,
+            vehicle_number: vehicle_number || null
+          }
+        })
+        console.log(`✅ Delivery activity logged successfully for status: ${status}`)
+      } catch (activityError) {
+        console.error('⚠️ Failed to log delivery activity:', activityError)
+        // Don't fail the delivery update if activity logging fails
       }
     }
 
