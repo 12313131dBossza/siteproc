@@ -24,7 +24,11 @@ export function DeliveryStatusTransitionModal({
 }: DeliveryStatusTransitionModalProps) {
   const { push: toast } = useToast()
   const [loading, setLoading] = useState(false)
-  const [newStatus, setNewStatus] = useState<'partial' | 'delivered'>('partial')
+  
+  // Smart default: if current status is 'partial', default to 'delivered', otherwise 'partial'
+  const [newStatus, setNewStatus] = useState<'partial' | 'delivered'>(
+    currentStatus === 'partial' ? 'delivered' : 'partial'
+  )
 
   // Determine which statuses are valid transitions from current status
   const validTransitions: Record<string, Array<'partial' | 'delivered'>> = {
