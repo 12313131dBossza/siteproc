@@ -117,11 +117,19 @@ export function AddItemModal({ isOpen, onClose, projectId, type, onSuccess }: Ad
         };
         console.log('Creating expense:', body);
       } else if (type === 'delivery') {
-        endpoint = `/api/deliveries`;
+        endpoint = `/api/order-deliveries`;  // Fixed: was /api/deliveries
         body = {
           ...deliveryForm,
           proof_url: uploadedFileUrl || deliveryForm.proof_url,
           project_id: projectId,
+          // Add required fields for delivery creation
+          order_id: `MANUAL-${Date.now()}`,
+          items: [{
+            product_name: 'Manual entry from project',
+            quantity: 1,
+            unit: 'item',
+            unit_price: 0
+          }]
         };
         console.log('Creating delivery:', body);
       }
@@ -146,7 +154,7 @@ export function AddItemModal({ isOpen, onClose, projectId, type, onSuccess }: Ad
       // Reset forms
       setOrderForm({ vendor: '', product_name: '', qty: 1, unit_price: 0, status: 'pending' });
       setExpenseForm({ vendor: '', category: 'materials', amount: 0, description: '', status: 'pending' });
-      setDeliveryForm({ delivery_date: new Date().toISOString().split('T')[0], status: 'pending', notes: '' });
+      setDeliveryForm({ delivery_date: new Date().toISOString().split('T')[0], status: 'pending', notes: '', proof_url: '' });
     } catch (err: any) {
       console.error('Form submission error:', err);
       setError(err.message || 'Failed to create item');

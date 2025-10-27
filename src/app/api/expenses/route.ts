@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
       amount,
       description: body.description || body.vendor || '',
       memo: body.memo || body.description || '',
-      status: 'pending',
+      status: body.status || 'pending', // Respect user-selected status
       company_id: profile.company_id,
       job_id: null, // Note: job_id references 'jobs' table, not 'projects'. Keep null for now.
       spent_at: spendDate,
@@ -140,9 +140,8 @@ export async function POST(request: NextRequest) {
       receipt_url: body.receipt_url || null,
     }
 
-    // Auto-approve for admins/owners/bookkeepers
-    if (['admin','owner','bookkeeper'].includes(profile.role)) {
-      baseData.status = 'approved'
+    // If status is 'approved', set approval metadata
+    if (baseData.status === 'approved') {
       baseData.approved_at = new Date().toISOString()
       baseData.approved_by = user.id
     }
