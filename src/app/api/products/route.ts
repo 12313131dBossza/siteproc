@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sbServer } from '@/lib/supabase-server';
 import { createServiceClient } from '@/lib/supabase-service';
+import { logActivity } from '@/app/api/activity/route';
 
 export const runtime = 'nodejs';
 
@@ -217,6 +218,30 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Log activity
+    await logActivity({
+      type: 'product',
+      action: 'created',
+      title: `Product "${product.name}" created`,
+      description: `Created new product: ${product.name} (${product.category})`,
+      entity_type: 'product',
+      entity_id: product.id,
+      metadata: {
+        product_id: product.id,
+        product_name: product.name,
+        category: product.category,
+        price: product.price,
+        unit: product.unit,
+        stock_quantity: product.stock_quantity,
+        status: product.status,
+        supplier_name: product.supplier_name,
+      },
+      amount: product.price,
+      status: 'success',
+      user_id: user.id,
+      company_id: profile?.company_id,
+    })
 
     console.log('✅ Product created successfully:', product?.id);
     return NextResponse.json(product, { status: 201 });
