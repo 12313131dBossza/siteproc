@@ -229,7 +229,7 @@ export async function POST(request: NextRequest) {
       amount,
       description: orderData.description,
       category: orderData.category,
-      status: 'pending',
+      status: body.status || 'pending', // Respect user's status choice
       requested_by: profile.id,
       requested_at: new Date().toISOString()
     }
