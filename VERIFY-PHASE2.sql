@@ -43,12 +43,12 @@ ORDER BY tablename, cmd;
 -- ============================================================================
 
 SELECT 
-  activity_type,
+  type as activity_type,
   COUNT(*) as count
 FROM activity_logs
-WHERE activity_type IN ('client', 'contractor', 'bid')
-GROUP BY activity_type
-ORDER BY activity_type;
+WHERE type::text IN ('client', 'contractor', 'bid')
+GROUP BY type
+ORDER BY type;
 
 -- ============================================================================
 -- Summary Statistics
