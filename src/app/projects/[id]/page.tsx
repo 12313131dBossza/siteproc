@@ -235,8 +235,8 @@ export default function ProjectDetailPage() {
       <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         <KPI title="Budget" value={fmtCurrency.format(Number(project.budget||0))} />
         <KPI 
-          title="Actual Expenses" 
-          value={fmtCurrency.format(Number(project.actual_expenses || rollup?.actual_expenses || 0))} 
+          title="Actual Cost" 
+          value={fmtCurrency.format(Number(project.actual_cost || rollup?.actual_cost || 0))} 
           subtitle="Auto-synced" 
         />
         <KPI 
@@ -279,7 +279,7 @@ export default function ProjectDetailPage() {
                   <span className="text-gray-600">Spent</span>
                   <span className="font-medium">
                     {project.budget > 0 
-                      ? `${Math.round((Number(rollup?.actual_expenses || 0) / Number(project.budget)) * 100)}%`
+                      ? `${Math.round((Number(project.actual_cost || rollup?.actual_cost || 0) / Number(project.budget)) * 100)}%`
                       : '0%'
                     }
                   </span>
@@ -294,7 +294,7 @@ export default function ProjectDetailPage() {
                         : 'bg-green-500'
                     }`}
                     style={{ 
-                      width: `${Math.min(100, Math.round((Number(rollup?.actual_expenses || 0) / Number(project.budget || 1)) * 100))}%` 
+                      width: `${Math.min(100, Math.round((Number(project.actual_cost || rollup?.actual_cost || 0) / Number(project.budget || 1)) * 100))}%` 
                     }}
                   />
                 </div>
@@ -309,9 +309,9 @@ export default function ProjectDetailPage() {
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs text-gray-500 mb-1">Spent (Auto-synced)</div>
+                  <div className="text-xs text-gray-500 mb-1">Actual Cost (Auto-synced)</div>
                   <div className="text-lg font-semibold text-blue-600">
-                    {fmtCurrency.format(Number(rollup?.actual_expenses || 0))}
+                    {fmtCurrency.format(Number(project.actual_cost || rollup?.actual_cost || 0))}
                   </div>
                 </div>
                 <div>

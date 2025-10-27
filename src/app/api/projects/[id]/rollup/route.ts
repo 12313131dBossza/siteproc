@@ -15,8 +15,12 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   console.log('Rollup API: fetching rollup for project ID:', id)
 
   try {
-    // Load project - handle case where project doesn't exist
-    const proj = await supabase.from('projects').select('id, budget, company_id, status').eq('id', id).maybeSingle()
+    // Load project with budget tracking columns - handle case where project doesn't exist
+    const proj = await supabase
+      .from('projects')
+      .select('id, budget, company_id, status, actual_cost, variance')
+      .eq('id', id)
+      .maybeSingle()
     console.log('Rollup API: project query result - data:', proj.data, 'error:', proj.error)
     
     if (proj.error) {
@@ -29,7 +33,11 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       return NextResponse.json({ error: 'project_not_found' }, { status: 404 })
     }
 
-    // actual_expenses: approved expenses on this project
+    // Use database-calculated actual_cost (auto-synced via triggers)
+    // This includes delivered_value from orders + all expenses
+    const actual_cost = Number(proj.data.actual_cost || 0)
+    
+    // Legacy: actual_expenses for backwards compatibility (approved expenses only)
     const exp = await supabase
       .from('expenses')
       .select('amount, status', { count: 'exact' })
@@ -65,9 +73,16 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     counts.deliveries = del.count || 0
 
     const budget = Number((proj.data as any).budget || 0)
-    const variance = budget - actual_expenses
+    const variance = Number(proj.data.variance || 0) // Use database-calculated variance
     
-    const result = { budget, actual_expenses, committed_orders, variance, counts }
+    const result = { 
+      budget, 
+      actual_cost,       // New: Auto-synced from orders + expenses via triggers
+      actual_expenses,   // Legacy: Approved expenses only (for backwards compatibility)
+      committed_orders, 
+      variance,          // Database-calculated: budget - actual_cost
+      counts 
+    }
     console.log('Rollup API: returning result:', result)
 
     return NextResponse.json({ data: result })
