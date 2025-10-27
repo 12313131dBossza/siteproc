@@ -45,7 +45,7 @@ export function ExpenseBreakdownChart({ data }: ExpenseBreakdownChartProps) {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h3 className="text-lg font-semibold text-gray-900">Expense Breakdown</h3>
-          <p className="text-sm text-gray-500 mt-1">By project category</p>
+          <p className="text-sm text-gray-500 mt-1">Total expenses by category</p>
         </div>
         <div className="p-2 bg-green-50 rounded-lg">
           <DollarSign className="h-5 w-5 text-green-600" />

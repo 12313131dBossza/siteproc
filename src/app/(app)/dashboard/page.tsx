@@ -491,11 +491,11 @@ export default function DashboardPage() {
           
           <ExpenseBreakdownChart 
             data={[
-              { name: 'Materials', value: stats.expenses.thisMonth * 0.4, color: '#3b82f6' },
-              { name: 'Labor', value: stats.expenses.thisMonth * 0.3, color: '#10b981' },
-              { name: 'Equipment', value: stats.expenses.thisMonth * 0.15, color: '#f59e0b' },
-              { name: 'Subcontractors', value: stats.expenses.thisMonth * 0.1, color: '#ef4444' },
-              { name: 'Other', value: stats.expenses.thisMonth * 0.05, color: '#8b5cf6' },
+              { name: 'Materials', value: stats.projects.totalSpent * 0.4, color: '#3b82f6' },
+              { name: 'Labor', value: stats.projects.totalSpent * 0.3, color: '#10b981' },
+              { name: 'Equipment', value: stats.projects.totalSpent * 0.15, color: '#f59e0b' },
+              { name: 'Subcontractors', value: stats.projects.totalSpent * 0.1, color: '#ef4444' },
+              { name: 'Other', value: stats.projects.totalSpent * 0.05, color: '#8b5cf6' },
             ]}
           />
         </div>
