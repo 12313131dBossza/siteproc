@@ -8,6 +8,7 @@ import { Toaster } from 'sonner'
 import PWAInitializer from '@/components/PWAInitializer'
 import { Footer } from '@/components/Footer'
 import { SentryInitializer } from '@/components/SentryInitializer'
+import { NotificationBell } from '@/components/NotificationBell'
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -75,13 +76,16 @@ export default function RootLayout({
           <nav className="w-full p-3 flex justify-between items-center border-b border-black/10 dark:border-white/10">
             <Link href="/" className="font-semibold">SiteProc</Link>
             <Suspense>
-              <div id="offline-indicator" className="flex items-center gap-2">
-                <span id="offline-badge" className="text-sm bg-yellow-200 text-yellow-900 px-2 py-1 rounded hidden">
-                  Sync pending
-                </span>
-                <span id="install-badge" className="text-sm bg-blue-200 text-blue-900 px-2 py-1 rounded cursor-pointer hidden">
-                  Install App
-                </span>
+              <div className="flex items-center gap-4">
+                <NotificationBell />
+                <div id="offline-indicator" className="flex items-center gap-2">
+                  <span id="offline-badge" className="text-sm bg-yellow-200 text-yellow-900 px-2 py-1 rounded hidden">
+                    Sync pending
+                  </span>
+                  <span id="install-badge" className="text-sm bg-blue-200 text-blue-900 px-2 py-1 rounded cursor-pointer hidden">
+                    Install App
+                  </span>
+                </div>
               </div>
             </Suspense>
           </nav>
