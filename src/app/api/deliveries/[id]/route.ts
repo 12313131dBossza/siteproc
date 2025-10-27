@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseService } from '@/lib/supabase'
 import { getSessionProfile, enforceRole } from '@/lib/auth'
 import { audit } from '@/lib/audit'
+import { logActivity } from '@/app/api/activity/route'
 import { broadcastDeliveryUpdated, broadcastDashboardUpdated } from '@/lib/realtime'
 import {
   isValidStatusTransition,
@@ -198,6 +199,50 @@ export async function PATCH(
       changes
     )
 
+    // Log to new Activity Log system
+    if (status && status !== currentDelivery.status) {
+      const statusActions: Record<string, string> = {
+        'pending': 'created',
+        'partial': 'status_changed',
+        'delivered': 'completed'
+      }
+      
+      const statusTitles: Record<string, string> = {
+        'pending': 'Delivery marked as Pending',
+        'partial': 'Delivery In Transit',
+        'delivered': 'Delivery Completed'
+      }
+      
+      const statusDescriptions: Record<string, string> = {
+        'pending': `Delivery status changed to Pending`,
+        'partial': `Delivery is now In Transit${driver_name ? ` (Driver: ${driver_name})` : ''}${vehicle_number ? ` - Vehicle: ${vehicle_number}` : ''}`,
+        'delivered': `Delivery completed and signed off${signer_name ? ` by ${signer_name}` : ''}`
+      }
+
+      await logActivity({
+        type: 'delivery',
+        action: statusActions[status] || 'updated',
+        title: statusTitles[status] || `Delivery status changed to ${status}`,
+        description: statusDescriptions[status] || `Delivery #${updatedDelivery.delivery_number || deliveryId.substring(0, 8)} status updated`,
+        entity_type: 'delivery',
+        entity_id: deliveryId,
+        metadata: {
+          delivery_id: deliveryId,
+          delivery_number: updatedDelivery.delivery_number,
+          order_id: updatedDelivery.order_id,
+          project_id: updatedDelivery.project_id,
+          status_from: currentDelivery.status,
+          status_to: status,
+          driver_name: driver_name || updatedDelivery.driver_name,
+          vehicle_number: vehicle_number || updatedDelivery.vehicle_number,
+          signer_name: signer_name || updatedDelivery.signer_name,
+        },
+        status: status === 'delivered' ? 'success' : 'pending',
+        user_id: session.user.id,
+        company_id: session.companyId,
+      })
+    }
+
     // Step 7: Broadcast updates
     await Promise.all([
       broadcastDeliveryUpdated(deliveryId, ['updated']),
@@ -295,6 +340,28 @@ export async function DELETE(
       'archived',
       { previous_status: delivery.status }
     )
+
+    // Log to new Activity Log system
+    await logActivity({
+      type: 'delivery',
+      action: 'deleted',
+      title: `Delivery archived`,
+      description: `Delivery #${delivery.delivery_number || deliveryId.substring(0, 8)} was archived (soft delete)`,
+      entity_type: 'delivery',
+      entity_id: deliveryId,
+      metadata: {
+        delivery_id: deliveryId,
+        delivery_number: delivery.delivery_number,
+        order_id: delivery.order_id,
+        project_id: delivery.project_id,
+        previous_status: delivery.status,
+        driver_name: delivery.driver_name,
+        vehicle_number: delivery.vehicle_number,
+      },
+      status: 'success',
+      user_id: session.user.id,
+      company_id: session.companyId,
+    })
 
     // Broadcast updates
     await Promise.all([

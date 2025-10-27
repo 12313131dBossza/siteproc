@@ -5,6 +5,7 @@ import { EVENTS } from '@/lib/constants'
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseService } from '@/lib/supabase'
 import { audit } from '@/lib/audit'
+import { logActivity } from '@/app/api/activity/route'
 import { parseJson } from '@/lib/api'
 import { deliveryCreateSchema } from '@/lib/validation'
 import { broadcastDeliveryUpdated, broadcast, broadcastPoUpdated, broadcastDashboardUpdated } from '@/lib/realtime'
@@ -141,6 +142,29 @@ export async function POST(req: NextRequest) {
   }
 
   await audit(session.companyId as string, session.user.id, 'delivery', delivery.id as string, 'create', { items: items.length, photos: photoUrls.length })
+  
+  // Log to new Activity Log system
+  await logActivity({
+    type: 'delivery',
+    action: 'created',
+    title: `Delivery created`,
+    description: `New delivery #${delivery.delivery_number || (delivery.id as string).substring(0, 8)} created with ${items.length} items`,
+    entity_type: 'delivery',
+    entity_id: delivery.id as string,
+    metadata: {
+      delivery_id: delivery.id,
+      delivery_number: delivery.delivery_number,
+      order_id: payload.po_id,
+      project_id: payload.job_id,
+      items_count: items.length,
+      photos_count: photoUrls.length,
+      status: delivery.status,
+    },
+    status: 'success',
+    user_id: session.user.id,
+    company_id: session.companyId,
+  })
+  
   await Promise.all([
     broadcastDeliveryUpdated(delivery.id as string, ['create']),
     broadcast(`job:${payload.job_id}`, EVENTS.JOB_DELIVERY_UPDATED, { kind: 'delivery', job_id: payload.job_id, delivery_id: delivery.id as string, at: new Date().toISOString() }),
