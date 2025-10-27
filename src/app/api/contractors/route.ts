@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sbServer } from '@/lib/supabase-server';
 import { createServiceClient } from '@/lib/supabase-service';
+import { logActivity } from '@/app/api/activity/route';
 
 export async function GET(request: NextRequest) {
   try {
@@ -137,6 +138,25 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Log activity
+    await logActivity({
+      type: 'contractor',
+      action: 'created',
+      title: `Contractor "${contractor.name}" created`,
+      description: `Created new contractor: ${contractor.company_name || contractor.name}`,
+      entity_type: 'contractor',
+      entity_id: contractor.id,
+      metadata: {
+        contractor_name: contractor.name,
+        company_name: contractor.company_name,
+        email: contractor.email,
+        specialty: contractor.specialty,
+        status: contractor.status,
+      },
+      user_id: user.id,
+      company_id: profile.company_id,
+    })
 
     return NextResponse.json(contractor, { status: 201 });
   } catch (error: any) {

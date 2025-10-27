@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sbServer } from '@/lib/supabase-server'
 import { createServiceClient } from '@/lib/supabase-service'
+import { logActivity } from '@/app/api/activity/route'
 
 export const runtime = 'nodejs'
 
@@ -119,6 +120,24 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
+
+    // Log activity
+    await logActivity({
+      type: 'client',
+      action: 'created',
+      title: `Client "${client.name}" created`,
+      description: `Created new client: ${client.company_name || client.name}`,
+      entity_type: 'client',
+      entity_id: client.id,
+      metadata: {
+        client_name: client.name,
+        company_name: client.company_name,
+        email: client.email,
+        status: client.status,
+      },
+      user_id: user.id,
+      company_id: profile.company_id,
+    })
 
     return NextResponse.json(client, { status: 201 })
   } catch (error: any) {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sbServer } from '@/lib/supabase-server'
+import { logActivity } from '@/app/api/activity/route'
 
 export const runtime = 'nodejs'
 
@@ -64,6 +65,26 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) throw error
+
+    // Log activity
+    await logActivity({
+      type: 'bid',
+      action: 'created',
+      title: `Bid from "${bid.vendor_name}" created`,
+      description: `Created new bid: ${bid.item_description} - $${bid.total_amount}`,
+      entity_type: 'bid',
+      entity_id: bid.id,
+      metadata: {
+        vendor_name: bid.vendor_name,
+        vendor_email: bid.vendor_email,
+        item_description: bid.item_description,
+        total_amount: bid.total_amount,
+        status: bid.status,
+      },
+      amount: bid.total_amount,
+      user_id: user.id,
+      company_id: profile.company_id,
+    })
 
     return NextResponse.json(bid, { status: 201 })
   } catch (error: any) {
