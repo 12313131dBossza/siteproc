@@ -43,14 +43,14 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     // Use service client to bypass RLS for counting
     const ord = await serviceSupabase
       .from('purchase_orders')
-      .select('total_estimated, qty, unit_price, company_id', { count: 'exact' })
+      .select('amount, quantity, unit_price, company_id', { count: 'exact' })
       .eq('project_id', id)
     console.log('Rollup API: orders query result - count:', ord.count, 'error:', ord.error)
     console.log('Rollup API: orders data sample:', ord.data?.slice(0, 2))
     
     const committed_orders = (ord.data || []).reduce((sum: number, o: any) => {
-      if (o.total_estimated != null) return sum + Number(o.total_estimated || 0)
-      if (o.qty != null && o.unit_price != null) return sum + Number(o.qty) * Number(o.unit_price)
+      if (o.amount != null) return sum + Number(o.amount || 0)
+      if (o.quantity != null && o.unit_price != null) return sum + Number(o.quantity) * Number(o.unit_price)
       return sum
     }, 0)
 
