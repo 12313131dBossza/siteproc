@@ -90,6 +90,25 @@ export async function POST(
 
     console.log('✅ File uploaded:', { fileName, publicUrl })
 
+    // Update the delivery record in database with the proof URL
+    try {
+      const { error: updateError } = await supabase
+        .from('deliveries')
+        .update({ proof_urls: [publicUrl] })
+        .eq('id', deliveryId)
+      
+      if (updateError) {
+        console.error('Failed to update delivery with proof URL:', updateError)
+        // Don't fail the request - file was uploaded successfully
+        // Just log the error and continue
+      } else {
+        console.log('✅ Delivery updated with proof URL')
+      }
+    } catch (dbError) {
+      console.error('Database update error:', dbError)
+      // Don't fail - file upload succeeded
+    }
+
     // Return the public URL
     return NextResponse.json(
       {
