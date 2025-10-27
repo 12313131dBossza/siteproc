@@ -506,7 +506,8 @@ export async function POST(req: NextRequest) {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
     const deliveryData: any = {
       order_uuid: body.order_uuid || null,
-      order_id: body.order_id || `ORD-${Date.now()}`,
+      // order_id is a UUID foreign key - only set if provided and is valid UUID
+      // For manual entries from projects, this will be null
       delivery_date: body.delivery_date || new Date().toISOString(),
       status: body.status || 'pending',
       driver_name: body.driver_name || null,
@@ -516,6 +517,11 @@ export async function POST(req: NextRequest) {
       company_id: user.company_id,
       created_by: user.id,
       project_id: body.project_id || null, // Add project_id support
+    }
+    
+    // Only set order_id if it's a valid UUID (references purchase_orders table)
+    if (body.order_id && uuidRegex.test(String(body.order_id))) {
+      deliveryData.order_id = body.order_id
     }
     // If proof_urls array is provided, attempt to store it on a jsonb column (add if missing)
     if (Array.isArray(body.proof_urls) && body.proof_urls.length > 0) {

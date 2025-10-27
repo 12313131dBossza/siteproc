@@ -122,10 +122,10 @@ export function AddItemModal({ isOpen, onClose, projectId, type, onSuccess }: Ad
           ...deliveryForm,
           proof_url: uploadedFileUrl || deliveryForm.proof_url,
           project_id: projectId,
-          // Add required fields for delivery creation
-          order_id: `MANUAL-${Date.now()}`,
+          // Don't set order_id - it's a UUID foreign key to purchase_orders
+          // The API will handle manual entries without an order_id
           items: [{
-            product_name: 'Manual entry from project',
+            product_name: deliveryForm.notes || 'Manual entry from project',
             quantity: 1,
             unit: 'item',
             unit_price: 0
