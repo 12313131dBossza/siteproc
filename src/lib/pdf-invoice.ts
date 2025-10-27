@@ -69,20 +69,20 @@ export function generateInvoicePDF(data: InvoiceData): jsPDF {
   let yPos = 20;
   
   // ============================================================================
-  // TOP LINE
+  // TOP LINE - Darker for visibility
   // ============================================================================
-  doc.setDrawColor(200, 200, 200);
-  doc.setLineWidth(0.3);
+  doc.setDrawColor(100, 100, 100);
+  doc.setLineWidth(0.5);
   doc.line(margin, yPos, pageWidth - margin, yPos);
   
   yPos += 15;
   
   // ============================================================================
-  // INVOICE TITLE (Centered, minimal)
+  // INVOICE TITLE (Centered, bold black)
   // ============================================================================
-  doc.setFontSize(14);
-  doc.setTextColor(120, 120, 120);
-  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(16);
+  doc.setTextColor(0, 0, 0);
+  doc.setFont('helvetica', 'bold');
   doc.text('INVOICE', pageWidth / 2, yPos, { align: 'center' });
   
   yPos += 20;
@@ -90,20 +90,22 @@ export function generateInvoicePDF(data: InvoiceData): jsPDF {
   // ============================================================================
   // LEFT COLUMN: ISSUED TO
   // ============================================================================
-  doc.setFontSize(8);
-  doc.setTextColor(100, 100, 100);
+  doc.setFontSize(9);
+  doc.setTextColor(70, 70, 70);
   doc.setFont('helvetica', 'bold');
   doc.text('ISSUED TO', margin, yPos);
   
-  yPos += 5;
+  yPos += 6;
   
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.setTextColor(60, 60, 60);
+  doc.setFontSize(10);
+  doc.setTextColor(0, 0, 0);
   doc.text(data.clientName, margin, yPos);
   yPos += 5;
   
   if (data.clientAddress) {
+    doc.setFontSize(9);
+    doc.setTextColor(50, 50, 50);
     doc.text(data.clientAddress, margin, yPos);
     yPos += 5;
   }
@@ -117,61 +119,70 @@ export function generateInvoicePDF(data: InvoiceData): jsPDF {
   yPos = 55;
   
   // ============================================================================
-  // RIGHT COLUMN: Invoice Details
+  // RIGHT COLUMN: Invoice Details (with better contrast)
   // ============================================================================
   const rightX = pageWidth - margin;
   
   doc.setFontSize(8);
-  doc.setTextColor(100, 100, 100);
-  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(70, 70, 70);
+  doc.setFont('helvetica', 'bold');
   
   // Invoice Number
   doc.text('INVOICE NO:', rightX - 40, yPos);
-  doc.setTextColor(60, 60, 60);
+  doc.setTextColor(0, 0, 0);
+  doc.setFont('helvetica', 'normal');
   doc.text(data.invoiceNumber, rightX, yPos, { align: 'right' });
   yPos += 5;
   
   // Pay To
-  doc.setTextColor(100, 100, 100);
+  doc.setTextColor(70, 70, 70);
+  doc.setFont('helvetica', 'bold');
   doc.text('PAY TO:', rightX - 40, yPos);
-  doc.setTextColor(60, 60, 60);
+  doc.setTextColor(0, 0, 0);
+  doc.setFont('helvetica', 'normal');
   doc.text(data.companyName, rightX, yPos, { align: 'right' });
   yPos += 5;
   
   // Due Date
-  doc.setTextColor(100, 100, 100);
+  doc.setTextColor(70, 70, 70);
+  doc.setFont('helvetica', 'bold');
   doc.text('DUE DATE:', rightX - 40, yPos);
-  doc.setTextColor(60, 60, 60);
+  doc.setTextColor(0, 0, 0);
+  doc.setFont('helvetica', 'normal');
   doc.text(data.dueDate || data.invoiceDate, rightX, yPos, { align: 'right' });
   yPos += 5;
   
   // Account Name
-  doc.setTextColor(100, 100, 100);
+  doc.setTextColor(70, 70, 70);
+  doc.setFont('helvetica', 'bold');
   doc.text('Account Name:', rightX - 40, yPos);
-  doc.setTextColor(60, 60, 60);
+  doc.setTextColor(0, 0, 0);
+  doc.setFont('helvetica', 'normal');
   doc.text(data.clientName, rightX, yPos, { align: 'right' });
   yPos += 5;
   
   // Account Number
-  doc.setTextColor(100, 100, 100);
+  doc.setTextColor(70, 70, 70);
+  doc.setFont('helvetica', 'bold');
   doc.text('Account No:', rightX - 40, yPos);
-  doc.setTextColor(60, 60, 60);
+  doc.setTextColor(0, 0, 0);
+  doc.setFont('helvetica', 'normal');
   doc.text(data.paymentId.substring(0, 13), rightX, yPos, { align: 'right' });
   
-  yPos += 15;
+  yPos += 20;
   
   // ============================================================================
-  // DESCRIPTION HEADER
+  // DESCRIPTION HEADER - Bold and darker
   // ============================================================================
-  doc.setFontSize(8);
-  doc.setTextColor(100, 100, 100);
+  doc.setFontSize(9);
+  doc.setTextColor(0, 0, 0);
   doc.setFont('helvetica', 'bold');
   doc.text('DESCRIPTION', margin, yPos);
   
   yPos += 10;
   
   // ============================================================================
-  // LINE ITEMS TABLE
+  // LINE ITEMS TABLE - Better borders and contrast
   // ============================================================================
   const tableData = data.items.map(item => [
     item.description,
@@ -186,23 +197,26 @@ export function generateInvoicePDF(data: InvoiceData): jsPDF {
     body: tableData,
     theme: 'plain',
     styles: {
-      fontSize: 9,
-      cellPadding: 2,
-      textColor: [60, 60, 60],
-      lineColor: [230, 230, 230],
-      lineWidth: 0.1,
+      fontSize: 10,
+      cellPadding: 3,
+      textColor: [0, 0, 0],
+      lineColor: [150, 150, 150],
+      lineWidth: 0.3,
     },
     headStyles: {
-      fontSize: 8,
-      textColor: [100, 100, 100],
+      fontSize: 9,
+      textColor: [70, 70, 70],
       fontStyle: 'bold',
       fillColor: [255, 255, 255],
+    },
+    bodyStyles: {
+      textColor: [0, 0, 0],
     },
     columnStyles: {
       0: { cellWidth: 95 },
       1: { cellWidth: 30, halign: 'right' },
       2: { cellWidth: 20, halign: 'center' },
-      3: { cellWidth: 30, halign: 'right' },
+      3: { cellWidth: 30, halign: 'right', fontStyle: 'bold' },
     },
     margin: { left: margin, right: margin },
     didDrawPage: function(hookData) {
@@ -210,54 +224,54 @@ export function generateInvoicePDF(data: InvoiceData): jsPDF {
     },
   });
   
-  yPos = (doc as any).lastAutoTable.finalY + 10;
+  yPos = (doc as any).lastAutoTable.finalY + 15;
   
   // ============================================================================
-  // TOTALS SECTION (Right-aligned)
+  // TOTALS SECTION (Right-aligned, better contrast)
   // ============================================================================
   const totalsX = pageWidth - margin - 40;
   const labelX = totalsX - 35;
   
-  doc.setFontSize(9);
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   
   // Subtotal
-  doc.setTextColor(100, 100, 100);
+  doc.setTextColor(70, 70, 70);
   doc.text('SUBTOTAL:', labelX, yPos, { align: 'right' });
-  doc.setTextColor(60, 60, 60);
+  doc.setTextColor(0, 0, 0);
   doc.text(`$${data.subtotal.toFixed(0)}`, totalsX + 40, yPos, { align: 'right' });
-  yPos += 6;
+  yPos += 7;
   
   // Tax (if any)
   if (data.taxAmount && data.taxAmount > 0) {
-    doc.setTextColor(100, 100, 100);
+    doc.setTextColor(70, 70, 70);
     doc.text(`TAX (${data.taxRate}%):`, labelX, yPos, { align: 'right' });
-    doc.setTextColor(60, 60, 60);
+    doc.setTextColor(0, 0, 0);
     doc.text(`$${data.taxAmount.toFixed(0)}`, totalsX + 40, yPos, { align: 'right' });
-    yPos += 6;
+    yPos += 7;
   }
   
   // Discount (if any)
   if (data.discount && data.discount > 0) {
-    doc.setTextColor(100, 100, 100);
+    doc.setTextColor(70, 70, 70);
     doc.text('DISCOUNT:', labelX, yPos, { align: 'right' });
-    doc.setTextColor(60, 60, 60);
+    doc.setTextColor(0, 0, 0);
     doc.text(`-$${data.discount.toFixed(0)}`, totalsX + 40, yPos, { align: 'right' });
-    yPos += 6;
+    yPos += 7;
   }
   
-  yPos += 2;
+  yPos += 3;
   
-  // Total separator line
-  doc.setDrawColor(200, 200, 200);
-  doc.setLineWidth(0.3);
+  // Total separator line - Darker
+  doc.setDrawColor(100, 100, 100);
+  doc.setLineWidth(0.5);
   doc.line(labelX - 5, yPos, pageWidth - margin, yPos);
-  yPos += 7;
+  yPos += 8;
   
-  // TOTAL
-  doc.setFontSize(10);
+  // TOTAL - Bold black
+  doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(60, 60, 60);
+  doc.setTextColor(0, 0, 0);
   doc.text('TOTAL:', labelX, yPos, { align: 'right' });
   doc.text(`$${data.total.toFixed(0)}`, totalsX + 40, yPos, { align: 'right' });
   
