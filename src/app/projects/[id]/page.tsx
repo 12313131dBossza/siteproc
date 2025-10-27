@@ -91,7 +91,7 @@ export default function ProjectDetailPage() {
             if (!aborted) setExpenses(filtered)
     } else if (tab==='orders') {
       console.log('Project detail: fetching orders for project:', id);
-      const res = await fetch(`/api/orders?projectId=${encodeURIComponent(id)}`)
+      const res = await fetch(`/api/orders?project_id=${encodeURIComponent(id)}`)
       const j = await res.json().catch(()=>[])
       console.log('Project detail: orders response:', j);
       const ordersList = Array.isArray(j)? j : (j?.data || j || []);
