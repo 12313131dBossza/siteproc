@@ -19,6 +19,7 @@ interface Delivery {
   status: 'pending' | 'partial' | 'delivered'
   delivery_date: string
   notes?: string
+  proof_url?: string
   total_amount: number
   items: Array<{
     id: string
@@ -576,8 +577,18 @@ export default function DeliveriesPage() {
                             Delivery Date: {format(new Date(delivery.delivery_date), 'MMM dd, yyyy')}
                           </div>
                           {delivery.status === 'delivered' && (
-                            <div className="text-green-600 font-medium">
-                              ✓ Delivered - Record is locked from editing
+                            <div className="flex items-center gap-2">
+                              <div className="text-green-600 font-medium">
+                                ✓ Delivered - Record is locked from editing
+                              </div>
+                              {delivery.proof_url && (
+                                <div className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 text-xs font-medium rounded-full border border-blue-200">
+                                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+                                  </svg>
+                                  POD Uploaded
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
@@ -602,7 +613,7 @@ export default function DeliveriesPage() {
                               leftIcon={<Upload className="h-4 w-4" />}
                               onClick={() => setPodUploadModal({ open: true, deliveryId: delivery.id })}
                             >
-                              Upload POD
+                              {delivery.proof_url ? 'Change POD' : 'Upload POD'}
                             </Button>
                           )}
                           
@@ -834,6 +845,35 @@ export default function DeliveriesPage() {
                 <div>
                   <label className="text-xs font-medium text-gray-500 uppercase tracking-wider block mb-2">Notes</label>
                   <p className="text-sm text-gray-700 bg-gray-50 rounded-lg p-3">{selectedDelivery.notes}</p>
+                </div>
+              )}
+
+              {/* Proof of Delivery */}
+              {selectedDelivery.proof_url && (
+                <div>
+                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wider block mb-2">Proof of Delivery</label>
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <img 
+                      src={selectedDelivery.proof_url} 
+                      alt="Proof of Delivery"
+                      className="w-full h-auto max-h-96 object-contain bg-gray-50"
+                      onError={(e) => {
+                        console.error('Failed to load POD image:', selectedDelivery.proof_url)
+                        e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iI2Y1ZjVmNSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTYiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5JbWFnZSBub3QgYXZhaWxhYmxlPC90ZXh0Pjwvc3ZnPg=='
+                      }}
+                    />
+                  </div>
+                  <a 
+                    href={selectedDelivery.proof_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 mt-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                    Open in new tab
+                  </a>
                 </div>
               )}
 
