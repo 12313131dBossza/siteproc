@@ -43,6 +43,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       .select('total_estimated, qty, unit_price', { count: 'exact' })
       .eq('project_id', id)
     console.log('Rollup API: orders query result - count:', ord.count, 'error:', ord.error)
+    console.log('Rollup API: orders data sample:', ord.data?.slice(0, 2))
     
     const committed_orders = (ord.data || []).reduce((sum: number, o: any) => {
       if (o.total_estimated != null) return sum + Number(o.total_estimated || 0)
