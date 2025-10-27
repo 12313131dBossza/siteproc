@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
       created_at: e.created_at,
       approved_at: e.approved_at,
       approved_by: e.approved_by,
-      project_id: e.job_id, // Map job_id to project_id for frontend
+      project_id: e.project_id || e.job_id, // Try project_id first, fallback to job_id for legacy data
       receipt_url: e.receipt_url
     }))
 
@@ -139,10 +139,10 @@ export async function POST(request: NextRequest) {
       receipt_url: body.receipt_url || null,
     }
 
-    // Handle project association - try both job_id and project_id columns
+    // Handle project association - only use project_id column (added by migration)
+    // Do NOT set job_id as it references a different table (jobs vs projects)
     if (body.project_id) {
-      baseData.project_id = body.project_id // New column from SQL migration
-      baseData.job_id = body.project_id // Legacy column for backward compatibility
+      baseData.project_id = body.project_id
     }
 
     // If status is 'approved', set approval metadata
@@ -221,7 +221,7 @@ export async function POST(request: NextRequest) {
       description: expense.description,
       status: expense.status,
       created_at: expense.created_at,
-      project_id: expense.job_id // Map job_id back to project_id for frontend
+      project_id: expense.project_id || expense.job_id // Return project_id, fallback to job_id for legacy
     })
   } catch (error) {
     console.error('Error creating expense:', error)
