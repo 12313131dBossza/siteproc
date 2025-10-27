@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
 import {
   LayoutDashboard,
   Package,
@@ -21,7 +22,9 @@ import {
   Settings,
   ChevronRight,
   LogOut,
-  User
+  User,
+  Menu,
+  X
 } from "lucide-react";
 
 const navigation = [
@@ -44,9 +47,36 @@ const navigation = [
 
 export function SidebarNav() {
   const pathname = usePathname();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
-    <div className="flex h-full w-64 flex-col bg-white border-r border-gray-200 shadow-sm">
+    <>
+      {/* Mobile Menu Button */}
+      <button
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-lg border border-gray-200"
+      >
+        {isMobileMenuOpen ? (
+          <X className="h-6 w-6 text-gray-700" />
+        ) : (
+          <Menu className="h-6 w-6 text-gray-700" />
+        )}
+      </button>
+
+      {/* Mobile Overlay */}
+      {isMobileMenuOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+          onClick={() => setIsMobileMenuOpen(false)}
+        ></div>
+      )}
+
+      {/* Sidebar */}
+      <div className={cn(
+        "flex h-full w-64 flex-col bg-white border-r border-gray-200 shadow-sm",
+        "fixed lg:relative inset-y-0 left-0 z-40 transition-transform duration-300",
+        isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+      )}>
       {/* Logo Section */}
       <div className="flex h-16 items-center px-6 border-b border-gray-200">
         <div className="flex items-center gap-2">
@@ -70,6 +100,7 @@ export function SidebarNav() {
               <li key={item.name}>
                 <Link
                   href={item.href}
+                  onClick={() => setIsMobileMenuOpen(false)}
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
                     isActive
@@ -105,5 +136,6 @@ export function SidebarNav() {
         </div>
       </div>
     </div>
+    </>
   );
 }

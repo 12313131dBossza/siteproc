@@ -165,10 +165,10 @@ export function NotificationBell() {
           ></div>
 
           {/* Dropdown */}
-          <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-[600px] overflow-hidden flex flex-col">
+          <div className="absolute right-0 mt-2 w-screen max-w-md sm:w-96 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-[80vh] sm:max-h-[600px] overflow-hidden flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
+            <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900">Notifications</h3>
               {unreadCount > 0 && (
                 <button
                   onClick={markAllAsRead}

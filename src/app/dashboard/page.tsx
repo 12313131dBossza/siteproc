@@ -106,19 +106,19 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Dashboard</h1>
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <h1 className="text-2xl sm:text-3xl font-bold">Dashboard</h1>
         <button
           onClick={() => window.print()}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm sm:text-base"
         >
           Export to PDF
         </button>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Budget</CardTitle>
@@ -167,14 +167,14 @@ export default function DashboardPage() {
       </div>
 
       {/* Charts Row 1 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Expenses by Category - Pie Chart */}
         <Card>
           <CardHeader>
-            <CardTitle>Expenses by Category</CardTitle>
+            <CardTitle className="text-base sm:text-lg">Expenses by Category</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
               <PieChart>
                 <Pie
                   data={expensesByCategory}
@@ -199,10 +199,10 @@ export default function DashboardPage() {
         {/* Budget Utilization - Line Chart */}
         <Card>
           <CardHeader>
-            <CardTitle>Monthly Trends</CardTitle>
+            <CardTitle className="text-base sm:text-lg">Monthly Trends</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
               <LineChart data={monthlyTrends}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
@@ -221,10 +221,10 @@ export default function DashboardPage() {
       {/* Project Performance - Bar Chart */}
       <Card>
         <CardHeader>
-          <CardTitle>Project Performance (Budget vs Actual)</CardTitle>
+          <CardTitle className="text-base sm:text-lg">Project Performance (Budget vs Actual)</CardTitle>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
             <BarChart data={projectPerformance}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
