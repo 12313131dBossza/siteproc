@@ -40,6 +40,8 @@ export function DeliveryStatusTransitionModal({
   const [vehicleNumber, setVehicleNumber] = useState('')
   const [signerName, setSignerName] = useState('')
   const [signatureUrl, setSignatureUrl] = useState('')
+  const [podFile, setPodFile] = useState<File | null>(null)
+  const [uploadingPod, setUploadingPod] = useState(false)
 
   const handleTransition = async () => {
     if (!newStatus) {
@@ -93,6 +95,12 @@ export function DeliveryStatusTransitionModal({
 
       const json = await res.json()
       const updated = json?.delivery || json?.data || json
+
+      // Upload POD file if provided
+      if (podFile) {
+        await uploadPodFile()
+      }
+
       toast({
         title: `Delivery status updated to ${newStatus}`,
         variant: 'success'
@@ -103,6 +111,7 @@ export function DeliveryStatusTransitionModal({
       setVehicleNumber('')
       setSignerName('')
       setSignatureUrl('')
+      setPodFile(null)
       setNewStatus('partial')
 
       // Callback
@@ -113,6 +122,33 @@ export function DeliveryStatusTransitionModal({
       toast({ title: 'Failed to update delivery status', variant: 'error' })
     } finally {
       setLoading(false)
+    }
+  }
+
+  const uploadPodFile = async () => {
+    if (!podFile) return
+
+    setUploadingPod(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', podFile)
+
+      const res = await fetch(`/api/order-deliveries/${deliveryId}/upload-proof`, {
+        method: 'POST',
+        body: formData
+      })
+
+      if (!res.ok) {
+        const errData = await res.json()
+        throw new Error(errData.error || 'Failed to upload POD')
+      }
+
+      toast({ title: 'POD uploaded successfully', variant: 'success' })
+    } catch (err: any) {
+      console.error('POD upload error:', err)
+      toast({ title: err.message || 'Failed to upload POD', variant: 'error' })
+    } finally {
+      setUploadingPod(false)
     }
   }
 
@@ -195,17 +231,37 @@ export function DeliveryStatusTransitionModal({
                   />
                 </div>
                 <div className="sp-field">
-                  <label className="text-xs font-medium">Signature URL (optional)</label>
-                  <input
-                    type="text"
-                    value={signatureUrl}
-                    onChange={(e) => setSignatureUrl(e.target.value)}
-                    className="sp-input"
-                    placeholder="https://..."
-                  />
-                </div>
-                <div className="text-xs text-[var(--sp-color-muted)]">
-                  Proof of Delivery (POD) can be uploaded separately before or after completion.
+                  <label className="text-xs font-medium">Proof of Delivery (POD) - Optional</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="file"
+                      accept="image/*,.pdf"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) setPodFile(file)
+                      }}
+                      className="sp-input flex-1"
+                      id="pod-upload-partial"
+                    />
+                    {podFile && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setPodFile(null)}
+                        type="button"
+                      >
+                        Clear
+                      </Button>
+                    )}
+                  </div>
+                  {podFile && (
+                    <div className="text-xs text-[var(--sp-color-success)] mt-1">
+                      Selected: {podFile.name}
+                    </div>
+                  )}
+                  <div className="text-xs text-[var(--sp-color-muted)] mt-1">
+                    Upload POD now or add it later
+                  </div>
                 </div>
               </>
             )}            {/* Delivered Fields */}
@@ -222,17 +278,37 @@ export function DeliveryStatusTransitionModal({
                   />
                 </div>
                 <div className="sp-field">
-                  <label className="text-xs font-medium">Signature URL (optional)</label>
-                  <input
-                    type="text"
-                    value={signatureUrl}
-                    onChange={(e) => setSignatureUrl(e.target.value)}
-                    className="sp-input"
-                    placeholder="https://..."
-                  />
-                </div>
-                <div className="text-xs text-[var(--sp-color-muted)]">
-                  Proof of Delivery (POD) can be uploaded separately after completion.
+                  <label className="text-xs font-medium">Proof of Delivery (POD) - Optional</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="file"
+                      accept="image/*,.pdf"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) setPodFile(file)
+                      }}
+                      className="sp-input flex-1"
+                      id="pod-upload-delivered"
+                    />
+                    {podFile && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setPodFile(null)}
+                        type="button"
+                      >
+                        Clear
+                      </Button>
+                    )}
+                  </div>
+                  {podFile && (
+                    <div className="text-xs text-[var(--sp-color-success)] mt-1">
+                      Selected: {podFile.name}
+                    </div>
+                  )}
+                  <div className="text-xs text-[var(--sp-color-muted)] mt-1">
+                    Upload POD signature or document
+                  </div>
                 </div>
               </>
             )}
