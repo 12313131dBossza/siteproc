@@ -69,16 +69,18 @@ export function formatDistanceToNow(
 
 /**
  * Helper: Format date for display (short format)
+ * US Format: MM/DD/YYYY (e.g., 10/27/2025)
  */
 export function formatDateShort(date: string | Date | number): string {
-  return format(date, 'MMM dd, yyyy')
+  return format(date, 'MM/dd/yyyy')
 }
 
 /**
  * Helper: Format date with time
+ * US Format: MM/DD/YYYY h:mm AM/PM (e.g., 10/27/2025 2:30 PM)
  */
 export function formatDateTime(date: string | Date | number): string {
-  return format(date, 'MMM dd, yyyy h:mm a')
+  return format(date, 'MM/dd/yyyy h:mm a')
 }
 
 /**
