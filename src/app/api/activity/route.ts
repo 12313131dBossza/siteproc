@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       ok: true,
-      data: activities || [],
+      activities: activities || [],
       pagination: {
         page,
         limit,
@@ -156,7 +156,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate enum values
-    const validTypes = ['delivery', 'expense', 'order', 'project', 'payment', 'user', 'change_order', 'product', 'other'];
+    const validTypes = ['delivery', 'expense', 'order', 'project', 'payment', 'user', 'change_order', 'product', 'client', 'contractor', 'bid', 'other'];
     const validActions = ['created', 'updated', 'deleted', 'approved', 'rejected', 'submitted', 'completed', 'cancelled', 'status_changed', 'invited', 'processed', 'failed'];
     
     if (!validTypes.includes(type)) {
