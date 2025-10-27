@@ -202,11 +202,11 @@ export const exportProjectReportPDF = (reportData: ProjectReportData): void => {
     head: [['Project', 'Status', 'Budget', 'Actual', 'Variance', 'Budget Status']],
     body: data.map((project) => [
       project.name,
-      project.status,
+      project.status.toUpperCase(),
       formatCurrency(project.budget),
       formatCurrency(project.actual),
       formatCurrency(project.variance),
-      project.budget_status === 'on-budget' ? '✓ On Budget' : '⚠ Over Budget',
+      project.budget_status === 'on-budget' ? 'On Budget' : 'Over Budget',
     ]),
     theme: 'striped',
     headStyles: {
@@ -225,6 +225,20 @@ export const exportProjectReportPDF = (reportData: ProjectReportData): void => {
       2: { halign: 'right' },
       3: { halign: 'right' },
       4: { halign: 'right' },
+      5: { halign: 'center' },
+    },
+    didParseCell: function(data) {
+      // Color-code budget status column
+      if (data.column.index === 5 && data.section === 'body') {
+        const cellValue = data.cell.raw;
+        if (cellValue === 'On Budget') {
+          data.cell.styles.textColor = [22, 163, 74]; // Green
+          data.cell.styles.fontStyle = 'bold';
+        } else if (cellValue === 'Over Budget') {
+          data.cell.styles.textColor = [220, 38, 38]; // Red
+          data.cell.styles.fontStyle = 'bold';
+        }
+      }
     },
   });
   
@@ -321,7 +335,7 @@ export const exportPaymentReportPDF = (reportData: PaymentReportData): void => {
       payment.category,
       formatCurrency(payment.amount),
       payment.status.toUpperCase(),
-      payment.is_overdue ? `${payment.age_days}d ⚠` : `${payment.age_days}d`,
+      payment.is_overdue ? `${payment.age_days} days (OVERDUE)` : `${payment.age_days} days`,
       formatDate(payment.created_at),
     ]),
     theme: 'striped',
@@ -339,6 +353,25 @@ export const exportPaymentReportPDF = (reportData: PaymentReportData): void => {
     },
     columnStyles: {
       2: { halign: 'right' },
+    },
+    didParseCell: function(data) {
+      // Color-code overdue payments
+      if (data.column.index === 4 && data.section === 'body') {
+        const cellValue = data.cell.raw as string;
+        if (cellValue.includes('OVERDUE')) {
+          data.cell.styles.textColor = [220, 38, 38]; // Red
+          data.cell.styles.fontStyle = 'bold';
+        }
+      }
+      // Color-code status column
+      if (data.column.index === 3 && data.section === 'body') {
+        const status = data.cell.raw as string;
+        if (status === 'PAID') {
+          data.cell.styles.textColor = [22, 163, 74]; // Green
+        } else if (status === 'PENDING' || status === 'UNPAID') {
+          data.cell.styles.textColor = [234, 179, 8]; // Yellow/Orange
+        }
+      }
     },
   });
   
@@ -436,7 +469,7 @@ export const exportDeliveryReportPDF = (reportData: DeliveryReportData): void =>
       delivery.vehicle_number,
       delivery.status.replace('_', ' ').toUpperCase(),
       formatCurrency(delivery.amount),
-      delivery.is_delayed ? `${delivery.age_days}d ⚠` : `${delivery.age_days}d`,
+      delivery.is_delayed ? `${delivery.age_days} days (DELAYED)` : `${delivery.age_days} days`,
       delivery.delivery_date ? formatDate(delivery.delivery_date) : 'Not scheduled',
     ]),
     theme: 'striped',
@@ -454,6 +487,27 @@ export const exportDeliveryReportPDF = (reportData: DeliveryReportData): void =>
     },
     columnStyles: {
       4: { halign: 'right' },
+    },
+    didParseCell: function(data) {
+      // Color-code delayed deliveries
+      if (data.column.index === 5 && data.section === 'body') {
+        const cellValue = data.cell.raw as string;
+        if (cellValue.includes('DELAYED')) {
+          data.cell.styles.textColor = [220, 38, 38]; // Red
+          data.cell.styles.fontStyle = 'bold';
+        }
+      }
+      // Color-code status column
+      if (data.column.index === 3 && data.section === 'body') {
+        const status = data.cell.raw as string;
+        if (status === 'DELIVERED') {
+          data.cell.styles.textColor = [22, 163, 74]; // Green
+        } else if (status === 'IN TRANSIT') {
+          data.cell.styles.textColor = [234, 179, 8]; // Yellow/Orange
+        } else if (status === 'PENDING') {
+          data.cell.styles.textColor = [107, 114, 128]; // Gray
+        }
+      }
     },
   });
   
