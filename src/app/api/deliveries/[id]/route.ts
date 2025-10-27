@@ -201,46 +201,52 @@ export async function PATCH(
 
     // Log to new Activity Log system
     if (status && status !== currentDelivery.status) {
-      const statusActions: Record<string, string> = {
-        'pending': 'created',
-        'partial': 'status_changed',
-        'delivered': 'completed'
-      }
-      
-      const statusTitles: Record<string, string> = {
-        'pending': 'Delivery marked as Pending',
-        'partial': 'Delivery In Transit',
-        'delivered': 'Delivery Completed'
-      }
-      
-      const statusDescriptions: Record<string, string> = {
-        'pending': `Delivery status changed to Pending`,
-        'partial': `Delivery is now In Transit${driver_name ? ` (Driver: ${driver_name})` : ''}${vehicle_number ? ` - Vehicle: ${vehicle_number}` : ''}`,
-        'delivered': `Delivery completed and signed off${signer_name ? ` by ${signer_name}` : ''}`
-      }
+      try {
+        const statusActions: Record<string, string> = {
+          'pending': 'created',
+          'partial': 'status_changed',
+          'delivered': 'completed'
+        }
+        
+        const statusTitles: Record<string, string> = {
+          'pending': 'Delivery marked as Pending',
+          'partial': 'Delivery In Transit',
+          'delivered': 'Delivery Completed'
+        }
+        
+        const statusDescriptions: Record<string, string> = {
+          'pending': `Delivery status changed to Pending`,
+          'partial': `Delivery is now In Transit${driver_name ? ` (Driver: ${driver_name})` : ''}${vehicle_number ? ` - Vehicle: ${vehicle_number}` : ''}`,
+          'delivered': `Delivery completed and signed off${signer_name ? ` by ${signer_name}` : ''}`
+        }
 
-      await logActivity({
-        type: 'delivery',
-        action: statusActions[status] || 'updated',
-        title: statusTitles[status] || `Delivery status changed to ${status}`,
-        description: statusDescriptions[status] || `Delivery #${updatedDelivery.delivery_number || deliveryId.substring(0, 8)} status updated`,
-        entity_type: 'delivery',
-        entity_id: deliveryId,
-        metadata: {
-          delivery_id: deliveryId,
-          delivery_number: updatedDelivery.delivery_number,
-          order_id: updatedDelivery.order_id,
-          project_id: updatedDelivery.project_id,
-          status_from: currentDelivery.status,
-          status_to: status,
-          driver_name: driver_name || updatedDelivery.driver_name,
-          vehicle_number: vehicle_number || updatedDelivery.vehicle_number,
-          signer_name: signer_name || updatedDelivery.signer_name,
-        },
-        status: status === 'delivered' ? 'success' : 'pending',
-        user_id: session.user.id,
-        company_id: session.companyId,
-      })
+        await logActivity({
+          type: 'delivery',
+          action: statusActions[status] || 'updated',
+          title: statusTitles[status] || `Delivery status changed to ${status}`,
+          description: statusDescriptions[status] || `Delivery #${updatedDelivery.delivery_number || deliveryId.substring(0, 8)} status updated`,
+          entity_type: 'delivery',
+          entity_id: deliveryId,
+          metadata: {
+            delivery_id: deliveryId,
+            delivery_number: updatedDelivery.delivery_number,
+            order_id: updatedDelivery.order_id,
+            project_id: updatedDelivery.project_id,
+            status_from: currentDelivery.status,
+            status_to: status,
+            driver_name: driver_name || updatedDelivery.driver_name,
+            vehicle_number: vehicle_number || updatedDelivery.vehicle_number,
+            signer_name: signer_name || updatedDelivery.signer_name,
+          },
+          status: status === 'delivered' ? 'success' : 'pending',
+          user_id: session.user.id,
+          company_id: session.companyId,
+        })
+        console.log('✅ Delivery activity logged successfully for status:', status)
+      } catch (activityError: any) {
+        console.error('⚠️ Failed to log delivery activity:', activityError)
+        // Don't fail the request if activity logging fails
+      }
     }
 
     // Step 7: Broadcast updates

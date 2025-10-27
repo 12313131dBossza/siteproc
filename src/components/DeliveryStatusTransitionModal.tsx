@@ -194,10 +194,21 @@ export function DeliveryStatusTransitionModal({
                     placeholder="e.g., ABC-123"
                   />
                 </div>
+                <div className="sp-field">
+                  <label className="text-xs font-medium">Signature URL (optional)</label>
+                  <input
+                    type="text"
+                    value={signatureUrl}
+                    onChange={(e) => setSignatureUrl(e.target.value)}
+                    className="sp-input"
+                    placeholder="https://..."
+                  />
+                </div>
+                <div className="text-xs text-[var(--sp-color-muted)]">
+                  Proof of Delivery (POD) can be uploaded separately before or after completion.
+                </div>
               </>
-            )}
-
-            {/* Delivered Fields */}
+            )}            {/* Delivered Fields */}
             {newStatus === 'delivered' && (
               <>
                 <div className="sp-field">
