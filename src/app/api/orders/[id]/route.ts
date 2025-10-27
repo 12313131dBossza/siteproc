@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUserProfile } from '@/lib/server-utils'
 import { sendOrderApprovalNotification, sendOrderRejectionNotification } from '@/lib/email'
+import { logActivity } from '@/app/api/activity/route'
 
 // PATCH /api/orders/[id] - Approve or reject an order
 export async function PATCH(
@@ -91,6 +92,29 @@ export async function PATCH(
       console.error('Failed to send order decision notification:', emailError)
       // Don't fail the request if email fails
     }
+
+    // Log activity
+    await logActivity({
+      type: 'order',
+      action: status === 'approved' ? 'approved' : 'rejected',
+      title: `Order ${status}`,
+      description: `Order #${updatedOrder.order_number || orderId.substring(0, 8)} was ${status}${rejection_reason ? `: ${rejection_reason}` : ''}`,
+      entity_type: 'order',
+      entity_id: orderId,
+      metadata: {
+        order_id: orderId,
+        order_number: updatedOrder.order_number,
+        project_id: updatedOrder.project_id,
+        project_name: updatedOrder.projects?.name,
+        status: status,
+        rejection_reason: rejection_reason,
+        notes: notes,
+      },
+      status: status === 'approved' ? 'success' : 'failed',
+      amount: updatedOrder.total_amount,
+      user_id: profile.id,
+      company_id: profile.company_id,
+    })
 
     return NextResponse.json({ 
       ok: true, 
