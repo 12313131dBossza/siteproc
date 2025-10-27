@@ -126,24 +126,50 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('delivery-proofs', 'delivery-proofs', true)
 ON CONFLICT (id) DO NOTHING;
 
--- Set up storage policies for delivery-proofs bucket
+-- Set up storage policies for delivery-proofs bucket (drop first to avoid conflicts)
 DROP POLICY IF EXISTS "Allow authenticated uploads" ON storage.objects;
 DROP POLICY IF EXISTS "Allow public read access" ON storage.objects;
+DROP POLICY IF EXISTS "Allow authenticated delete" ON storage.objects;
 
-CREATE POLICY "Allow authenticated uploads"
-ON storage.objects FOR INSERT
-TO authenticated
-WITH CHECK (bucket_id = 'delivery-proofs');
+-- Only create policies if they don't already exist
+DO $$
+BEGIN
+    -- Create upload policy
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE tablename = 'objects' 
+        AND policyname = 'Allow authenticated uploads'
+    ) THEN
+        CREATE POLICY "Allow authenticated uploads"
+        ON storage.objects FOR INSERT
+        TO authenticated
+        WITH CHECK (bucket_id = 'delivery-proofs');
+    END IF;
 
-CREATE POLICY "Allow public read access"
-ON storage.objects FOR SELECT
-TO public
-USING (bucket_id = 'delivery-proofs');
+    -- Create read policy
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE tablename = 'objects' 
+        AND policyname = 'Allow public read access'
+    ) THEN
+        CREATE POLICY "Allow public read access"
+        ON storage.objects FOR SELECT
+        TO public
+        USING (bucket_id = 'delivery-proofs');
+    END IF;
 
-CREATE POLICY "Allow authenticated delete"
-ON storage.objects FOR DELETE
-TO authenticated
-USING (bucket_id = 'delivery-proofs');
+    -- Create delete policy
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE tablename = 'objects' 
+        AND policyname = 'Allow authenticated delete'
+    ) THEN
+        CREATE POLICY "Allow authenticated delete"
+        ON storage.objects FOR DELETE
+        TO authenticated
+        USING (bucket_id = 'delivery-proofs');
+    END IF;
+END $$;
 
 -- ========================================================================
 -- 4. BACKFILL MISSING COMPANY IDs (Critical for RLS)

@@ -134,10 +134,15 @@ export async function POST(request: NextRequest) {
       memo: body.memo || body.description || '',
       status: body.status || 'pending', // Respect user-selected status
       company_id: profile.company_id,
-      job_id: body.project_id || null, // Map project_id from frontend to job_id in database
       spent_at: spendDate,
       user_id: user.id,
       receipt_url: body.receipt_url || null,
+    }
+
+    // Handle project association - try both job_id and project_id columns
+    if (body.project_id) {
+      baseData.project_id = body.project_id // New column from SQL migration
+      baseData.job_id = body.project_id // Legacy column for backward compatibility
     }
 
     // If status is 'approved', set approval metadata
