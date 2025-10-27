@@ -48,7 +48,9 @@ export function OrderForm({ isModal = false, onSuccess, onCancel }: OrderFormPro
       const response = await fetch('/api/projects');
       if (response.ok) {
         const data = await response.json();
-        setProjects(Array.isArray(data) ? data : []);
+        // Handle both { data: [...] } and direct array responses
+        const projectsList = data.data || data;
+        setProjects(Array.isArray(projectsList) ? projectsList : []);
       }
     } catch (error) {
       console.error('Failed to load projects:', error);
