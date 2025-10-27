@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
       memo: body.memo || body.description || '',
       status: body.status || 'pending', // Respect user-selected status
       company_id: profile.company_id,
-      job_id: null, // Note: job_id references 'jobs' table, not 'projects'. Keep null for now.
+      job_id: body.project_id || null, // Map project_id from frontend to job_id in database
       spent_at: spendDate,
       user_id: user.id,
       receipt_url: body.receipt_url || null,

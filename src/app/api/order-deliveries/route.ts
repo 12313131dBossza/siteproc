@@ -514,7 +514,8 @@ export async function POST(req: NextRequest) {
       notes: body.notes || null,
       total_amount: totalAmount,
       company_id: user.company_id,
-      created_by: user.id
+      created_by: user.id,
+      project_id: body.project_id || null, // Add project_id support
     }
     // If proof_urls array is provided, attempt to store it on a jsonb column (add if missing)
     if (Array.isArray(body.proof_urls) && body.proof_urls.length > 0) {
