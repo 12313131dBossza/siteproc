@@ -6,6 +6,7 @@ import { Plus, Search, DollarSign, Edit, Trash2, X } from 'lucide-react';
 import { AppLayout } from '@/components/app-layout';
 import { Button } from '@/components/ui/Button';
 import { format } from '@/lib/date-format';
+import { InvoiceGenerator } from '@/components/InvoiceGenerator';
 
 interface Payment {
   id: string;
@@ -353,6 +354,15 @@ export default function PaymentsPageClient() {
                     </td>
                     <td className="p-3">
                       <div className="flex items-center justify-end gap-2">
+                        <InvoiceGenerator 
+                          payment={payment}
+                          companyName="SiteProc"
+                          companyDetails={{
+                            email: 'info@siteproc.com',
+                            phone: '(555) 123-4567',
+                            website: 'www.siteproc.com'
+                          }}
+                        />
                         <button
                           onClick={() => handleEdit(payment)}
                           className="p-1 hover:bg-gray-200 rounded transition-colors"
