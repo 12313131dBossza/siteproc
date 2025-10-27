@@ -312,6 +312,11 @@ export async function GET(req: NextRequest) {
       
       const total_amount = typeof delivery.total_amount === 'string' ? Number(delivery.total_amount) : (delivery.total_amount ?? 0)
       
+      // Extract proof_url from proof_urls array for frontend compatibility
+      const proof_url = Array.isArray(delivery.proof_urls) && delivery.proof_urls.length > 0 
+        ? delivery.proof_urls[0] 
+        : null
+      
       // Debug logging for items transformation
       console.log(`📦 Delivery #${delivery.id?.slice(-8)}: ${rawItems.length} raw items -> ${items.length} formatted items`)
       console.log(`📝 Formatted items:`, items.map(i => `${i.product_name}: ${i.quantity} ${i.unit} @ $${i.unit_price}`))
@@ -322,7 +327,7 @@ export async function GET(req: NextRequest) {
         console.log(`✅ Items for ${delivery.id?.slice(-8)}:`, items.map(i => `${i.product_name} (${i.quantity})`))
       }
       
-      return { ...delivery, items, total_amount }
+      return { ...delivery, items, total_amount, proof_url }
     })
 
     // If nested items came back empty (likely due to RLS or missing grants), try a follow-up fetch and merge

@@ -51,6 +51,17 @@ BEGIN
     ELSE
         RAISE NOTICE '✓ company_id already exists in deliveries';
     END IF;
+
+    -- Add proof_urls column if it doesn't exist (for POD images/PDFs)
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'deliveries' AND column_name = 'proof_urls'
+    ) THEN
+        ALTER TABLE deliveries ADD COLUMN proof_urls JSONB;
+        RAISE NOTICE '✅ Added proof_urls to deliveries table';
+    ELSE
+        RAISE NOTICE '✓ proof_urls already exists in deliveries';
+    END IF;
 END $$;
 
 -- ========================================================================
@@ -301,14 +312,15 @@ SELECT
     COUNT(*) FILTER (WHERE column_name = 'project_id') as has_project_id,
     COUNT(*) FILTER (WHERE column_name = 'order_id') as has_order_id,
     COUNT(*) FILTER (WHERE column_name = 'company_id') as has_company_id,
+    COUNT(*) FILTER (WHERE column_name = 'proof_urls') as has_proof_urls,
     CASE 
-        WHEN COUNT(*) FILTER (WHERE column_name IN ('project_id', 'order_id', 'company_id')) = 3 
+        WHEN COUNT(*) FILTER (WHERE column_name IN ('project_id', 'order_id', 'company_id', 'proof_urls')) = 4
         THEN '✅ ALL COLUMNS PRESENT'
         ELSE '❌ MISSING COLUMNS'
     END as status
 FROM information_schema.columns 
 WHERE table_name = 'deliveries' 
-AND column_name IN ('project_id', 'order_id', 'company_id');
+AND column_name IN ('project_id', 'order_id', 'company_id', 'proof_urls');
 
 -- Check expenses columns
 SELECT 
