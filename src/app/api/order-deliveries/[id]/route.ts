@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { supabaseService } from '@/lib/supabase'
 import { cookies } from 'next/headers'
-import { logActivity } from '@/lib/activity-logger'
+import { logActivity } from '@/app/api/activity/route'
 
 export const runtime = 'nodejs'
 

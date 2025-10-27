@@ -3,7 +3,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { supabaseService } from '@/lib/supabase'
 import { syncOrderStatus } from '@/lib/orderSync'
-import { logActivity } from '@/lib/activity-logger'
+import { logActivity } from '@/app/api/activity/route'
 
 export async function PATCH(
   request: NextRequest,
