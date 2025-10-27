@@ -116,28 +116,29 @@ export default function NotificationsPage() {
   const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
-    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+    <div className="p-4 md:p-6 max-w-4xl mx-auto">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Notifications</h1>
-          <p className="text-sm sm:text-base text-gray-600 mt-1">
+          <h1 className="text-2xl md:text-3xl font-bold">Notifications</h1>
+          <p className="text-gray-600 mt-1 text-sm md:text-base">
             {unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}
           </p>
         </div>
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
           <Link
             href="/notifications/preferences"
-            className="px-3 sm:px-4 py-2 text-sm sm:text-base text-gray-700 bg-gray-100 rounded hover:bg-gray-200"
+            className="px-4 py-2 text-center text-gray-700 bg-gray-100 rounded hover:bg-gray-200"
           >
             Preferences
           </Link>
           {unreadCount > 0 && (
             <button
               onClick={markAllAsRead}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2"
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center justify-center gap-2"
             >
               <CheckCheck className="h-4 w-4" />
-              Mark all as read
+              <span className="hidden sm:inline">Mark all as read</span>
+              <span className="sm:hidden">Mark all read</span>
             </button>
           )}
         </div>

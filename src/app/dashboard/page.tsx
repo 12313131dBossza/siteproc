@@ -106,19 +106,19 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl sm:text-3xl font-bold">Dashboard</h1>
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
         <button
           onClick={() => window.print()}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm sm:text-base"
+          className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
         >
           Export to PDF
         </button>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Budget</CardTitle>
@@ -167,14 +167,14 @@ export default function DashboardPage() {
       </div>
 
       {/* Charts Row 1 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         {/* Expenses by Category - Pie Chart */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base sm:text-lg">Expenses by Category</CardTitle>
+            <CardTitle className="text-lg md:text-xl">Expenses by Category</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
+            <ResponsiveContainer width="100%" height={250} className="md:h-[300px]">
               <PieChart>
                 <Pie
                   data={expensesByCategory}
@@ -199,16 +199,16 @@ export default function DashboardPage() {
         {/* Budget Utilization - Line Chart */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base sm:text-lg">Monthly Trends</CardTitle>
+            <CardTitle className="text-lg md:text-xl">Monthly Trends</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
+            <ResponsiveContainer width="100%" height={250} className="md:h-[300px]">
               <LineChart data={monthlyTrends}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
+                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} />
                 <Tooltip />
-                <Legend />
+                <Legend wrapperStyle={{ fontSize: '12px' }} />
                 <Line type="monotone" dataKey="orders" stroke="#8884d8" name="Orders" />
                 <Line type="monotone" dataKey="expenses" stroke="#82ca9d" name="Expenses" />
                 <Line type="monotone" dataKey="deliveries" stroke="#ffc658" name="Deliveries" />
@@ -221,16 +221,16 @@ export default function DashboardPage() {
       {/* Project Performance - Bar Chart */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base sm:text-lg">Project Performance (Budget vs Actual)</CardTitle>
+          <CardTitle className="text-lg md:text-xl">Project Performance (Budget vs Actual)</CardTitle>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
+          <ResponsiveContainer width="100%" height={250} className="md:h-[300px]">
             <BarChart data={projectPerformance}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
+              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 12 }} />
               <Tooltip formatter={(value) => `$${Number(value).toLocaleString()}`} />
-              <Legend />
+              <Legend wrapperStyle={{ fontSize: '12px' }} />
               <Bar dataKey="budget" fill="#8884d8" name="Budget" />
               <Bar dataKey="actual" fill="#82ca9d" name="Actual" />
             </BarChart>
