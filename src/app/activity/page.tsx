@@ -78,8 +78,9 @@ function useActivity() {
       
       const result = await response.json();
       
-      if (result.ok && result.data) {
-        setActivities(result.data);
+      // API returns { activities: [...], stats: {...}, pagination: {...} }
+      if (result.activities) {
+        setActivities(result.activities);
         setStats(result.stats || {
           total: 0,
           total_today: 0,
@@ -107,149 +108,6 @@ function useActivity() {
   }, []);
 
   return { activities, loading, stats, error, refetch: fetchActivities };
-}
-
-// Legacy mock data for fallback (keeping structure for reference)
-function useMockActivities_DEPRECATED() {
-  const [activities, setActivities] = useState<ActivityItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<ActivityStats>({
-    total: 0,
-    total_today: 0,
-    total_week: 0,
-    unique_users: 0,
-    most_active_type: '',
-    by_type: {},
-    by_status: {}
-  });
-
-  useEffect(() => {
-    setTimeout(() => {
-      const mockActivities_OLD: any[] = [
-        {
-          id: '1',
-          type: 'delivery',
-          action: 'created',
-          title: 'Delivery #D-102 Created',
-          description: '8 pallets of cement scheduled for delivery',
-          timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
-          user: { name: 'Alex Chen', email: 'alex@company.com' },
-          status: 'success',
-          metadata: { delivery_id: 'D-102', items: 8 }
-        },
-        {
-          id: '2',
-          type: 'expense',
-          action: 'approved',
-          title: 'Equipment Rental Expense Approved',
-          description: 'Excavator rental expense for foundation work',
-          timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
-          user: { name: 'Marie Kumar', email: 'marie@company.com' },
-          status: 'success',
-          amount: 1240,
-          metadata: { expense_id: 'EXP-045', category: 'equipment' }
-        },
-        {
-          id: '3',
-          type: 'change-order',
-          action: 'submitted',
-          title: 'Change Order #CO-018 Submitted',
-          description: 'Foundation rebar upgrade requested for Project Alpha',
-          timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
-          user: { name: 'John Doe', email: 'john@company.com' },
-          status: 'pending',
-          amount: 3500,
-          metadata: { change_order_id: 'CO-018', project: 'Project Alpha' }
-        },
-        {
-          id: '4',
-          type: 'user',
-          action: 'invited',
-          title: 'New Team Member Invited',
-          description: 'Admin access granted to new project coordinator',
-          timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
-          user: { name: 'System', email: 'system@siteproc.com' },
-          status: 'success',
-          metadata: { invited_email: 'coordinator@company.com', role: 'admin' }
-        },
-        {
-          id: '5',
-          type: 'order',
-          action: 'completed',
-          title: 'Purchase Order #PO-234 Completed',
-          description: '20 steel beams delivered and verified',
-          timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
-          user: { name: 'Bob Wilson', email: 'bob@company.com' },
-          status: 'success',
-          amount: 15000,
-          metadata: { order_id: 'PO-234', items: 20 }
-        },
-        {
-          id: '6',
-          type: 'expense',
-          action: 'rejected',
-          title: 'Transportation Expense Rejected',
-          description: 'Fuel expense rejected - exceeds monthly budget',
-          timestamp: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(), // 4 days ago
-          user: { name: 'Alice Brown', email: 'alice@company.com' },
-          status: 'failed',
-          amount: 850,
-          metadata: { expense_id: 'EXP-043', reason: 'Budget exceeded' }
-        },
-        {
-          id: '7',
-          type: 'payment',
-          action: 'processed',
-          title: 'Supplier Payment Processed',
-          description: 'Payment to Steel Suppliers Co. completed',
-          timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days ago
-          user: { name: 'Jane Smith', email: 'jane@company.com' },
-          status: 'success',
-          amount: 25000,
-          metadata: { payment_id: 'PAY-156', supplier: 'Steel Suppliers Co.' }
-        },
-        {
-          id: '8',
-          type: 'delivery',
-          action: 'failed',
-          title: 'Delivery #D-100 Failed',
-          description: 'Lumber shipment rejected due to quality issues',
-          timestamp: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // 1 week ago
-          user: { name: 'Mike Johnson', email: 'mike@company.com' },
-          status: 'failed',
-          metadata: { delivery_id: 'D-100', reason: 'Quality issues' }
-        }
-      ];
-      
-      setActivities(mockActivities);
-      
-      // Calculate stats
-      const now = new Date();
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-      
-      const todayActivities = mockActivities.filter(a => new Date(a.timestamp) >= today);
-      const weekActivities = mockActivities.filter(a => new Date(a.timestamp) >= weekAgo);
-      const uniqueUsers = new Set(mockActivities.map(a => a.user.email)).size;
-      
-      const typeCounts = mockActivities.reduce((acc, a) => {
-        acc[a.type] = (acc[a.type] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-      const mostActiveType = Object.entries(typeCounts).sort(([,a], [,b]) => b - a)[0]?.[0] || '';
-      
-      setStats({
-        total_today: todayActivities.length,
-        total_week: weekActivities.length,
-        unique_users: uniqueUsers,
-        most_active_type: mostActiveType
-      });
-      
-      setLoading(false);
-    }, 500);
-  }, []);
-
-  return { activities, loading, stats };
 }
 
 export default function ActivityPage() {
