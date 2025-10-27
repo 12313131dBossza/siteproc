@@ -24,6 +24,18 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* Mobile bottom navigation safe area */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Prevent content from going under bottom nav on mobile */
+@media (max-width: 768px) {
+  body {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  }
+}
+
 h1,h2,h3,h4 { font-weight:600; letter-spacing:-.5px; }
 p { line-height:1.55; }
 

@@ -9,6 +9,7 @@ import PWAInitializer from '@/components/PWAInitializer'
 import { Footer } from '@/components/Footer'
 import { SentryInitializer } from '@/components/SentryInitializer'
 import { NotificationBell } from '@/components/NotificationBell'
+import { MobileBottomNav } from '@/components/MobileBottomNav'
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -68,7 +69,7 @@ export default function RootLayout({
         <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
         <link rel="icon" type="image/png" href="/icons/icon-192.png" />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased pb-0 md:pb-0`}>
         <SentryInitializer />
         <ToastProvider>
           <Toaster position="top-right" />
@@ -90,9 +91,18 @@ export default function RootLayout({
             </Suspense>
           </nav>
           
-          {children}
+          {/* Main content with padding for mobile bottom nav */}
+          <div className="pb-16 md:pb-0">
+            {children}
+          </div>
           
-          <Footer />
+          {/* Footer - hidden on mobile */}
+          <div className="hidden md:block">
+            <Footer />
+          </div>
+          
+          {/* Mobile Bottom Navigation */}
+          <MobileBottomNav />
           
           {/* PWA Initializer */}
           <PWAInitializer />
