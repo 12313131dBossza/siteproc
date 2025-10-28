@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { useRouter } from "next/navigation";
 import { FolderOpen, Plus, Search, DollarSign, Clock, CheckCircle, AlertCircle, TrendingUp, TrendingDown, BarChart3, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { FormModal, FormModalActions, Input, Select } from '@/components/ui';
+import { FormModal, FormModalActions, Input, Select, SearchBar, FilterPanel, useFilters } from '@/components/ui';
 
 interface Project {
   id: string;
@@ -33,6 +33,7 @@ export default function ProjectsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | undefined>();
   const [searchTerm, setSearchTerm] = useState("");
+  const { filters, setFilters } = useFilters();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [form, setForm] = useState({ name: "", budget: 0, code: "", status: "active" });
   const [isCreating, setIsCreating] = useState(false);
@@ -100,10 +101,36 @@ export default function ProjectsPage() {
 
   const filteredProjects = useMemo(() => {
     let filtered = projects;
-    if (activeTab !== "all") filtered = filtered.filter(p => p.status === activeTab);
-    if (searchTerm) filtered = filtered.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.code?.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    // Tab filter
+    if (activeTab !== "all") {
+      filtered = filtered.filter(p => p.status === activeTab);
+    }
+    
+    // Search filter
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(p => 
+        p.name.toLowerCase().includes(term) || 
+        p.code?.toLowerCase().includes(term)
+      );
+    }
+    
+    // Advanced filters
+    if (filters.status) {
+      filtered = filtered.filter(p => p.status === filters.status);
+    }
+    
+    if (filters.minBudget) {
+      filtered = filtered.filter(p => Number(p.budget) >= Number(filters.minBudget));
+    }
+    
+    if (filters.maxBudget) {
+      filtered = filtered.filter(p => Number(p.budget) <= Number(filters.maxBudget));
+    }
+    
     return filtered;
-  }, [projects, activeTab, searchTerm]);
+  }, [projects, activeTab, searchTerm, filters]);
 
   const stats = useMemo(() => {
     const totalBudget = projects.reduce((sum, p) => sum + Number(p.budget), 0);
@@ -140,7 +167,73 @@ export default function ProjectsPage() {
           </div>
         )}
 
-        <div className="bg-white rounded-lg border border-gray-200 p-4"><div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"><div className="flex items-center gap-2 overflow-x-auto">{tabs.map((tab) => (<button key={tab.id} onClick={() => setActiveTab(tab.id)} className={cn("flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap transition-colors", activeTab === tab.id ? "bg-blue-100 text-blue-700 font-medium" : "text-gray-600 hover:bg-gray-100")}><tab.icon className="h-4 w-4" />{tab.label}<span className="ml-1 text-xs px-2 py-0.5 rounded-full bg-white/50">{tab.id === "all" ? projects.length : projects.filter(p => p.status === tab.id).length}</span></button>))}</div><div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" /><input type="text" placeholder="Search projects..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" /></div></div></div>
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+            <div className="flex items-center gap-2 overflow-x-auto">
+              {tabs.map((tab) => (
+                <button 
+                  key={tab.id} 
+                  onClick={() => setActiveTab(tab.id)} 
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap transition-colors", 
+                    activeTab === tab.id 
+                      ? "bg-blue-100 text-blue-700 font-medium" 
+                      : "text-gray-600 hover:bg-gray-100"
+                  )}
+                >
+                  <tab.icon className="h-4 w-4" />
+                  {tab.label}
+                  <span className="ml-1 text-xs px-2 py-0.5 rounded-full bg-white/50">
+                    {tab.id === "all" ? projects.length : projects.filter(p => p.status === tab.id).length}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <div className="w-full md:w-80">
+              <SearchBar
+                value={searchTerm}
+                onChange={setSearchTerm}
+                placeholder="Search projects by name or code..."
+              />
+            </div>
+          </div>
+          
+          <FilterPanel
+            config={{
+              status: [
+                { label: 'Active', value: 'active' },
+                { label: 'On Hold', value: 'on_hold' },
+                { label: 'Closed', value: 'closed' },
+              ],
+              customFilters: [
+                {
+                  label: 'Min Budget',
+                  options: [
+                    { label: '$0+', value: '0' },
+                    { label: '$10k+', value: '10000' },
+                    { label: '$50k+', value: '50000' },
+                    { label: '$100k+', value: '100000' },
+                  ],
+                  value: filters.minBudget || '',
+                  onChange: (value) => setFilters({ ...filters, minBudget: value }),
+                },
+                {
+                  label: 'Max Budget',
+                  options: [
+                    { label: 'No Limit', value: '' },
+                    { label: '$50k', value: '50000' },
+                    { label: '$100k', value: '100000' },
+                    { label: '$500k', value: '500000' },
+                  ],
+                  value: filters.maxBudget || '',
+                  onChange: (value) => setFilters({ ...filters, maxBudget: value }),
+                },
+              ],
+            }}
+            filters={filters}
+            onChange={setFilters}
+          />
+        </div>
 
         {loading ? (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">{Array.from({ length: 6 }).map((_, i) => (<div key={i} className="animate-pulse bg-white border border-gray-200 rounded-lg p-4 md:p-6"><div className="h-5 w-40 bg-gray-200 rounded mb-2" /><div className="h-3 w-24 bg-gray-100 rounded mb-4" /><div className="grid grid-cols-3 gap-3"><div className="h-4 bg-gray-100 rounded" /><div className="h-4 bg-gray-100 rounded" /><div className="h-4 bg-gray-100 rounded" /></div></div>))}</div>) : filteredProjects.length === 0 ? (<div className="text-center py-12 bg-white rounded-lg border border-gray-200"><FolderOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" /><h3 className="text-lg font-medium text-gray-900 mb-2">{searchTerm ? "No projects found" : "No projects yet"}</h3><p className="text-gray-500 mb-4">{searchTerm ? "Try adjusting your search criteria" : "Create your first project to track budget, actuals, and deliveries"}</p>{!searchTerm && (<Button onClick={() => setShowCreateModal(true)} className="mx-auto"><Plus className="h-4 w-4 mr-2" />Create Project</Button>)}</div>) : (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">{filteredProjects.map(p => (<ProjectCard key={p.id} project={p} formatCurrency={formatCurrency} />))}</div>)}
 

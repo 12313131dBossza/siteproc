@@ -28,9 +28,15 @@ export type { PageHeaderProps, SectionHeaderProps } from './PageHeader';
 export { FormModal, FormModalActions } from './FormModal';
 export type { FormModalProps, FormModalActionsProps } from './FormModal';
 
+// Search & Filter Components
+export { SearchBar } from './SearchBar';
+export type { SearchBarProps } from './SearchBar';
+
+export { FilterPanel, useFilters } from './FilterPanel';
+export type { FilterPanelProps, FilterConfig, FilterOption } from './FilterPanel';
+
 // Existing Components (re-export for convenience)
 export { Button } from './Button';
 export { Card } from './Card';
 export { Modal } from './Modal';
 export { Chip } from './Chip';
-export { Toast } from './Toast';
