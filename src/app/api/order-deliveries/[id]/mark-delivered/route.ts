@@ -4,6 +4,7 @@ import { cookies } from 'next/headers'
 import { supabaseService } from '@/lib/supabase'
 import { syncOrderStatus } from '@/lib/orderSync'
 import { logActivity } from '@/app/api/activity/route'
+import { notifyDeliveryStatus } from '@/lib/notification-triggers'
 
 export async function PATCH(
   request: NextRequest,
@@ -152,6 +153,32 @@ export async function PATCH(
     } catch (activityError) {
       console.error('⚠️ Failed to log delivery activity:', activityError)
       // Don't fail the delivery update if activity logging fails
+    }
+
+    // Create in-app notification for delivery completion
+    try {
+      // Get order details to find who to notify
+      const { data: orderData } = await supabase
+        .from('purchase_orders')
+        .select('created_by, company_id, order_number, projects(name)')
+        .eq('id', delivery.order_id)
+        .single()
+
+      if (orderData && orderData.created_by && orderData.company_id) {
+        await notifyDeliveryStatus({
+          deliveryId: deliveryId,
+          recipientUserIds: [orderData.created_by], // Notify order creator
+          companyId: orderData.company_id,
+          deliveryNumber: delivery.delivery_number || undefined,
+          projectName: orderData.projects?.name || undefined,
+          newStatus: 'delivered',
+          orderId: delivery.order_id || undefined
+        })
+        console.log(`✅ Delivery notification sent to user ${orderData.created_by}`)
+      }
+    } catch (notifError) {
+      console.error('Failed to create delivery notification:', notifError)
+      // Don't fail the request if notification fails
     }
 
     // Try to update project actuals if delivery is linked to a project

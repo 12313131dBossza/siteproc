@@ -2,6 +2,7 @@ import { sbServer } from '@/lib/supabase-server';
 import { createServiceClient } from '@/lib/supabase-service';
 import { sendExpenseNotifications } from '@/lib/notifications';
 import { logActivity } from '@/app/api/activity/route';
+import { notifyExpenseApproval, notifyExpenseRejection } from '@/lib/notification-triggers';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
@@ -150,6 +151,49 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     } catch (emailError) {
       console.error('Failed to send expense approval notification:', emailError);
       // Don't fail the request if email fails
+    }
+
+    // Create in-app notification for expense submitter
+    try {
+      if (expense.submitted_by && expense.submitted_by !== user.id) {
+        // Get approver's name
+        const { data: approverProfile } = await serviceClient
+          .from('profiles')
+          .select('first_name, last_name, email')
+          .eq('id', user.id)
+          .single()
+        
+        const approverName = approverProfile 
+          ? `${approverProfile.first_name || ''} ${approverProfile.last_name || ''}`.trim() || approverProfile.email
+          : 'Admin'
+
+        if (action === 'approve') {
+          await notifyExpenseApproval({
+            expenseId: expenseId,
+            employeeId: expense.submitted_by,
+            companyId: profile.company_id,
+            amount: expense.amount || undefined,
+            vendor: expense.vendor || undefined,
+            category: expense.category || undefined,
+            approverName
+          })
+        } else {
+          await notifyExpenseRejection({
+            expenseId: expenseId,
+            employeeId: expense.submitted_by,
+            companyId: profile.company_id,
+            amount: expense.amount || undefined,
+            vendor: expense.vendor || undefined,
+            category: expense.category || undefined,
+            rejectionReason: notes || undefined,
+            rejectorName: approverName
+          })
+        }
+        console.log(`✅ In-app notification sent to user ${expense.submitted_by}`)
+      }
+    } catch (notifError) {
+      console.error('Failed to create in-app notification:', notifError)
+      // Don't fail the request if notification fails
     }
 
     // Log activity for expense approval/rejection

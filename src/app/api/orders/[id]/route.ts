@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUserProfile } from '@/lib/server-utils'
 import { sendOrderApprovalNotification, sendOrderRejectionNotification } from '@/lib/email'
-import { logActivity } from '@/app/api/activity/route'
+import { notifyOrderApproval, notifyOrderRejection } from '@/lib/notification-triggers'
 
 // PATCH /api/orders/[id] - Approve or reject an order
 export async function PATCH(
@@ -93,28 +93,46 @@ export async function PATCH(
       // Don't fail the request if email fails
     }
 
-    // Log activity
-    await logActivity({
-      type: 'order',
-      action: status === 'approved' ? 'approved' : 'rejected',
-      title: `Order ${status}`,
-      description: `Order #${updatedOrder.order_number || orderId.substring(0, 8)} was ${status}${rejection_reason ? `: ${rejection_reason}` : ''}`,
-      entity_type: 'order',
-      entity_id: orderId,
-      metadata: {
-        order_id: orderId,
-        order_number: updatedOrder.order_number,
-        project_id: updatedOrder.project_id,
-        project_name: updatedOrder.projects?.name,
-        status: status,
-        rejection_reason: rejection_reason,
-        notes: notes,
-      },
-      status: status === 'approved' ? 'success' : 'failed',
-      amount: updatedOrder.total_amount,
-      user_id: profile.id,
-      company_id: profile.company_id,
-    })
+    // Create in-app notification for order creator
+    try {
+      if (order.created_by && order.created_by !== profile.id) {
+        // Get approver's name
+        const { data: approverProfile } = await supabase
+          .from('profiles')
+          .select('first_name, last_name')
+          .eq('id', profile.id)
+          .single()
+        
+        const approverName = approverProfile 
+          ? `${approverProfile.first_name || ''} ${approverProfile.last_name || ''}`.trim() || profile.email
+          : profile.email
+
+        if (status === 'approved') {
+          await notifyOrderApproval({
+            orderId: orderId,
+            orderCreatorId: order.created_by,
+            companyId: profile.company_id,
+            orderNumber: order.order_number || undefined,
+            projectName: order.projects?.name || undefined,
+            approverName
+          })
+        } else {
+          await notifyOrderRejection({
+            orderId: orderId,
+            orderCreatorId: order.created_by,
+            companyId: profile.company_id,
+            orderNumber: order.order_number || undefined,
+            projectName: order.projects?.name || undefined,
+            rejectionReason: rejection_reason || notes || undefined,
+            rejectorName: approverName
+          })
+        }
+        console.log(`✅ In-app notification sent to user ${order.created_by}`)
+      }
+    } catch (notifError) {
+      console.error('Failed to create in-app notification:', notifError)
+      // Don't fail the request if notification fails
+    }
 
     return NextResponse.json({ 
       ok: true, 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { sbServer } from '@/lib/supabase-server'
 import { createServiceClient } from '@/lib/supabase-service'
 import { logActivity } from '@/app/api/activity/route'
+import { notifyPaymentCreated } from '@/lib/notification-triggers'
 
 export const runtime = 'nodejs'
 
@@ -214,6 +215,46 @@ export async function POST(req: NextRequest) {
     } catch (logError) {
       console.error('Failed to log payment creation activity:', logError)
       // Don't fail the request if logging fails
+    }
+
+    // Create in-app notification for payment approvers
+    try {
+      // Get all admins/owners/bookkeepers in the company to notify
+      const { data: approvers } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .eq('company_id', profile.company_id)
+        .in('role', ['admin', 'owner', 'bookkeeper'])
+        .neq('id', user.id) // Don't notify creator
+
+      if (approvers && approvers.length > 0) {
+        const approverIds = approvers.map(a => a.id)
+        
+        // Get creator's name
+        const { data: creatorProfile } = await supabase
+          .from('profiles')
+          .select('first_name, last_name, email')
+          .eq('id', user.id)
+          .single()
+        
+        const creatorName = creatorProfile 
+          ? `${creatorProfile.first_name || ''} ${creatorProfile.last_name || ''}`.trim() || creatorProfile.email
+          : 'A team member'
+
+        await notifyPaymentCreated({
+          paymentId: payment.id,
+          approverUserIds: approverIds,
+          companyId: profile.company_id,
+          amount: payment.amount,
+          vendor: payment.vendor_name,
+          paymentMethod: payment.payment_method,
+          creatorName
+        })
+        console.log(`✅ Payment notification sent to ${approverIds.length} approvers`)
+      }
+    } catch (notifError) {
+      console.error('Failed to create payment notification:', notifError)
+      // Don't fail the request if notification fails
     }
 
     return NextResponse.json({ ok: true, data: payment }, { status: 201 })
