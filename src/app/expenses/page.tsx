@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/app-layout";
 import { Button } from "@/components/ui/Button";
-import { FormModal, FormModalActions, Input, Select, TextArea } from '@/components/ui';
+import { FormModal, FormModalActions, Input, Select, TextArea, SearchBar, FilterPanel, useFilters } from '@/components/ui';
 import {
   DollarSign,
   TrendingUp,
@@ -54,6 +54,7 @@ export default function ExpensesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const { filters, setFilters } = useFilters();
   const [selectedTab, setSelectedTab] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
@@ -154,7 +155,20 @@ export default function ExpensesPage() {
                          expense.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = selectedTab === 'all' || expense.status === selectedTab;
     const matchesCategory = categoryFilter === 'all' || expense.category === categoryFilter;
-    return matchesSearch && matchesStatus && matchesCategory;
+    
+    // Advanced filters
+    const matchesAdvStatus = !filters.status || expense.status === filters.status;
+    const matchesAdvCategory = !filters.category || expense.category === filters.category;
+    
+    // Date range filter
+    const matchesDateRange = (!filters.startDate || new Date(expense.created_at) >= new Date(filters.startDate)) &&
+                             (!filters.endDate || new Date(expense.created_at) <= new Date(filters.endDate));
+    
+    // Amount range filter
+    const matchesAmountRange = (!filters.minAmount || expense.amount >= Number(filters.minAmount)) &&
+                               (!filters.maxAmount || expense.amount <= Number(filters.maxAmount));
+    
+    return matchesSearch && matchesStatus && matchesCategory && matchesAdvStatus && matchesAdvCategory && matchesDateRange && matchesAmountRange;
   });
 
   const stats = {
@@ -450,16 +464,11 @@ export default function ExpensesPage() {
           <div className="p-6">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <input
-                    type="text"
-                    placeholder="Search expenses..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
+                <SearchBar
+                  value={searchTerm}
+                  onChange={setSearchTerm}
+                  placeholder="Search by vendor or description..."
+                />
               </div>
               <div className="flex gap-2">
                 <select
@@ -478,6 +487,26 @@ export default function ExpensesPage() {
               </div>
             </div>
           </div>
+          
+          <FilterPanel
+            config={{
+              status: [
+                { label: 'Pending', value: 'pending' },
+                { label: 'Approved', value: 'approved' },
+                { label: 'Rejected', value: 'rejected' },
+              ],
+              category: [
+                { label: 'Labor', value: 'labor' },
+                { label: 'Materials', value: 'materials' },
+                { label: 'Equipment', value: 'equipment' },
+                { label: 'Rentals', value: 'rentals' },
+                { label: 'Transportation', value: 'transportation' },
+                { label: 'Other', value: 'other' },
+              ],
+            }}
+            filters={filters}
+            onChange={setFilters}
+          />
         </div>
 
         {/* Tabs */}
