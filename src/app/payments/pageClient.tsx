@@ -7,7 +7,7 @@ import { AppLayout } from '@/components/app-layout';
 import { Button } from '@/components/ui/Button';
 import { format } from '@/lib/date-format';
 import { InvoiceGenerator } from '@/components/InvoiceGenerator';
-import { FormModal, FormModalActions, Input, Select, TextArea } from '@/components/ui';
+import { FormModal, FormModalActions, Input, Select, TextArea, SearchBar, FilterPanel, useFilters } from '@/components/ui';
 
 interface Payment {
   id: string;
@@ -35,6 +35,7 @@ export default function PaymentsPageClient() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const { filters, setFilters } = useFilters();
   const [showModal, setShowModal] = useState(false);
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -194,11 +195,27 @@ export default function PaymentsPageClient() {
   };
 
   // Filter payments based on search
-  const filteredPayments = payments.filter(payment =>
-    payment.vendor_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    payment.reference_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    payment.projects?.name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredPayments = payments.filter(payment => {
+    const matchesSearch = payment.vendor_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      payment.reference_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      payment.projects?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // Advanced filters
+    const matchesStatus = !filters.status || payment.status === filters.status;
+    
+    // Payment method filter (custom filter)
+    const matchesMethod = !filters.paymentMethod || payment.payment_method === filters.paymentMethod;
+    
+    // Date range filter
+    const matchesDateRange = (!filters.startDate || new Date(payment.payment_date) >= new Date(filters.startDate)) &&
+                             (!filters.endDate || new Date(payment.payment_date) <= new Date(filters.endDate));
+    
+    // Amount range filter
+    const matchesAmountRange = (!filters.minAmount || payment.amount >= Number(filters.minAmount)) &&
+                               (!filters.maxAmount || payment.amount <= Number(filters.maxAmount));
+    
+    return matchesSearch && matchesStatus && matchesMethod && matchesDateRange && matchesAmountRange;
+  });
 
   // Calculate totals
   const totals = filteredPayments.reduce((acc, p) => {
@@ -264,14 +281,11 @@ export default function PaymentsPageClient() {
       {/* Filters */}
       <div className="bg-white border rounded-lg p-4">
         <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by vendor, reference, or project..."
+          <div className="flex-1">
+            <SearchBar
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={setSearchTerm}
+              placeholder="Search by vendor, reference, or project..."
             />
           </div>
           <select
@@ -285,6 +299,34 @@ export default function PaymentsPageClient() {
             <option value="paid">Paid</option>
           </select>
         </div>
+      </div>
+      
+      <div className="bg-white border rounded-lg">
+        <FilterPanel
+          config={{
+            status: [
+              { label: 'Unpaid', value: 'unpaid' },
+              { label: 'Partial', value: 'partial' },
+              { label: 'Paid', value: 'paid' },
+            ],
+            customFilters: [
+              {
+                label: 'Payment Method',
+                options: [
+                  { label: 'All Methods', value: '' },
+                  { label: 'Check', value: 'check' },
+                  { label: 'Cash', value: 'cash' },
+                  { label: 'Bank Transfer', value: 'bank_transfer' },
+                  { label: 'Credit Card', value: 'credit_card' },
+                ],
+                value: filters.paymentMethod || '',
+                onChange: (value) => setFilters({ ...filters, paymentMethod: value }),
+              },
+            ],
+          }}
+          filters={filters}
+          onChange={setFilters}
+        />
       </div>
 
       {/* Payments Table */}
