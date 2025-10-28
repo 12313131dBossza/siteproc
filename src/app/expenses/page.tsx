@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/app-layout";
 import { Button } from "@/components/ui/Button";
+import { FormModal, FormModalActions, Input, Select, TextArea } from '@/components/ui';
 import {
   DollarSign,
   TrendingUp,
@@ -606,103 +607,108 @@ export default function ExpensesPage() {
         </div>
 
         {/* Add Expense Modal */}
-        {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto scale-100 animate-modal-pop">
-              <div className="flex items-center justify-between p-6 border-b sticky top-0 bg-white">
-                <h3 className="text-xl font-semibold text-gray-900">Add New Expense</h3>
-                <button
-                  onClick={() => setIsModalOpen(false)}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                  aria-label="Close modal"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
+        <FormModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          title="Add New Expense"
+          description="Record a new expense and link it to a project for budget tracking"
+          icon={<Receipt className="h-5 w-5" />}
+          size="lg"
+        >
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Basic Information Section */}
+            <div className="space-y-4">
+              <h4 className="font-semibold text-gray-900 text-sm">Basic Information</h4>
+              
+              <Input
+                label="Vendor"
+                required
+                value={newExpense.vendor}
+                onChange={(e) => setNewExpense(v => ({ ...v, vendor: e.target.value }))}
+                placeholder="Enter vendor/supplier name"
+                fullWidth
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                <Select
+                  label="Category"
+                  required
+                  value={newExpense.category}
+                  onChange={(e) => setNewExpense(v => ({ ...v, category: e.target.value }))}
+                  options={[
+                    { value: '', label: 'Select category' },
+                    { value: 'labor', label: 'Labor' },
+                    { value: 'materials', label: 'Materials' },
+                    { value: 'equipment', label: 'Equipment' },
+                    { value: 'rentals', label: 'Rentals' },
+                    { value: 'transportation', label: 'Transportation' },
+                    { value: 'other', label: 'Other' }
+                  ]}
+                />
+
+                <Input
+                  label="Amount"
+                  type="number"
+                  required
+                  step="0.01"
+                  value={newExpense.amount}
+                  onChange={(e) => setNewExpense(v => ({ ...v, amount: e.target.value }))}
+                  placeholder="0.00"
+                  leftIcon={<DollarSign className="h-4 w-4" />}
+                />
               </div>
-              <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Vendor <span className="text-red-500">*</span></label>
-                  <input type="text" value={newExpense.vendor} onChange={(e) => setNewExpense(v => ({ ...v, vendor: e.target.value }))} className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required placeholder="Enter vendor/supplier name" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Category <span className="text-red-500">*</span></label>
-                  <select value={newExpense.category} onChange={(e) => setNewExpense(v => ({ ...v, category: e.target.value }))} className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                    <option value="">Select category</option>
-                    <option value="labor">Labor</option>
-                    <option value="materials">Materials</option>
-                    <option value="equipment">Equipment</option>
-                    <option value="rentals">Rentals</option>
-                    <option value="transportation">Transportation</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Amount <span className="text-red-500">*</span></label>
-                  <input type="number" step="0.01" value={newExpense.amount} onChange={(e) => setNewExpense(v => ({ ...v, amount: e.target.value }))} className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required placeholder="0.00" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description <span className="text-red-500">*</span></label>
-                  <textarea value={newExpense.description} onChange={(e) => setNewExpense(v => ({ ...v, description: e.target.value }))} className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" rows={3} required placeholder="Optional description" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Project <span className="text-red-500">*</span>
-                  </label>
-                  <select 
-                    value={newExpense.project_id} 
-                    onChange={(e) => setNewExpense((v: any) => ({ ...v, project_id: e.target.value }))} 
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                    required
-                  >
-                    <option value="">{projectsLoading ? 'Loading projects...' : 'Select project'}</option>
-                    {projects.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
-                  {!newExpense.project_id && (
-                    <p className="mt-1 text-xs text-amber-600 flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3" />
-                      Linking to a project enables budget tracking
-                    </p>
-                  )}
-                </div>
-
-                {/* Receipt Upload Note */}
-                {parseFloat(newExpense.amount) > 100 && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <div className="flex items-start gap-2">
-                      <Receipt className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-blue-900">Receipt Recommended</p>
-                        <p className="text-xs text-blue-700 mt-1">
-                          For expenses over $100, please upload a receipt after creating this expense.
-                          You can add it from the expense details page.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex gap-3 pt-4 border-t">
-                  <button 
-                    type="button" 
-                    onClick={() => setIsModalOpen(false)} 
-                    className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit" 
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                    Add Expense
-                  </button>
-                </div>
-              </form>
             </div>
-          </div>
-        )}
+
+            {/* Project Link Section */}
+            <div className="space-y-4">
+              <h4 className="font-semibold text-gray-900 text-sm">Project Link</h4>
+              
+              <Select
+                label="Project"
+                required
+                value={newExpense.project_id}
+                onChange={(e) => setNewExpense((v: any) => ({ ...v, project_id: e.target.value }))}
+                options={[
+                  { value: '', label: projectsLoading ? 'Loading projects...' : 'Select project' },
+                  ...projects.map((p) => ({ value: p.id, label: p.name }))
+                ]}
+                helpText={!newExpense.project_id ? "Linking to a project enables budget tracking" : undefined}
+              />
+            </div>
+
+            {/* Description Section */}
+            <TextArea
+              label="Description"
+              required
+              value={newExpense.description}
+              onChange={(e) => setNewExpense(v => ({ ...v, description: e.target.value }))}
+              placeholder="Describe the expense, what was purchased, or purpose"
+              rows={3}
+              fullWidth
+            />
+
+            {/* Receipt Reminder */}
+            {parseFloat(newExpense.amount) > 100 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <Receipt className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-blue-900">Receipt Recommended</p>
+                    <p className="text-xs text-blue-700 mt-1">
+                      For expenses over $100, please upload a receipt after creating this expense.
+                      You can add it from the expense details page.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <FormModalActions
+              onCancel={() => setIsModalOpen(false)}
+              submitLabel="Add Expense"
+            />
+          </form>
+        </FormModal>
 
         {/* Approval Modal */}
         {isApprovalModalOpen && selectedExpense && (

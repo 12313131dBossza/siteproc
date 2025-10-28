@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useCompanyId } from '@/lib/useCompanyId';
-import { Plus, Search, DollarSign, Edit, Trash2, X } from 'lucide-react';
+import { Plus, Search, DollarSign, Edit, Trash2 } from 'lucide-react';
 import { AppLayout } from '@/components/app-layout';
 import { Button } from '@/components/ui/Button';
 import { format } from '@/lib/date-format';
 import { InvoiceGenerator } from '@/components/InvoiceGenerator';
+import { FormModal, FormModalActions, Input, Select, TextArea } from '@/components/ui';
 
 interface Payment {
   id: string;
@@ -393,170 +394,104 @@ export default function PaymentsPageClient() {
       </div>
 
       {/* Add/Edit Modal */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
-                  <DollarSign className="h-5 w-5" />
-                </div>
-                <h2 className="text-xl font-semibold">
-                  {editingPayment ? 'Edit Payment' : 'Add New Payment'}
-                </h2>
-              </div>
-              <button
-                onClick={() => {
-                  setShowModal(false);
-                  setEditingPayment(null);
-                }}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+      <FormModal
+        isOpen={showModal}
+        onClose={() => {
+          setShowModal(false);
+          setEditingPayment(null);
+        }}
+        title={editingPayment ? 'Edit Payment' : 'Add New Payment'}
+        description="Track vendor payments and manage payment records"
+        icon={<DollarSign className="h-5 w-5" />}
+        size="lg"
+      >
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Input
+            label="Vendor Name"
+            required
+            value={form.vendor_name}
+            onChange={(e) => setForm({ ...form, vendor_name: e.target.value })}
+            placeholder="Enter vendor name"
+            fullWidth
+          />
 
-            {/* Modal Form */}
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Vendor Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={form.vendor_name}
-                    onChange={(e) => setForm({ ...form, vendor_name: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter vendor name"
-                  />
-                </div>
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Amount"
+              type="number"
+              required
+              min="0"
+              step="0.01"
+              value={form.amount}
+              onChange={(e) => setForm({ ...form, amount: e.target.value })}
+              placeholder="0.00"
+              leftIcon={<DollarSign className="h-4 w-4" />}
+            />
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Amount <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min="0"
-                    step="0.01"
-                    value={form.amount}
-                    onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="0.00"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Payment Date <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={form.payment_date}
-                    onChange={(e) => setForm({ ...form, payment_date: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Payment Method
-                  </label>
-                  <select
-                    value={form.payment_method}
-                    onChange={(e) => setForm({ ...form, payment_method: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="check">Check</option>
-                    <option value="cash">Cash</option>
-                    <option value="transfer">Transfer</option>
-                    <option value="card">Card</option>
-                    <option value="ach">ACH</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Status
-                  </label>
-                  <select
-                    value={form.status}
-                    onChange={(e) => setForm({ ...form, status: e.target.value as any })}
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="unpaid">Unpaid</option>
-                    <option value="partial">Partial</option>
-                    <option value="paid">Paid</option>
-                  </select>
-                </div>
-
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Reference Number
-                  </label>
-                  <input
-                    type="text"
-                    value={form.reference_number}
-                    onChange={(e) => setForm({ ...form, reference_number: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Check #, Transaction ID, etc."
-                  />
-                </div>
-
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Notes
-                  </label>
-                  <textarea
-                    value={form.notes}
-                    onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Optional notes about this payment"
-                    rows={3}
-                  />
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-3 pt-4 border-t">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowModal(false);
-                    setEditingPayment(null);
-                  }}
-                  className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50 transition-colors"
-                  disabled={loading}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {loading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <DollarSign className="h-4 w-4" />
-                      {editingPayment ? 'Update Payment' : 'Create Payment'}
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
+            <Input
+              label="Payment Date"
+              type="date"
+              required
+              value={form.payment_date}
+              onChange={(e) => setForm({ ...form, payment_date: e.target.value })}
+            />
           </div>
-        </div>
-      )}
+
+          <div className="grid grid-cols-2 gap-4">
+            <Select
+              label="Payment Method"
+              value={form.payment_method}
+              onChange={(e) => setForm({ ...form, payment_method: e.target.value })}
+              options={[
+                { value: 'check', label: 'Check' },
+                { value: 'cash', label: 'Cash' },
+                { value: 'transfer', label: 'Transfer' },
+                { value: 'card', label: 'Card' },
+                { value: 'ach', label: 'ACH' }
+              ]}
+            />
+
+            <Select
+              label="Status"
+              value={form.status}
+              onChange={(e) => setForm({ ...form, status: e.target.value as any })}
+              options={[
+                { value: 'unpaid', label: 'Unpaid' },
+                { value: 'partial', label: 'Partial' },
+                { value: 'paid', label: 'Paid' }
+              ]}
+            />
+          </div>
+
+          <Input
+            label="Reference Number"
+            value={form.reference_number}
+            onChange={(e) => setForm({ ...form, reference_number: e.target.value })}
+            placeholder="Check #, Transaction ID, etc."
+            helpText="Optional reference number for tracking"
+            fullWidth
+          />
+
+          <TextArea
+            label="Notes"
+            value={form.notes}
+            onChange={(e) => setForm({ ...form, notes: e.target.value })}
+            placeholder="Optional notes about this payment"
+            rows={3}
+            fullWidth
+          />
+
+          <FormModalActions
+            onCancel={() => {
+              setShowModal(false);
+              setEditingPayment(null);
+            }}
+            submitLabel={editingPayment ? 'Update Payment' : 'Create Payment'}
+            isSubmitting={loading}
+            submitDisabled={loading}
+          />
+        </form>
+      </FormModal>
       </div>
     </AppLayout>
   );
