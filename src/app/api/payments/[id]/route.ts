@@ -3,6 +3,7 @@ import { getSessionProfile, enforceRole } from '@/lib/auth'
 import { supabaseService } from '@/lib/supabase'
 import { audit } from '@/lib/audit'
 import { broadcastDashboardUpdated } from '@/lib/realtime'
+import { logActivity } from '@/app/api/activity/route'
 
 export const runtime = 'nodejs'
 
@@ -40,8 +41,8 @@ export async function PATCH(req: NextRequest, ctx: any) {
     if (!session.user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
     if (!session.companyId) return NextResponse.json({ error: 'no_company' }, { status: 400 })
 
-    // Only Admin or Accountant can update payments
-    enforceRole('accountant', session)
+    // Only Admin, Manager, or Bookkeeper can update payments
+    enforceRole('bookkeeper', session)
 
     const id = ctx?.params?.id
     const body = await req.json()
@@ -84,7 +85,32 @@ export async function PATCH(req: NextRequest, ctx: any) {
       return NextResponse.json({ error: error?.message || 'Failed to update payment' }, { status: 500 })
     }
 
-    // Log activity
+    // Log activity with new logActivity function
+    try {
+      const statusChanged = existing.status !== updated.status
+      await logActivity({
+        type: 'payment',
+        action: statusChanged ? 'status_changed' : 'updated',
+        title: statusChanged ? `Payment ${updated.status}` : 'Payment Updated',
+        description: `${updated.vendor_name} - $${updated.amount}${statusChanged ? ` (${existing.status} → ${updated.status})` : ''}`,
+        entity_type: 'payment',
+        entity_id: updated.id,
+        metadata: {
+          changes: updateData,
+          vendor_name: updated.vendor_name,
+          amount: updated.amount,
+          status: updated.status,
+          old_status: existing.status,
+          project_id: updated.project_id
+        },
+        status: 'success',
+        amount: updated.amount
+      })
+    } catch (logError) {
+      console.error('Failed to log payment update activity:', logError)
+    }
+
+    // Keep old audit for compatibility
     await audit(
       session.companyId,
       session.user.id,
@@ -141,7 +167,29 @@ export async function DELETE(req: NextRequest, ctx: any) {
       return NextResponse.json({ error: error?.message || 'Failed to delete payment' }, { status: 500 })
     }
 
-    // Log activity
+    // Log activity with new logActivity function
+    try {
+      await logActivity({
+        type: 'payment',
+        action: 'deleted',
+        title: 'Payment Deleted',
+        description: `${existing.vendor_name} - $${existing.amount}`,
+        entity_type: 'payment',
+        entity_id: id,
+        metadata: {
+          vendor_name: existing.vendor_name,
+          amount: existing.amount,
+          status: existing.status,
+          project_id: existing.project_id
+        },
+        status: 'success',
+        amount: existing.amount
+      })
+    } catch (logError) {
+      console.error('Failed to log payment deletion activity:', logError)
+    }
+
+    // Keep old audit for compatibility
     await audit(
       session.companyId,
       session.user.id,

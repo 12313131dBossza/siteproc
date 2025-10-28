@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sbServer } from '@/lib/supabase-server'
 import { createServiceClient } from '@/lib/supabase-service'
+import { logActivity } from '@/app/api/activity/route'
 
 export const runtime = 'nodejs'
 
@@ -187,6 +188,32 @@ export async function POST(req: NextRequest) {
         error: error?.message || 'Failed to create payment',
         details: error?.details || 'No details available'
       }, { status: 500 })
+    }
+
+    // Log activity
+    try {
+      await logActivity({
+        type: 'payment',
+        action: 'created',
+        title: 'Payment Created',
+        description: `${payment.vendor_name} - ${payment.payment_method} - $${payment.amount}`,
+        entity_type: 'payment',
+        entity_id: payment.id,
+        metadata: {
+          vendor_name: payment.vendor_name,
+          amount: payment.amount,
+          payment_method: payment.payment_method,
+          status: payment.status,
+          project_id: payment.project_id,
+          order_id: payment.order_id,
+          expense_id: payment.expense_id
+        },
+        status: 'success',
+        amount: payment.amount
+      })
+    } catch (logError) {
+      console.error('Failed to log payment creation activity:', logError)
+      // Don't fail the request if logging fails
     }
 
     return NextResponse.json({ ok: true, data: payment }, { status: 201 })
