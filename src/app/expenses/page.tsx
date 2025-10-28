@@ -372,6 +372,31 @@ export default function ExpensesPage() {
       }
     >
       <div className="space-y-6">
+        {/* Action Items Banner */}
+        {(expenses.filter(e => !e.receipt_url && e.amount > 100).length > 0 || 
+          expenses.filter(e => !e.project_id).length > 0 ||
+          expenses.filter(e => e.status === 'pending').length > 0) && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h4 className="font-semibold text-amber-900 mb-1">Action Required</h4>
+                <ul className="text-sm text-amber-800 space-y-1">
+                  {expenses.filter(e => e.status === 'pending').length > 0 && (
+                    <li>• {expenses.filter(e => e.status === 'pending').length} expense(s) awaiting approval</li>
+                  )}
+                  {expenses.filter(e => !e.receipt_url && e.amount > 100).length > 0 && (
+                    <li>• {expenses.filter(e => !e.receipt_url && e.amount > 100).length} expense(s) over $100 missing receipts</li>
+                  )}
+                  {expenses.filter(e => !e.project_id).length > 0 && (
+                    <li>• {expenses.filter(e => !e.project_id).length} expense(s) not linked to projects</li>
+                  )}
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
@@ -507,12 +532,30 @@ export default function ExpensesPage() {
                               <StatusIcon className="w-3.5 h-3.5" />
                               {statusConfig.label}
                             </div>
+                            {!expense.receipt_url && expense.amount > 100 && (
+                              <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-amber-50 border border-amber-200 text-xs font-medium text-amber-700">
+                                <AlertCircle className="w-3 h-3" />
+                                Receipt needed
+                              </div>
+                            )}
+                            {!expense.project_id && (
+                              <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-gray-50 border border-gray-200 text-xs font-medium text-gray-600">
+                                <AlertCircle className="w-3 h-3" />
+                                No project
+                              </div>
+                            )}
                           </div>
                           <p className="text-gray-600 mb-2">{expense.description}</p>
                           {expense.project_name && (
                             <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
                               <Building className="h-4 w-4" />
                               <span>{expense.project_name}</span>
+                            </div>
+                          )}
+                          {expense.receipt_url && (
+                            <div className="flex items-center gap-2 text-sm text-green-600 mb-2">
+                              <Receipt className="h-4 w-4" />
+                              <span>Receipt attached</span>
                             </div>
                           )}
                           <div className="text-sm text-gray-500">
@@ -602,17 +645,56 @@ export default function ExpensesPage() {
                   <textarea value={newExpense.description} onChange={(e) => setNewExpense(v => ({ ...v, description: e.target.value }))} className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" rows={3} required placeholder="Optional description" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Project <span className="text-red-500">*</span></label>
-                  <select value={newExpense.project_id} onChange={(e) => setNewExpense((v: any) => ({ ...v, project_id: e.target.value }))} className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Project <span className="text-red-500">*</span>
+                  </label>
+                  <select 
+                    value={newExpense.project_id} 
+                    onChange={(e) => setNewExpense((v: any) => ({ ...v, project_id: e.target.value }))} 
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                    required
+                  >
                     <option value="">{projectsLoading ? 'Loading projects...' : 'Select project'}</option>
                     {projects.map((p) => (
                       <option key={p.id} value={p.id}>{p.name}</option>
                     ))}
                   </select>
+                  {!newExpense.project_id && (
+                    <p className="mt-1 text-xs text-amber-600 flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      Linking to a project enables budget tracking
+                    </p>
+                  )}
                 </div>
+
+                {/* Receipt Upload Note */}
+                {parseFloat(newExpense.amount) > 100 && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <div className="flex items-start gap-2">
+                      <Receipt className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-blue-900">Receipt Recommended</p>
+                        <p className="text-xs text-blue-700 mt-1">
+                          For expenses over $100, please upload a receipt after creating this expense.
+                          You can add it from the expense details page.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex gap-3 pt-4 border-t">
-                  <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50 transition-colors">Cancel</button>
-                  <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                  <button 
+                    type="button" 
+                    onClick={() => setIsModalOpen(false)} 
+                    className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                     Add Expense
                   </button>
