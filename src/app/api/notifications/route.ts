@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase-server';
+import { sbServer } from '@/lib/supabase-server';
 
 export const dynamic = 'force-dynamic';
 
 // GET /api/notifications - Get all notifications for current user
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient();
+    const supabase = await sbServer();
     
     // Check authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
 // POST /api/notifications - Create a new notification
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient();
+    const supabase = await sbServer();
     
     // Check authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser();

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase-server';
+import { sbServer } from '@/lib/supabase-server';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,7 +9,7 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createClient();
+    const supabase = await sbServer();
     
     // Check authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -61,7 +61,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createClient();
+    const supabase = await sbServer();
     
     // Check authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser();
