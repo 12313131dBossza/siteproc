@@ -24,6 +24,10 @@ export type { EmptyStateProps } from './EmptyState';
 export { PageHeader, SectionHeader } from './PageHeader';
 export type { PageHeaderProps, SectionHeaderProps } from './PageHeader';
 
+// Modal Components
+export { FormModal, FormModalActions } from './FormModal';
+export type { FormModalProps, FormModalActionsProps } from './FormModal';
+
 // Existing Components (re-export for convenience)
 export { Button } from './Button';
 export { Card } from './Card';
