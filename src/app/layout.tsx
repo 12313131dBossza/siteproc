@@ -9,6 +9,7 @@ import PWAInitializer from '@/components/PWAInitializer'
 import { Footer } from '@/components/Footer'
 import { SentryInitializer } from '@/components/SentryInitializer'
 import { NotificationBell } from '@/components/NotificationBell'
+import { NotificationProvider } from '@/contexts/NotificationContext'
 import { MobileBottomNav } from '@/components/MobileBottomNav'
 
 const geistSans = Geist({
@@ -72,39 +73,41 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <SentryInitializer />
         <ToastProvider>
-          <Toaster position="top-right" />
-          
-          {/* Simple top bar - Desktop only */}
-          <nav className="hidden md:flex w-full p-3 justify-between items-center border-b border-black/10 dark:border-white/10 bg-white">
-            <Link href="/" className="font-semibold">SiteProc</Link>
-            <Suspense>
-              <div className="flex items-center gap-4">
-                <NotificationBell />
-                <div id="offline-indicator" className="flex items-center gap-2">
-                  <span id="offline-badge" className="text-sm bg-yellow-200 text-yellow-900 px-2 py-1 rounded hidden">
-                    Sync pending
-                  </span>
-                  <span id="install-badge" className="text-sm bg-blue-200 text-blue-900 px-2 py-1 rounded cursor-pointer hidden">
-                    Install App
-                  </span>
+          <NotificationProvider>
+            <Toaster position="top-right" />
+            
+            {/* Simple top bar - Desktop only */}
+            <nav className="hidden md:flex w-full p-3 justify-between items-center border-b border-black/10 dark:border-white/10 bg-white">
+              <Link href="/" className="font-semibold">SiteProc</Link>
+              <Suspense>
+                <div className="flex items-center gap-4">
+                  <NotificationBell />
+                  <div id="offline-indicator" className="flex items-center gap-2">
+                    <span id="offline-badge" className="text-sm bg-yellow-200 text-yellow-900 px-2 py-1 rounded hidden">
+                      Sync pending
+                    </span>
+                    <span id="install-badge" className="text-sm bg-blue-200 text-blue-900 px-2 py-1 rounded cursor-pointer hidden">
+                      Install App
+                    </span>
+                  </div>
                 </div>
-              </div>
-            </Suspense>
-          </nav>
-          
-          {/* Main content */}
-          {children}
-          
-          {/* Footer - hidden on mobile */}
-          <div className="hidden md:block">
-            <Footer />
-          </div>
-          
-          {/* Mobile Bottom Navigation */}
-          <MobileBottomNav />
-          
-          {/* PWA Initializer */}
-          <PWAInitializer />
+              </Suspense>
+            </nav>
+            
+            {/* Main content */}
+            {children}
+            
+            {/* Footer - hidden on mobile */}
+            <div className="hidden md:block">
+              <Footer />
+            </div>
+            
+            {/* Mobile Bottom Navigation */}
+            <MobileBottomNav />
+            
+            {/* PWA Initializer */}
+            <PWAInitializer />
+          </NotificationProvider>
         </ToastProvider>
       </body>
     </html>
