@@ -52,14 +52,22 @@ export default function TestNotificationsPage() {
       const sessionRes = await fetch('/api/auth/session');
       const session = await sessionRes.json();
       
-      if (!session.user) {
+      if (!session.authenticated || !session.user) {
         setStatus({ type: 'error', message: 'Please login first!' });
         return;
       }
 
+      const user_id = session.user.id;
+      const company_id = session.user.profile?.company_id;
+
+      if (!company_id) {
+        setStatus({ type: 'error', message: 'No company_id found in your profile!' });
+        return;
+      }
+
       await createNotification({
-        user_id: session.user.id,
-        company_id: session.user.company_id,
+        user_id,
+        company_id,
         ...testNotifications[index],
       });
       
