@@ -1,8 +1,9 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Plus, Upload, X, Trash2 } from 'lucide-react'
+import { Plus, Upload, X, Trash2, Truck } from 'lucide-react'
 import { sbBrowser } from '@/lib/supabase-browser'
+import { Input, Select, TextArea } from '@/components/ui'
 
 interface DeliveryItem {
   product_name: string
@@ -396,83 +397,55 @@ export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, d
 
         {/* Basic Info */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="delivery_date" className="block text-sm font-medium text-gray-700 mb-1">
-              Delivery Date *
-            </label>
-            <input
-              type="date"
-              id="delivery_date"
-              required
-              value={formData.delivery_date}
-              onChange={(e) => setFormData(prev => ({ ...prev, delivery_date: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
+          <Input
+            label="Delivery Date"
+            type="date"
+            required
+            value={formData.delivery_date}
+            onChange={(e) => setFormData(prev => ({ ...prev, delivery_date: e.target.value }))}
+            fullWidth
+          />
 
-          <div>
-            <label htmlFor="driver_name" className="block text-sm font-medium text-gray-700 mb-1">
-              Driver Name
-            </label>
-            <input
-              type="text"
-              id="driver_name"
-              value={formData.driver_name}
-              onChange={(e) => setFormData(prev => ({ ...prev, driver_name: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="e.g., John Smith"
-            />
-          </div>
+          <Input
+            label="Driver Name"
+            value={formData.driver_name}
+            onChange={(e) => setFormData(prev => ({ ...prev, driver_name: e.target.value }))}
+            placeholder="e.g., John Smith"
+            fullWidth
+          />
 
-          <div>
-            <label htmlFor="vehicle_number" className="block text-sm font-medium text-gray-700 mb-1">
-              Vehicle Number
-            </label>
-            <input
-              type="text"
-              id="vehicle_number"
-              value={formData.vehicle_number}
-              onChange={(e) => setFormData(prev => ({ ...prev, vehicle_number: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="e.g., TRK-001"
-            />
-          </div>
+          <Input
+            label="Vehicle Number"
+            value={formData.vehicle_number}
+            onChange={(e) => setFormData(prev => ({ ...prev, vehicle_number: e.target.value }))}
+            placeholder="e.g., TRK-001"
+            leftIcon={<Truck className="h-4 w-4" />}
+            fullWidth
+          />
         </div>
 
-        <div>
-          <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
-            Status
-          </label>
-          <select
-            id="status"
-            value={formData.status}
-            onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as any }))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="pending">Pending</option>
-            <option value="partial">In Transit (Partial)</option>
-            <option value="delivered">Delivered</option>
-          </select>
-        </div>
+        <Select
+          label="Status"
+          value={formData.status}
+          onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as any }))}
+          options={[
+            { value: 'pending', label: 'Pending' },
+            { value: 'partial', label: 'In Transit (Partial)' },
+            { value: 'delivered', label: 'Delivered' }
+          ]}
+          fullWidth
+        />
 
-        <div>
-          <label htmlFor="project_id" className="block text-sm font-medium text-gray-700 mb-1">
-            Project (Optional)
-          </label>
-          <select
-            id="project_id"
-            value={formData.projectId}
-            onChange={(e) => setFormData(prev => ({ ...prev, projectId: e.target.value }))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="">Select a project (optional)...</option>
-            {projects.map(project => (
-              <option key={project.id} value={project.id}>
-                {project.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <Select
+          label="Project (Optional)"
+          value={formData.projectId}
+          onChange={(e) => setFormData(prev => ({ ...prev, projectId: e.target.value }))}
+          options={[
+            { value: '', label: 'Select a project (optional)...' },
+            ...projects.map(project => ({ value: project.id, label: project.name }))
+          ]}
+          fullWidth
+        />
 
   {/* Items */}
         <div>
@@ -584,19 +557,14 @@ export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, d
           </div>
         </div>
 
-        <div>
-          <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">
-            Delivery Notes
-          </label>
-          <textarea
-            id="notes"
-            value={formData.notes}
-            onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-            rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Optional notes about the delivery..."
-          />
-        </div>
+        <TextArea
+          label="Delivery Notes"
+          value={formData.notes}
+          onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+          rows={3}
+          placeholder="Optional notes about the delivery..."
+          fullWidth
+        />
 
         {/* Attachments */}
         <div>
