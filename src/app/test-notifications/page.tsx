@@ -7,7 +7,7 @@ import { useNotifications } from '@/contexts/NotificationContext';
 import { Bell, CheckCircle, AlertCircle } from 'lucide-react';
 
 export default function TestNotificationsPage() {
-  const { createNotification, notifications, unreadCount } = useNotifications();
+  const { createNotification, notifications, unreadCount, fetchNotifications } = useNotifications();
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
@@ -63,6 +63,9 @@ export default function TestNotificationsPage() {
         ...testNotifications[index],
       });
       
+      // Refresh the notification list
+      await fetchNotifications();
+      
       setStatus({ type: 'success', message: 'Notification created! Check the bell icon above.' });
     } catch (error) {
       console.error('Error:', error);
@@ -82,9 +85,6 @@ export default function TestNotificationsPage() {
       if (!session.user) {
         setStatus({ type: 'error', message: 'Please login first!' });
         setLoading(false);
-        return;
-      }
-
       for (let i = 0; i < testNotifications.length; i++) {
         await createNotification({
           user_id: session.user.id,
@@ -92,6 +92,12 @@ export default function TestNotificationsPage() {
           ...testNotifications[i],
         });
         await new Promise(resolve => setTimeout(resolve, 300)); // 300ms delay
+      }
+      
+      // Refresh the notification list
+      await fetchNotifications();
+      
+      setStatus({ type: 'success', message: `Created ${testNotifications.length} notifications! Check the bell icon.` });
       }
       
       setStatus({ type: 'success', message: `Created ${testNotifications.length} notifications! Check the bell icon.` });

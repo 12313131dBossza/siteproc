@@ -140,13 +140,17 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
       const data = await response.json();
       
-      // Update local state
+      // Update local state immediately
       setNotifications(prev => [data.data, ...prev]);
       setUnreadCount(prev => prev + 1);
+      
+      // Also refresh from server to ensure sync
+      await fetchNotifications();
     } catch (error) {
       console.error('Error creating notification:', error);
+      throw error;
     }
-  }, []);
+  }, [fetchNotifications]);
 
   // Initial fetch
   useEffect(() => {
