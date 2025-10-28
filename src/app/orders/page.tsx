@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/app-layout";
 import { Button } from "@/components/ui/Button";
+import { SearchBar, FilterPanel, useFilters } from "@/components/ui";
 import {
   ShoppingCart,
   Plus,
@@ -86,6 +87,7 @@ export default function OrdersPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const { filters, setFilters } = useFilters();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [decisionModalOpen, setDecisionModalOpen] = useState(false);
   const [decisionAction, setDecisionAction] = useState<'approve' | 'reject'>('approve');
@@ -268,7 +270,19 @@ export default function OrdersPage() {
                          order.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          order.category?.toLowerCase().includes(searchQuery.toLowerCase());
     
-    return matchesTab && matchesSearch;
+    // Advanced filters
+    const matchesStatus = !filters.status || order.status === filters.status;
+    const matchesCategory = !filters.category || order.category === filters.category;
+    
+    // Date range filter
+    const matchesDateRange = (!filters.startDate || new Date(order.requested_at) >= new Date(filters.startDate)) &&
+                             (!filters.endDate || new Date(order.requested_at) <= new Date(filters.endDate));
+    
+    // Amount range filter
+    const matchesAmountRange = (!filters.minAmount || order.amount >= Number(filters.minAmount)) &&
+                               (!filters.maxAmount || order.amount <= Number(filters.maxAmount));
+    
+    return matchesTab && matchesSearch && matchesStatus && matchesCategory && matchesDateRange && matchesAmountRange;
   });
 
   const handleDecision = async () => {
@@ -519,18 +533,34 @@ export default function OrdersPage() {
                 </div>
               </div>
 
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <input
-                  type="text"
-                  placeholder="Search orders..."
+              <div className="w-full md:w-80">
+                <SearchBar
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  onChange={setSearchQuery}
+                  placeholder="Search by description or category..."
                 />
               </div>
             </div>
           </div>
+          
+          <FilterPanel
+            config={{
+              status: [
+                { label: 'Pending', value: 'pending' },
+                { label: 'Approved', value: 'approved' },
+                { label: 'Rejected', value: 'rejected' },
+              ],
+              category: [
+                { label: 'Materials', value: 'materials' },
+                { label: 'Equipment', value: 'equipment' },
+                { label: 'Labor', value: 'labor' },
+                { label: 'Services', value: 'services' },
+                { label: 'Other', value: 'other' },
+              ],
+            }}
+            filters={filters}
+            onChange={setFilters}
+          />
 
           {/* Orders List */}
           <div className="divide-y divide-gray-200">
