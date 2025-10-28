@@ -67,7 +67,10 @@ export async function POST(request: NextRequest) {
     // Check authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ 
+        error: 'Unauthorized',
+        details: authError?.message 
+      }, { status: 401 });
     }
 
     const body = await request.json();
@@ -108,17 +111,26 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('Error creating notification:', error);
-      return NextResponse.json({ error: 'Failed to create notification' }, { status: 500 });
+      return NextResponse.json({ 
+        error: 'Failed to create notification',
+        details: error.message,
+        code: error.code,
+        hint: error.hint
+      }, { status: 500 });
     }
 
     return NextResponse.json({
       ok: true,
       data: notification,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create notification error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        error: 'Internal server error',
+        details: error?.message || String(error),
+        stack: process.env.NODE_ENV === 'development' ? error?.stack : undefined
+      },
       { status: 500 }
     );
   }
