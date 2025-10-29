@@ -1,5 +1,4 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
@@ -30,7 +29,7 @@ const ALLOWED_FILE_TYPES = [
 // GET: List documents
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = await createClient();
 
     // Get authenticated user
     const {
@@ -73,7 +72,7 @@ export async function GET(request: NextRequest) {
         project:projects(id, name, code),
         order:purchase_orders(id, po_number),
         expense:expenses(id, description),
-        delivery:order_deliveries(id, delivery_date)
+        delivery:deliveries(id, delivery_date)
       `, { count: 'exact' })
       .eq('company_id', profile.company_id)
       .is('deleted_at', null)
@@ -127,7 +126,7 @@ export async function GET(request: NextRequest) {
 // POST: Upload document
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = await createClient();
 
     // Get authenticated user
     const {
@@ -238,7 +237,7 @@ export async function POST(request: NextRequest) {
         project:projects(id, name, code),
         order:purchase_orders(id, po_number),
         expense:expenses(id, description),
-        delivery:order_deliveries(id, delivery_date)
+        delivery:deliveries(id, delivery_date)
       `)
       .single();
 
@@ -261,7 +260,7 @@ export async function POST(request: NextRequest) {
 // DELETE: Soft delete document
 export async function DELETE(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = await createClient();
 
     // Get authenticated user
     const {

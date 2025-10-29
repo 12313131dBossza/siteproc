@@ -1,5 +1,4 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 
 // GET: Get signed URL for document download/preview
@@ -8,7 +7,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = await createClient();
 
     // Get authenticated user
     const {
@@ -72,7 +71,7 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = await createClient();
 
     // Get authenticated user
     const {
@@ -126,7 +125,7 @@ export async function PATCH(
         project:projects(id, name, code),
         order:purchase_orders(id, po_number),
         expense:expenses(id, description),
-        delivery:order_deliveries(id, delivery_date)
+        delivery:deliveries(id, delivery_date)
       `)
       .single();
 

@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS documents (
     project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
     order_id UUID REFERENCES purchase_orders(id) ON DELETE SET NULL,
     expense_id UUID REFERENCES expenses(id) ON DELETE SET NULL,
-    delivery_id UUID REFERENCES order_deliveries(id) ON DELETE SET NULL,
+    delivery_id UUID REFERENCES deliveries(id) ON DELETE SET NULL,
     
     -- Version Control
     version INTEGER DEFAULT 1,
