@@ -117,8 +117,9 @@ export default function GlobalSearch() {
   return (
     <>
       {/* Backdrop */}
+      {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black bg-opacity-50 z-50"
+        className="fixed inset-0 bg-black/80 backdrop-blur-md z-50"
         onClick={() => setIsOpen(false)}
       />
 
@@ -159,8 +160,17 @@ export default function GlobalSearch() {
           {query.length >= 2 && results && results.total === 0 && (
             <div className="p-8 text-center text-gray-500">
               <Search className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-              <p>No results found for "{query}"</p>
-              <p className="text-sm mt-2">Try a different search term</p>
+              <p className="font-medium text-gray-900">No results found for "{query}"</p>
+              <p className="text-sm mt-2">Try searching for:</p>
+              <ul className="text-sm mt-3 space-y-1 text-gray-600">
+                <li>• Order numbers or vendors</li>
+                <li>• Project names or addresses</li>
+                <li>• Product SKUs or names</li>
+                <li>• Expense categories</li>
+              </ul>
+              <p className="text-xs mt-4 text-gray-400">
+                Tip: Make sure you have data in your database first
+              </p>
             </div>
           )}
 
