@@ -521,25 +521,27 @@ export default function OrdersPage() {
             <div className="mt-4">
               <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Order Status</div>
               <div className="flex flex-wrap gap-1">
-                filteredOrders.map((order) => (
-                  <div key={order.id} className="p-6 hover:bg-gray-50 transition-colors">
-                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                      <div className="flex items-start gap-3 sm:gap-4 min-w-0">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
                     className={cn(
                       "px-4 py-2 rounded-lg font-medium text-sm transition-colors",
                       activeTab === tab.id
-                        <div className="flex-1 min-w-0">
-                          <div className="flex flex-wrap items-center gap-2 mb-1">
+                        ? "bg-blue-50 text-blue-700 border border-blue-200"
+                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                     )}
                   >
                     {tab.label}
                     {tab.count !== undefined && (
-                      <span className={cn(
-                        "ml-2 px-2 py-0.5 rounded-full text-xs",
-                        activeTab === tab.id
-                          ? "bg-blue-100 text-blue-700"
-                          : "bg-gray-100 text-gray-600"
-                      )}>
+                      <span
+                        className={cn(
+                          "ml-2 px-2 py-0.5 rounded-full text-xs",
+                          activeTab === tab.id
+                            ? "bg-blue-100 text-blue-700"
+                            : "bg-gray-100 text-gray-600"
+                        )}
+                      >
                         {tab.count}
                       </span>
                     )}
@@ -562,12 +564,14 @@ export default function OrdersPage() {
                   >
                     {tab.label}
                     {tab.count !== undefined && (
-                      <span className={cn(
-                      <div className="flex items-center gap-3 sm:self-start">
-                        <div className="sm:text-right text-left w-full sm:w-auto">
-                          <div className="text-lg font-bold text-gray-900 whitespace-nowrap sm:whitespace-normal">
-                          : "bg-gray-100 text-gray-600"
-                      )}>
+                      <span
+                        className={cn(
+                          "ml-2 px-2 py-0.5 rounded-full text-xs",
+                          activeTab === tab.id
+                            ? "bg-green-100 text-green-700"
+                            : "bg-gray-100 text-gray-600"
+                        )}
+                      >
                         {tab.count}
                       </span>
                     )}
@@ -599,13 +603,13 @@ export default function OrdersPage() {
             ) : (
               filteredOrders.map((order) => (
                 <div key={order.id} className="p-6 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-4">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                    <div className="flex items-start gap-3 sm:gap-4 min-w-0">
                       <div className="p-3 bg-gray-50 rounded-lg">
                         <Package className="h-5 w-5 text-gray-600" />
                       </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
                           <h4 className="font-semibold text-gray-900">{order.description}</h4>
                           <span className="text-sm text-gray-500">({order.category})</span>
                           <span className={cn(
@@ -628,7 +632,7 @@ export default function OrdersPage() {
                         <p className="text-sm text-gray-600 mb-2">
                           Project: {order.projects?.name || 'N/A'}
                         </p>
-                        <div className="flex items-center gap-4 text-xs text-gray-500">
+                        <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500">
                           <span>Created {format(new Date(order.created_at), "MMM dd, yyyy")}</span>
                           {order.approved_at && (
                             <span>Approved {format(new Date(order.approved_at), "MMM dd, yyyy")}</span>
@@ -639,9 +643,9 @@ export default function OrdersPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <div className="text-lg font-bold text-gray-900">
+                    <div className="flex items-center gap-3 sm:self-start">
+                      <div className="sm:text-right text-left w-full sm:w-auto">
+                        <div className="text-lg font-bold text-gray-900 whitespace-nowrap sm:whitespace-normal">
                           {formatCurrency(order.amount)}
                         </div>
                         <div className="text-sm text-gray-500">
