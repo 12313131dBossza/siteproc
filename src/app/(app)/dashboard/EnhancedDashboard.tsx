@@ -117,10 +117,15 @@ export default function EnhancedDashboard() {
       const response = await fetch('/api/reports/dashboard');
       const result = await response.json();
 
+      console.log('Dashboard API Response:', result);
+
       if (!response.ok || !result.success) {
         throw new Error(result.error || 'Failed to fetch dashboard data');
       }
 
+      console.log('Dashboard Data:', result.data);
+      console.log('Stats:', result.data?.stats);
+      
       setDashboardData(result.data);
     } catch (err: any) {
       console.error('Dashboard error:', err);
@@ -159,14 +164,19 @@ export default function EnhancedDashboard() {
 
   // Prepare budget health pie chart data
   const budgetHealthData = [
-    { name: 'Healthy', value: budgetHealth.healthy },
-    { name: 'Warning', value: budgetHealth.warning },
-    { name: 'Critical', value: budgetHealth.critical },
-    { name: 'Over Budget', value: budgetHealth.overBudget },
+    { name: 'Healthy', value: budgetHealth?.healthy || 0 },
+    { name: 'Warning', value: budgetHealth?.warning || 0 },
+    { name: 'Critical', value: budgetHealth?.critical || 0 },
+    { name: 'Over Budget', value: budgetHealth?.overBudget || 0 },
   ].filter(item => item.value > 0);
 
   // Prepare expense breakdown for pie chart (top 5)
-  const topExpenseCategories = expenseBreakdown.slice(0, 5);
+  const topExpenseCategories = (expenseBreakdown || []).slice(0, 5);
+  
+  // Check if we have monthly data
+  const hasMonthlyData = monthlyTrends && monthlyTrends.length > 0;
+  const hasTopVendors = topVendors && topVendors.length > 0;
+  const hasExpenseCategories = topExpenseCategories.length > 0;
 
   return (
     <div className="p-2 sm:p-4 md:p-6 space-y-4 sm:space-y-6 max-w-full overflow-hidden">
@@ -216,83 +226,101 @@ export default function EnhancedDashboard() {
       </div>
 
       {/* Charts Row 1: Monthly Trends */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Monthly Financial Trend */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-6">
+        <div className="bg-white rounded-lg sm:rounded-xl border border-gray-200 p-4 sm:p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">Monthly Financial Trends</h3>
-              <p className="text-sm text-gray-500">Last 6 months</p>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900">Monthly Financial Trends</h3>
+              <p className="text-xs sm:text-sm text-gray-500">Last 6 months</p>
             </div>
-            <Link href="/reports" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+            <Link href="/reports" className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 font-medium">
               View Details
             </Link>
           </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={monthlyTrends}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis 
-                dataKey="month" 
-                tick={{ fontSize: 12 }}
-                stroke="#9ca3af"
-              />
-              <YAxis 
-                tick={{ fontSize: 12 }}
-                stroke="#9ca3af"
-                tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
-              />
-              <Tooltip 
-                formatter={(value: any) => formatCurrency(value)}
-                contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
-              />
-              <Legend />
-              <Line 
-                type="monotone" 
-                dataKey="expenses" 
-                stroke={COLORS.danger} 
-                strokeWidth={2}
-                name="Expenses"
-                dot={{ r: 4 }}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="payments" 
-                stroke={COLORS.success} 
-                strokeWidth={2}
-                name="Payments"
-                dot={{ r: 4 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          {hasMonthlyData ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={monthlyTrends}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis 
+                  dataKey="month" 
+                  tick={{ fontSize: 12 }}
+                  stroke="#9ca3af"
+                />
+                <YAxis 
+                  tick={{ fontSize: 12 }}
+                  stroke="#9ca3af"
+                  tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+                />
+                <Tooltip 
+                  formatter={(value: any) => formatCurrency(value)}
+                  contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
+                />
+                <Legend />
+                <Line 
+                  type="monotone" 
+                  dataKey="expenses" 
+                  stroke={COLORS.danger} 
+                  strokeWidth={2}
+                  name="Expenses"
+                  dot={{ r: 4 }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="payments" 
+                  stroke={COLORS.success} 
+                  strokeWidth={2}
+                  name="Payments"
+                  dot={{ r: 4 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[300px] flex items-center justify-center text-gray-400">
+              <div className="text-center">
+                <BarChart3 className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No financial data yet</p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Budget Health Distribution */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-6">
+        <div className="bg-white rounded-lg sm:rounded-xl border border-gray-200 p-4 sm:p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">Project Budget Health</h3>
-              <p className="text-sm text-gray-500">Distribution by status</p>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900">Project Budget Health</h3>
+              <p className="text-xs sm:text-sm text-gray-500">Distribution by status</p>
             </div>
           </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={budgetHealthData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={(entry) => `${entry.name}: ${entry.value}`}
-                outerRadius={100}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {budgetHealthData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={BUDGET_HEALTH_COLORS[index % BUDGET_HEALTH_COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
+          {budgetHealthData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={budgetHealthData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={(entry) => `${entry.name}: ${entry.value}`}
+                  outerRadius={100}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {budgetHealthData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={BUDGET_HEALTH_COLORS[index % BUDGET_HEALTH_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[300px] flex items-center justify-center text-gray-400">
+              <div className="text-center">
+                <Activity className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No project data yet</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
