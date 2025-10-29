@@ -15,7 +15,8 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const companyId = session.profile?.company_id;
+    // Prefer the normalized companyId field, fall back to raw profile.company_id
+    const companyId = session.companyId || session.profile?.company_id;
     if (!companyId) {
       return NextResponse.json({ error: 'No company found' }, { status: 400 });
     }
