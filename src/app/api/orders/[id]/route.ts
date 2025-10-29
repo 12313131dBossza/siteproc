@@ -95,6 +95,13 @@ export async function PATCH(
 
     // Create in-app notification for order creator
     try {
+      console.log('🔔 Notification check:', {
+        order_created_by: order.created_by,
+        approver_id: profile.id,
+        is_same_user: order.created_by === profile.id,
+        will_notify: order.created_by && order.created_by !== profile.id
+      })
+
       if (order.created_by && order.created_by !== profile.id) {
         // Get approver's name
         const { data: approverProfile } = await supabase
@@ -107,6 +114,8 @@ export async function PATCH(
           ? `${approverProfile.first_name || ''} ${approverProfile.last_name || ''}`.trim() || profile.email
           : profile.email
 
+        console.log('🔔 Sending notification to user:', order.created_by)
+
         if (status === 'approved') {
           await notifyOrderApproval({
             orderId: orderId,
@@ -116,6 +125,7 @@ export async function PATCH(
             projectName: order.projects?.name || undefined,
             approverName
           })
+          console.log('✅ Order approval notification sent')
         } else {
           await notifyOrderRejection({
             orderId: orderId,
@@ -126,11 +136,20 @@ export async function PATCH(
             rejectionReason: rejection_reason || notes || undefined,
             rejectorName: approverName
           })
+          console.log('✅ Order rejection notification sent')
         }
         console.log(`✅ In-app notification sent to user ${order.created_by}`)
+      } else {
+        console.log('⚠️ Skipping notification:', {
+          reason: !order.created_by ? 'No created_by field' : 'Same user approving their own order'
+        })
       }
     } catch (notifError) {
-      console.error('Failed to create in-app notification:', notifError)
+      console.error('❌ Failed to create in-app notification:', notifError)
+      console.error('Notification error details:', {
+        message: notifError instanceof Error ? notifError.message : String(notifError),
+        stack: notifError instanceof Error ? notifError.stack : undefined
+      })
       // Don't fail the request if notification fails
     }
 
