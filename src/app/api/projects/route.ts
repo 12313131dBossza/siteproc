@@ -3,7 +3,7 @@ import { sbServer } from '@/lib/supabase-server'
 import { createServiceClient } from '@/lib/supabase-service'
 
 // GET /api/projects - List projects for user's company
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const supabase = await sbServer()
     
@@ -28,13 +28,40 @@ export async function GET() {
       return NextResponse.json({ error: 'No company associated' }, { status: 400 })
     }
 
+    // Get filter parameters
+    const { searchParams } = new URL(request.url)
+    const status = searchParams.get('status')
+    const minBudget = searchParams.get('minBudget')
+    const maxBudget = searchParams.get('maxBudget')
+    const startDate = searchParams.get('startDate')
+    const endDate = searchParams.get('endDate')
+
     // Get all projects for this company (broadened filter for visibility)
     console.log('🔍 Fetching projects for company_id:', profile.company_id)
-    const { data: projects, error } = await supabase
+    let query = supabase
       .from('projects')
       .select('*')
       .or(`company_id.eq.${profile.company_id},created_by.eq.${user.id}`)
       .order('created_at', { ascending: false })
+
+    // Apply filters
+    if (status) {
+      query = query.eq('status', status)
+    }
+    if (minBudget) {
+      query = query.gte('budget', Number(minBudget))
+    }
+    if (maxBudget) {
+      query = query.lte('budget', Number(maxBudget))
+    }
+    if (startDate) {
+      query = query.gte('created_at', startDate)
+    }
+    if (endDate) {
+      query = query.lte('created_at', endDate)
+    }
+
+    const { data: projects, error } = await query
 
     if (error) {
       console.error('❌ Projects fetch error (RLS):', error)
@@ -44,11 +71,30 @@ export async function GET() {
         console.log('🔄 Using service-role fallback for projects')
         
         const serviceSb = createServiceClient()
-        const { data: fallbackProjects, error: fallbackError } = await serviceSb
+        let fallbackQuery = serviceSb
           .from('projects')
           .select('*')
           .eq('company_id', profile.company_id)
           .order('created_at', { ascending: false })
+
+        // Apply same filters to fallback query
+        if (status) {
+          fallbackQuery = fallbackQuery.eq('status', status)
+        }
+        if (minBudget) {
+          fallbackQuery = fallbackQuery.gte('budget', Number(minBudget))
+        }
+        if (maxBudget) {
+          fallbackQuery = fallbackQuery.lte('budget', Number(maxBudget))
+        }
+        if (startDate) {
+          fallbackQuery = fallbackQuery.gte('created_at', startDate)
+        }
+        if (endDate) {
+          fallbackQuery = fallbackQuery.lte('created_at', endDate)
+        }
+
+        const { data: fallbackProjects, error: fallbackError } = await fallbackQuery
 
         if (fallbackError) {
           console.error('Service-role fallback also failed:', fallbackError)

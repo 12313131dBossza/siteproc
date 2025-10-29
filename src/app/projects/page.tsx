@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/Button";
 import { useRouter } from "next/navigation";
 import { FolderOpen, Plus, Search, DollarSign, Clock, CheckCircle, AlertCircle, TrendingUp, TrendingDown, BarChart3, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { FormModal, FormModalActions, Input, Select, SearchBar, FilterPanel, useFilters } from '@/components/ui';
+import { FormModal, FormModalActions, Input, Select, SearchBar } from '@/components/ui';
+import { ProjectsFilterPanel } from "@/components/ProjectsFilterPanel";
 
 interface Project {
   id: string;
@@ -33,7 +34,7 @@ export default function ProjectsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | undefined>();
   const [searchTerm, setSearchTerm] = useState("");
-  const { filters, setFilters } = useFilters();
+  const [appliedFilters, setAppliedFilters] = useState<Record<string, any>>({});
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [form, setForm] = useState({ name: "", budget: 0, code: "", status: "active" });
   const [isCreating, setIsCreating] = useState(false);
@@ -43,7 +44,18 @@ export default function ProjectsPage() {
     setLoading(true);
     setError(undefined);
     try {
-      const res = await fetch("/api/projects", { headers: { Accept: "application/json" } });
+      // Build query string from applied filters
+      const params = new URLSearchParams();
+      Object.entries(appliedFilters).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== '' && key !== 'budgetUsage' && key !== 'overBudget') {
+          params.append(key, String(value));
+        }
+      });
+      
+      const queryString = params.toString();
+      const url = `/api/projects${queryString ? `?${queryString}` : ''}`;
+      
+      const res = await fetch(url, { headers: { Accept: "application/json" } });
       const json = await res.json().catch(()=>({}));
       if (res.ok) {
         const projectsData = Array.isArray(json) ? json : (json.data || []);
@@ -68,7 +80,7 @@ export default function ProjectsPage() {
     setLoading(false);
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [appliedFilters]);
 
   async function createProject() {
     // Prevent double submission
@@ -116,21 +128,25 @@ export default function ProjectsPage() {
       );
     }
     
-    // Advanced filters
-    if (filters.status) {
-      filtered = filtered.filter(p => p.status === filters.status);
+    // Client-side only filters (require calculated data)
+    if (appliedFilters.budgetUsage) {
+      const threshold = Number(appliedFilters.budgetUsage);
+      filtered = filtered.filter(p => {
+        const actual = p.actual_expenses ?? p.rollup?.actual_expenses ?? 0;
+        const usage = p.budget > 0 ? (actual / p.budget) * 100 : 0;
+        return usage >= threshold;
+      });
     }
     
-    if (filters.minBudget) {
-      filtered = filtered.filter(p => Number(p.budget) >= Number(filters.minBudget));
-    }
-    
-    if (filters.maxBudget) {
-      filtered = filtered.filter(p => Number(p.budget) <= Number(filters.maxBudget));
+    if (appliedFilters.overBudget === 'true') {
+      filtered = filtered.filter(p => {
+        const actual = p.actual_expenses ?? p.rollup?.actual_expenses ?? 0;
+        return actual > p.budget;
+      });
     }
     
     return filtered;
-  }, [projects, activeTab, searchTerm, filters]);
+  }, [projects, activeTab, searchTerm, appliedFilters]);
 
   const stats = useMemo(() => {
     const totalBudget = projects.reduce((sum, p) => sum + Number(p.budget), 0);
@@ -198,41 +214,8 @@ export default function ProjectsPage() {
             </div>
           </div>
           
-          <FilterPanel
-            config={{
-              status: [
-                { label: 'Active', value: 'active' },
-                { label: 'On Hold', value: 'on_hold' },
-                { label: 'Closed', value: 'closed' },
-              ],
-              customFilters: [
-                {
-                  label: 'Min Budget',
-                  options: [
-                    { label: '$0+', value: '0' },
-                    { label: '$10k+', value: '10000' },
-                    { label: '$50k+', value: '50000' },
-                    { label: '$100k+', value: '100000' },
-                  ],
-                  value: filters.minBudget || '',
-                  onChange: (value) => setFilters({ ...filters, minBudget: value }),
-                },
-                {
-                  label: 'Max Budget',
-                  options: [
-                    { label: 'No Limit', value: '' },
-                    { label: '$50k', value: '50000' },
-                    { label: '$100k', value: '100000' },
-                    { label: '$500k', value: '500000' },
-                  ],
-                  value: filters.maxBudget || '',
-                  onChange: (value) => setFilters({ ...filters, maxBudget: value }),
-                },
-              ],
-            }}
-            filters={filters}
-            onChange={setFilters}
-          />
+          {/* Projects Filter Panel */}
+          <ProjectsFilterPanel onFiltersChange={setAppliedFilters} />
         </div>
 
         {loading ? (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">{Array.from({ length: 6 }).map((_, i) => (<div key={i} className="animate-pulse bg-white border border-gray-200 rounded-lg p-4 md:p-6"><div className="h-5 w-40 bg-gray-200 rounded mb-2" /><div className="h-3 w-24 bg-gray-100 rounded mb-4" /><div className="grid grid-cols-3 gap-3"><div className="h-4 bg-gray-100 rounded" /><div className="h-4 bg-gray-100 rounded" /><div className="h-4 bg-gray-100 rounded" /></div></div>))}</div>) : filteredProjects.length === 0 ? (<div className="text-center py-12 bg-white rounded-lg border border-gray-200"><FolderOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" /><h3 className="text-lg font-medium text-gray-900 mb-2">{searchTerm ? "No projects found" : "No projects yet"}</h3><p className="text-gray-500 mb-4">{searchTerm ? "Try adjusting your search criteria" : "Create your first project to track budget, actuals, and deliveries"}</p>{!searchTerm && (<Button onClick={() => setShowCreateModal(true)} className="mx-auto"><Plus className="h-4 w-4 mr-2" />Create Project</Button>)}</div>) : (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">{filteredProjects.map(p => (<ProjectCard key={p.id} project={p} formatCurrency={formatCurrency} />))}</div>)}
