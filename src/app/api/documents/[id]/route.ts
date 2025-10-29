@@ -121,11 +121,11 @@ export async function PATCH(
       .is('deleted_at', null)
       .select(`
         *,
-        profiles:uploaded_by(id, full_name, email),
-        projects:project_id(id, name, code),
-        purchase_orders:order_id(id, po_number),
-        expenses:expense_id(id, description),
-        deliveries:delivery_id(id, delivery_date)
+        profiles!uploaded_by(id, full_name, email),
+        projects(id, name, code),
+        purchase_orders(id, po_number),
+        expenses(id, description),
+        deliveries(id, delivery_date)
       `)
       .single();
 

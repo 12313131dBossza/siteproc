@@ -68,11 +68,11 @@ export async function GET(request: NextRequest) {
       .from('documents')
       .select(`
         *,
-        profiles:uploaded_by(id, full_name, email),
-        projects:project_id(id, name, code),
-        purchase_orders:order_id(id, po_number),
-        expenses:expense_id(id, description),
-        deliveries:delivery_id(id, delivery_date)
+        profiles!uploaded_by(id, full_name, email),
+        projects(id, name, code),
+        purchase_orders(id, po_number),
+        expenses(id, description),
+        deliveries(id, delivery_date)
       `, { count: 'exact' })
       .eq('company_id', profile.company_id)
       .is('deleted_at', null)
@@ -231,14 +231,7 @@ export async function POST(request: NextRequest) {
         expense_id: expenseId || null,
         delivery_id: deliveryId || null,
       })
-      .select(`
-        *,
-        profiles:uploaded_by(id, full_name, email),
-        projects:project_id(id, name, code),
-        purchase_orders:order_id(id, po_number),
-        expenses:expense_id(id, description),
-        deliveries:delivery_id(id, delivery_date)
-      `)
+      .select()
       .single();
 
     if (dbError) {
@@ -250,7 +243,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Database error: ${dbError.message}` }, { status: 500 });
     }
 
-    return NextResponse.json({ document }, { status: 201 });
+    // Fetch the full document with relationships
+    const { data: fullDocument } = await supabase
+      .from('documents')
+      .select(`
+        *,
+        profiles!uploaded_by(id, full_name, email),
+        projects(id, name, code),
+        purchase_orders(id, po_number),
+        expenses(id, description),
+        deliveries(id, delivery_date)
+      `)
+      .eq('id', document.id)
+      .single();
+
+    return NextResponse.json({ document: fullDocument || document }, { status: 201 });
   } catch (error: any) {
     console.error('Documents POST error:', error);
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
