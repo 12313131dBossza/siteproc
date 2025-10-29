@@ -42,8 +42,10 @@ export async function GET() {
       
       // Raw data for KPIs
       supabase.from('projects').select('id, status, budget, actual_cost').eq('company_id', companyId),
-      supabase.from('orders').select('id, status, created_at').eq('company_id', companyId),
-      supabase.from('deliveries').select('id, status, created_at').eq('company_id', companyId),
+      // Use purchase_orders which powers the Orders page
+      supabase.from('purchase_orders').select('id, status, created_at, amount, delivery_progress, ordered_qty, delivered_qty').eq('company_id', companyId),
+      // Deliveries table (may be optional in some deployments)
+      supabase.from('deliveries').select('id, status, created_at, company_id').eq('company_id', companyId),
       supabase.from('payments').select('id, status, amount, payment_date').eq('company_id', companyId),
     ]);
 
@@ -52,39 +54,49 @@ export async function GET() {
     const monthlyFinancial = monthlyFinancialRes.status === 'fulfilled' && monthlyFinancialRes.value.data || [];
     const vendorSummary = vendorSummaryRes.status === 'fulfilled' && vendorSummaryRes.value.data || [];
     const expenseCategory = expenseCategoryRes.status === 'fulfilled' && expenseCategoryRes.value.data || [];
-    const projects = projectsRes.status === 'fulfilled' && projectsRes.value.data || [];
-    const orders = ordersRes.status === 'fulfilled' && ordersRes.value.data || [];
-    const deliveries = deliveriesRes.status === 'fulfilled' && deliveriesRes.value.data || [];
+  const projects = projectsRes.status === 'fulfilled' && projectsRes.value.data || [];
+  const orders = ordersRes.status === 'fulfilled' && ordersRes.value.data || [];
+  const deliveries = deliveriesRes.status === 'fulfilled' && deliveriesRes.value.data || [];
     const payments = paymentsRes.status === 'fulfilled' && paymentsRes.value.data || [];
 
     // Calculate KPI stats
+    // Normalize helpers
+    const toLower = (s: any) => (typeof s === 'string' ? s.toLowerCase() : s);
+
+    // Derive delivery stats from purchase_orders.delivery_progress first; fall back to deliveries table
+    const poPending = orders.filter((o: any) => toLower(o.delivery_progress) === 'pending_delivery' || (toLower(o.status) === 'approved' && (!o.delivered_qty || Number(o.delivered_qty) <= 0))).length;
+    const poPartial = orders.filter((o: any) => toLower(o.delivery_progress) === 'partially_delivered').length;
+    const poDelivered = orders.filter((o: any) => ['completed','delivered'].includes(toLower(o.delivery_progress))).length;
+
+    const deliveriesStats = {
+      total: deliveries.length || (poPending + poPartial + poDelivered),
+      pending: (poPending) || deliveries.filter((d: any) => toLower(d.status) === 'pending').length,
+      delivered: (poDelivered) || deliveries.filter((d: any) => toLower(d.status) === 'delivered').length,
+      partial: (poPartial) || deliveries.filter((d: any) => toLower(d.status) === 'partial').length,
+    };
+
     const stats = {
       projects: {
         total: projects.length,
-        active: projects.filter((p: any) => p.status === 'active').length,
+        active: projects.filter((p: any) => toLower(p.status) === 'active').length,
         totalBudget: projects.reduce((sum: number, p: any) => sum + (Number(p.budget) || 0), 0),
         totalSpent: projects.reduce((sum: number, p: any) => sum + (Number(p.actual_cost) || 0), 0),
       },
       orders: {
         total: orders.length,
-        pending: orders.filter((o: any) => o.status === 'pending').length,
-        approved: orders.filter((o: any) => o.status === 'approved').length,
+        pending: orders.filter((o: any) => toLower(o.status) === 'pending').length,
+        approved: orders.filter((o: any) => toLower(o.status) === 'approved').length,
         thisMonth: orders.filter((o: any) => {
           const date = new Date(o.created_at);
           const now = new Date();
           return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
         }).length,
       },
-      deliveries: {
-        total: deliveries.length,
-        pending: deliveries.filter((d: any) => d.status === 'pending').length,
-        delivered: deliveries.filter((d: any) => d.status === 'delivered').length,
-        partial: deliveries.filter((d: any) => d.status === 'partial').length,
-      },
+      deliveries: deliveriesStats,
       payments: {
         total: payments.reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0),
-        paid: payments.filter((p: any) => p.status === 'paid').reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0),
-        unpaid: payments.filter((p: any) => p.status === 'unpaid').reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0),
+        paid: payments.filter((p: any) => toLower(p.status) === 'paid').reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0),
+        unpaid: payments.filter((p: any) => toLower(p.status) === 'unpaid').reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0),
         thisMonth: payments.filter((p: any) => {
           if (!p.payment_date) return false;
           const date = new Date(p.payment_date);
