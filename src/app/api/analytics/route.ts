@@ -10,13 +10,29 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-    const startDate = searchParams.get('startDate')
-    const endDate = searchParams.get('endDate')
+    const dateRange = searchParams.get('range') || 'month'
 
-    // Get date range (default to current month)
+    // Calculate date range based on selection
     const now = new Date()
-    const start = startDate ? new Date(startDate) : new Date(now.getFullYear(), now.getMonth(), 1)
-    const end = endDate ? new Date(endDate) : now
+    let start: Date
+    let end: Date = now
+
+    switch (dateRange) {
+      case 'today':
+        start = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        break
+      case 'week':
+        start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7)
+        break
+      case 'month':
+        start = new Date(now.getFullYear(), now.getMonth(), 1)
+        break
+      case 'year':
+        start = new Date(now.getFullYear(), 0, 1)
+        break
+      default:
+        start = new Date(now.getFullYear(), now.getMonth(), 1)
+    }
 
     // Fetch all relevant data
     const [ordersResult, expensesResult, projectsResult, paymentsResult] = await Promise.all([

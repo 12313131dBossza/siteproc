@@ -50,7 +50,7 @@ export function PieChart({
           cx="50%"
           cy="50%"
           labelLine={false}
-          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+          label={false}
           outerRadius={100}
           fill="#8884d8"
           dataKey={dataKey}
@@ -69,7 +69,16 @@ export function PieChart({
             padding: '8px 12px'
           }}
         />
-        <Legend />
+        <Legend 
+          verticalAlign="bottom"
+          height={36}
+          formatter={(value, entry: any) => {
+            const item = data.find((d) => d[nameKey] === value)
+            const total = data.reduce((sum, d) => sum + d[dataKey], 0)
+            const percent = item ? ((item[dataKey] / total) * 100).toFixed(0) : 0
+            return `${value}: ${percent}%`
+          }}
+        />
       </RechartsPieChart>
     </ResponsiveContainer>
   )

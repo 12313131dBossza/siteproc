@@ -69,7 +69,7 @@ export default function AnalyticsPage() {
   const fetchAnalytics = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/analytics')
+      const response = await fetch(`/api/analytics?range=${dateRange}`)
       const result = await response.json()
       
       if (result.ok) {
@@ -80,6 +80,66 @@ export default function AnalyticsPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleExport = () => {
+    if (!data) return
+
+    // Create CSV content
+    const csv = []
+    
+    // Header
+    csv.push('SiteProc Analytics Report')
+    csv.push(`Date Range: ${dateRange}`)
+    csv.push(`Generated: ${new Date().toLocaleString()}`)
+    csv.push('')
+    
+    // KPIs
+    csv.push('KEY PERFORMANCE INDICATORS')
+    csv.push('Metric,Value')
+    csv.push(`Total Revenue,${data.kpis.totalRevenue}`)
+    csv.push(`Total Expenses,${data.kpis.totalExpenses}`)
+    csv.push(`Net Profit,${data.kpis.profit}`)
+    csv.push(`Profit Margin,${data.kpis.profitMargin.toFixed(2)}%`)
+    csv.push(`Active Projects,${data.kpis.activeProjects}`)
+    csv.push(`Total Projects,${data.kpis.totalProjects}`)
+    csv.push(`Budget Utilization,${data.kpis.budgetUtilization.toFixed(2)}%`)
+    csv.push('')
+    
+    // Project Performance
+    csv.push('PROJECT PERFORMANCE')
+    csv.push('Project,Code,Budget,Spent,Remaining,Utilization %,Status')
+    data.charts.projectPerformance.forEach(p => {
+      csv.push(`"${p.name}",${p.code},${p.budget},${p.spent},${p.remaining},${p.utilization.toFixed(2)},${p.status}`)
+    })
+    csv.push('')
+    
+    // Expenses by Category
+    csv.push('EXPENSES BY CATEGORY')
+    csv.push('Category,Amount')
+    data.charts.expensesByCategory.forEach(c => {
+      csv.push(`${c.name},${c.value}`)
+    })
+    csv.push('')
+    
+    // Top Vendors
+    csv.push('TOP VENDORS')
+    csv.push('Vendor,Amount')
+    data.charts.topVendors.forEach(v => {
+      csv.push(`${v.vendor},${v.amount}`)
+    })
+    
+    // Create and download file
+    const csvContent = csv.join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `analytics-report-${dateRange}-${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
   }
 
   if (loading) {
@@ -132,7 +192,7 @@ export default function AnalyticsPage() {
               Refresh
             </Button>
             
-            <Button>
+            <Button onClick={handleExport}>
               <Download className="w-4 h-4 mr-2" />
               Export Report
             </Button>
