@@ -64,8 +64,8 @@ export default function GlobalSearch() {
       projects: `/projects/${id}`,
       deliveries: `/deliveries/${id}`,
       expenses: `/expenses/${id}`,
-      payments: `/payments`,
-      products: `/products`
+      payments: `/payments/${id}`,
+      products: `/products/${id}`
     }
     
     router.push(routes[type] || '/')
@@ -196,19 +196,19 @@ export default function GlobalSearch() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="font-medium text-gray-900 truncate">
-                              {type === 'orders' && item.order_number}
-                              {type === 'projects' && item.name}
+                              {type === 'orders' && (item.description || item.vendor || 'Order')}
+                              {type === 'projects' && (item.name || item.code)}
                               {type === 'deliveries' && item.delivery_number}
                               {type === 'expenses' && item.vendor}
                               {type === 'payments' && item.vendor}
                               {type === 'products' && item.name}
                             </div>
                             <div className="text-sm text-gray-600 truncate">
-                              {type === 'orders' && (item.description || item.vendor)}
-                              {type === 'projects' && item.address}
+                              {type === 'orders' && (item.vendor || item.product_name || item.category)}
+                              {type === 'projects' && (item.code || `Budget: $${parseFloat(item.budget || 0).toLocaleString()}`)}
                               {type === 'deliveries' && item.purchase_orders?.projects?.name}
                               {type === 'expenses' && item.description}
-                              {type === 'payments' && `${item.payment_method} - ${item.reference_number || 'N/A'}`}
+                              {type === 'payments' && `${item.payment_method || 'Payment'} - ${item.reference_number || 'N/A'}`}
                               {type === 'products' && (item.sku || item.category)}
                             </div>
                             <div className="flex items-center gap-3 mt-1">
