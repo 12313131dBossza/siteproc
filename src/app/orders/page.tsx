@@ -521,15 +521,15 @@ export default function OrdersPage() {
             <div className="mt-4">
               <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Order Status</div>
               <div className="flex flex-wrap gap-1">
-                {tabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
+                filteredOrders.map((order) => (
+                  <div key={order.id} className="p-6 hover:bg-gray-50 transition-colors">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                      <div className="flex items-start gap-3 sm:gap-4 min-w-0">
                     className={cn(
                       "px-4 py-2 rounded-lg font-medium text-sm transition-colors",
                       activeTab === tab.id
-                        ? "bg-blue-50 text-blue-700 border border-blue-200"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
                     )}
                   >
                     {tab.label}
@@ -563,9 +563,9 @@ export default function OrdersPage() {
                     {tab.label}
                     {tab.count !== undefined && (
                       <span className={cn(
-                        "ml-2 px-2 py-0.5 rounded-full text-xs",
-                        activeTab === tab.id
-                          ? "bg-green-100 text-green-700"
+                      <div className="flex items-center gap-3 sm:self-start">
+                        <div className="sm:text-right text-left w-full sm:w-auto">
+                          <div className="text-lg font-bold text-gray-900 whitespace-nowrap sm:whitespace-normal">
                           : "bg-gray-100 text-gray-600"
                       )}>
                         {tab.count}

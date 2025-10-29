@@ -542,9 +542,9 @@ export default function DeliveriesPage() {
                       "border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow",
                       delivery.status === 'delivered' && "bg-green-50 border-green-200"
                     )}>
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
                             <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
                               {delivery.order_id}
                             </span>
@@ -574,8 +574,8 @@ export default function DeliveriesPage() {
                             </div>
                           )}
                         </div>
-                        <div className="text-right">
-                          <div className="text-lg font-bold text-gray-900">{formatCurrency(delivery.total_amount)}</div>
+                        <div className="sm:text-right text-left w-full sm:w-auto flex-shrink-0">
+                          <div className="text-lg font-bold text-gray-900 whitespace-nowrap sm:whitespace-normal">{formatCurrency(delivery.total_amount)}</div>
                           <div className="text-sm text-gray-500">{delivery.items?.length || 0} items</div>
                         </div>
                       </div>
