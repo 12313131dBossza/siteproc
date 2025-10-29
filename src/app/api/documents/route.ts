@@ -68,11 +68,11 @@ export async function GET(request: NextRequest) {
       .from('documents')
       .select(`
         *,
-        uploaded_by_profile:profiles!uploaded_by(id, full_name, email),
-        project:projects(id, name, code),
-        order:purchase_orders(id, po_number),
-        expense:expenses(id, description),
-        delivery:deliveries(id, delivery_date)
+        profiles:uploaded_by(id, full_name, email),
+        projects:project_id(id, name, code),
+        purchase_orders:order_id(id, po_number),
+        expenses:expense_id(id, description),
+        deliveries:delivery_id(id, delivery_date)
       `, { count: 'exact' })
       .eq('company_id', profile.company_id)
       .is('deleted_at', null)
@@ -233,11 +233,11 @@ export async function POST(request: NextRequest) {
       })
       .select(`
         *,
-        uploaded_by_profile:profiles!uploaded_by(id, full_name, email),
-        project:projects(id, name, code),
-        order:purchase_orders(id, po_number),
-        expense:expenses(id, description),
-        delivery:deliveries(id, delivery_date)
+        profiles:uploaded_by(id, full_name, email),
+        projects:project_id(id, name, code),
+        purchase_orders:order_id(id, po_number),
+        expenses:expense_id(id, description),
+        deliveries:delivery_id(id, delivery_date)
       `)
       .single();
 

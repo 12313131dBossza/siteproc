@@ -20,7 +20,7 @@ interface Document {
   title: string | null;
   category: string | null;
   created_at: string;
-  uploaded_by_profile: {
+  profiles: {
     full_name: string;
   };
 }
@@ -193,7 +193,7 @@ export default function AssociatedDocuments({
                 <div className="flex items-center gap-3 text-xs text-gray-500">
                   <span>{formatFileSize(doc.file_size)}</span>
                   <span>•</span>
-                  <span>{doc.uploaded_by_profile?.full_name}</span>
+                  <span>{doc.profiles?.full_name}</span>
                   <span>•</span>
                   <span>{formatDate(doc.created_at)}</span>
                   {doc.category && (

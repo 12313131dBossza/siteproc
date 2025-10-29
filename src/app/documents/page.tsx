@@ -46,15 +46,15 @@ interface Document {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
-  uploaded_by_profile: {
+  profiles: {
     id: string;
     full_name: string;
     email: string;
   };
-  project?: { id: string; name: string; code: string };
-  order?: { id: string; po_number: string };
-  expense?: { id: string; description: string };
-  delivery?: { id: string; delivery_date: string };
+  projects?: { id: string; name: string; code: string };
+  purchase_orders?: { id: string; po_number: string };
+  expenses?: { id: string; description: string };
+  deliveries?: { id: string; delivery_date: string };
 }
 
 export default function DocumentsPage() {
@@ -367,25 +367,25 @@ export default function DocumentsPage() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm">
-                        <p className="text-gray-900">{doc.uploaded_by_profile?.full_name}</p>
+                        <p className="text-gray-900">{doc.profiles?.full_name}</p>
                         <p className="text-gray-500">{formatDate(doc.created_at)}</p>
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-xs space-y-1">
-                        {doc.project && (
+                        {doc.projects && (
                           <div className="text-blue-600">
-                            Project: {doc.project.name}
+                            Project: {doc.projects.name}
                           </div>
                         )}
-                        {doc.order && (
+                        {doc.purchase_orders && (
                           <div className="text-green-600">
-                            Order: {doc.order.po_number}
+                            Order: {doc.purchase_orders.po_number}
                           </div>
                         )}
-                        {doc.expense && (
+                        {doc.expenses && (
                           <div className="text-purple-600">
-                            Expense: {doc.expense.description}
+                            Expense: {doc.expenses.description}
                           </div>
                         )}
                       </div>
