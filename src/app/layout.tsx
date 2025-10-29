@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import "./mobile.css";
 import Link from 'next/link'
 import { Suspense } from 'react'
 import { ToastProvider } from '@/components/ui/Toast'
@@ -42,8 +43,8 @@ export const viewport: Viewport = {
   themeColor: "#0066cc",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  maximumScale: 5, // Allow zoom for accessibility
+  userScalable: true, // Allow pinch-to-zoom
   viewportFit: "cover",
 };
 

@@ -1,0 +1,157 @@
+/* Mobile Optimization Global Styles */
+
+/* Ensure touch-friendly minimum sizes */
+@layer components {
+  .btn-touch {
+    @apply min-h-[44px] px-4 py-2 touch-manipulation;
+  }
+
+  .input-touch {
+    @apply min-h-[44px] px-3 py-2 touch-manipulation;
+  }
+
+  /* Mobile-friendly cards */
+  .mobile-card {
+    @apply bg-white border border-gray-200 rounded-lg p-4 shadow-sm;
+  }
+
+  /* Responsive table utilities */
+  .table-scroll {
+    @apply overflow-x-auto -mx-4 sm:mx-0;
+  }
+
+  .table-scroll table {
+    @apply min-w-full;
+  }
+
+  /* Mobile modal full screen */
+  .modal-mobile-full {
+    @apply fixed inset-0 sm:relative sm:inset-auto sm:rounded-lg;
+  }
+
+  /* Better mobile spacing */
+  .container-mobile {
+    @apply px-4 sm:px-6 lg:px-8;
+  }
+
+  /* Touch-friendly action buttons */
+  .action-btn {
+    @apply p-2 sm:p-1 hover:bg-gray-100 rounded touch-manipulation;
+  }
+
+  /* Mobile-friendly search bar */
+  .search-mobile {
+    @apply w-full sm:w-64 md:w-96;
+  }
+
+  /* Mobile menu improvements */
+  .mobile-menu-item {
+    @apply flex items-center gap-3 px-4 py-3 sm:py-2 text-base sm:text-sm touch-manipulation;
+  }
+
+  /* Full width buttons on mobile */
+  .btn-mobile-full {
+    @apply w-full sm:w-auto;
+  }
+
+  /* Mobile-friendly spacing */
+  .section-mobile {
+    @apply space-y-4 sm:space-y-6;
+  }
+
+  /* Sticky header on mobile */
+  .sticky-mobile-header {
+    @apply sticky top-0 z-10 bg-white border-b border-gray-200;
+  }
+
+  /* Bottom action bar for mobile */
+  .mobile-bottom-bar {
+    @apply fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 sm:relative sm:border-0 sm:p-0;
+  }
+}
+
+/* Improve scrolling on iOS */
+@supports (-webkit-overflow-scrolling: touch) {
+  .overflow-x-auto,
+  .overflow-y-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Prevent zoom on input focus (iOS) */
+@media screen and (max-width: 640px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="search"],
+  input[type="date"],
+  input[type="time"],
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* Better tap highlight */
+* {
+  -webkit-tap-highlight-color: rgba(59, 130, 246, 0.1);
+}
+
+/* Improve button active states on mobile */
+button:active,
+a:active {
+  @apply opacity-75 transition-opacity duration-75;
+}
+
+/* Mobile-safe viewport */
+@supports (height: 100dvh) {
+  .min-h-screen-mobile {
+    min-height: 100dvh;
+  }
+}
+
+/* Hide scrollbar but keep functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Mobile table improvements */
+@media (max-width: 640px) {
+  table {
+    @apply text-sm;
+  }
+
+  th, td {
+    @apply px-3 py-2;
+  }
+}
+
+/* Safe area insets for notched devices */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+/* Better focus states for accessibility */
+@media (hover: none) and (pointer: coarse) {
+  button:focus,
+  a:focus,
+  input:focus,
+  select:focus,
+  textarea:focus {
+    @apply outline-none ring-2 ring-blue-500 ring-offset-2;
+  }
+}
