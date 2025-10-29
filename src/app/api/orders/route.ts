@@ -17,6 +17,12 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const projectId = searchParams.get('project_id')
     const status = searchParams.get('status')
+    const vendor = searchParams.get('vendor')
+    const startDate = searchParams.get('startDate')
+    const endDate = searchParams.get('endDate')
+    const minAmount = searchParams.get('minAmount')
+    const maxAmount = searchParams.get('maxAmount')
+    const deliveryProgress = searchParams.get('delivery_progress')
     
     // Broadened filter: company_id OR created_by (for visibility during migration)
     let query = supabase
@@ -57,12 +63,37 @@ export async function GET(request: NextRequest) {
       .or(`company_id.eq.${profile.company_id},created_by.eq.${profile.id}`)
       .order('created_at', { ascending: false })
 
+    // Apply filters
     if (projectId) {
       query = query.eq('project_id', projectId)
     }
 
     if (status) {
       query = query.eq('status', status)
+    }
+
+    if (vendor) {
+      query = query.ilike('vendor', `%${vendor}%`)
+    }
+
+    if (startDate) {
+      query = query.gte('created_at', startDate)
+    }
+
+    if (endDate) {
+      query = query.lte('created_at', endDate)
+    }
+
+    if (minAmount) {
+      query = query.gte('amount', Number(minAmount))
+    }
+
+    if (maxAmount) {
+      query = query.lte('amount', Number(maxAmount))
+    }
+
+    if (deliveryProgress) {
+      query = query.eq('delivery_progress', deliveryProgress)
     }
 
     const { data: orders, error } = await query
@@ -123,11 +154,30 @@ export async function GET(request: NextRequest) {
           .eq('company_id', profile.company_id)
           .order('created_at', { ascending: false })
 
+        // Apply same filters to fallback query
         if (projectId) {
           fallbackQuery = fallbackQuery.eq('project_id', projectId)
         }
         if (status) {
           fallbackQuery = fallbackQuery.eq('status', status)
+        }
+        if (vendor) {
+          fallbackQuery = fallbackQuery.ilike('vendor', `%${vendor}%`)
+        }
+        if (startDate) {
+          fallbackQuery = fallbackQuery.gte('created_at', startDate)
+        }
+        if (endDate) {
+          fallbackQuery = fallbackQuery.lte('created_at', endDate)
+        }
+        if (minAmount) {
+          fallbackQuery = fallbackQuery.gte('amount', Number(minAmount))
+        }
+        if (maxAmount) {
+          fallbackQuery = fallbackQuery.lte('amount', Number(maxAmount))
+        }
+        if (deliveryProgress) {
+          fallbackQuery = fallbackQuery.eq('delivery_progress', deliveryProgress)
         }
 
         const { data: fallbackOrders, error: fallbackError } = await fallbackQuery

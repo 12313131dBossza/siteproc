@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/app-layout";
 import { Button } from "@/components/ui/Button";
-import { SearchBar, FilterPanel, useFilters } from "@/components/ui";
+import { SearchBar } from "@/components/ui";
+import { OrdersFilterPanel } from "@/components/OrdersFilterPanel";
 import {
   ShoppingCart,
   Plus,
@@ -37,6 +38,7 @@ interface Order {
   amount: number;
   description: string;
   category: string;
+  vendor?: string | null;
   status: "pending" | "approved" | "rejected";
   requested_by: string;
   requested_at: string;
@@ -82,12 +84,13 @@ interface TabConfig {
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [projects, setProjects] = useState<Array<{ id: string; name: string }>>([]);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const { filters, setFilters } = useFilters();
+  const [appliedFilters, setAppliedFilters] = useState<Record<string, any>>({});
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [decisionModalOpen, setDecisionModalOpen] = useState(false);
   const [decisionAction, setDecisionAction] = useState<'approve' | 'reject'>('approve');
@@ -100,8 +103,9 @@ export default function OrdersPage() {
 
   useEffect(() => {
     fetchUserProfile();
+    fetchProjects();
     fetchOrders();
-  }, []);
+  }, [appliedFilters]);
 
   const fetchUserProfile = async () => {
     try {
@@ -121,6 +125,19 @@ export default function OrdersPage() {
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
+    }
+  };
+
+  const fetchProjects = async () => {
+    try {
+      const response = await fetch('/api/projects');
+      if (!response.ok) {
+        throw new Error('Failed to fetch projects');
+      }
+      const data = await response.json();
+      setProjects(data.data || data.projects || []);
+    } catch (error) {
+      console.error('Error fetching projects:', error);
     }
   };
 
@@ -157,8 +174,19 @@ export default function OrdersPage() {
     try {
       setLoading(true);
       
+      // Build query string from applied filters
+      const params = new URLSearchParams();
+      Object.entries(appliedFilters).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== '') {
+          params.append(key, String(value));
+        }
+      });
+      
+      const queryString = params.toString();
+      const url = `/api/orders${queryString ? `?${queryString}` : ''}`;
+      
       // Fetch orders from API
-      const response = await fetch('/api/orders', {
+      const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -268,21 +296,10 @@ export default function OrdersPage() {
     
     const matchesSearch = !searchQuery || 
                          order.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         order.category?.toLowerCase().includes(searchQuery.toLowerCase());
+                         order.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         order.vendor?.toLowerCase().includes(searchQuery.toLowerCase());
     
-    // Advanced filters
-    const matchesStatus = !filters.status || order.status === filters.status;
-    const matchesCategory = !filters.category || order.category === filters.category;
-    
-    // Date range filter
-    const matchesDateRange = (!filters.startDate || new Date(order.requested_at) >= new Date(filters.startDate)) &&
-                             (!filters.endDate || new Date(order.requested_at) <= new Date(filters.endDate));
-    
-    // Amount range filter
-    const matchesAmountRange = (!filters.minAmount || order.amount >= Number(filters.minAmount)) &&
-                               (!filters.maxAmount || order.amount <= Number(filters.maxAmount));
-    
-    return matchesTab && matchesSearch && matchesStatus && matchesCategory && matchesDateRange && matchesAmountRange;
+    return matchesTab && matchesSearch;
   });
 
   const handleDecision = async () => {
@@ -474,93 +491,80 @@ export default function OrdersPage() {
         {/* Tabs and Filters */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
           <div className="p-6 border-b border-gray-200">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div className="space-y-2 w-full sm:w-auto">
-                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Order Status</div>
-                <div className="flex flex-wrap gap-1">
-                  {tabs.map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={cn(
-                        "px-4 py-2 rounded-lg font-medium text-sm transition-colors",
-                        activeTab === tab.id
-                          ? "bg-blue-50 text-blue-700 border border-blue-200"
-                          : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                      )}
-                    >
-                      {tab.label}
-                      {tab.count !== undefined && (
-                        <span className={cn(
-                          "ml-2 px-2 py-0.5 rounded-full text-xs",
-                          activeTab === tab.id
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-gray-100 text-gray-600"
-                        )}>
-                          {tab.count}
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-                
-                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mt-4">Delivery Progress</div>
-                <div className="flex flex-wrap gap-1">
-                  {deliveryTabs.map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={cn(
-                        "px-4 py-2 rounded-lg font-medium text-sm transition-colors",
-                        activeTab === tab.id
-                          ? "bg-green-50 text-green-700 border border-green-200"
-                          : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                      )}
-                    >
-                      {tab.label}
-                      {tab.count !== undefined && (
-                        <span className={cn(
-                          "ml-2 px-2 py-0.5 rounded-full text-xs",
-                          activeTab === tab.id
-                            ? "bg-green-100 text-green-700"
-                            : "bg-gray-100 text-gray-600"
-                        )}>
-                          {tab.count}
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
+            {/* Filter Panel */}
+            <OrdersFilterPanel 
+              onFiltersChange={setAppliedFilters}
+              projects={projects}
+            />
 
-              <div className="w-full md:w-80">
-                <SearchBar
-                  value={searchQuery}
-                  onChange={setSearchQuery}
-                  placeholder="Search by description or category..."
-                />
+            {/* Search Bar */}
+            <div className="mt-4">
+              <SearchBar
+                value={searchQuery}
+                onChange={setSearchQuery}
+                placeholder="Search by description, category, or vendor..."
+              />
+            </div>
+
+            {/* Status Tabs */}
+            <div className="mt-4">
+              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Order Status</div>
+              <div className="flex flex-wrap gap-1">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={cn(
+                      "px-4 py-2 rounded-lg font-medium text-sm transition-colors",
+                      activeTab === tab.id
+                        ? "bg-blue-50 text-blue-700 border border-blue-200"
+                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                    )}
+                  >
+                    {tab.label}
+                    {tab.count !== undefined && (
+                      <span className={cn(
+                        "ml-2 px-2 py-0.5 rounded-full text-xs",
+                        activeTab === tab.id
+                          ? "bg-blue-100 text-blue-700"
+                          : "bg-gray-100 text-gray-600"
+                      )}>
+                        {tab.count}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+              
+              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mt-4 mb-2">Delivery Progress</div>
+              <div className="flex flex-wrap gap-1">
+                {deliveryTabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={cn(
+                      "px-4 py-2 rounded-lg font-medium text-sm transition-colors",
+                      activeTab === tab.id
+                        ? "bg-green-50 text-green-700 border border-green-200"
+                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                    )}
+                  >
+                    {tab.label}
+                    {tab.count !== undefined && (
+                      <span className={cn(
+                        "ml-2 px-2 py-0.5 rounded-full text-xs",
+                        activeTab === tab.id
+                          ? "bg-green-100 text-green-700"
+                          : "bg-gray-100 text-gray-600"
+                      )}>
+                        {tab.count}
+                      </span>
+                    )}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
-          
-          <FilterPanel
-            config={{
-              status: [
-                { label: 'Pending', value: 'pending' },
-                { label: 'Approved', value: 'approved' },
-                { label: 'Rejected', value: 'rejected' },
-              ],
-              category: [
-                { label: 'Materials', value: 'materials' },
-                { label: 'Equipment', value: 'equipment' },
-                { label: 'Labor', value: 'labor' },
-                { label: 'Services', value: 'services' },
-                { label: 'Other', value: 'other' },
-              ],
-            }}
-            filters={filters}
-            onChange={setFilters}
-          />
 
           {/* Orders List */}
           <div className="divide-y divide-gray-200">
