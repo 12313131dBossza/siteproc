@@ -21,12 +21,14 @@ import {
   Settings,
   ChevronRight,
   LogOut,
-  User
+  User,
+  Files
 } from "lucide-react";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Analytics", href: "/analytics", icon: BarChart3 },
+  { name: "Documents", href: "/documents", icon: Files },
   { name: "Deliveries", href: "/deliveries", icon: Package },
   { name: "Expenses", href: "/expenses", icon: Receipt },
   { name: "Change Orders", href: "/change-orders", icon: FileText },
