@@ -218,10 +218,10 @@ COMMENT ON FUNCTION set_default_filter IS 'Set a saved filter as the default for
 CREATE INDEX IF NOT EXISTS idx_purchase_orders_search 
 ON purchase_orders 
 USING gin(to_tsvector('english', 
-    COALESCE(order_number, '') || ' ' || 
     COALESCE(description, '') || ' ' || 
     COALESCE(vendor, '') || ' ' || 
-    COALESCE(notes, '')
+    COALESCE(product_name, '') || ' ' || 
+    COALESCE(category, '')
 ));
 
 -- Projects search
@@ -229,8 +229,7 @@ CREATE INDEX IF NOT EXISTS idx_projects_search
 ON projects 
 USING gin(to_tsvector('english', 
     COALESCE(name, '') || ' ' || 
-    COALESCE(address, '') || ' ' || 
-    COALESCE(description, '')
+    COALESCE(code, '')
 ));
 
 -- Products search
@@ -239,7 +238,6 @@ ON products
 USING gin(to_tsvector('english', 
     COALESCE(name, '') || ' ' || 
     COALESCE(sku, '') || ' ' || 
-    COALESCE(description, '') || ' ' || 
     COALESCE(category, '')
 ));
 
