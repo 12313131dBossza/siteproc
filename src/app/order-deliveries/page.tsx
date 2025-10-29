@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/app-layout";
 import { Button } from "@/components/ui/Button";
+import { StatCard } from "@/components/StatCard";
 import {
   Truck,
   Plus,
@@ -277,51 +278,39 @@ export default function OrderDeliveriesPage() {
       <div className="p-6">
         {/* Stats Grid */}
   <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-blue-50 rounded-lg">
-                <Package className="h-6 w-6 text-blue-600" />
-              </div>
-              <TrendingUp className="h-4 w-4 text-green-500" />
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-1">{stats.total}</h3>
-            <p className="text-sm text-gray-500">Total Deliveries</p>
-          </div>
+          <StatCard
+            title="Total Deliveries"
+            value={stats.total.toString()}
+            icon={Package}
+            iconColor="text-blue-600"
+            iconBgColor="bg-blue-50"
+          />
 
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-blue-50 rounded-lg">
-                <Truck className="h-6 w-6 text-blue-600" />
-              </div>
-              <span className="text-xs text-blue-600 font-medium">{stats.inTransit}</span>
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-1">{stats.inTransit}</h3>
-            <p className="text-sm text-gray-500">In Transit</p>
-          </div>
+          <StatCard
+            title="In Transit"
+            value={stats.inTransit.toString()}
+            icon={Truck}
+            iconColor="text-blue-600"
+            iconBgColor="bg-blue-50"
+          />
 
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-green-50 rounded-lg">
-                <CheckCircle className="h-6 w-6 text-green-600" />
-              </div>
-              <span className="text-xs text-green-600 font-medium">{stats.delivered}</span>
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-1">{stats.delivered}</h3>
-            <p className="text-sm text-gray-500">Delivered</p>
-          </div>
+          <StatCard
+            title="Delivered"
+            value={stats.delivered.toString()}
+            icon={CheckCircle}
+            iconColor="text-green-600"
+            iconBgColor="bg-green-50"
+          />
 
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-purple-50 rounded-lg">
-                <DollarSign className="h-6 w-6 text-purple-600" />
-              </div>
-              <span className="text-xs text-purple-600 font-medium">
-                {((stats.delivered / stats.total) * 100).toFixed(0)}%
-              </span>
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-1">{formatCurrency(stats.totalValue)}</h3>
-            <p className="text-sm text-gray-500">Total Value</p>
-          </div>
+          <StatCard
+            title="Total Value"
+            value={formatCurrency(stats.totalValue)}
+            icon={DollarSign}
+            iconColor="text-purple-600"
+            iconBgColor="bg-purple-50"
+            badge={`${((stats.delivered / stats.total) * 100).toFixed(0)}%`}
+            badgeColor="text-purple-600"
+          />
         </div>
 
         {/* Tabs and Filters */}

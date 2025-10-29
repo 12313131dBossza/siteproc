@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/app-layout";
 import { Button } from "@/components/ui/Button";
 import { FormModal, FormModalActions, Input, Select, TextArea } from '@/components/ui';
+import { StatCard } from "@/components/StatCard";
 import {
   Package,
   Search,
@@ -420,49 +421,39 @@ export default function TokoPage() {
       <div className="space-y-6">
         {/* Stats Grid */}
   <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-blue-50 rounded-lg">
-                <Package className="h-6 w-6 text-blue-600" />
-              </div>
-              <TrendingUp className="h-4 w-4 text-green-500" />
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-1">{stats.total_products}</h3>
-            <p className="text-sm text-gray-500">Total Products</p>
-          </div>
+          <StatCard
+            title="Total Products"
+            value={stats.total_products.toString()}
+            icon={Package}
+            iconColor="text-blue-600"
+            iconBgColor="bg-blue-50"
+          />
 
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-green-50 rounded-lg">
-                <CheckCircle className="h-6 w-6 text-green-600" />
-              </div>
-              <span className="text-sm font-medium text-green-600">{stats.active_products}</span>
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-1">{stats.active_products}</h3>
-            <p className="text-sm text-gray-500">Active Products</p>
-          </div>
+          <StatCard
+            title="Active Products"
+            value={stats.active_products.toString()}
+            icon={CheckCircle}
+            iconColor="text-green-600"
+            iconBgColor="bg-green-50"
+          />
 
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-red-50 rounded-lg">
-                <AlertTriangle className="h-6 w-6 text-red-600" />
-              </div>
-              <span className="text-sm font-medium text-red-600">{stats.low_stock_items}</span>
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-1">{stats.low_stock_items}</h3>
-            <p className="text-sm text-gray-500">Low Stock Items</p>
-          </div>
+          <StatCard
+            title="Low Stock Items"
+            value={stats.low_stock_items.toString()}
+            icon={AlertTriangle}
+            iconColor="text-red-600"
+            iconBgColor="bg-red-50"
+          />
 
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-purple-50 rounded-lg">
-                <DollarSign className="h-6 w-6 text-purple-600" />
-              </div>
-              <span className="text-sm font-medium text-purple-600">+12%</span>
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-1">{formatCurrency(stats.total_value)}</h3>
-            <p className="text-sm text-gray-500">Inventory Value</p>
-          </div>
+          <StatCard
+            title="Inventory Value"
+            value={formatCurrency(stats.total_value)}
+            icon={DollarSign}
+            iconColor="text-purple-600"
+            iconBgColor="bg-purple-50"
+            badge="+12%"
+            badgeColor="text-purple-600"
+          />
         </div>
 
         {/* Filters and Search */}

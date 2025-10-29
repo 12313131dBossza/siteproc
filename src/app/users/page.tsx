@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { AppLayout } from "@/components/app-layout";
 import { Button } from "@/components/ui/Button";
+import { StatCard } from "@/components/StatCard";
 import {
   Plus,
   UserPlus,
@@ -201,49 +202,39 @@ export default function UsersPage() {
       <div className="space-y-6">
         {/* Stats Grid */}
   <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-blue-50 rounded-lg">
-                <Users className="h-6 w-6 text-blue-600" />
-              </div>
-              <span className="text-sm font-medium text-blue-600">+2</span>
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-1">{users.length}</h3>
-            <p className="text-sm text-gray-500">Total Users</p>
-          </div>
+          <StatCard
+            title="Total Users"
+            value={users.length.toString()}
+            icon={Users}
+            iconColor="text-blue-600"
+            iconBgColor="bg-blue-50"
+            badge="+2"
+            badgeColor="text-blue-600"
+          />
 
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-green-50 rounded-lg">
-                <UserCheck className="h-6 w-6 text-green-600" />
-              </div>
-              <span className="text-sm font-medium text-green-600">{statusCounts.active || 0}</span>
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-1">{statusCounts.active || 0}</h3>
-            <p className="text-sm text-gray-500">Active Users</p>
-          </div>
+          <StatCard
+            title="Active Users"
+            value={(statusCounts.active || 0).toString()}
+            icon={UserCheck}
+            iconColor="text-green-600"
+            iconBgColor="bg-green-50"
+          />
 
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-yellow-50 rounded-lg">
-                <Clock className="h-6 w-6 text-yellow-600" />
-              </div>
-              <span className="text-sm font-medium text-yellow-600">{statusCounts.pending || 0}</span>
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-1">{statusCounts.pending || 0}</h3>
-            <p className="text-sm text-gray-500">Pending Invites</p>
-          </div>
+          <StatCard
+            title="Pending Invites"
+            value={(statusCounts.pending || 0).toString()}
+            icon={Clock}
+            iconColor="text-yellow-600"
+            iconBgColor="bg-yellow-50"
+          />
 
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-purple-50 rounded-lg">
-                <Shield className="h-6 w-6 text-purple-600" />
-              </div>
-              <span className="text-sm font-medium text-purple-600">{(roleCounts.admin || 0) + (roleCounts.owner || 0)}</span>
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-1">{(roleCounts.admin || 0) + (roleCounts.owner || 0)}</h3>
-            <p className="text-sm text-gray-500">Admins & Owners</p>
-          </div>
+          <StatCard
+            title="Admins & Owners"
+            value={((roleCounts.admin || 0) + (roleCounts.owner || 0)).toString()}
+            icon={Shield}
+            iconColor="text-purple-600"
+            iconBgColor="bg-purple-50"
+          />
         </div>
 
         {/* Role Distribution */}

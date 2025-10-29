@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { AppLayout } from "@/components/app-layout"
 import { Button } from "@/components/ui/Button"
 import { SearchBar, FilterPanel, useFilters } from "@/components/ui"
+import { StatCard } from "@/components/StatCard"
 import { Package, Truck, MapPin, Clock, CheckCircle, CheckCircle2, AlertCircle, Search, Filter, Eye, Calendar, Lock, Edit, X, Upload } from 'lucide-react'
 import { format } from '@/lib/date-format'
 import { cn, formatCurrency } from '@/lib/utils'
@@ -409,46 +410,38 @@ export default function DeliveriesPage() {
     >
       <div className="p-6">
         {/* Stats Grid - Top Counters */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-gray-50 rounded-lg">
-                <Package className="h-6 w-6 text-gray-600" />
-              </div>
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-1">{stats.total}</h3>
-            <p className="text-sm text-gray-500">Total Deliveries</p>
-          </div>
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <StatCard
+            title="Total Deliveries"
+            value={stats.total.toString()}
+            icon={Package}
+            iconColor="text-gray-600"
+            iconBgColor="bg-gray-50"
+          />
 
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-yellow-50 rounded-lg">
-                <Clock className="h-6 w-6 text-yellow-600" />
-              </div>
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-1">{stats.pending}</h3>
-            <p className="text-sm text-gray-500">Pending</p>
-          </div>
+          <StatCard
+            title="Pending"
+            value={stats.pending.toString()}
+            icon={Clock}
+            iconColor="text-yellow-600"
+            iconBgColor="bg-yellow-50"
+          />
 
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-blue-50 rounded-lg">
-                <Truck className="h-6 w-6 text-blue-600" />
-              </div>
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-1">{stats.partial}</h3>
-            <p className="text-sm text-gray-500">In Transit</p>
-          </div>
+          <StatCard
+            title="In Transit"
+            value={stats.partial.toString()}
+            icon={Truck}
+            iconColor="text-blue-600"
+            iconBgColor="bg-blue-50"
+          />
 
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-green-50 rounded-lg">
-                <CheckCircle className="h-6 w-6 text-green-600" />
-              </div>
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-1">{stats.delivered}</h3>
-            <p className="text-sm text-gray-500">Delivered</p>
-          </div>
+          <StatCard
+            title="Delivered"
+            value={stats.delivered.toString()}
+            icon={CheckCircle}
+            iconColor="text-green-600"
+            iconBgColor="bg-green-50"
+          />
         </div>
 
         {/* Filters and Search */}

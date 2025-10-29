@@ -5,6 +5,7 @@ import { AppLayout } from "@/components/app-layout";
 import { Button } from "@/components/ui/Button";
 import { SearchBar } from "@/components/ui";
 import { OrdersFilterPanel } from "@/components/OrdersFilterPanel";
+import { StatCard } from "@/components/StatCard";
 import {
   ShoppingCart,
   Plus,
@@ -458,52 +459,44 @@ export default function OrdersPage() {
     >
       <div className="p-4 md:p-6">
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
-          <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-3 md:mb-4">
-              <div className="p-2 md:p-3 bg-blue-50 rounded-lg">
-                <ShoppingCart className="h-5 w-5 md:h-6 md:w-6 text-blue-600" />
-              </div>
-              <TrendingUp className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
-            </div>
-            <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-1">{stats.total}</h3>
-            <p className="text-xs md:text-sm text-gray-500">Total Orders</p>
-          </div>
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
+          <StatCard
+            title="Total Orders"
+            value={stats.total}
+            icon={ShoppingCart}
+            iconColor="text-blue-600"
+            iconBgColor="bg-blue-50"
+          />
 
-          <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-3 md:mb-4">
-              <div className="p-2 md:p-3 bg-yellow-50 rounded-lg">
-                <Clock className="h-5 w-5 md:h-6 md:w-6 text-yellow-600" />
-              </div>
-              <span className="text-xs text-yellow-600 font-medium">{stats.pending}</span>
-            </div>
-            <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-1">{stats.pending}</h3>
-            <p className="text-xs md:text-sm text-gray-500">Pending Approval</p>
-          </div>
+          <StatCard
+            title="Pending Approval"
+            value={stats.pending}
+            icon={Clock}
+            iconColor="text-yellow-600"
+            iconBgColor="bg-yellow-50"
+            badge={stats.pending}
+            badgeColor="text-yellow-600"
+          />
 
-          <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-3 md:mb-4">
-              <div className="p-2 md:p-3 bg-green-50 rounded-lg">
-                <CheckCircle className="h-5 w-5 md:h-6 md:w-6 text-green-600" />
-              </div>
-              <span className="text-xs text-green-600 font-medium">{stats.approved}</span>
-            </div>
-            <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-1">{stats.approved}</h3>
-            <p className="text-xs md:text-sm text-gray-500">Approved</p>
-          </div>
+          <StatCard
+            title="Approved"
+            value={stats.approved}
+            icon={CheckCircle}
+            iconColor="text-green-600"
+            iconBgColor="bg-green-50"
+            badge={stats.approved}
+            badgeColor="text-green-600"
+          />
 
-          <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-3 md:mb-4">
-              <div className="p-2 md:p-3 bg-purple-50 rounded-lg">
-                <DollarSign className="h-5 w-5 md:h-6 md:w-6 text-purple-600" />
-              </div>
-              <span className="text-xs text-purple-600 font-medium">
-                {((stats.thisMonth / (stats.totalValue || 1)) * 100).toFixed(0)}%
-              </span>
-            </div>
-            <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-1">{formatCurrency(stats.totalValue)}</h3>
-            <p className="text-xs md:text-sm text-gray-500">Total Value</p>
-          </div>
+          <StatCard
+            title="Total Value"
+            value={formatCurrency(stats.totalValue)}
+            icon={DollarSign}
+            iconColor="text-purple-600"
+            iconBgColor="bg-purple-50"
+            badge={`${((stats.thisMonth / (stats.totalValue || 1)) * 100).toFixed(0)}%`}
+            badgeColor="text-purple-600"
+          />
         </div>
 
         {/* Tabs and Filters */}

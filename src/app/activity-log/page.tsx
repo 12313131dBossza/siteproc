@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { AppLayout } from "@/components/app-layout";
 import { Button } from "@/components/ui/Button";
+import { StatCard } from "@/components/StatCard";
 import {
   Activity,
   Package,
@@ -262,49 +263,37 @@ export default function ActivityLogPage() {
       <div className="space-y-6">
         {/* Stats Grid */}
   <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-blue-50 rounded-lg">
-                <Activity className="h-6 w-6 text-blue-600" />
-              </div>
-              <TrendingUp className="h-4 w-4 text-green-500" />
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-1">{stats.total_today}</h3>
-            <p className="text-sm text-gray-500">Activities Today</p>
-          </div>
+          <StatCard
+            title="Activities Today"
+            value={stats.total_today.toString()}
+            icon={Activity}
+            iconColor="text-blue-600"
+            iconBgColor="bg-blue-50"
+          />
 
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-green-50 rounded-lg">
-                <Calendar className="h-6 w-6 text-green-600" />
-              </div>
-              <span className="text-sm font-medium text-green-600">{stats.total_week}</span>
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-1">{stats.total_week}</h3>
-            <p className="text-sm text-gray-500">This Week</p>
-          </div>
+          <StatCard
+            title="This Week"
+            value={stats.total_week.toString()}
+            icon={Calendar}
+            iconColor="text-green-600"
+            iconBgColor="bg-green-50"
+          />
 
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-purple-50 rounded-lg">
-                <Users className="h-6 w-6 text-purple-600" />
-              </div>
-              <span className="text-sm font-medium text-purple-600">{stats.unique_users}</span>
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-1">{stats.unique_users}</h3>
-            <p className="text-sm text-gray-500">Active Users</p>
-          </div>
+          <StatCard
+            title="Active Users"
+            value={stats.unique_users.toString()}
+            icon={Users}
+            iconColor="text-purple-600"
+            iconBgColor="bg-purple-50"
+          />
 
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-orange-50 rounded-lg">
-                <BarChart3 className="h-6 w-6 text-orange-600" />
-              </div>
-              <span className="text-sm font-medium text-orange-600">Most Active</span>
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-1 capitalize">{stats.most_active_type}</h3>
-            <p className="text-sm text-gray-500">Top Activity Type</p>
-          </div>
+          <StatCard
+            title="Top Activity Type"
+            value={stats.most_active_type}
+            icon={BarChart3}
+            iconColor="text-orange-600"
+            iconBgColor="bg-orange-50"
+          />
         </div>
 
         {/* Filters and Search */}

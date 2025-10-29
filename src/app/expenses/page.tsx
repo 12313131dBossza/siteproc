@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/app-layout";
 import { Button } from "@/components/ui/Button";
 import { FormModal, FormModalActions, Input, Select, TextArea, SearchBar, FilterPanel, useFilters } from '@/components/ui';
+import { StatCard } from "@/components/StatCard";
 import {
   DollarSign,
   TrendingUp,
@@ -414,49 +415,37 @@ export default function ExpensesPage() {
 
         {/* Stats Grid */}
   <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-blue-50 rounded-lg">
-                <DollarSign className="h-6 w-6 text-blue-600" />
-              </div>
-              <TrendingUp className="h-4 w-4 text-green-500" />
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-1">{formatCurrency(stats.total)}</h3>
-            <p className="text-sm text-gray-500">Total Expenses</p>
-          </div>
+          <StatCard
+            title="Total Expenses"
+            value={formatCurrency(stats.total)}
+            icon={DollarSign}
+            iconColor="text-blue-600"
+            iconBgColor="bg-blue-50"
+          />
 
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-yellow-50 rounded-lg">
-                <Clock className="h-6 w-6 text-yellow-600" />
-              </div>
-              <span className="text-sm font-medium text-yellow-600">1</span>
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-1">{formatCurrency(stats.pending)}</h3>
-            <p className="text-sm text-gray-500">Pending Approval</p>
-          </div>
+          <StatCard
+            title="Pending Approval"
+            value={formatCurrency(stats.pending)}
+            icon={Clock}
+            iconColor="text-yellow-600"
+            iconBgColor="bg-yellow-50"
+          />
 
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-green-50 rounded-lg">
-                <CheckCircle className="h-6 w-6 text-green-600" />
-              </div>
-              <span className="text-sm font-medium text-green-600">2</span>
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-1">{formatCurrency(stats.approved)}</h3>
-            <p className="text-sm text-gray-500">Approved</p>
-          </div>
+          <StatCard
+            title="Approved"
+            value={formatCurrency(stats.approved)}
+            icon={CheckCircle}
+            iconColor="text-green-600"
+            iconBgColor="bg-green-50"
+          />
 
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-purple-50 rounded-lg">
-                <Calendar className="h-6 w-6 text-purple-600" />
-              </div>
-              <span className="text-sm font-medium text-purple-600">2625000%</span>
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-1">{formatCurrency(stats.thisMonth)}</h3>
-            <p className="text-sm text-gray-500">This Month</p>
-          </div>
+          <StatCard
+            title="This Month"
+            value={formatCurrency(stats.thisMonth)}
+            icon={Calendar}
+            iconColor="text-purple-600"
+            iconBgColor="bg-purple-50"
+          />
         </div>
 
         {/* Filters and Search */}

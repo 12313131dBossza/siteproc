@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { PageLoading } from "@/components/ui";
+import { StatCard } from "@/components/StatCard";
 import {
   TrendingUp,
   TrendingDown,
@@ -172,70 +173,46 @@ export default function EnhancedDashboard() {
       {/* KPI Cards Grid */}
   <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4">
         {/* Projects Card */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-blue-50 rounded-lg">
-              <FolderOpen className="h-6 w-6 text-blue-600" />
-            </div>
-            <TrendingUp className="h-4 w-4 text-green-500" />
-          </div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-1">{stats.projects.total}</h3>
-          <p className="text-sm text-gray-500 mb-3">Total Projects</p>
-          <div className="text-xs text-gray-600">
-            <span className="text-green-600 font-medium">{stats.projects.active} active</span>
-          </div>
-        </div>
+        <StatCard
+          title="Total Projects"
+          value={stats.projects.total.toString()}
+          icon={FolderOpen}
+          iconColor="text-blue-600"
+          iconBgColor="bg-blue-50"
+          subtitle={`${stats.projects.active} active`}
+        />
 
         {/* Budget Card */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-green-50 rounded-lg">
-              <DollarSign className="h-6 w-6 text-green-600" />
-            </div>
-            <span className="text-xs text-green-600 font-medium">
-              {budgetUsagePercentage.toFixed(0)}%
-            </span>
-          </div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-1">
-            {formatCurrency(stats.projects.totalBudget)}
-          </h3>
-          <p className="text-sm text-gray-500 mb-3">Total Budget</p>
-          <div className="text-xs text-gray-600">
-            <span className="text-orange-600 font-medium">
-              {formatCurrency(stats.projects.totalSpent)} spent
-            </span>
-          </div>
-        </div>
+        <StatCard
+          title="Total Budget"
+          value={formatCurrency(stats.projects.totalBudget)}
+          icon={DollarSign}
+          iconColor="text-green-600"
+          iconBgColor="bg-green-50"
+          badge={`${budgetUsagePercentage.toFixed(0)}%`}
+          badgeColor="text-green-600"
+          subtitle={`${formatCurrency(stats.projects.totalSpent)} spent`}
+        />
 
         {/* Orders Card */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-purple-50 rounded-lg">
-              <ShoppingCart className="h-6 w-6 text-purple-600" />
-            </div>
-            <AlertCircle className="h-4 w-4 text-yellow-500" />
-          </div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-1">{stats.orders.total}</h3>
-          <p className="text-sm text-gray-500 mb-3">Total Orders</p>
-          <div className="text-xs text-gray-600">
-            <span className="text-yellow-600 font-medium">{stats.orders.pending} pending</span>
-          </div>
-        </div>
+        <StatCard
+          title="Total Orders"
+          value={stats.orders.total.toString()}
+          icon={ShoppingCart}
+          iconColor="text-purple-600"
+          iconBgColor="bg-purple-50"
+          subtitle={`${stats.orders.pending} pending`}
+        />
 
         {/* Deliveries Card */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-orange-50 rounded-lg">
-              <Package className="h-6 w-6 text-orange-600" />
-            </div>
-            <CheckCircle className="h-4 w-4 text-green-500" />
-          </div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-1">{stats.deliveries.total}</h3>
-          <p className="text-sm text-gray-500 mb-3">Total Deliveries</p>
-          <div className="text-xs text-gray-600">
-            <span className="text-green-600 font-medium">{stats.deliveries.delivered} delivered</span>
-          </div>
-        </div>
+        <StatCard
+          title="Total Deliveries"
+          value={stats.deliveries.total.toString()}
+          icon={Package}
+          iconColor="text-orange-600"
+          iconBgColor="bg-orange-50"
+          subtitle={`${stats.deliveries.delivered} delivered`}
+        />
       </div>
 
       {/* Charts Row 1: Monthly Trends */}
@@ -391,47 +368,37 @@ export default function EnhancedDashboard() {
 
       {/* Quick Stats Summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Pending Payments</p>
-              <p className="text-xl font-bold text-gray-900">{formatCurrency(stats.payments.unpaid)}</p>
-            </div>
-            <Receipt className="h-8 w-8 text-orange-400" />
-          </div>
-        </div>
+        <StatCard
+          title="Pending Payments"
+          value={formatCurrency(stats.payments.unpaid)}
+          icon={Receipt}
+          iconColor="text-orange-400"
+          iconBgColor="bg-orange-50"
+        />
 
-        <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Orders This Month</p>
-              <p className="text-xl font-bold text-gray-900">{stats.orders.thisMonth}</p>
-            </div>
-            <ShoppingCart className="h-8 w-8 text-purple-400" />
-          </div>
-        </div>
+        <StatCard
+          title="Orders This Month"
+          value={stats.orders.thisMonth.toString()}
+          icon={ShoppingCart}
+          iconColor="text-purple-400"
+          iconBgColor="bg-purple-50"
+        />
 
-        <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Pending Deliveries</p>
-              <p className="text-xl font-bold text-gray-900">{stats.deliveries.pending}</p>
-            </div>
-            <Package className="h-8 w-8 text-blue-400" />
-          </div>
-        </div>
+        <StatCard
+          title="Pending Deliveries"
+          value={stats.deliveries.pending.toString()}
+          icon={Package}
+          iconColor="text-blue-400"
+          iconBgColor="bg-blue-50"
+        />
 
-        <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Budget Remaining</p>
-              <p className="text-xl font-bold text-gray-900">
-                {formatCurrency(stats.projects.totalBudget - stats.projects.totalSpent)}
-              </p>
-            </div>
-            <DollarSign className="h-8 w-8 text-green-400" />
-          </div>
-        </div>
+        <StatCard
+          title="Budget Remaining"
+          value={formatCurrency(stats.projects.totalBudget - stats.projects.totalSpent)}
+          icon={DollarSign}
+          iconColor="text-green-400"
+          iconBgColor="bg-green-50"
+        />
       </div>
 
       {/* Quick Actions */}
