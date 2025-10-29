@@ -121,7 +121,7 @@ export async function PATCH(
       .is('deleted_at', null)
       .select(`
         *,
-        uploaded_by_profile:profiles!documents_uploaded_by_fkey(id, full_name, email),
+        uploaded_by_profile:profiles!uploaded_by(id, full_name, email),
         project:projects(id, name, code),
         order:purchase_orders(id, po_number),
         expense:expenses(id, description),

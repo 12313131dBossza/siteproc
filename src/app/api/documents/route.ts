@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
       .from('documents')
       .select(`
         *,
-        uploaded_by_profile:profiles!documents_uploaded_by_fkey(id, full_name, email),
+        uploaded_by_profile:profiles!uploaded_by(id, full_name, email),
         project:projects(id, name, code),
         order:purchase_orders(id, po_number),
         expense:expenses(id, description),
@@ -233,7 +233,7 @@ export async function POST(request: NextRequest) {
       })
       .select(`
         *,
-        uploaded_by_profile:profiles!documents_uploaded_by_fkey(id, full_name, email),
+        uploaded_by_profile:profiles!uploaded_by(id, full_name, email),
         project:projects(id, name, code),
         order:purchase_orders(id, po_number),
         expense:expenses(id, description),
