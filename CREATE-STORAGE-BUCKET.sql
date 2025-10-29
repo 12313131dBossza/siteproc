@@ -1,88 +1,93 @@
 -- ============================================================================
 -- SUPABASE STORAGE: DOCUMENTS BUCKET CONFIGURATION
--- Run this in Supabase SQL Editor to create storage bucket
+-- ============================================================================
+-- NOTE: Storage bucket and RLS policies MUST be created via Supabase Dashboard UI
+-- You cannot create storage policies via SQL (permission denied error)
+-- 
+-- Follow these steps instead:
 -- ============================================================================
 
--- Create storage bucket for documents
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('documents', 'documents', false)
-ON CONFLICT (id) DO NOTHING;
+-- STEP 1: Create Bucket via Dashboard
+-- ----------------------------------------------------------------------------
+-- 1. Go to: Supabase Dashboard → Storage
+-- 2. Click "New bucket"
+-- 3. Bucket name: documents
+-- 4. Public bucket: OFF (private)
+-- 5. Click "Create bucket"
+
+-- STEP 2: Create RLS Policies via Dashboard
+-- ----------------------------------------------------------------------------
+-- 1. Click on "documents" bucket
+-- 2. Go to "Policies" tab
+-- 3. Click "New Policy"
+-- 4. Create these 4 policies (see below for SQL to use in policy editor)
 
 -- ============================================================================
--- STORAGE RLS POLICIES
+-- POLICY 1: Upload - Users can upload to their company folder
 -- ============================================================================
+-- Policy name: Users can upload documents to their company folder
+-- Allowed operations: INSERT
+-- Policy definition (USING expression):
 
--- Enable RLS on storage.objects
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
-
--- Drop existing policies if they exist
-DROP POLICY IF EXISTS "Users can upload documents to their company folder" ON storage.objects;
-DROP POLICY IF EXISTS "Users can view documents from their company" ON storage.objects;
-DROP POLICY IF EXISTS "Users can update documents they uploaded" ON storage.objects;
-DROP POLICY IF EXISTS "Users can delete documents they uploaded" ON storage.objects;
-
--- Policy: Users can upload files to their company folder
-CREATE POLICY "Users can upload documents to their company folder"
-ON storage.objects
-FOR INSERT
-WITH CHECK (
-    bucket_id = 'documents'
-    AND (storage.foldername(name))[1] IN (
-        SELECT company_id::text 
-        FROM profiles 
-        WHERE id = auth.uid()
-    )
-);
-
--- Policy: Users can view files from their company folder
-CREATE POLICY "Users can view documents from their company"
-ON storage.objects
-FOR SELECT
-USING (
-    bucket_id = 'documents'
-    AND (storage.foldername(name))[1] IN (
-        SELECT company_id::text 
-        FROM profiles 
-        WHERE id = auth.uid()
-    )
-);
-
--- Policy: Users can update files they uploaded or admins can update all
-CREATE POLICY "Users can update documents they uploaded"
-ON storage.objects
-FOR UPDATE
-USING (
-    bucket_id = 'documents'
-    AND (
-        owner = auth.uid()
-        OR EXISTS (
-            SELECT 1 FROM profiles 
-            WHERE id = auth.uid() 
-            AND role IN ('owner', 'admin')
-            AND company_id::text = (storage.foldername(name))[1]
-        )
-    )
-);
-
--- Policy: Users can delete files they uploaded or admins can delete all
-CREATE POLICY "Users can delete documents they uploaded"
-ON storage.objects
-FOR DELETE
-USING (
-    bucket_id = 'documents'
-    AND (
-        owner = auth.uid()
-        OR EXISTS (
-            SELECT 1 FROM profiles 
-            WHERE id = auth.uid() 
-            AND role IN ('owner', 'admin')
-            AND company_id::text = (storage.foldername(name))[1]
-        )
-    )
-);
+-- bucket_id = 'documents'
+-- AND (storage.foldername(name))[1] IN (
+--     SELECT company_id::text 
+--     FROM profiles 
+--     WHERE id = auth.uid()
+-- )
 
 -- ============================================================================
--- VERIFICATION
+-- POLICY 2: Select - Users can view their company's files
+-- ============================================================================
+-- Policy name: Users can view documents from their company
+-- Allowed operations: SELECT
+-- Policy definition (USING expression):
+
+-- bucket_id = 'documents'
+-- AND (storage.foldername(name))[1] IN (
+--     SELECT company_id::text 
+--     FROM profiles 
+--     WHERE id = auth.uid()
+-- )
+
+-- ============================================================================
+-- POLICY 3: Update - Users can update own files, admins can update all
+-- ============================================================================
+-- Policy name: Users can update documents they uploaded
+-- Allowed operations: UPDATE
+-- Policy definition (USING expression):
+
+-- bucket_id = 'documents'
+-- AND (
+--     owner = auth.uid()
+--     OR EXISTS (
+--         SELECT 1 FROM profiles 
+--         WHERE id = auth.uid() 
+--         AND role IN ('owner', 'admin')
+--         AND company_id::text = (storage.foldername(name))[1]
+--     )
+-- )
+
+-- ============================================================================
+-- POLICY 4: Delete - Users can delete own files, admins can delete all
+-- ============================================================================
+-- Policy name: Users can delete documents they uploaded
+-- Allowed operations: DELETE
+-- Policy definition (USING expression):
+
+-- bucket_id = 'documents'
+-- AND (
+--     owner = auth.uid()
+--     OR EXISTS (
+--         SELECT 1 FROM profiles 
+--         WHERE id = auth.uid() 
+--         AND role IN ('owner', 'admin')
+--         AND company_id::text = (storage.foldername(name))[1]
+--     )
+-- )
+
+-- ============================================================================
+-- VERIFICATION (Run this SQL to check setup)
 -- ============================================================================
 
 -- Check bucket exists
@@ -94,11 +99,10 @@ SELECT
 FROM storage.buckets
 WHERE id = 'documents';
 
--- Check storage policies
+-- Check storage policies (should return 4 policies)
 SELECT 
     policyname,
-    cmd as command,
-    qual as using_expression
+    cmd as command
 FROM pg_policies
 WHERE schemaname = 'storage'
   AND tablename = 'objects'
