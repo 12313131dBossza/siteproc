@@ -540,8 +540,8 @@ export default function ExpensesPage() {
                   
                   return (
                     <div key={expense.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex-1">
+                      <div className="flex items-start justify-between gap-3 sm:gap-4 mb-4">
+                        <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-3 mb-2">
                             <span className="font-semibold text-gray-900">{expense.vendor}</span>
                             <span className={cn("px-2 py-1 rounded-full text-xs font-medium border", getCategoryColor(expense.category))}>
@@ -564,7 +564,7 @@ export default function ExpensesPage() {
                               </div>
                             )}
                           </div>
-                          <p className="text-gray-600 mb-2">{expense.description}</p>
+                          <p className="text-gray-600 mb-2 break-words">{expense.description}</p>
                           {expense.project_name && (
                             <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
                               <Building className="h-4 w-4" />
@@ -577,14 +577,17 @@ export default function ExpensesPage() {
                               <span>Receipt attached</span>
                             </div>
                           )}
-                          <div className="text-sm text-gray-500">
+                          <div className="text-sm text-gray-500 break-words">
                             <div>Created: {format(new Date(expense.created_at), 'MMM dd, yyyy')}</div>
                             {expense.approved_at && (
-                              <div>Approved: {format(new Date(expense.approved_at), 'MMM dd, yyyy')} by {expense.approved_by}</div>
+                              <div>
+                                Approved: {format(new Date(expense.approved_at), 'MMM dd, yyyy')} by {" "}
+                                <span className="break-all">{expense.approved_by}</span>
+                              </div>
                             )}
                           </div>
                         </div>
-                        <div className="text-right">
+                        <div className="text-right flex-shrink-0">
                           <div className="text-xl font-bold text-gray-900">{formatCurrency(expense.amount)}</div>
                           {expense.status === 'pending' && (
                             <div className="flex gap-2 mt-2">
