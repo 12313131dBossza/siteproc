@@ -35,25 +35,26 @@ export async function GET(request: NextRequest) {
       .from('purchase_orders')
       .select(`
         id,
-        order_number,
         description,
         vendor,
+        product_name,
+        category,
         amount,
         status,
         created_at,
-        projects(id, name)
+        project_id
       `)
       .eq('company_id', profile.company_id)
-      .or(`order_number.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%,vendor.ilike.%${searchQuery}%,notes.ilike.%${searchQuery}%`)
+      .or(`description.ilike.%${searchQuery}%,vendor.ilike.%${searchQuery}%,product_name.ilike.%${searchQuery}%,category.ilike.%${searchQuery}%`)
       .order('created_at', { ascending: false })
       .limit(5)
 
     // Search Projects
     const { data: projects } = await supabase
       .from('projects')
-      .select('id, name, address, description, status, budget, actual_cost, created_at')
+      .select('id, name, code, status, budget, created_at')
       .eq('company_id', profile.company_id)
-      .or(`name.ilike.%${searchQuery}%,address.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`)
+      .or(`name.ilike.%${searchQuery}%,code.ilike.%${searchQuery}%`)
       .order('created_at', { ascending: false })
       .limit(5)
 
@@ -85,13 +86,14 @@ export async function GET(request: NextRequest) {
         amount,
         category,
         description,
+        memo,
         status,
-        expense_date,
-        projects(id, name)
+        spent_at,
+        project_id
       `)
       .eq('company_id', profile.company_id)
       .or(`vendor.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%,memo.ilike.%${searchQuery}%,category.ilike.%${searchQuery}%`)
-      .order('expense_date', { ascending: false })
+      .order('spent_at', { ascending: false })
       .limit(5)
 
     // Search Payments
@@ -115,9 +117,8 @@ export async function GET(request: NextRequest) {
     // Search Products
     const { data: products } = await supabase
       .from('products')
-      .select('id, sku, name, category, description, unit_price, quantity')
-      .eq('company_id', profile.company_id)
-      .or(`sku.ilike.%${searchQuery}%,name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%,category.ilike.%${searchQuery}%`)
+      .select('id, sku, name, category, price, stock, unit')
+      .or(`sku.ilike.%${searchQuery}%,name.ilike.%${searchQuery}%,category.ilike.%${searchQuery}%`)
       .order('name')
       .limit(5)
 
