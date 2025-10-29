@@ -170,7 +170,7 @@ export default function EnhancedDashboard() {
   return (
     <div className="p-4 md:p-6 space-y-6">
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4">
         {/* Projects Card */}
         <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-4">

@@ -61,32 +61,33 @@ export function KPICard({
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between">
+    <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">
+      <div className="flex items-center justify-between gap-4">
         <div className="flex-1">
           <p className="text-sm font-medium text-gray-600">{title}</p>
-          <p className="mt-2 text-3xl font-bold text-gray-900">
-            {formatValue(value)}
-          </p>
-          
-          {(trend !== undefined || description) && (
+          <div className="mt-2 flex items-center gap-3">
+            <div className="inline-flex items-baseline px-3 py-2 bg-gray-50 border border-gray-100 rounded-md">
+              <p className="text-lg sm:text-2xl font-bold text-gray-900 leading-none">
+                {formatValue(value)}
+              </p>
+            </div>
+            {description && (
+              <span className="text-sm text-gray-500">{description}</span>
+            )}
+          </div>
+
+          {(trend !== undefined) && (
             <div className="mt-3 flex items-center gap-2">
-              {trend !== undefined && (
-                <span className={`flex items-center gap-1 text-sm font-medium ${getTrendColor()}`}>
-                  {getTrendIcon()}
-                  {Math.abs(trend).toFixed(1)}%
-                  {trendLabel && <span className="text-gray-500 font-normal">{trendLabel}</span>}
-                </span>
-              )}
-              
-              {description && (
-                <span className="text-sm text-gray-500">{description}</span>
-              )}
+              <span className={`flex items-center gap-1 text-sm font-medium ${getTrendColor()}`}>
+                {getTrendIcon()}
+                {Math.abs(trend).toFixed(1)}%
+                {trendLabel && <span className="text-gray-500 font-normal">{trendLabel}</span>}
+              </span>
             </div>
           )}
         </div>
-        
-        <div className={`p-3 rounded-lg ${colorClasses[color]}`}>
+
+        <div className={`flex-shrink-0 p-3 rounded-lg ${colorClasses[color]}`}>
           <Icon className="w-6 h-6" />
         </div>
       </div>
