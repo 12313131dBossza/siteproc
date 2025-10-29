@@ -99,10 +99,11 @@ export async function PATCH(
         order_created_by: order.created_by,
         approver_id: profile.id,
         is_same_user: order.created_by === profile.id,
-        will_notify: order.created_by && order.created_by !== profile.id
+        will_notify: order.created_by ? true : false,
+        note: 'TESTING MODE: Self-notifications enabled'
       })
 
-      if (order.created_by && order.created_by !== profile.id) {
+      if (order.created_by) {
         // Get approver's name
         const { data: approverProfile } = await supabase
           .from('profiles')
@@ -140,9 +141,7 @@ export async function PATCH(
         }
         console.log(`✅ In-app notification sent to user ${order.created_by}`)
       } else {
-        console.log('⚠️ Skipping notification:', {
-          reason: !order.created_by ? 'No created_by field' : 'Same user approving their own order'
-        })
+        console.log('⚠️ Skipping notification: No created_by field on order')
       }
     } catch (notifError) {
       console.error('❌ Failed to create in-app notification:', notifError)

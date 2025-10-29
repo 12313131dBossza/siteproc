@@ -155,7 +155,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
     // Create in-app notification for expense submitter
     try {
-      if (expense.submitted_by && expense.submitted_by !== user.id) {
+      if (expense.submitted_by) {
         // Get approver's name
         const { data: approverProfile } = await serviceClient
           .from('profiles')
@@ -166,6 +166,8 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         const approverName = approverProfile 
           ? `${approverProfile.first_name || ''} ${approverProfile.last_name || ''}`.trim() || approverProfile.email
           : 'Admin'
+
+        console.log('🔔 TESTING MODE: Self-notifications enabled for expense')
 
         if (action === 'approve') {
           await notifyExpenseApproval({
