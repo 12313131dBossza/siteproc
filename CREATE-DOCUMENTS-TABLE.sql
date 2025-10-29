@@ -69,15 +69,18 @@ CREATE INDEX IF NOT EXISTS idx_documents_created_at ON documents(created_at);
 CREATE INDEX IF NOT EXISTS idx_documents_file_type ON documents(file_type);
 CREATE INDEX IF NOT EXISTS idx_documents_deleted_at ON documents(deleted_at) WHERE deleted_at IS NULL;
 
--- Full-text search index on document content
-CREATE INDEX IF NOT EXISTS idx_documents_search 
-ON documents 
-USING gin(to_tsvector('english', 
-    COALESCE(title, '') || ' ' || 
-    COALESCE(description, '') || ' ' || 
-    COALESCE(file_name, '') || ' ' ||
-    COALESCE(array_to_string(tags, ' '), '')
-));
+-- Create a generated column for full-text search (IMMUTABLE)
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS search_vector tsvector 
+    GENERATED ALWAYS AS (
+        to_tsvector('english', 
+            COALESCE(title, '') || ' ' || 
+            COALESCE(description, '') || ' ' || 
+            COALESCE(file_name, '')
+        )
+    ) STORED;
+
+-- Full-text search index on generated column
+CREATE INDEX IF NOT EXISTS idx_documents_search ON documents USING gin(search_vector);
 
 -- Add table comments
 COMMENT ON TABLE documents IS 'File and document storage with associations to projects, orders, expenses';
@@ -87,6 +90,7 @@ COMMENT ON COLUMN documents.tags IS 'Flexible tagging system for categorization'
 COMMENT ON COLUMN documents.version IS 'Version number for document versioning';
 COMMENT ON COLUMN documents.parent_document_id IS 'Reference to parent document for versioning';
 COMMENT ON COLUMN documents.is_latest_version IS 'Flag to identify the latest version';
+COMMENT ON COLUMN documents.search_vector IS 'Generated tsvector for full-text search on title, description, and filename';
 
 -- ============================================================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
