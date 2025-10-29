@@ -414,7 +414,7 @@ export default function ExpensesPage() {
         )}
 
         {/* Stats Grid */}
-  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4">
+  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
           <StatCard
             title="Total Expenses"
             value={formatCurrency(stats.total)}
@@ -449,9 +449,9 @@ export default function ExpensesPage() {
         </div>
 
         {/* Filters and Search */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-          <div className="p-6">
-            <div className="flex flex-col md:flex-row gap-4">
+        <div className="bg-white rounded-lg sm:rounded-xl border border-gray-200 shadow-sm">
+          <div className="p-3 sm:p-4 md:p-6">
+            <div className="flex flex-col md:flex-row gap-3 sm:gap-4">
               <div className="flex-1">
                 <SearchBar
                   value={searchTerm}
@@ -463,7 +463,7 @@ export default function ExpensesPage() {
                 <select
                   value={categoryFilter}
                   onChange={(e) => setCategoryFilter(e.target.value)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                 >
                   <option value="all">All Categories</option>
                   <option value="labor">Labor</option>

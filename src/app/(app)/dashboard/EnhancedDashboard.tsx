@@ -169,9 +169,9 @@ export default function EnhancedDashboard() {
   const topExpenseCategories = expenseBreakdown.slice(0, 5);
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-2 sm:p-4 md:p-6 space-y-4 sm:space-y-6 max-w-full overflow-hidden">
       {/* KPI Cards Grid */}
-  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4">
+  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
         {/* Projects Card */}
         <StatCard
           title="Total Projects"

@@ -342,43 +342,43 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Project Performance */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Project Performance</h3>
-          <div className="overflow-x-auto">
+        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4 md:p-6">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Project Performance</h3>
+          <div className="w-full overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
             <table className="min-w-full divide-y divide-gray-200">
               <thead>
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Project</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Budget</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Spent</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Remaining</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Utilization</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Project</th>
+                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Budget</th>
+                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Spent</th>
+                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Remaining</th>
+                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Utilization</th>
+                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {data.charts.projectPerformance.map((project) => (
                   <tr key={project.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3">
+                    <td className="px-2 sm:px-4 py-2 sm:py-3">
                       <div>
-                        <div className="font-medium text-gray-900">{project.name}</div>
-                        <div className="text-sm text-gray-500">{project.code}</div>
+                        <div className="font-medium text-gray-900 text-xs sm:text-sm">{project.name}</div>
+                        <div className="text-xs text-gray-500">{project.code}</div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-right text-gray-900">
+                    <td className="px-2 sm:px-4 py-2 sm:py-3 text-right text-gray-900 text-xs sm:text-sm whitespace-nowrap">
                       ${project.budget.toLocaleString()}
                     </td>
-                    <td className="px-4 py-3 text-right text-gray-900">
+                    <td className="px-2 sm:px-4 py-2 sm:py-3 text-right text-gray-900 text-xs sm:text-sm whitespace-nowrap">
                       ${project.spent.toLocaleString()}
                     </td>
-                    <td className="px-4 py-3 text-right">
-                      <span className={project.remaining < 0 ? 'text-red-600 font-medium' : 'text-gray-900'}>
+                    <td className="px-2 sm:px-4 py-2 sm:py-3 text-right whitespace-nowrap">
+                      <span className={cn("text-xs sm:text-sm", project.remaining < 0 ? 'text-red-600 font-medium' : 'text-gray-900')}>
                         ${project.remaining.toLocaleString()}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-2 sm:px-4 py-2 sm:py-3 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <div className="w-20 bg-gray-200 rounded-full h-2">
+                        <div className="w-16 sm:w-20 bg-gray-200 rounded-full h-2">
                           <div
                             className={`h-2 rounded-full ${
                               project.utilization > 100 ? 'bg-red-600' :
