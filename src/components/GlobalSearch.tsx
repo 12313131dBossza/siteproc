@@ -59,13 +59,14 @@ export default function GlobalSearch() {
   }, [query])
 
   const handleResultClick = (type: string, id: string) => {
+    // Navigate to list page with ID as query parameter to open the modal
     const routes: Record<string, string> = {
-      orders: `/orders/${id}`,
-      projects: `/projects/${id}`,
-      deliveries: `/deliveries/${id}`,
-      expenses: `/expenses/${id}`,
-      payments: `/payments/${id}`,
-      products: `/products/${id}`
+      orders: `/orders?id=${id}`,
+      projects: `/projects?id=${id}`,
+      deliveries: `/deliveries?id=${id}`,
+      expenses: `/expenses?id=${id}`,
+      payments: `/payments?id=${id}`,
+      products: `/products?id=${id}`
     }
     
     router.push(routes[type] || '/')

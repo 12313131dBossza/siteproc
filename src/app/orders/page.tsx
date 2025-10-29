@@ -107,6 +107,24 @@ export default function OrdersPage() {
     fetchOrders();
   }, [appliedFilters]);
 
+  // Auto-open modal if ID is in URL (from global search)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && orders.length > 0) {
+      const params = new URLSearchParams(window.location.search);
+      const orderId = params.get('id');
+      
+      if (orderId) {
+        const order = orders.find(o => o.id === orderId);
+        if (order) {
+          setSelectedOrder(order);
+          setShowDetailModal(true);
+          // Clean up URL
+          window.history.replaceState({}, '', '/orders');
+        }
+      }
+    }
+  }, [orders]);
+
   const fetchUserProfile = async () => {
     try {
       const supabase = createClient();
