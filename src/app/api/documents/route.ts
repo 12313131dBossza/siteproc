@@ -63,17 +63,10 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    // Build query
+    // Build query - fetch documents first, then manually join profiles
     let query = supabase
       .from('documents')
-      .select(`
-        *,
-        profiles!uploaded_by(id, full_name, email),
-        projects(id, name, code),
-        purchase_orders(id, po_number),
-        expenses(id, description),
-        deliveries(id, delivery_date)
-      `, { count: 'exact' })
+      .select('*', { count: 'exact' })
       .eq('company_id', profile.company_id)
       .is('deleted_at', null)
       .order('created_at', { ascending: false });
@@ -106,6 +99,51 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('Error fetching documents:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    // Manually fetch related data for each document
+    if (documents && documents.length > 0) {
+      // Get unique IDs
+      const uploaderIds = [...new Set(documents.map(d => d.uploaded_by).filter(Boolean))];
+      const projectIds = [...new Set(documents.map(d => d.project_id).filter(Boolean))];
+      const orderIds = [...new Set(documents.map(d => d.order_id).filter(Boolean))];
+      const expenseIds = [...new Set(documents.map(d => d.expense_id).filter(Boolean))];
+      const deliveryIds = [...new Set(documents.map(d => d.delivery_id).filter(Boolean))];
+
+      // Fetch all related records in parallel
+      const [profilesData, projectsData, ordersData, expensesData, deliveriesData] = await Promise.all([
+        uploaderIds.length > 0
+          ? supabase.from('profiles').select('id, full_name, email').in('id', uploaderIds)
+          : Promise.resolve({ data: [] }),
+        projectIds.length > 0
+          ? supabase.from('projects').select('id, name, code').in('id', projectIds)
+          : Promise.resolve({ data: [] }),
+        orderIds.length > 0
+          ? supabase.from('purchase_orders').select('id, po_number').in('id', orderIds)
+          : Promise.resolve({ data: [] }),
+        expenseIds.length > 0
+          ? supabase.from('expenses').select('id, description').in('id', expenseIds)
+          : Promise.resolve({ data: [] }),
+        deliveryIds.length > 0
+          ? supabase.from('deliveries').select('id, delivery_date').in('id', deliveryIds)
+          : Promise.resolve({ data: [] }),
+      ]);
+
+      // Create lookup maps
+      const profilesMap = new Map(profilesData.data?.map(p => [p.id, p]) || []);
+      const projectsMap = new Map(projectsData.data?.map(p => [p.id, p]) || []);
+      const ordersMap = new Map(ordersData.data?.map(o => [o.id, o]) || []);
+      const expensesMap = new Map(expensesData.data?.map(e => [e.id, e]) || []);
+      const deliveriesMap = new Map(deliveriesData.data?.map(d => [d.id, d]) || []);
+
+      // Attach related data to documents
+      documents.forEach((doc: any) => {
+        doc.profiles = profilesMap.get(doc.uploaded_by) || null;
+        doc.projects = doc.project_id ? projectsMap.get(doc.project_id) || null : null;
+        doc.purchase_orders = doc.order_id ? ordersMap.get(doc.order_id) || null : null;
+        doc.expenses = doc.expense_id ? expensesMap.get(doc.expense_id) || null : null;
+        doc.deliveries = doc.delivery_id ? deliveriesMap.get(doc.delivery_id) || null : null;
+      });
     }
 
     return NextResponse.json({
@@ -246,16 +284,34 @@ export async function POST(request: NextRequest) {
     // Fetch the full document with relationships
     const { data: fullDocument } = await supabase
       .from('documents')
-      .select(`
-        *,
-        profiles!uploaded_by(id, full_name, email),
-        projects(id, name, code),
-        purchase_orders(id, po_number),
-        expenses(id, description),
-        deliveries(id, delivery_date)
-      `)
+      .select('*')
       .eq('id', document.id)
       .single();
+
+    // Manually fetch related data
+    if (fullDocument) {
+      const [profileData, projectData, orderData, expenseData, deliveryData] = await Promise.all([
+        supabase.from('profiles').select('id, full_name, email').eq('id', fullDocument.uploaded_by).single(),
+        fullDocument.project_id
+          ? supabase.from('projects').select('id, name, code').eq('id', fullDocument.project_id).single()
+          : Promise.resolve({ data: null }),
+        fullDocument.order_id
+          ? supabase.from('purchase_orders').select('id, po_number').eq('id', fullDocument.order_id).single()
+          : Promise.resolve({ data: null }),
+        fullDocument.expense_id
+          ? supabase.from('expenses').select('id, description').eq('id', fullDocument.expense_id).single()
+          : Promise.resolve({ data: null }),
+        fullDocument.delivery_id
+          ? supabase.from('deliveries').select('id, delivery_date').eq('id', fullDocument.delivery_id).single()
+          : Promise.resolve({ data: null }),
+      ]);
+
+      fullDocument.profiles = profileData.data;
+      fullDocument.projects = projectData.data;
+      fullDocument.purchase_orders = orderData.data;
+      fullDocument.expenses = expenseData.data;
+      fullDocument.deliveries = deliveryData.data;
+    }
 
     return NextResponse.json({ document: fullDocument || document }, { status: 201 });
   } catch (error: any) {

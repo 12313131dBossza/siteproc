@@ -119,14 +119,7 @@ export async function PATCH(
       .eq('id', documentId)
       .eq('company_id', profile.company_id)
       .is('deleted_at', null)
-      .select(`
-        *,
-        profiles!uploaded_by(id, full_name, email),
-        projects(id, name, code),
-        purchase_orders(id, po_number),
-        expenses(id, description),
-        deliveries(id, delivery_date)
-      `)
+      .select('*')
       .single();
 
     if (updateError) {
@@ -137,6 +130,29 @@ export async function PATCH(
     if (!document) {
       return NextResponse.json({ error: 'Document not found or permission denied' }, { status: 404 });
     }
+
+    // Manually fetch related data
+    const [profileData, projectData, orderData, expenseData, deliveryData] = await Promise.all([
+      supabase.from('profiles').select('id, full_name, email').eq('id', document.uploaded_by).single(),
+      document.project_id
+        ? supabase.from('projects').select('id, name, code').eq('id', document.project_id).single()
+        : Promise.resolve({ data: null }),
+      document.order_id
+        ? supabase.from('purchase_orders').select('id, po_number').eq('id', document.order_id).single()
+        : Promise.resolve({ data: null }),
+      document.expense_id
+        ? supabase.from('expenses').select('id, description').eq('id', document.expense_id).single()
+        : Promise.resolve({ data: null }),
+      document.delivery_id
+        ? supabase.from('deliveries').select('id, delivery_date').eq('id', document.delivery_id).single()
+        : Promise.resolve({ data: null }),
+    ]);
+
+    document.profiles = profileData.data;
+    document.projects = projectData.data;
+    document.purchase_orders = orderData.data;
+    document.expenses = expenseData.data;
+    document.deliveries = deliveryData.data;
 
     return NextResponse.json({ document });
   } catch (error: any) {
