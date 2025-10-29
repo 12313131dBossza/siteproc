@@ -1,24 +1,24 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
 
 export interface FilterState {
   [key: string]: any
 }
 
 export function useFilters(module: string) {
-  const router = useRouter()
-  const searchParams = useSearchParams()
   const [filters, setFilters] = useState<FilterState>({})
   const [savedFilters, setSavedFilters] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
 
-  // Initialize filters from URL params
+  // Initialize filters from URL params on mount (client-side only)
   useEffect(() => {
-    const params = Object.fromEntries(searchParams.entries())
-    if (Object.keys(params).length > 0) {
-      setFilters(params)
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const paramsObj = Object.fromEntries(params.entries())
+      if (Object.keys(paramsObj).length > 0) {
+        setFilters(paramsObj)
+      }
     }
-  }, [searchParams])
+  }, [])
 
   // Fetch saved filters
   const fetchSavedFilters = useCallback(async () => {
@@ -57,8 +57,10 @@ export function useFilters(module: string) {
   // Clear all filters
   const clearFilters = useCallback(() => {
     setFilters({})
-    router.push(window.location.pathname)
-  }, [router])
+    if (typeof window !== 'undefined') {
+      window.history.pushState({}, '', window.location.pathname)
+    }
+  }, [])
 
   // Save current filters
   const saveFilter = useCallback(async (name: string, isDefault: boolean = false) => {
@@ -112,6 +114,8 @@ export function useFilters(module: string) {
 
   // Update URL with current filters
   const updateURL = useCallback(() => {
+    if (typeof window === 'undefined') return
+    
     const params = new URLSearchParams()
     Object.entries(filters).forEach(([key, value]) => {
       if (value !== null && value !== undefined && value !== '') {
@@ -119,8 +123,8 @@ export function useFilters(module: string) {
       }
     })
     const newURL = params.toString() ? `?${params.toString()}` : window.location.pathname
-    router.push(newURL)
-  }, [filters, router])
+    window.history.pushState({}, '', newURL)
+  }, [filters])
 
   // Get active filter count
   const activeFilterCount = Object.keys(filters).length
