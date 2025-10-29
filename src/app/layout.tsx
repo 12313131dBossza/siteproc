@@ -11,6 +11,7 @@ import { SentryInitializer } from '@/components/SentryInitializer'
 import { NotificationBell } from '@/components/NotificationBell'
 import { NotificationProvider } from '@/contexts/NotificationContext'
 import { MobileBottomNav } from '@/components/MobileBottomNav'
+import GlobalSearch from '@/components/GlobalSearch'
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -81,6 +82,7 @@ export default function RootLayout({
               <Link href="/" className="font-semibold">SiteProc</Link>
               <Suspense>
                 <div className="flex items-center gap-4">
+                  <GlobalSearch />
                   <NotificationBell />
                   <div id="offline-indicator" className="flex items-center gap-2">
                     <span id="offline-badge" className="text-sm bg-yellow-200 text-yellow-900 px-2 py-1 rounded hidden">
