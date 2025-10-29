@@ -540,9 +540,9 @@ export default function ExpensesPage() {
                   
                   return (
                     <div key={expense.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                      <div className="flex items-start justify-between gap-3 sm:gap-4 mb-4">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4 mb-4">
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-3 mb-2">
+                          <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
                             <span className="font-semibold text-gray-900">{expense.vendor}</span>
                             <span className={cn("px-2 py-1 rounded-full text-xs font-medium border", getCategoryColor(expense.category))}>
                               {expense.category}
@@ -587,8 +587,8 @@ export default function ExpensesPage() {
                             )}
                           </div>
                         </div>
-                        <div className="text-right flex-shrink-0">
-                          <div className="text-xl font-bold text-gray-900">{formatCurrency(expense.amount)}</div>
+                        <div className="sm:text-right text-left w-full sm:w-auto flex-shrink-0">
+                          <div className="text-xl font-bold text-gray-900 whitespace-nowrap sm:whitespace-normal">{formatCurrency(expense.amount)}</div>
                           {expense.status === 'pending' && (
                             <div className="flex gap-2 mt-2">
                               <Button
