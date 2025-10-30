@@ -8,8 +8,6 @@ import { Button } from '@/components/ui/Button';
 import { format } from '@/lib/date-format';
 import { InvoiceGenerator } from '@/components/InvoiceGenerator';
 import { FormModal, FormModalActions, Input, Select, TextArea, SearchBar } from '@/components/ui';
-import { PaymentsFilterPanel } from '@/components/PaymentsFilterPanel';
-import { SortControl, sortArray } from "@/components/SortControl";
 
 interface Payment {
   id: string;
@@ -37,10 +35,7 @@ export default function PaymentsPageClient() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [filters, setFilters] = useState<any>({});
   const [showModal, setShowModal] = useState(false);
-  const [sortBy, setSortBy] = useState('');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
 
@@ -199,41 +194,13 @@ export default function PaymentsPageClient() {
   };
 
   // Filter payments based on search
-  let filteredPayments = payments.filter(payment => {
+  const filteredPayments = payments.filter(payment => {
     const matchesSearch = payment.vendor_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       payment.reference_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       payment.projects?.name?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    // Advanced filters
-    const matchesStatus = !filters.status || payment.status === filters.status;
-    
-    // Payment method filter
-    const matchesMethod = !filters.paymentMethod || payment.payment_method === filters.paymentMethod;
-    
-    // Vendor filter
-    const matchesVendor = !filters.vendor || payment.vendor_name.toLowerCase().includes(filters.vendor.toLowerCase());
-    
-    // Date range filter
-    const matchesDateRange = (!filters.startDate || new Date(payment.payment_date) >= new Date(filters.startDate)) &&
-                             (!filters.endDate || new Date(payment.payment_date) <= new Date(filters.endDate));
-    
-    // Amount range filter
-    const matchesAmountRange = (!filters.minAmount || payment.amount >= Number(filters.minAmount)) &&
-                               (!filters.maxAmount || payment.amount <= Number(filters.maxAmount));
-    
-    return matchesSearch && matchesStatus && matchesMethod && matchesVendor && matchesDateRange && matchesAmountRange;
+    return matchesSearch;
   });
-
-  // Apply sorting
-  if (sortBy) {
-    filteredPayments = sortArray(filteredPayments, sortBy, sortOrder, (item, key) => {
-      if (key === 'payment_date') return new Date(item.payment_date).getTime();
-      if (key === 'amount') return item.amount;
-      if (key === 'vendor_name') return item.vendor_name;
-      if (key === 'status') return item.status;
-      return item[key as keyof Payment];
-    });
-  }
 
   // Calculate totals
   const totals = filteredPayments.reduce((acc, p) => {
@@ -317,23 +284,6 @@ export default function PaymentsPageClient() {
             <option value="paid">Paid</option>
           </select>
         </div>
-      </div>
-      
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <PaymentsFilterPanel onFiltersChange={setFilters} />
-        
-        <SortControl
-          options={[
-            { label: 'Payment Date', value: 'payment_date' },
-            { label: 'Amount', value: 'amount' },
-            { label: 'Vendor', value: 'vendor_name' },
-            { label: 'Status', value: 'status' },
-          ]}
-          onSortChange={(sortBy, sortOrder) => {
-            setSortBy(sortBy);
-            setSortOrder(sortOrder);
-          }}
-        />
       </div>
 
       {/* Payments Table */}
