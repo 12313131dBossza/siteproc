@@ -48,6 +48,7 @@ interface Expense {
     full_name: string;
     email: string;
   };
+  document_count?: number; // Number of documents attached
 }
 
 export default function ExpensesPage() {
@@ -70,6 +71,7 @@ export default function ExpensesPage() {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
   const [docManagerOpen, setDocManagerOpen] = useState(false);
   const [docManagerExpenseId, setDocManagerExpenseId] = useState<string>('');
+  const [documentCounts, setDocumentCounts] = useState<Record<string, number>>({});
 
   // Mock user for approval functionality
   const user = { email: 'admin@siteproc.com' };
@@ -144,6 +146,9 @@ export default function ExpensesPage() {
       const fetchedExpenses: Expense[] = json.data || json.expenses || [];
 
       setExpenses(fetchedExpenses);
+      
+      // Load document counts for each expense
+      loadDocumentCounts(fetchedExpenses.map(e => e.id));
     } catch (error) {
       console.error('Failed to fetch expenses:', error);
       
@@ -151,6 +156,32 @@ export default function ExpensesPage() {
       setExpenses([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadDocumentCounts = async (expenseIds: string[]) => {
+    try {
+      // Load document counts for all expenses
+      const counts: Record<string, number> = {};
+      
+      await Promise.all(
+        expenseIds.map(async (expenseId) => {
+          try {
+            const response = await fetch(`/api/documents?expense_id=${expenseId}`);
+            if (response.ok) {
+              const data = await response.json();
+              counts[expenseId] = data.documents?.length || 0;
+            }
+          } catch (error) {
+            console.error(`Failed to load documents for expense ${expenseId}:`, error);
+            counts[expenseId] = 0;
+          }
+        })
+      );
+      
+      setDocumentCounts(counts);
+    } catch (error) {
+      console.error('Failed to load document counts:', error);
     }
   };
 
@@ -392,7 +423,7 @@ export default function ExpensesPage() {
     >
       <div className="space-y-6">
         {/* Action Items Banner */}
-        {(expenses.filter(e => !e.receipt_url && e.amount > 100).length > 0 || 
+        {(expenses.filter(e => !documentCounts[e.id] && !e.receipt_url && e.amount > 100).length > 0 || 
           expenses.filter(e => !e.project_id).length > 0 ||
           expenses.filter(e => e.status === 'pending').length > 0) && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
@@ -404,8 +435,8 @@ export default function ExpensesPage() {
                   {expenses.filter(e => e.status === 'pending').length > 0 && (
                     <li>• {expenses.filter(e => e.status === 'pending').length} expense(s) awaiting approval</li>
                   )}
-                  {expenses.filter(e => !e.receipt_url && e.amount > 100).length > 0 && (
-                    <li>• {expenses.filter(e => !e.receipt_url && e.amount > 100).length} expense(s) over $100 missing receipts</li>
+                  {expenses.filter(e => !documentCounts[e.id] && !e.receipt_url && e.amount > 100).length > 0 && (
+                    <li>• {expenses.filter(e => !documentCounts[e.id] && !e.receipt_url && e.amount > 100).length} expense(s) over $100 missing receipts</li>
                   )}
                   {expenses.filter(e => !e.project_id).length > 0 && (
                     <li>• {expenses.filter(e => !e.project_id).length} expense(s) not linked to projects</li>
@@ -554,7 +585,7 @@ export default function ExpensesPage() {
                               <StatusIcon className="w-3.5 h-3.5" />
                               {statusConfig.label}
                             </div>
-                            {!expense.receipt_url && expense.amount > 100 && (
+                            {!documentCounts[expense.id] && !expense.receipt_url && expense.amount > 100 && (
                               <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-amber-50 border border-amber-200 text-xs font-medium text-amber-700">
                                 <AlertCircle className="w-3 h-3" />
                                 Receipt needed
@@ -575,10 +606,14 @@ export default function ExpensesPage() {
                             </div>
                           )}
                           <div className="flex items-center gap-2 mb-2">
-                            {expense.receipt_url && (
+                            {(documentCounts[expense.id] > 0 || expense.receipt_url) && (
                               <div className="flex items-center gap-2 text-sm text-green-600">
                                 <Receipt className="h-4 w-4" />
-                                <span>Receipt attached</span>
+                                <span>
+                                  {documentCounts[expense.id] > 0 
+                                    ? `${documentCounts[expense.id]} receipt${documentCounts[expense.id] > 1 ? 's' : ''} attached`
+                                    : 'Receipt attached'}
+                                </span>
                               </div>
                             )}
                             <Button
@@ -801,6 +836,10 @@ export default function ExpensesPage() {
           isOpen={docManagerOpen}
           onClose={() => {
             setDocManagerOpen(false);
+            // Reload document count for this expense
+            if (docManagerExpenseId) {
+              loadDocumentCounts([docManagerExpenseId]);
+            }
             setDocManagerExpenseId('');
           }}
           title="Expense Receipts"
