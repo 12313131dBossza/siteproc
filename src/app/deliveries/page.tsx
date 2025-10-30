@@ -12,6 +12,7 @@ import { toast } from 'sonner'
 import RecordDeliveryForm from '@/components/RecordDeliveryForm'
 import { DeliveryStatusTransitionModal } from '@/components/DeliveryStatusTransitionModal'
 import { useToast } from '@/components/ui/Toast'
+import { DeliveriesFilterPanel } from '@/components/DeliveriesFilterPanel'
 
 interface Delivery {
   id: string
@@ -182,7 +183,15 @@ export default function DeliveriesPage() {
     const matchesDateRange = (!filters.startDate || new Date(delivery.delivery_date) >= new Date(filters.startDate)) &&
                              (!filters.endDate || new Date(delivery.delivery_date) <= new Date(filters.endDate))
     
-    return matchesSearch && matchesStatusFilter && matchesAdvStatus && matchesDateRange
+    // Amount range filter
+    const amount = delivery.unit_price * delivery.quantity;
+    const matchesAmountRange = (!filters.minAmount || amount >= Number(filters.minAmount)) &&
+                               (!filters.maxAmount || amount <= Number(filters.maxAmount))
+    
+    // Has proof filter
+    const matchesProof = !filters.hasProof || delivery.proof_url
+    
+    return matchesSearch && matchesStatusFilter && matchesAdvStatus && matchesDateRange && matchesAmountRange && matchesProof
   })
 
   const getTabDeliveries = (status: string) => {
@@ -470,16 +479,10 @@ export default function DeliveriesPage() {
             </div>
           </div>
           
-          <FilterPanel
-            config={{
-              status: [
-                { label: 'Pending', value: 'pending' },
-                { label: 'In Transit', value: 'partial' },
-                { label: 'Delivered', value: 'delivered' },
-              ],
+          <DeliveriesFilterPanel
+            onFiltersChange={(newFilters) => {
+              setFilters(newFilters);
             }}
-            filters={filters}
-            onChange={setFilters}
           />
         </div>
 
