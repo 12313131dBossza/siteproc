@@ -175,19 +175,19 @@ export default function DeliveriesPage() {
   let filteredDeliveries = deliveries.filter(delivery => {
     const matchesSearch = (delivery.driver_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (delivery.vehicle_number || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         delivery.order_id.toLowerCase().includes(searchTerm.toLowerCase())
+                         (delivery.order_id || '').toLowerCase().includes(searchTerm.toLowerCase())
     
     const matchesStatusFilter = statusFilter === 'all' || delivery.status === statusFilter
     
     // Advanced filters
     const matchesAdvStatus = !filters.status || delivery.status === filters.status
     
-    // Date range filter
-    const matchesDateRange = (!filters.startDate || new Date(delivery.delivery_date) >= new Date(filters.startDate)) &&
-                             (!filters.endDate || new Date(delivery.delivery_date) <= new Date(filters.endDate))
+    // Date range filter - safely handle null/undefined dates
+    const matchesDateRange = (!filters.startDate || (delivery.delivery_date && new Date(delivery.delivery_date) >= new Date(filters.startDate))) &&
+                             (!filters.endDate || (delivery.delivery_date && new Date(delivery.delivery_date) <= new Date(filters.endDate)))
     
-    // Amount range filter
-    const amount = delivery.unit_price * delivery.quantity;
+    // Amount range filter - use total_amount from delivery
+    const amount = delivery.total_amount || 0;
     const matchesAmountRange = (!filters.minAmount || amount >= Number(filters.minAmount)) &&
                                (!filters.maxAmount || amount <= Number(filters.maxAmount))
     
@@ -200,11 +200,11 @@ export default function DeliveriesPage() {
   // Apply sorting
   if (sortBy) {
     filteredDeliveries = sortArray(filteredDeliveries, sortBy, sortOrder, (item, key) => {
-      if (key === 'delivery_date') return new Date(item.delivery_date).getTime();
-      if (key === 'amount') return item.unit_price * item.quantity;
+      if (key === 'delivery_date') return item.delivery_date ? new Date(item.delivery_date).getTime() : 0;
+      if (key === 'amount') return item.total_amount || 0;
       if (key === 'driver_name') return item.driver_name || '';
-      if (key === 'status') return item.status;
-      return item[key as keyof Delivery];
+      if (key === 'status') return item.status || '';
+      return item[key as keyof Delivery] || '';
     });
   }
 
