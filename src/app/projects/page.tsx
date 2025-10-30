@@ -8,6 +8,7 @@ import { FolderOpen, Plus, Search, DollarSign, Clock, CheckCircle, AlertCircle, 
 import { cn } from "@/lib/utils";
 import { FormModal, FormModalActions, Input, Select, SearchBar } from '@/components/ui';
 import { ProjectsFilterPanel } from "@/components/ProjectsFilterPanel";
+import { SortControl, sortArray } from "@/components/SortControl";
 
 interface Project {
   id: string;
@@ -38,6 +39,8 @@ export default function ProjectsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [form, setForm] = useState({ name: "", budget: 0, code: "", status: "active" });
   const [isCreating, setIsCreating] = useState(false);
+  const [sortBy, setSortBy] = useState('');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const router = useRouter();
 
   async function load() {
@@ -145,8 +148,20 @@ export default function ProjectsPage() {
       });
     }
     
+    // Apply sorting
+    if (sortBy) {
+      filtered = sortArray(filtered, sortBy, sortOrder, (item, key) => {
+        if (key === 'name') return item.name;
+        if (key === 'status') return item.status;
+        if (key === 'budget') return item.budget;
+        if (key === 'created_at') return item.created_at ? new Date(item.created_at).getTime() : 0;
+        if (key === 'actual_expenses') return item.actual_expenses ?? item.rollup?.actual_expenses ?? 0;
+        return item[key as keyof Project];
+      });
+    }
+    
     return filtered;
-  }, [projects, activeTab, searchTerm, appliedFilters]);
+  }, [projects, activeTab, searchTerm, appliedFilters, sortBy, sortOrder]);
 
   const stats = useMemo(() => {
     const totalBudget = projects.reduce((sum, p) => sum + Number(p.budget), 0);
@@ -214,8 +229,24 @@ export default function ProjectsPage() {
             </div>
           </div>
           
-          {/* Projects Filter Panel */}
-          <ProjectsFilterPanel onFiltersChange={setAppliedFilters} />
+          {/* Filters and Sort */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <ProjectsFilterPanel onFiltersChange={setAppliedFilters} />
+            
+            <SortControl
+              options={[
+                { label: 'Name', value: 'name' },
+                { label: 'Budget', value: 'budget' },
+                { label: 'Actual Expenses', value: 'actual_expenses' },
+                { label: 'Status', value: 'status' },
+                { label: 'Date Created', value: 'created_at' },
+              ]}
+              onSortChange={(sortBy, sortOrder) => {
+                setSortBy(sortBy);
+                setSortOrder(sortOrder);
+              }}
+            />
+          </div>
         </div>
 
         {loading ? (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">{Array.from({ length: 6 }).map((_, i) => (<div key={i} className="animate-pulse bg-white border border-gray-200 rounded-lg p-4 md:p-6"><div className="h-5 w-40 bg-gray-200 rounded mb-2" /><div className="h-3 w-24 bg-gray-100 rounded mb-4" /><div className="grid grid-cols-3 gap-3"><div className="h-4 bg-gray-100 rounded" /><div className="h-4 bg-gray-100 rounded" /><div className="h-4 bg-gray-100 rounded" /></div></div>))}</div>) : filteredProjects.length === 0 ? (<div className="text-center py-12 bg-white rounded-lg border border-gray-200"><FolderOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" /><h3 className="text-lg font-medium text-gray-900 mb-2">{searchTerm ? "No projects found" : "No projects yet"}</h3><p className="text-gray-500 mb-4">{searchTerm ? "Try adjusting your search criteria" : "Create your first project to track budget, actuals, and deliveries"}</p>{!searchTerm && (<Button onClick={() => setShowCreateModal(true)} className="mx-auto"><Plus className="h-4 w-4 mr-2" />Create Project</Button>)}</div>) : (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">{filteredProjects.map(p => (<ProjectCard key={p.id} project={p} formatCurrency={formatCurrency} />))}</div>)}

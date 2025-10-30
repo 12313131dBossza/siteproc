@@ -13,6 +13,7 @@ import RecordDeliveryForm from '@/components/RecordDeliveryForm'
 import { DeliveryStatusTransitionModal } from '@/components/DeliveryStatusTransitionModal'
 import { useToast } from '@/components/ui/Toast'
 import { DeliveriesFilterPanel } from '@/components/DeliveriesFilterPanel'
+import { SortControl, sortArray } from "@/components/SortControl"
 
 interface Delivery {
   id: string
@@ -64,6 +65,8 @@ export default function DeliveriesPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const { filters, setFilters } = useFilters()
   const [selectedTab, setSelectedTab] = useState<'pending' | 'partial' | 'delivered'>('pending')
+  const [sortBy, setSortBy] = useState('')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [authenticated, setAuthenticated] = useState<boolean | null>(null)
   const [updatingDelivery, setUpdatingDelivery] = useState<string | null>(null)
   const [userRole, setUserRole] = useState<string | null>(null)
@@ -169,7 +172,7 @@ export default function DeliveriesPage() {
     }
   }
 
-  const filteredDeliveries = deliveries.filter(delivery => {
+  let filteredDeliveries = deliveries.filter(delivery => {
     const matchesSearch = (delivery.driver_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (delivery.vehicle_number || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                          delivery.order_id.toLowerCase().includes(searchTerm.toLowerCase())
@@ -193,6 +196,17 @@ export default function DeliveriesPage() {
     
     return matchesSearch && matchesStatusFilter && matchesAdvStatus && matchesDateRange && matchesAmountRange && matchesProof
   })
+
+  // Apply sorting
+  if (sortBy) {
+    filteredDeliveries = sortArray(filteredDeliveries, sortBy, sortOrder, (item, key) => {
+      if (key === 'delivery_date') return new Date(item.delivery_date).getTime();
+      if (key === 'amount') return item.unit_price * item.quantity;
+      if (key === 'driver_name') return item.driver_name || '';
+      if (key === 'status') return item.status;
+      return item[key as keyof Delivery];
+    });
+  }
 
   const getTabDeliveries = (status: string) => {
     return deliveries.filter(d => d.status === status)
@@ -479,11 +493,26 @@ export default function DeliveriesPage() {
             </div>
           </div>
           
-          <DeliveriesFilterPanel
-            onFiltersChange={(newFilters) => {
-              setFilters(newFilters);
-            }}
-          />
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <DeliveriesFilterPanel
+              onFiltersChange={(newFilters) => {
+                setFilters(newFilters);
+              }}
+            />
+            
+            <SortControl
+              options={[
+                { label: 'Delivery Date', value: 'delivery_date' },
+                { label: 'Amount', value: 'amount' },
+                { label: 'Driver Name', value: 'driver_name' },
+                { label: 'Status', value: 'status' },
+              ]}
+              onSortChange={(sortBy, sortOrder) => {
+                setSortBy(sortBy);
+                setSortOrder(sortOrder);
+              }}
+            />
+          </div>
         </div>
 
         {/* Tabs */}
