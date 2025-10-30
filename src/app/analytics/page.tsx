@@ -19,6 +19,7 @@ import {
   RefreshCw
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { cn } from '@/lib/utils'
 
 interface AnalyticsData {
   kpis: {
@@ -187,7 +188,7 @@ export default function AnalyticsPage() {
               <option value="year">This Year</option>
             </select>
             
-            <Button variant="outline" onClick={fetchAnalytics}>
+            <Button variant="ghost" onClick={fetchAnalytics}>
               <RefreshCw className="w-4 h-4 mr-2" />
               Refresh
             </Button>
