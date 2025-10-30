@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/app-layout";
 import { Button } from "@/components/ui/Button";
-import { FormModal, FormModalActions, Input, Select, TextArea, SearchBar, FilterPanel, useFilters } from '@/components/ui';
+import { FormModal, FormModalActions, Input, Select, TextArea, SearchBar } from '@/components/ui';
 import { StatCard } from "@/components/StatCard";
+import { ExpensesFilterPanel } from "@/components/ExpensesFilterPanel";
 import {
   DollarSign,
   TrendingUp,
@@ -55,9 +56,7 @@ export default function ExpensesPage() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const { filters, setFilters } = useFilters();
+  const [filters, setFilters] = useState<any>({});
   const [selectedTab, setSelectedTab] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
@@ -189,9 +188,8 @@ export default function ExpensesPage() {
     const matchesSearch = expense.vendor.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          expense.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = selectedTab === 'all' || expense.status === selectedTab;
-    const matchesCategory = categoryFilter === 'all' || expense.category === categoryFilter;
     
-    // Advanced filters
+    // Advanced filters from ExpensesFilterPanel
     const matchesAdvStatus = !filters.status || expense.status === filters.status;
     const matchesAdvCategory = !filters.category || expense.category === filters.category;
     
@@ -203,7 +201,12 @@ export default function ExpensesPage() {
     const matchesAmountRange = (!filters.minAmount || expense.amount >= Number(filters.minAmount)) &&
                                (!filters.maxAmount || expense.amount <= Number(filters.maxAmount));
     
-    return matchesSearch && matchesStatus && matchesCategory && matchesAdvStatus && matchesAdvCategory && matchesDateRange && matchesAmountRange;
+    // Missing receipts filter
+    const matchesMissingReceipts = !filters.missingReceipts || filters.missingReceipts !== 'true' || 
+                                   (!documentCounts[expense.id] && !expense.receipt_url && expense.amount > 100);
+    
+    return matchesSearch && matchesStatus && matchesAdvStatus && matchesAdvCategory && 
+           matchesDateRange && matchesAmountRange && matchesMissingReceipts;
   });
 
   const stats = {
@@ -493,43 +496,10 @@ export default function ExpensesPage() {
                   placeholder="Search by vendor or description..."
                 />
               </div>
-              <div className="flex gap-2">
-                <select
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                  className="px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                >
-                  <option value="all">All Categories</option>
-                  <option value="labor">Labor</option>
-                  <option value="materials">Materials</option>
-                  <option value="equipment">Equipment</option>
-                  <option value="rentals">Rentals</option>
-                  <option value="transportation">Transportation</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
             </div>
           </div>
           
-          <FilterPanel
-            config={{
-              status: [
-                { label: 'Pending', value: 'pending' },
-                { label: 'Approved', value: 'approved' },
-                { label: 'Rejected', value: 'rejected' },
-              ],
-              category: [
-                { label: 'Labor', value: 'labor' },
-                { label: 'Materials', value: 'materials' },
-                { label: 'Equipment', value: 'equipment' },
-                { label: 'Rentals', value: 'rentals' },
-                { label: 'Transportation', value: 'transportation' },
-                { label: 'Other', value: 'other' },
-              ],
-            }}
-            filters={filters}
-            onChange={setFilters}
-          />
+          <ExpensesFilterPanel onFiltersChange={setFilters} />
         </div>
 
         {/* Tabs */}
