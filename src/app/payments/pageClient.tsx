@@ -7,7 +7,8 @@ import { AppLayout } from '@/components/app-layout';
 import { Button } from '@/components/ui/Button';
 import { format } from '@/lib/date-format';
 import { InvoiceGenerator } from '@/components/InvoiceGenerator';
-import { FormModal, FormModalActions, Input, Select, TextArea, SearchBar, FilterPanel, useFilters } from '@/components/ui';
+import { FormModal, FormModalActions, Input, Select, TextArea, SearchBar } from '@/components/ui';
+import { PaymentsFilterPanel } from '@/components/PaymentsFilterPanel';
 
 interface Payment {
   id: string;
@@ -35,7 +36,7 @@ export default function PaymentsPageClient() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const { filters, setFilters } = useFilters();
+  const [filters, setFilters] = useState<any>({});
   const [showModal, setShowModal] = useState(false);
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -203,8 +204,11 @@ export default function PaymentsPageClient() {
     // Advanced filters
     const matchesStatus = !filters.status || payment.status === filters.status;
     
-    // Payment method filter (custom filter)
+    // Payment method filter
     const matchesMethod = !filters.paymentMethod || payment.payment_method === filters.paymentMethod;
+    
+    // Vendor filter
+    const matchesVendor = !filters.vendor || payment.vendor_name.toLowerCase().includes(filters.vendor.toLowerCase());
     
     // Date range filter
     const matchesDateRange = (!filters.startDate || new Date(payment.payment_date) >= new Date(filters.startDate)) &&
@@ -214,7 +218,7 @@ export default function PaymentsPageClient() {
     const matchesAmountRange = (!filters.minAmount || payment.amount >= Number(filters.minAmount)) &&
                                (!filters.maxAmount || payment.amount <= Number(filters.maxAmount));
     
-    return matchesSearch && matchesStatus && matchesMethod && matchesDateRange && matchesAmountRange;
+    return matchesSearch && matchesStatus && matchesMethod && matchesVendor && matchesDateRange && matchesAmountRange;
   });
 
   // Calculate totals
@@ -301,33 +305,7 @@ export default function PaymentsPageClient() {
         </div>
       </div>
       
-      <div className="bg-white border rounded-lg">
-        <FilterPanel
-          config={{
-            status: [
-              { label: 'Unpaid', value: 'unpaid' },
-              { label: 'Partial', value: 'partial' },
-              { label: 'Paid', value: 'paid' },
-            ],
-            customFilters: [
-              {
-                label: 'Payment Method',
-                options: [
-                  { label: 'All Methods', value: '' },
-                  { label: 'Check', value: 'check' },
-                  { label: 'Cash', value: 'cash' },
-                  { label: 'Bank Transfer', value: 'bank_transfer' },
-                  { label: 'Credit Card', value: 'credit_card' },
-                ],
-                value: filters.paymentMethod || '',
-                onChange: (value) => setFilters({ ...filters, paymentMethod: value }),
-              },
-            ],
-          }}
-          filters={filters}
-          onChange={setFilters}
-        />
-      </div>
+      <PaymentsFilterPanel onFiltersChange={setFilters} />
 
       {/* Payments Table */}
       <div className="bg-white border rounded-lg overflow-hidden">
