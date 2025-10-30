@@ -4,11 +4,12 @@ import { useState, useEffect, useMemo } from "react";
 import { AppLayout } from "@/components/app-layout";
 import { Button } from "@/components/ui/Button";
 import { useRouter } from "next/navigation";
-import { FolderOpen, Plus, Search, DollarSign, Clock, CheckCircle, AlertCircle, TrendingUp, TrendingDown, BarChart3, Eye } from "lucide-react";
+import { FolderOpen, Plus, Search, DollarSign, Clock, CheckCircle, AlertCircle, TrendingUp, TrendingDown, BarChart3, Eye, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FormModal, FormModalActions, Input, Select, SearchBar } from '@/components/ui';
 import { ProjectsFilterPanel } from "@/components/ProjectsFilterPanel";
 import { SortControl, sortArray } from "@/components/SortControl";
+import { exportToCSV, formatCurrencyForExport, formatDateForExport } from "@/lib/export-csv";
 
 interface Project {
   id: string;
@@ -173,6 +174,22 @@ export default function ProjectsPage() {
 
   const formatCurrency = (amount: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount);
 
+  const handleExportCSV = () => {
+    exportToCSV(
+      filteredProjects,
+      `projects-export-${new Date().toISOString().split('T')[0]}.csv`,
+      [
+        { key: 'name', label: 'Project Name' },
+        { key: 'code', label: 'Project Code' },
+        { key: 'status', label: 'Status' },
+        { key: 'budget', label: 'Budget' },
+        { key: 'actual_expenses', label: 'Actual Expenses' },
+        { key: 'variance', label: 'Variance' },
+        { key: 'created_at', label: 'Date Created' },
+      ]
+    );
+  };
+
   return (
     <AppLayout>
       <div className="p-4 md:p-6 space-y-4 md:space-y-6">
@@ -181,10 +198,21 @@ export default function ProjectsPage() {
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Projects</h1>
             <p className="text-sm md:text-base text-gray-500 mt-1">Manage project budgets and track expenses</p>
           </div>
-          <Button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2 w-full md:w-auto justify-center">
-            <Plus className="h-4 w-4" />
-            New Project
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              onClick={handleExportCSV} 
+              variant="ghost" 
+              className="flex items-center gap-2"
+              disabled={filteredProjects.length === 0}
+            >
+              <Download className="h-4 w-4" />
+              Export CSV
+            </Button>
+            <Button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              New Project
+            </Button>
+          </div>
         </div>
 
         {error && (<div className="mb-4 rounded border border-red-200 bg-red-50 text-red-700 p-3"><div className="font-medium mb-1">Couldn not load projects</div><div className="text-sm">{error}</div></div>)}
