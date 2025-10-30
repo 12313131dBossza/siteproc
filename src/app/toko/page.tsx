@@ -5,6 +5,7 @@ import { AppLayout } from "@/components/app-layout";
 import { Button } from "@/components/ui/Button";
 import { FormModal, FormModalActions, Input, Select, TextArea } from '@/components/ui';
 import { StatCard } from "@/components/StatCard";
+import { ProductsFilterPanel } from "@/components/ProductsFilterPanel";
 import {
   Package,
   Search,
@@ -70,8 +71,7 @@ export default function TokoPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [filters, setFilters] = useState<any>({});
   const [selectedTab, setSelectedTab] = useState<'all' | 'active' | 'low-stock' | 'inactive'>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -245,15 +245,27 @@ export default function TokoPage() {
                          product.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          product.supplier_name?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
-    const matchesStatus = statusFilter === 'all' || product.status === statusFilter;
-    
     const matchesTab = selectedTab === 'all' || 
                       (selectedTab === 'active' && product.status === 'active') ||
                       (selectedTab === 'low-stock' && product.stock_quantity <= product.min_stock_level) ||
                       (selectedTab === 'inactive' && product.status === 'inactive');
     
-    return matchesSearch && matchesCategory && matchesStatus && matchesTab;
+    // Advanced filters
+    const matchesStatus = !filters.status || product.status === filters.status;
+    const matchesCategory = !filters.category || product.category.toLowerCase().includes(filters.category.toLowerCase());
+    const matchesSupplier = !filters.supplier || product.supplier_name?.toLowerCase().includes(filters.supplier.toLowerCase());
+    
+    // Price range filter
+    const matchesPriceRange = (!filters.minPrice || product.price >= Number(filters.minPrice)) &&
+                              (!filters.maxPrice || product.price <= Number(filters.maxPrice));
+    
+    // Stock status filter
+    const matchesStockStatus = !filters.stockStatus || 
+                               (filters.stockStatus === 'in' && product.stock_quantity > product.min_stock_level) ||
+                               (filters.stockStatus === 'low' && product.stock_quantity <= product.min_stock_level && product.stock_quantity > 0) ||
+                               (filters.stockStatus === 'out' && product.stock_quantity === 0);
+    
+    return matchesSearch && matchesTab && matchesStatus && matchesCategory && matchesSupplier && matchesPriceRange && matchesStockStatus;
   });
 
   const getStockStatus = (product: Product) => {
@@ -459,7 +471,7 @@ export default function TokoPage() {
         {/* Filters and Search */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
           <div className="p-6">
-            <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex flex-col md:flex-row gap-4 mb-4">
               <div className="flex-1">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -472,29 +484,9 @@ export default function TokoPage() {
                   />
                 </div>
               </div>
-              <div className="flex gap-2">
-                <select
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="all">All Categories</option>
-                  {categories.map(category => (
-                    <option key={category} value={category}>{category}</option>
-                  ))}
-                </select>
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="all">All Status</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                  <option value="discontinued">Discontinued</option>
-                </select>
-              </div>
             </div>
+            
+            <ProductsFilterPanel onFiltersChange={setFilters} />
           </div>
         </div>
 
