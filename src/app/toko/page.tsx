@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { FormModal, FormModalActions, Input, Select, TextArea } from '@/components/ui';
 import { StatCard } from "@/components/StatCard";
 import { ProductsFilterPanel } from "@/components/ProductsFilterPanel";
+import { SortControl, sortArray } from "@/components/SortControl";
 import {
   Package,
   Search,
@@ -73,6 +74,8 @@ export default function TokoPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState<any>({});
   const [selectedTab, setSelectedTab] = useState<'all' | 'active' | 'low-stock' | 'inactive'>('all');
+  const [sortBy, setSortBy] = useState('');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
@@ -240,7 +243,7 @@ export default function TokoPage() {
     }
   };
 
-  const filteredProducts = products.filter(product => {
+  let filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          product.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          product.supplier_name?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -267,6 +270,18 @@ export default function TokoPage() {
     
     return matchesSearch && matchesTab && matchesStatus && matchesCategory && matchesSupplier && matchesPriceRange && matchesStockStatus;
   });
+
+  // Apply sorting
+  if (sortBy) {
+    filteredProducts = sortArray(filteredProducts, sortBy, sortOrder, (item, key) => {
+      if (key === 'name') return item.name;
+      if (key === 'price') return item.price;
+      if (key === 'stock_quantity') return item.stock_quantity;
+      if (key === 'category') return item.category;
+      if (key === 'status') return item.status;
+      return item[key as keyof Product];
+    });
+  }
 
   const getStockStatus = (product: Product) => {
     if (product.stock_quantity <= product.min_stock_level) {
@@ -486,7 +501,23 @@ export default function TokoPage() {
               </div>
             </div>
             
-            <ProductsFilterPanel onFiltersChange={setFilters} />
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <ProductsFilterPanel onFiltersChange={setFilters} />
+              
+              <SortControl
+                options={[
+                  { label: 'Name', value: 'name' },
+                  { label: 'Price', value: 'price' },
+                  { label: 'Stock Quantity', value: 'stock_quantity' },
+                  { label: 'Category', value: 'category' },
+                  { label: 'Status', value: 'status' },
+                ]}
+                onSortChange={(sortBy, sortOrder) => {
+                  setSortBy(sortBy);
+                  setSortOrder(sortOrder);
+                }}
+              />
+            </div>
           </div>
         </div>
 

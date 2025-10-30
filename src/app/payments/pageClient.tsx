@@ -9,6 +9,7 @@ import { format } from '@/lib/date-format';
 import { InvoiceGenerator } from '@/components/InvoiceGenerator';
 import { FormModal, FormModalActions, Input, Select, TextArea, SearchBar } from '@/components/ui';
 import { PaymentsFilterPanel } from '@/components/PaymentsFilterPanel';
+import { SortControl, sortArray } from "@/components/SortControl";
 
 interface Payment {
   id: string;
@@ -38,6 +39,8 @@ export default function PaymentsPageClient() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [filters, setFilters] = useState<any>({});
   const [showModal, setShowModal] = useState(false);
+  const [sortBy, setSortBy] = useState('');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
 
@@ -196,7 +199,7 @@ export default function PaymentsPageClient() {
   };
 
   // Filter payments based on search
-  const filteredPayments = payments.filter(payment => {
+  let filteredPayments = payments.filter(payment => {
     const matchesSearch = payment.vendor_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       payment.reference_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       payment.projects?.name?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -220,6 +223,17 @@ export default function PaymentsPageClient() {
     
     return matchesSearch && matchesStatus && matchesMethod && matchesVendor && matchesDateRange && matchesAmountRange;
   });
+
+  // Apply sorting
+  if (sortBy) {
+    filteredPayments = sortArray(filteredPayments, sortBy, sortOrder, (item, key) => {
+      if (key === 'payment_date') return new Date(item.payment_date).getTime();
+      if (key === 'amount') return item.amount;
+      if (key === 'vendor_name') return item.vendor_name;
+      if (key === 'status') return item.status;
+      return item[key as keyof Payment];
+    });
+  }
 
   // Calculate totals
   const totals = filteredPayments.reduce((acc, p) => {
@@ -305,7 +319,22 @@ export default function PaymentsPageClient() {
         </div>
       </div>
       
-      <PaymentsFilterPanel onFiltersChange={setFilters} />
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <PaymentsFilterPanel onFiltersChange={setFilters} />
+        
+        <SortControl
+          options={[
+            { label: 'Payment Date', value: 'payment_date' },
+            { label: 'Amount', value: 'amount' },
+            { label: 'Vendor', value: 'vendor_name' },
+            { label: 'Status', value: 'status' },
+          ]}
+          onSortChange={(sortBy, sortOrder) => {
+            setSortBy(sortBy);
+            setSortOrder(sortOrder);
+          }}
+        />
+      </div>
 
       {/* Payments Table */}
       <div className="bg-white border rounded-lg overflow-hidden">

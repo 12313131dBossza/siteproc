@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { FormModal, FormModalActions, Input, Select, TextArea, SearchBar } from '@/components/ui';
 import { StatCard } from "@/components/StatCard";
 import { ExpensesFilterPanel } from "@/components/ExpensesFilterPanel";
+import { SortControl, sortArray } from "@/components/SortControl";
 import {
   DollarSign,
   TrendingUp,
@@ -58,6 +59,8 @@ export default function ExpensesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState<any>({});
   const [selectedTab, setSelectedTab] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [sortBy, setSortBy] = useState('');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
@@ -184,7 +187,7 @@ export default function ExpensesPage() {
     }
   };
 
-  const filteredExpenses = expenses.filter(expense => {
+  let filteredExpenses = expenses.filter(expense => {
     const matchesSearch = expense.vendor.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          expense.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = selectedTab === 'all' || expense.status === selectedTab;
@@ -208,6 +211,18 @@ export default function ExpensesPage() {
     return matchesSearch && matchesStatus && matchesAdvStatus && matchesAdvCategory && 
            matchesDateRange && matchesAmountRange && matchesMissingReceipts;
   });
+
+  // Apply sorting
+  if (sortBy) {
+    filteredExpenses = sortArray(filteredExpenses, sortBy, sortOrder, (item, key) => {
+      if (key === 'created_at') return new Date(item.created_at).getTime();
+      if (key === 'amount') return item.amount;
+      if (key === 'vendor') return item.vendor;
+      if (key === 'status') return item.status;
+      if (key === 'category') return item.category;
+      return item[key as keyof Expense];
+    });
+  }
 
   const stats = {
     total: expenses.reduce((sum, exp) => sum + exp.amount, 0),
@@ -499,7 +514,23 @@ export default function ExpensesPage() {
             </div>
           </div>
           
-          <ExpensesFilterPanel onFiltersChange={setFilters} />
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <ExpensesFilterPanel onFiltersChange={setFilters} />
+            
+            <SortControl
+              options={[
+                { label: 'Date', value: 'created_at' },
+                { label: 'Amount', value: 'amount' },
+                { label: 'Vendor', value: 'vendor' },
+                { label: 'Category', value: 'category' },
+                { label: 'Status', value: 'status' },
+              ]}
+              onSortChange={(sortBy, sortOrder) => {
+                setSortBy(sortBy);
+                setSortOrder(sortOrder);
+              }}
+            />
+          </div>
         </div>
 
         {/* Tabs */}
