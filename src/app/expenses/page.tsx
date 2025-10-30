@@ -27,6 +27,7 @@ import { format } from "@/lib/date-format";
 import { cn, formatCurrency } from "@/lib/utils";
 import { createClient } from '@/lib/supabase-client';
 import { toast } from 'sonner';
+import { DocumentManager } from "@/components/DocumentManager";
 
 interface Expense {
   id: string;
@@ -67,6 +68,8 @@ export default function ExpensesPage() {
   const [projects, setProjects] = useState<Array<{ id: string; name: string }>>([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
+  const [docManagerOpen, setDocManagerOpen] = useState(false);
+  const [docManagerExpenseId, setDocManagerExpenseId] = useState<string>('');
 
   // Mock user for approval functionality
   const user = { email: 'admin@siteproc.com' };
@@ -571,12 +574,25 @@ export default function ExpensesPage() {
                               <span>{expense.project_name}</span>
                             </div>
                           )}
-                          {expense.receipt_url && (
-                            <div className="flex items-center gap-2 text-sm text-green-600 mb-2">
-                              <Receipt className="h-4 w-4" />
-                              <span>Receipt attached</span>
-                            </div>
-                          )}
+                          <div className="flex items-center gap-2 mb-2">
+                            {expense.receipt_url && (
+                              <div className="flex items-center gap-2 text-sm text-green-600">
+                                <Receipt className="h-4 w-4" />
+                                <span>Receipt attached</span>
+                              </div>
+                            )}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setDocManagerExpenseId(expense.id);
+                                setDocManagerOpen(true);
+                              }}
+                              leftIcon={<FileText className="w-4 h-4" />}
+                            >
+                              Documents
+                            </Button>
+                          </div>
                           <div className="text-sm text-gray-500 break-words">
                             <div>Created: {format(new Date(expense.created_at), 'MMM dd, yyyy')}</div>
                             {expense.approved_at && (
@@ -776,6 +792,19 @@ export default function ExpensesPage() {
             </div>
           </div>
         )}
+
+        {/* Document Manager Modal */}
+        <DocumentManager
+          entityType="expense"
+          entityId={docManagerExpenseId}
+          documentType="receipt"
+          isOpen={docManagerOpen}
+          onClose={() => {
+            setDocManagerOpen(false);
+            setDocManagerExpenseId('');
+          }}
+          title="Expense Receipts"
+        />
       </div>
     </AppLayout>
   );
