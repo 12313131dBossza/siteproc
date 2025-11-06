@@ -2,17 +2,21 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 const isDevelopment = process.env.NODE_ENV === 'development';
 
 function LoginForm() {
-  const [email, setEmail] = useState('');
+  const [emailOrUsername, setEmailOrUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [mounted, setMounted] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
@@ -20,11 +24,11 @@ function LoginForm() {
     const savedRememberMe = localStorage.getItem('rememberMe') === 'true';
     setRememberMe(savedRememberMe);
     
-    // Restore email if remember me was previously checked
+    // Restore email/username if remember me was previously checked
     if (savedRememberMe) {
-      const savedEmail = localStorage.getItem('savedEmail');
-      if (savedEmail) {
-        setEmail(savedEmail);
+      const savedCredential = localStorage.getItem('savedCredential');
+      if (savedCredential) {
+        setEmailOrUsername(savedCredential);
       }
     }
   }, []);
@@ -47,79 +51,69 @@ function LoginForm() {
     setMessage('');
 
     try {
-      // Save remember me preference and email if checked
+      // Save remember me preference and credentials if checked
       localStorage.setItem('rememberMe', rememberMe.toString());
       if (rememberMe) {
-        localStorage.setItem('savedEmail', email);
+        localStorage.setItem('savedCredential', emailOrUsername);
       } else {
-        localStorage.removeItem('savedEmail');
+        localStorage.removeItem('savedCredential');
       }
 
-      // Get app URL safely for client-side only
-      const appUrl = window.location.origin;
-
-      // Preserve redirectTo parameter
-      const redirectTo = searchParams.get('redirectTo');
-      let callbackUrl = `${appUrl}/auth/callback`;
-      if (redirectTo) {
-        callbackUrl += `?redirectTo=${encodeURIComponent(redirectTo)}`;
-      }
-
-      console.log('Starting authentication process...');
-      console.log('Email:', email);
+      console.log('Starting password authentication...');
+      console.log('Email/Username:', emailOrUsername);
       console.log('Remember Me:', rememberMe);
-      console.log('App URL:', appUrl);
-      console.log('Callback URL:', callbackUrl);
-      console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
       
-      // Create a timeout promise
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Authentication request timed out after 15 seconds')), 15000);
-      });
+      // Determine if input is email or username
+      const isEmail = emailOrUsername.includes('@');
+      let loginEmail = emailOrUsername;
       
-      // Use PKCE flow with explicit configuration
-      // When remember me is checked, we don't change the OTP behavior but the session will be longer after auth
-      const authPromise = supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: callbackUrl,
-          shouldCreateUser: true,
-          data: {
-            rememberMe: rememberMe // Pass remember me preference to be used after login
-          }
-        },
-      });
+      // If it's a username, we need to look up the email first
+      if (!isEmail) {
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('email')
+          .ilike('username', emailOrUsername)
+          .single();
+        
+        if (profileError || !profile?.email) {
+          throw new Error('Username not found');
+        }
+        
+        loginEmail = profile.email;
+      }
 
-      console.log('Auth response received...');
-      
-      // Race between auth call and timeout
-      const { error } = await Promise.race([authPromise, timeoutPromise]) as any;
-
-      console.log('Auth response received, error:', error);
+      // Sign in with email and password
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: loginEmail,
+        password: password,
+      });
 
       if (error) {
         console.error('Supabase auth error:', error);
-        console.error('Error message:', error.message);
-        console.error('Error status:', error.status);
-        console.error('Full error object:', JSON.stringify(error, null, 2));
         throw error;
       }
 
-      console.log('Magic link sent successfully');
-      setMessage('Check your email for the login link!');
-    } catch (error: any) {
-      console.error('Full catch error:', error);
-      console.error('Error type:', typeof error);
-      console.error('Error constructor:', error?.constructor?.name);
+      console.log('Login successful!');
       
-      let errorMessage = 'Unknown error occurred';
+      // Get redirect URL
+      const redirectTo = searchParams.get('redirectTo') || '/dashboard';
+      
+      // Redirect to dashboard or requested page
+      router.push(redirectTo);
+      
+    } catch (error: any) {
+      console.error('Login error:', error);
+      
+      let errorMessage = 'Login failed';
       
       if (error && error.message) {
-        errorMessage = error.message;
-      } else if (typeof error === 'string') {
-        errorMessage = error;
-      } else if (error) {
-        errorMessage = JSON.stringify(error);
+        if (error.message.includes('Invalid login credentials')) {
+          errorMessage = 'Invalid username/email or password';
+        } else if (error.message.includes('Username not found')) {
+          errorMessage = 'Username not found';
+        } else {
+          errorMessage = error.message;
+        }
       }
       
       setMessage('Error: ' + errorMessage);
@@ -137,37 +131,74 @@ function LoginForm() {
           </h2>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleLogin}>
-          <div>
-            <label htmlFor="email" className="sr-only">
-              Email address
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              required
-              className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-              placeholder="Email address"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={loading}
-            />
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="emailOrUsername" className="sr-only">
+                Email or Username
+              </label>
+              <input
+                id="emailOrUsername"
+                name="emailOrUsername"
+                type="text"
+                autoComplete="username"
+                required
+                className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                placeholder="Email or Username"
+                value={emailOrUsername}
+                onChange={(e) => setEmailOrUsername(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+            
+            <div className="relative">
+              <label htmlFor="password" className="sr-only">
+                Password
+              </label>
+              <input
+                id="password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
+                required
+                className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm pr-10"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+              />
+              <button
+                type="button"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                <span className="text-gray-400 text-sm">
+                  {showPassword ? '👁️' : '👁️‍🗨️'}
+                </span>
+              </button>
+            </div>
           </div>
 
-          <div className="flex items-center">
-            <input
-              id="remember-me"
-              name="remember-me"
-              type="checkbox"
-              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
-              disabled={loading}
-            />
-            <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
-              Remember me
-            </label>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <input
+                id="remember-me"
+                name="remember-me"
+                type="checkbox"
+                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                disabled={loading}
+              />
+              <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
+                Remember me
+              </label>
+            </div>
+            
+            <div className="text-sm">
+              <Link href="/forgot-password" className="font-medium text-indigo-600 hover:text-indigo-500">
+                Forgot password?
+              </Link>
+            </div>
           </div>
           
           <div>
@@ -176,12 +207,21 @@ function LoginForm() {
               disabled={loading || !mounted}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
             >
-              {!mounted ? 'Loading...' : loading ? 'Sending...' : 'Send magic link'}
+              {!mounted ? 'Loading...' : loading ? 'Signing in...' : 'Sign in'}
             </button>
+          </div>
+          
+          <div className="text-center">
+            <p className="text-sm text-gray-600">
+              Don't have an account?{' '}
+              <Link href="/signup" className="font-medium text-indigo-600 hover:text-indigo-500">
+                Sign up
+              </Link>
+            </p>
           </div>
 
           {message && (
-            <div className="mt-4 text-center text-sm text-gray-600">
+            <div className={`mt-4 text-center text-sm ${message.includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
               {message}
             </div>
           )}
