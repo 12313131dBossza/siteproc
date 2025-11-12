@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { AppLayout } from "@/components/app-layout"
 import { Button } from "@/components/ui/Button"
 import { SearchBar, FilterPanel, useFilters } from "@/components/ui"
+import { FormModal } from '@/components/ui/FormModal'
 import { StatCard } from "@/components/StatCard"
 import { Package, Truck, MapPin, Clock, CheckCircle, CheckCircle2, AlertCircle, Search, Filter, Eye, Calendar, Lock, Edit, X, Upload } from 'lucide-react'
 import { format } from '@/lib/date-format'
@@ -692,38 +693,32 @@ export default function DeliveriesPage() {
 
       {/* New Delivery Modal */}
       {showNewDeliveryModal && (
-        <div className="fixed inset-0 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-900">New Delivery</h2>
-              <button
-                onClick={() => setShowNewDeliveryModal(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-            <div className="p-6">
-              <RecordDeliveryForm
-                isModal={true}
-                onSuccess={(delivery) => {
-                  // Add the new delivery to the list
-                  setDeliveries(prev => [delivery, ...prev])
-                  // Close the modal
-                  setShowNewDeliveryModal(false)
-                  // Show success message
-                  toast.success('Delivery created successfully!', {
-                    description: 'The delivery has been added to the list.',
-                    duration: 3000,
-                  })
-                  // Refresh the deliveries list to get updated data
-                  fetchDeliveries()
-                }}
-                onCancel={() => setShowNewDeliveryModal(false)}
-              />
-            </div>
-          </div>
-        </div>
+        <FormModal
+          isOpen={showNewDeliveryModal}
+          onClose={() => setShowNewDeliveryModal(false)}
+          title="New Delivery"
+          description="Record a new delivery and link it to a purchase order for tracking"
+          icon={<Truck className="h-5 w-5" />}
+          size="xl"
+        >
+          <RecordDeliveryForm
+            isModal={true}
+            onSuccess={(delivery) => {
+              // Add the new delivery to the list
+              setDeliveries(prev => [delivery, ...prev])
+              // Close the modal
+              setShowNewDeliveryModal(false)
+              // Show success message
+              toast.success('Delivery created successfully!', {
+                description: 'The delivery has been added to the list.',
+                duration: 3000,
+              })
+              // Refresh the deliveries list to get updated data
+              fetchDeliveries()
+            }}
+            onCancel={() => setShowNewDeliveryModal(false)}
+          />
+        </FormModal>
       )}
 
       {/* Status Transition Modal */}

@@ -1,9 +1,10 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Plus, Upload, X, Trash2, Truck } from 'lucide-react'
+import { Plus, Upload, X, Trash2, Truck, Package, Calendar, FileText } from 'lucide-react'
 import { sbBrowser } from '@/lib/supabase-browser'
 import { Input, Select, TextArea } from '@/components/ui'
+import { FormModal } from '@/components/ui/FormModal'
 
 interface DeliveryItem {
   product_name: string
@@ -332,80 +333,70 @@ export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, d
   ]
 
   const formContent = (
-    <>
-      {!isModal && (
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-            <Plus className="h-5 w-5 mr-2" />
-            {deliveryId ? 'Edit Delivery' : 'Record New Delivery'}
-          </h3>
-          {onCancel && (
-            <button
-              onClick={onCancel}
-              className="text-gray-400 hover:text-gray-600"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          )}
-        </div>
-      )}
-
+    <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
-        <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3">
           <p className="text-red-700 text-sm">{error}</p>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Purchase Order Selection */}
-        <div>
-          <label htmlFor="order_uuid" className="block text-sm font-medium text-gray-700 mb-1">
-            Select Purchase Order *
-          </label>
-          <select
-            id="order_uuid"
-            required
-            value={formData.order_uuid}
-            onChange={(e) => {
-              const selectedOrder = orders.find(o => o.id === e.target.value)
-              const generatedOrderId = selectedOrder ? `ORD-${Date.now()}` : ''
-              setFormData(prev => ({ 
-                ...prev, 
-                order_uuid: e.target.value,
-                order_id: generatedOrderId
-              }))
-            }}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            disabled={!!preselectedOrderId}
-          >
-            <option value="">Select an order...</option>
-            {orders.map(order => (
-              <option key={order.id} value={order.id}>
-                {order.description || 'Unnamed Order'} - ${order.amount || '0.00'} ({order.status || 'pending'})
-              </option>
-            ))}
-          </select>
-          <p className="text-xs text-gray-500 mt-1">
-            {loadingOrders 
-              ? 'Loading orders...' 
-              : orders.length === 0 
-                ? 'No orders found. Create an order first or run QUICK-TEST-SETUP.sql to create test data.'
-                : `Select the purchase order this delivery is for (${orders.length} orders available)`
-            }
-          </p>
-        </div>
+      {/* Basic Information Section */}
+      <div className="space-y-4">
+        <h4 className="font-semibold text-gray-900 text-sm">Basic Information</h4>
+        
+        <Select
+          label="Select Purchase Order"
+          required
+          value={formData.order_uuid}
+          onChange={(e) => {
+            const selectedOrder = orders.find(o => o.id === e.target.value)
+            const generatedOrderId = selectedOrder ? `ORD-${Date.now()}` : ''
+            setFormData(prev => ({ 
+              ...prev, 
+              order_uuid: e.target.value,
+              order_id: generatedOrderId
+            }))
+          }}
+          options={[
+            { value: '', label: loadingOrders ? 'Loading orders...' : 'Select an order...' },
+            ...orders.map(order => ({ 
+              value: order.id, 
+              label: `${order.description || 'Unnamed Order'} - $${order.amount || '0.00'} (${order.status || 'pending'})`
+            }))
+          ]}
+          helpText={orders.length === 0 && !loadingOrders ? 
+            'No orders found. Create an order first or run QUICK-TEST-SETUP.sql to create test data.' : 
+            `Select the purchase order this delivery is for (${orders.length} orders available)`
+          }
+          disabled={!!preselectedOrderId}
+          fullWidth
+        />
 
-        {/* Basic Info */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4">
           <Input
             label="Delivery Date"
             type="date"
             required
             value={formData.delivery_date}
             onChange={(e) => setFormData(prev => ({ ...prev, delivery_date: e.target.value }))}
+            leftIcon={<Calendar className="h-4 w-4" />}
             fullWidth
           />
 
+          <Select
+            label="Status"
+            value={formData.status}
+            onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as any }))}
+            options={[
+              { value: 'pending', label: 'Pending' },
+              { value: 'partial', label: 'In Transit' },
+              { value: 'delivered', label: 'Delivered' }
+            ]}
+            fullWidth
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
           <Input
             label="Driver Name"
             value={formData.driver_name}
@@ -423,79 +414,78 @@ export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, d
             fullWidth
           />
         </div>
+      </div>
 
-        <Select
-          label="Status"
-          value={formData.status}
-          onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as any }))}
-          options={[
-            { value: 'pending', label: 'Pending' },
-            { value: 'partial', label: 'In Transit (Partial)' },
-            { value: 'delivered', label: 'Delivered' }
-          ]}
-          fullWidth
-        />
-
+      {/* Project Link Section */}
+      <div className="space-y-4">
+        <h4 className="font-semibold text-gray-900 text-sm">Project Link</h4>
+        
         <Select
           label="Project (Optional)"
           value={formData.projectId}
           onChange={(e) => setFormData(prev => ({ ...prev, projectId: e.target.value }))}
           options={[
-            { value: '', label: 'Select a project (optional)...' },
+            { value: '', label: loadingProjects ? 'Loading projects...' : 'Select a project (optional)...' },
             ...projects.map(project => ({ value: project.id, label: project.name }))
           ]}
+          helpText={!formData.projectId ? "Link this delivery to a project for tracking" : undefined}
           fullWidth
         />
+      </div>
 
-  {/* Items */}
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="text-sm font-medium text-gray-700">Delivery Items *</h4>
-            <button
-              type="button"
-              onClick={addItem}
-              className="text-blue-600 hover:text-blue-500 text-sm font-medium flex items-center"
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              Add Item
-            </button>
-          </div>
+      {/* Delivery Items Section */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h4 className="font-semibold text-gray-900 text-sm">Delivery Items</h4>
+          <button
+            type="button"
+            onClick={addItem}
+            className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-500 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Add Item
+          </button>
+        </div>
 
-          <div className="space-y-4">
-            {formData.items.map((item, index) => (
-              <div key={index} className="border border-gray-200 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-medium text-gray-600">Item {index + 1}</span>
-                  {formData.items.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeItem(index)}
-                      className="text-red-500 hover:text-red-700"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  )}
+        <div className="space-y-3">
+          {formData.items.map((item, index) => (
+            <div key={index} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Package className="h-4 w-4 text-gray-400" />
+                  <span className="text-sm font-medium text-gray-700">Item {index + 1}</span>
+                </div>
+                {formData.items.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeItem(index)}
+                    className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Product Name *</label>
+                  <input
+                    type="text"
+                    required
+                    list={`products-${index}`}
+                    value={item.product_name}
+                    onChange={(e) => updateItem(index, 'product_name', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    placeholder="Select or type product name"
+                  />
+                  <datalist id={`products-${index}`}>
+                    {commonProducts.map(product => (
+                      <option key={product} value={product} />
+                    ))}
+                  </datalist>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  <div className="md:col-span-2">
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Product Name *</label>
-                    <input
-                      type="text"
-                      required
-                      list={`products-${index}`}
-                      value={item.product_name}
-                      onChange={(e) => updateItem(index, 'product_name', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                      placeholder="Select or type product name"
-                    />
-                    <datalist id={`products-${index}`}>
-                      {commonProducts.map(product => (
-                        <option key={product} value={product} />
-                      ))}
-                    </datalist>
-                  </div>
-
+                <div className="grid grid-cols-3 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Quantity *</label>
                     <input
@@ -506,6 +496,7 @@ export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, d
                       value={item.quantity}
                       onChange={(e) => updateItem(index, 'quantity', parseFloat(e.target.value) || 0)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      placeholder="0"
                     />
                   </div>
 
@@ -522,9 +513,7 @@ export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, d
                       ))}
                     </select>
                   </div>
-                </div>
 
-                <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Unit Price *</label>
                     <input
@@ -538,91 +527,112 @@ export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, d
                       placeholder="0.00"
                     />
                   </div>
-                  <div className="md:col-span-2 flex items-end">
-                    <div className="text-sm text-gray-600">
-                      <span className="font-medium">Total: </span>
-                      ${roundToTwo(item.quantity * item.unit_price).toFixed(2)}
-                    </div>
-                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+                  <span className="text-xs font-medium text-gray-500">Item Total</span>
+                  <span className="text-sm font-semibold text-gray-900">
+                    ${roundToTwo(item.quantity * item.unit_price).toFixed(2)}
+                  </span>
                 </div>
               </div>
-            ))}
-          </div>
-
-          <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-            <div className="flex justify-between items-center">
-              <span className="font-medium text-gray-700">Grand Total:</span>
-              <span className="font-semibold text-lg text-gray-900">${calculateTotal().toFixed(2)}</span>
             </div>
-          </div>
+          ))}
         </div>
 
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <span className="font-semibold text-gray-900">Grand Total:</span>
+            <span className="text-xl font-bold text-blue-600">${calculateTotal().toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Delivery Notes Section */}
+      <div className="space-y-4">
+        <h4 className="font-semibold text-gray-900 text-sm">Delivery Notes</h4>
+        
         <TextArea
-          label="Delivery Notes"
+          label="Notes"
           value={formData.notes}
           onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
           rows={3}
           placeholder="Optional notes about the delivery..."
           fullWidth
         />
+      </div>
 
-        {/* Attachments */}
+      {/* Photo Proof Section */}
+      <div className="space-y-4">
+        <h4 className="font-semibold text-gray-900 text-sm">Photo Proof (optional)</h4>
+        
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Photo Proof (optional)</label>
-          <div className="flex items-center space-x-3">
-            <label className="inline-flex items-center px-3 py-2 border rounded-lg cursor-pointer text-gray-700 hover:bg-gray-50">
-              <Upload className="h-4 w-4 mr-2" />
-              <span>Upload Images</span>
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                className="hidden"
-                onChange={(e) => {
-                  const files = Array.from(e.target.files || []) as File[]
-                  const limited = files.slice(0, 5)
-                  setImages(limited)
-                  const urls = limited.map(f => URL.createObjectURL(f))
-                  setImagePreviews(urls)
-                }}
-              />
-            </label>
+          <label className="inline-flex items-center px-4 py-2.5 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all">
+            <Upload className="h-5 w-5 mr-2 text-gray-500" />
+            <span className="font-medium">Upload Images</span>
             {images.length > 0 && (
-              <span className="text-sm text-gray-600">{images.length} selected</span>
+              <span className="ml-2 px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full">
+                {images.length} selected
+              </span>
             )}
-          </div>
-          {imagePreviews.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {imagePreviews.map((src, i) => (
-                <div key={i} className="relative w-24 h-24 border rounded overflow-hidden">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={src} alt={`preview-${i}`} className="object-cover w-full h-full" />
-                </div>
-              ))}
-            </div>
-          )}
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                const files = Array.from(e.target.files || []) as File[]
+                const limited = files.slice(0, 5)
+                setImages(limited)
+                const urls = limited.map(f => URL.createObjectURL(f))
+                setImagePreviews(urls)
+              }}
+            />
+          </label>
+          <p className="text-xs text-gray-500 mt-1">Upload photos of delivery (max 5 images)</p>
         </div>
 
-        <div className="flex space-x-3 pt-4 border-t">
+        {imagePreviews.length > 0 && (
+          <div className="grid grid-cols-5 gap-3">
+            {imagePreviews.map((src, i) => (
+              <div key={i} className="relative aspect-square border-2 border-gray-200 rounded-lg overflow-hidden group">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={src} alt={`preview-${i}`} className="object-cover w-full h-full" />
+                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all" />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Form Actions */}
+      <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+        {onCancel && (
           <button
-            type="submit"
+            type="button"
+            onClick={onCancel}
             disabled={loading}
-            className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {loading ? 'Recording...' : 'Record Delivery'}
+            Cancel
           </button>
-          {onCancel && (
-            <button
-              type="button"
-              onClick={onCancel}
-              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-            >
-              Cancel
-            </button>
+        )}
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+        >
+          {loading && (
+            <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
           )}
-        </div>
-      </form>
-    </>
+          {loading ? 'Saving...' : (deliveryId ? 'Update Delivery' : 'Add Delivery')}
+        </button>
+      </div>
+    </form>
   )
 
   if (isModal) {
@@ -631,6 +641,12 @@ export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, d
 
   return (
     <div className="bg-white rounded-lg shadow-sm border p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <Truck className="h-5 w-5 text-blue-600" />
+          {deliveryId ? 'Edit Delivery' : 'New Delivery'}
+        </h3>
+      </div>
       {formContent}
     </div>
   )
