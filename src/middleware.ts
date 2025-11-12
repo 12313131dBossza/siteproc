@@ -29,6 +29,11 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next()
   }
   
+  // Skip for onboarding page itself (users without company need access)
+  if (url.pathname.startsWith('/onboarding')) {
+    return NextResponse.next()
+  }
+  
   // Handle authentication for protected routes
   const isProtectedRoute = protectedRoutes.some(route => url.pathname.startsWith(route))
   
@@ -76,7 +81,21 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(loginUrl)
     }
 
-    console.log('[middleware] User authenticated, allowing through:', user.email)
+    // Check if user has a company - if not, redirect to onboarding
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('company_id')
+      .eq('id', user.id)
+      .maybeSingle()
+    
+    if (!profile?.company_id) {
+      console.log('[middleware] User has no company, redirecting to onboarding')
+      const onboardingUrl = new URL('/onboarding', url.origin)
+      log({ level: 'info', event: 'onboarding_redirect', userId: user.id, originalPath: url.pathname })
+      return NextResponse.redirect(onboardingUrl)
+    }
+
+    console.log('[middleware] User authenticated with company, allowing through:', user.email)
     return response
   }
 
