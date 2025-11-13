@@ -23,6 +23,8 @@ export async function GET() {
 
     const supabase = supabaseService();
 
+    console.log('[Dashboard API] Fetching data for company:', companyId);
+
     // Fetch all dashboard data in parallel
     const [
       projectsRes,
@@ -36,6 +38,12 @@ export async function GET() {
       supabase.from('deliveries').select('id, status, created_at, company_id').eq('company_id', companyId),
       supabase.from('payments').select('id, status, amount, payment_date, vendor_name').eq('company_id', companyId),
     ]);
+
+    console.log('[Dashboard API] Projects result:', {
+      status: projectsRes.status,
+      count: projectsRes.status === 'fulfilled' ? projectsRes.value.data?.length : 0,
+      error: projectsRes.status === 'rejected' ? projectsRes.reason : (projectsRes.status === 'fulfilled' ? projectsRes.value.error : null)
+    });
 
     // Extract data from settled promises
   const projects = projectsRes.status === 'fulfilled' && projectsRes.value.data || [];
