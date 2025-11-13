@@ -44,8 +44,8 @@ export async function GET() {
       deliveriesRes,
       paymentsRes
     ] = await Promise.allSettled([
-      // Raw data for KPIs and calculations
-      supabase.from('projects').select('id, status, budget, actual_expenses, variance').eq('company_id', companyId),
+      // Raw data for KPIs and calculations - NOTE: actual_expenses column may not exist, we'll calculate it
+      supabase.from('projects').select('id, name, code, status, budget').eq('company_id', companyId),
       supabase.from('expenses').select('*').eq('company_id', companyId),
       supabase.from('deliveries').select('id, status, created_at, company_id').eq('company_id', companyId),
       supabase.from('payments').select('id, status, amount, payment_date, vendor_name').eq('company_id', companyId),
@@ -68,6 +68,29 @@ export async function GET() {
       expenses: expenses.length,
       deliveries: deliveries.length,
       payments: payments.length
+    });
+
+    // Calculate actual expenses per project from expenses table
+    const projectExpenses = new Map<string, number>();
+    expenses.forEach((expense: any) => {
+      if (expense.project_id && expense.status === 'approved') {
+        const projectId = expense.project_id;
+        const current = projectExpenses.get(projectId) || 0;
+        projectExpenses.set(projectId, current + (Number(expense.amount) || 0));
+      }
+    });
+
+    // Add calculated actual_expenses to each project
+    const projectsWithExpenses = projects.map((p: any) => ({
+      ...p,
+      actual_expenses: projectExpenses.get(p.id) || 0,
+      variance: (Number(p.budget) || 0) - (projectExpenses.get(p.id) || 0)
+    }));
+
+    console.log('[Dashboard API] Projects with calculated expenses:', {
+      projectsCount: projectsWithExpenses.length,
+      totalBudget: projectsWithExpenses.reduce((sum: number, p: any) => sum + (Number(p.budget) || 0), 0),
+      totalActual: projectsWithExpenses.reduce((sum: number, p: any) => sum + (p.actual_expenses || 0), 0)
     });
 
     // Calculate monthly financial data from expenses and payments
@@ -140,10 +163,10 @@ export async function GET() {
 
     const stats = {
       projects: {
-        total: projects.length,
-        active: projects.filter((p: any) => toLower(p.status) === 'active').length,
-        totalBudget: projects.reduce((sum: number, p: any) => sum + (Number(p.budget) || 0), 0),
-        totalSpent: projects.reduce((sum: number, p: any) => sum + (Number(p.actual_expenses) || 0), 0),
+        total: projectsWithExpenses.length,
+        active: projectsWithExpenses.filter((p: any) => toLower(p.status) === 'active').length,
+        totalBudget: projectsWithExpenses.reduce((sum: number, p: any) => sum + (Number(p.budget) || 0), 0),
+        totalSpent: projectsWithExpenses.reduce((sum: number, p: any) => sum + (p.actual_expenses || 0), 0),
       },
       orders: {
         total: 0, // purchase_orders don't have company_id
@@ -167,23 +190,23 @@ export async function GET() {
 
     // Calculate budget health distribution from projects
     const budgetHealth = {
-      overBudget: projects.filter((p: any) => {
-        const spent = Number(p.actual_expenses) || 0;
+      overBudget: projectsWithExpenses.filter((p: any) => {
+        const spent = p.actual_expenses || 0;
         const budget = Number(p.budget) || 0;
         return budget > 0 && spent > budget;
       }).length,
-      critical: projects.filter((p: any) => {
-        const spent = Number(p.actual_expenses) || 0;
+      critical: projectsWithExpenses.filter((p: any) => {
+        const spent = p.actual_expenses || 0;
         const budget = Number(p.budget) || 0;
         return budget > 0 && spent > budget * 0.9 && spent <= budget;
       }).length,
-      warning: projects.filter((p: any) => {
-        const spent = Number(p.actual_expenses) || 0;
+      warning: projectsWithExpenses.filter((p: any) => {
+        const spent = p.actual_expenses || 0;
         const budget = Number(p.budget) || 0;
         return budget > 0 && spent > budget * 0.75 && spent <= budget * 0.9;
       }).length,
-      healthy: projects.filter((p: any) => {
-        const spent = Number(p.actual_expenses) || 0;
+      healthy: projectsWithExpenses.filter((p: any) => {
+        const spent = p.actual_expenses || 0;
         const budget = Number(p.budget) || 0;
         return budget > 0 && spent <= budget * 0.75;
       }).length,
@@ -221,14 +244,14 @@ export async function GET() {
       }));
 
     // Budget variance for top projects
-    const budgetVariance = projects
+    const budgetVariance = projectsWithExpenses
       .map((p: any) => ({
         project_name: p.name || 'Unnamed Project',
         budget: Number(p.budget) || 0,
-        actual_cost: Number(p.actual_expenses) || 0,
-        variance: (Number(p.budget) || 0) - (Number(p.actual_expenses) || 0),
+        actual_cost: p.actual_expenses || 0,
+        variance: p.variance || 0,
         variance_percent: Number(p.budget) > 0 
-          ? ((((Number(p.budget) || 0) - (Number(p.actual_expenses) || 0)) / Number(p.budget)) * 100).toFixed(1)
+          ? (((p.variance || 0) / Number(p.budget)) * 100).toFixed(1)
           : 0,
       }))
       .slice(0, 5);
