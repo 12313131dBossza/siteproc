@@ -45,7 +45,7 @@ export async function GET() {
       paymentsRes
     ] = await Promise.allSettled([
       // Raw data for KPIs and calculations
-      supabase.from('projects').select('id, status, budget, actual_cost, actual_expenses').eq('company_id', companyId),
+      supabase.from('projects').select('id, status, budget, actual_expenses, variance').eq('company_id', companyId),
       supabase.from('expenses').select('*').eq('company_id', companyId),
       supabase.from('deliveries').select('id, status, created_at, company_id').eq('company_id', companyId),
       supabase.from('payments').select('id, status, amount, payment_date, vendor_name').eq('company_id', companyId),
@@ -143,7 +143,7 @@ export async function GET() {
         total: projects.length,
         active: projects.filter((p: any) => toLower(p.status) === 'active').length,
         totalBudget: projects.reduce((sum: number, p: any) => sum + (Number(p.budget) || 0), 0),
-        totalSpent: projects.reduce((sum: number, p: any) => sum + (Number(p.actual_expenses) || Number(p.actual_cost) || 0), 0),
+        totalSpent: projects.reduce((sum: number, p: any) => sum + (Number(p.actual_expenses) || 0), 0),
       },
       orders: {
         total: 0, // purchase_orders don't have company_id
@@ -168,22 +168,22 @@ export async function GET() {
     // Calculate budget health distribution from projects
     const budgetHealth = {
       overBudget: projects.filter((p: any) => {
-        const spent = Number(p.actual_expenses) || Number(p.actual_cost) || 0;
+        const spent = Number(p.actual_expenses) || 0;
         const budget = Number(p.budget) || 0;
         return budget > 0 && spent > budget;
       }).length,
       critical: projects.filter((p: any) => {
-        const spent = Number(p.actual_expenses) || Number(p.actual_cost) || 0;
+        const spent = Number(p.actual_expenses) || 0;
         const budget = Number(p.budget) || 0;
         return budget > 0 && spent > budget * 0.9 && spent <= budget;
       }).length,
       warning: projects.filter((p: any) => {
-        const spent = Number(p.actual_expenses) || Number(p.actual_cost) || 0;
+        const spent = Number(p.actual_expenses) || 0;
         const budget = Number(p.budget) || 0;
         return budget > 0 && spent > budget * 0.75 && spent <= budget * 0.9;
       }).length,
       healthy: projects.filter((p: any) => {
-        const spent = Number(p.actual_expenses) || Number(p.actual_cost) || 0;
+        const spent = Number(p.actual_expenses) || 0;
         const budget = Number(p.budget) || 0;
         return budget > 0 && spent <= budget * 0.75;
       }).length,
@@ -225,10 +225,10 @@ export async function GET() {
       .map((p: any) => ({
         project_name: p.name || 'Unnamed Project',
         budget: Number(p.budget) || 0,
-        actual_cost: Number(p.actual_expenses) || Number(p.actual_cost) || 0,
-        variance: (Number(p.budget) || 0) - (Number(p.actual_expenses) || Number(p.actual_cost) || 0),
+        actual_cost: Number(p.actual_expenses) || 0,
+        variance: (Number(p.budget) || 0) - (Number(p.actual_expenses) || 0),
         variance_percent: Number(p.budget) > 0 
-          ? ((((Number(p.budget) || 0) - (Number(p.actual_expenses) || Number(p.actual_cost) || 0)) / Number(p.budget)) * 100).toFixed(1)
+          ? ((((Number(p.budget) || 0) - (Number(p.actual_expenses) || 0)) / Number(p.budget)) * 100).toFixed(1)
           : 0,
       }))
       .slice(0, 5);
