@@ -34,11 +34,11 @@ export async function GET() {
       deliveriesRes,
       paymentsRes
     ] = await Promise.allSettled([
-      // Phase 8 Report Views
-      supabase.from('report_project_budget_variance').select('*').limit(10),
-      supabase.from('report_monthly_financial_summary').select('*').limit(6),
-      supabase.from('report_vendor_summary').select('*').limit(10),
-      supabase.from('report_expense_category_breakdown').select('*'),
+      // Phase 8 Report Views - FILTERED BY COMPANY
+      supabase.from('report_project_budget_variance').select('*').eq('company_id', companyId).limit(10),
+      supabase.from('report_monthly_financial_summary').select('*').eq('company_id', companyId).limit(6),
+      supabase.from('report_vendor_summary').select('*').eq('company_id', companyId).limit(10),
+      supabase.from('report_expense_category_breakdown').select('*').eq('company_id', companyId),
       
       // Raw data for KPIs
       supabase.from('projects').select('id, status, budget, actual_cost').eq('company_id', companyId),

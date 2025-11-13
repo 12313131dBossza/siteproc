@@ -7,7 +7,6 @@ import { Suspense } from 'react'
 import { ToastProvider } from '@/components/ui/Toast'
 import { Toaster } from 'sonner'
 import PWAInitializer from '@/components/PWAInitializer'
-import { Footer } from '@/components/Footer'
 import { SentryInitializer } from '@/components/SentryInitializer'
 import { NotificationBell } from '@/components/NotificationBell'
 import { NotificationProvider } from '@/contexts/NotificationContext'
@@ -100,10 +99,7 @@ export default function RootLayout({
             {/* Main content */}
             {children}
             
-            {/* Footer - hidden on mobile */}
-            <div className="hidden md:block">
-              <Footer />
-            </div>
+            {/* Footer - REMOVED per user request */}
             
             {/* Mobile Bottom Navigation */}
             <MobileBottomNav />
