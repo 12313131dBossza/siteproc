@@ -17,7 +17,19 @@ export async function GET() {
 
     // Prefer the normalized companyId field, fall back to raw profile.company_id
     const companyId = session.companyId || session.profile?.company_id;
+    
+    console.log('[Dashboard API] Session info:', {
+      userId: session.user?.id,
+      userEmail: session.user?.email,
+      companyId: companyId,
+      sessionCompanyId: session.companyId,
+      profileCompanyId: session.profile?.company_id,
+      role: session.role,
+      hasProfile: !!session.profile
+    });
+    
     if (!companyId) {
+      console.error('[Dashboard API] No company_id found in session');
       return NextResponse.json({ error: 'No company found' }, { status: 400 });
     }
 
@@ -220,6 +232,15 @@ export async function GET() {
           : 0,
       }))
       .slice(0, 5);
+
+    console.log('[Dashboard API] Returning stats:', {
+      projectsTotal: stats.projects.total,
+      totalBudget: stats.projects.totalBudget,
+      expensesCount: expenses.length,
+      paymentsCount: payments.length,
+      monthlyTrendsCount: monthlyTrends.length,
+      topVendorsCount: topVendors.length,
+    });
 
     return NextResponse.json({
       success: true,
