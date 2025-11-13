@@ -46,10 +46,17 @@ export async function GET() {
     });
 
     // Extract data from settled promises
-  const projects = projectsRes.status === 'fulfilled' && projectsRes.value.data || [];
-  const expenses = expensesRes.status === 'fulfilled' && expensesRes.value.data || [];
-  const deliveries = deliveriesRes.status === 'fulfilled' && deliveriesRes.value.data || [];
-    const payments = paymentsRes.status === 'fulfilled' && paymentsRes.value.data || [];
+    const projects = projectsRes.status === 'fulfilled' ? (projectsRes.value.data || []) : [];
+    const expenses = expensesRes.status === 'fulfilled' ? (expensesRes.value.data || []) : [];
+    const deliveries = deliveriesRes.status === 'fulfilled' ? (deliveriesRes.value.data || []) : [];
+    const payments = paymentsRes.status === 'fulfilled' ? (paymentsRes.value.data || []) : [];
+
+    console.log('[Dashboard API] Data counts:', {
+      projects: projects.length,
+      expenses: expenses.length,
+      deliveries: deliveries.length,
+      payments: payments.length
+    });
 
     // Calculate monthly financial data from expenses and payments
     const monthlyData = new Map<string, any>();
