@@ -104,6 +104,7 @@ export default function EnhancedDashboard() {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [rawResponse, setRawResponse] = useState<any>(null); // Debug
 
   useEffect(() => {
     fetchDashboardData();
@@ -118,6 +119,7 @@ export default function EnhancedDashboard() {
       const result = await response.json();
 
       console.log('Dashboard API Response:', result);
+      setRawResponse(result); // Store for debug
 
       if (!response.ok || !result.success) {
         throw new Error(result.error || 'Failed to fetch dashboard data');
@@ -180,6 +182,35 @@ export default function EnhancedDashboard() {
 
   return (
     <div className="p-2 sm:p-4 md:p-6 space-y-4 sm:space-y-6 max-w-full overflow-hidden">
+      {/* Debug Info */}
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm">
+        <h4 className="font-semibold text-yellow-900 mb-2">🔍 Debug Info:</h4>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-yellow-800">
+          <div>
+            <div className="text-xs opacity-70">Projects</div>
+            <div className="font-mono">{stats.projects.total}</div>
+          </div>
+          <div>
+            <div className="text-xs opacity-70">Budget</div>
+            <div className="font-mono">${stats.projects.totalBudget.toLocaleString()}</div>
+          </div>
+          <div>
+            <div className="text-xs opacity-70">API Success</div>
+            <div className="font-mono">{rawResponse?.success ? '✅' : '❌'}</div>
+          </div>
+          <div>
+            <div className="text-xs opacity-70">Has Data</div>
+            <div className="font-mono">{dashboardData ? '✅' : '❌'}</div>
+          </div>
+        </div>
+        <button 
+          onClick={() => console.log('Full API Response:', rawResponse)}
+          className="mt-2 text-xs text-yellow-700 hover:text-yellow-900 underline"
+        >
+          Log full response to console
+        </button>
+      </div>
+
       {/* KPI Cards Grid */}
   <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
         {/* Projects Card */}
