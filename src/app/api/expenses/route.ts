@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     let usedFallback = false
     let rows = expenses || []
 
-    // Admin/bookkeeper/owner fallback: if nothing visible but company exists, fetch via service role (company-scoped)
+    // Admin/bookkeeper/owner fallback: if nothing visible but company exists, fetch via service role (company-scoped ONLY)
     const role = profile?.role as string | null
     if (rows.length === 0 && companyId && role && ['admin','owner','bookkeeper'].includes(role)) {
       try {
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
         const { data: svcData, error: svcErr } = await svc
           .from('expenses')
           .select('*')
-          .eq('company_id', companyId)
+          .eq('company_id', companyId)  // ONLY their company
           .order('created_at', { ascending: false })
         if (!svcErr && svcData) {
           rows = svcData as any[]
@@ -64,21 +64,7 @@ export async function GET(request: NextRequest) {
       } catch {}
     }
 
-    // As a final diagnostic fallback for admins, if still empty, show last N expenses across all companies
-    if (rows.length === 0 && role && ['admin','owner','bookkeeper'].includes(role)) {
-      try {
-        const svc = supabaseService()
-        const { data: svcAll, error: svcAllErr } = await svc
-          .from('expenses')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(50)
-        if (!svcAllErr && svcAll && svcAll.length > 0) {
-          rows = svcAll as any[]
-          usedFallback = true
-        }
-      } catch {}
-    }
+    // REMOVED: Cross-company diagnostic fallback - violates data isolation
 
     const formatted = rows.map((e: any) => ({
       id: e.id,
