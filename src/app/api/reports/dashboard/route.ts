@@ -42,13 +42,15 @@ export async function GET() {
       projectsRes,
       expensesRes,
       deliveriesRes,
-      paymentsRes
+      paymentsRes,
+      ordersRes
     ] = await Promise.allSettled([
       // Raw data for KPIs and calculations - NOTE: actual_expenses column may not exist, we'll calculate it
       supabase.from('projects').select('id, name, code, status, budget').eq('company_id', companyId),
       supabase.from('expenses').select('*').eq('company_id', companyId),
       supabase.from('deliveries').select('id, status, created_at, company_id').eq('company_id', companyId),
       supabase.from('payments').select('id, status, amount, payment_date, vendor_name').eq('company_id', companyId),
+      supabase.from('purchase_orders').select('id, status, amount, created_at').eq('company_id', companyId),
     ]);
 
     console.log('[Dashboard API] Projects result:', {
@@ -62,12 +64,14 @@ export async function GET() {
     const expenses = expensesRes.status === 'fulfilled' ? (expensesRes.value.data || []) : [];
     const deliveries = deliveriesRes.status === 'fulfilled' ? (deliveriesRes.value.data || []) : [];
     const payments = paymentsRes.status === 'fulfilled' ? (paymentsRes.value.data || []) : [];
+    const orders = ordersRes.status === 'fulfilled' ? (ordersRes.value.data || []) : [];
 
     console.log('[Dashboard API] Data counts:', {
       projects: projects.length,
       expenses: expenses.length,
       deliveries: deliveries.length,
-      payments: payments.length
+      payments: payments.length,
+      orders: orders.length
     });
 
     // Calculate actual expenses per project from expenses table
@@ -169,10 +173,15 @@ export async function GET() {
         totalSpent: projectsWithExpenses.reduce((sum: number, p: any) => sum + (p.actual_expenses || 0), 0),
       },
       orders: {
-        total: 0, // purchase_orders don't have company_id
-        pending: 0,
-        approved: 0,
-        thisMonth: 0,
+        total: orders.length,
+        pending: orders.filter((o: any) => toLower(o.status) === 'pending').length,
+        approved: orders.filter((o: any) => toLower(o.status) === 'approved').length,
+        thisMonth: orders.filter((o: any) => {
+          if (!o.created_at) return false;
+          const date = new Date(o.created_at);
+          const now = new Date();
+          return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+        }).length,
       },
       deliveries: deliveriesStats,
       payments: {
