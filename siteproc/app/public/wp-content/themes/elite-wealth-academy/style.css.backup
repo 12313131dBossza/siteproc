@@ -1,0 +1,619 @@
+/*
+Theme Name: The Construction World
+Theme URI: https://constructionworld.com
+Author: Your Name
+Description: Exact clone of The Real World (TRW) design for construction industry training.
+Version: 1.0.0
+License: GPL v2
+Text Domain: construction-world
+*/
+
+:root {
+    --primary-red: #FF0000;
+    --dark-bg: #.campus-title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin-bottom: 12px;
+    color: var(--text-white);
+    letter-spacing: -0.01em;
+};
+    --card-bg: #0a0a0a;
+    --border-gray: #1a1a1a;
+    --text-white: #FFFFFF;
+    --text-gray: #999999;
+    --muted: #777;
+    --glass: rgba(255,255,255,0.04);
+    --shadow-1: 0 10px 30px rgba(0,0,0,.4);
+    --shadow-red: 0 10px 30px rgba(255,0,0,.2);
+    --radius: 16px;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    background-color: var(--dark-bg);
+    color: var(--text-white);
+    overflow-x: hidden;
+    line-height: 1.6;
+}
+
+/* Sticky Header */
+.site-header {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    background: rgba(0,0,0,0.8);
+    backdrop-filter: blur(6px);
+    border-bottom: 1px solid #111;
+}
+.nav-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+}
+.brand-mark { margin-right: 8px; }
+.brand { display: inline-flex; align-items: center; gap: 10px; color: #fff; text-decoration: none; font-weight: 800; }
+.brand-logo { font-size: 1.2rem; }
+.brand-text { letter-spacing: .5px; }
+.nav-toggle { display: none; background: transparent; border: 0; width: 40px; height: 40px; align-items: center; justify-content: center; gap: 4px; }
+.nav-toggle span { display: block; width: 22px; height: 2px; background: #fff; }
+.primary-nav ul { list-style: none; display: flex; gap: 24px; }
+.primary-nav a { color: #bbb; text-decoration: none; font-weight: 600; font-size: .95rem; }
+.primary-nav a:hover { color: var(--text-white); }
+.header-cta { background: var(--primary-red); color: #fff; padding: 10px 18px; border-radius: 8px; text-decoration: none; font-weight: 800; }
+.header-cta:hover { background: #cc0000; }
+.skip-link { position: absolute; left: -9999px; top: auto; width: 1px; height: 1px; overflow: hidden; }
+.skip-link:focus { position: static; width: auto; height: auto; padding: 10px; background: #000; color: #fff; }
+
+/* Hero Section - Exact TRW Style */
+.hero-section {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 60px 20px;
+    background: radial-gradient(1200px 600px at 50% -10%, rgba(255,0,0,.12), transparent 60%),
+        linear-gradient(180deg, #000 0%, #0b0000 100%);
+    overflow: hidden;
+}
+
+/* Bento utilities */
+.bento { display: grid; gap: 16px; }
+.bento-2 { grid-template-columns: repeat(2, 1fr); }
+.bento-3 { grid-template-columns: repeat(3, 1fr); }
+.card { background: linear-gradient(145deg, #0b0b0b, #070707); border: 1px solid #121212; border-radius: var(--radius); box-shadow: var(--shadow-1); }
+.glass { background: var(--glass); border: 1px solid #111; backdrop-filter: blur(8px); }
+.pad-l { padding: 32px; }
+.pad-m { padding: 20px; }
+.badge { display: inline-flex; align-items: center; gap: 10px; padding: 8px 14px; border-radius: 999px; border: 1px solid #222; background: #0b0b0b; color: #ccc; font-weight: 700; }
+.badge--red { border-color: var(--primary-red); color: var(--primary-red); background: rgba(255,0,0,.06); }
+.divider { height: 1px; background: #111; margin: 16px 0; }
+.muted { color: var(--muted); }
+
+.hero-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.15;
+    z-index: 0;
+}
+
+.hero-content {
+    position: relative;
+    z-index: 1;
+    max-width: 1200px;
+}
+
+.hero-logo {
+    font-size: 1rem;
+    letter-spacing: 4px;
+    font-weight: 700;
+    margin-bottom: 40px;
+    color: var(--text-white);
+}
+
+.hero-title {
+    font-size: clamp(2.5rem, 8vw, 5rem);
+    font-weight: 900;
+    line-height: 1.1;
+    margin-bottom: 30px;
+    text-transform: none;
+}
+
+.hero-title-line {
+    display: block;
+}
+
+.hero-subtitle {
+    font-size: clamp(1rem, 2vw, 1.2rem);
+    color: var(--text-gray);
+    max-width: 800px;
+    margin: 0 auto 50px;
+}
+
+.cta-button {
+    background-color: var(--primary-red);
+    color: var(--text-white);
+    font-size: 1.2rem;
+    font-weight: 700;
+    padding: 18px 60px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
+    box-shadow: 0 4px 20px rgba(255, 0, 0, 0.4);
+}
+
+.cta-button:hover {
+    background-color: #CC0000;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 30px rgba(255, 0, 0, 0.6);
+}
+
+/* Features Grid - TRW Style */
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+    margin-top: 80px;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.feature-card {
+    background: linear-gradient(145deg, #0a0a0a 0%, #1a1a1a 100%);
+    border: 1px solid #222;
+    border-radius: 12px;
+    padding: 40px 30px;
+    text-align: center;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.feature-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary-red), transparent);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.feature-card:hover::before {
+    transform: scaleX(1);
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--primary-red);
+}
+
+.feature-icon {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 20px;
+    font-size: 3rem;
+}
+
+.feature-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 15px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.feature-desc {
+    color: var(--text-gray);
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+/* Section Styling */
+.section {
+    padding: 100px 20px;
+    position: relative;
+}
+
+.section-dark {
+    background-color: var(--dark-bg);
+}
+
+.section-darker {
+    background-color: #000;
+    background-image: 
+        linear-gradient(0deg, transparent 24%, rgba(255, 255, 255, .03) 25%, rgba(255, 255, 255, .03) 26%, transparent 27%, transparent 74%, rgba(255, 255, 255, .03) 75%, rgba(255, 255, 255, .03) 76%, transparent 77%, transparent),
+        linear-gradient(90deg, transparent 24%, rgba(255, 255, 255, .03) 25%, rgba(255, 255, 255, .03) 26%, transparent 27%, transparent 74%, rgba(255, 255, 255, .03) 75%, rgba(255, 255, 255, .03) 76%, transparent 77%, transparent);
+    background-size: 50px 50px;
+}
+
+.section-title {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 900;
+    text-align: center;
+    margin-bottom: 20px;
+    line-height: 1.2;
+}
+
+.section-subtitle {
+    text-align: center;
+    color: var(--text-gray);
+    font-size: 1.1rem;
+    max-width: 800px;
+    margin: 0 auto 60px;
+}
+
+/* Sold Out Badge */
+.sold-out-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255, 0, 0, 0.1);
+    border: 1px solid var(--primary-red);
+    padding: 8px 20px;
+    border-radius: 30px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--primary-red);
+    margin-bottom: 30px;
+}
+
+/* Campus Cards - TRW Style */
+.campuses-section {
+    padding: 100px 20px;
+}
+
+.campuses-grid {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 40px;
+}
+
+.campus-card {
+    background: linear-gradient(145deg, #0a0a0a 0%, #000 100%);
+    border: 1px solid #1a1a1a;
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: all 0.4s ease;
+    position: relative;
+}
+
+.campus-card:hover {
+    transform: translateY(-10px);
+    border-color: var(--primary-red);
+    box-shadow: 0 20px 60px rgba(255, 0, 0, 0.2);
+}
+
+.campus-image {
+    width: 100%;
+    height: 250px;
+    object-fit: cover;
+    background: linear-gradient(145deg, #1a1a1a, #000);
+}
+
+.campus-content {
+    padding: 30px;
+}
+
+.campus-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 15px;
+    color: var(--text-white);
+}
+
+.campus-desc {
+    color: var(--text-gray);
+    font-size: 1rem;
+    line-height: 1.7;
+}
+
+/* Testimonials - Exact TRW Grid */
+.testimonials-section {
+    padding: 100px 20px;
+    background: #000;
+}
+
+.testimonials-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+    max-width: 1400px;
+    margin: 60px auto;
+}
+
+.testimonial-img {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    transition: transform 0.3s ease;
+    border: 1px solid #222;
+}
+
+.testimonial-img:hover {
+    transform: scale(1.05);
+    border-color: var(--primary-red);
+}
+
+/* Two Paths Section - TRW Style */
+.two-paths-section {
+    padding: 100px 20px;
+    background: linear-gradient(180deg, #000 0%, #1a0000 50%, #000 100%);
+}
+
+.paths-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 60px;
+}
+
+.path-card {
+    background: linear-gradient(145deg, #0a0a0a, #000);
+    border: 2px solid #1a1a1a;
+    border-radius: 16px;
+    padding: 50px 40px;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.path-card.fail {
+    border-color: #333;
+}
+
+.path-card.success {
+    border-color: var(--primary-red);
+    box-shadow: 0 0 40px rgba(255, 0, 0, 0.2);
+}
+
+.path-icon {
+    font-size: 4rem;
+    margin-bottom: 20px;
+}
+
+.path-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+}
+
+.path-price {
+    font-size: 2.5rem;
+    font-weight: 900;
+    color: var(--primary-red);
+    margin-bottom: 20px;
+}
+
+.path-features {
+    list-style: none;
+    text-align: left;
+    margin: 30px 0;
+}
+
+.path-features li {
+    padding: 12px 0;
+    border-bottom: 1px solid #222;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-gray);
+}
+
+.path-features li::before {
+    content: '✓';
+    color: var(--primary-red);
+    font-weight: 900;
+    font-size: 1.2rem;
+}
+
+/* FAQ Section */
+.faq-section {
+    padding: 100px 20px;
+    background: #000;
+}
+
+.faq-container {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.faq-item {
+    background: #0a0a0a;
+    border: 1px solid #1a1a1a;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.faq-question {
+    padding: 25px 30px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 1.1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.3s ease;
+}
+
+.faq-question:hover {
+    background: #111;
+    color: var(--primary-red);
+}
+
+.faq-answer {
+    padding: 0 30px 25px;
+    color: var(--text-gray);
+    line-height: 1.8;
+}
+
+/* Stats Bar - TRW Style */
+.stats-bar {
+    background: linear-gradient(90deg, #1a0000 0%, #000 50%, #1a0000 100%);
+    padding: 30px 20px;
+    text-align: center;
+    border-top: 1px solid var(--primary-red);
+    border-bottom: 1px solid var(--primary-red);
+}
+
+.stats-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-around;
+    flex-wrap: wrap;
+    gap: 40px;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-number {
+    font-size: 3rem;
+    font-weight: 900;
+    color: var(--primary-red);
+    display: block;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    color: var(--text-gray);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Footer */
+footer {
+    background: #000;
+    padding: 60px 20px 30px;
+    border-top: 1px solid #1a1a1a;
+    text-align: center;
+}
+
+.footer-links {
+    margin: 30px 0;
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    flex-wrap: wrap;
+}
+
+.footer-links a {
+    color: var(--text-gray);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.footer-links a:hover {
+    color: var(--primary-red);
+}
+
+.footer-disclaimer {
+    color: #666;
+    font-size: 0.85rem;
+    max-width: 800px;
+    margin: 30px auto 0;
+    line-height: 1.6;
+}
+
+/* Full-bleed alternating sections */
+.alt-section { position: relative; min-height: 520px; display: grid; align-items: center; }
+.alt-bg { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; filter:brightness(.6); }
+.alt-overlay { position:absolute; inset:0; background: linear-gradient(90deg, rgba(0,0,0,.75), rgba(0,0,0,.2)); }
+.alt-inner { position:relative; z-index:1; max-width:1200px; margin:0 auto; padding: 60px 20px; display:grid; gap:24px; }
+.alt-left .alt-inner { grid-template-columns: 1.2fr .8fr; }
+.alt-right .alt-inner { grid-template-columns: .8fr 1.2fr; }
+.alt-copy { display:flex; flex-direction:column; gap:16px; }
+.alt-copy h3 { font-size: clamp(1.8rem, 3.5vw, 2.6rem); line-height:1.15; }
+.alt-points { list-style:none; display:grid; gap:10px; }
+.alt-points li { color:#cfcfcf; }
+
+/* Wins marquee */
+.marquee { overflow:hidden; position:relative; padding: 24px 0; border-top:1px solid #111; border-bottom:1px solid #111; background: #050505; }
+.marquee-track { display:flex; gap:20px; will-change: transform; }
+.marquee-item { height: 140px; width: auto; border-radius: 12px; border:1px solid #151515; }
+.marquee:hover .marquee-track { animation-play-state: paused; }
+
+/* Floating CTA */
+.floating-cta { position: fixed; right: 18px; bottom: 18px; background: linear-gradient(135deg, var(--primary-red), var(--dark-red)); color:#fff; padding: 16px 24px; border-radius: 50px; text-decoration:none; font-weight:800; font-size: 0.95rem; box-shadow: 0 8px 24px rgba(200, 16, 46, 0.5); z-index: 900; transition: all 0.3s ease; }
+.floating-cta:hover { background: linear-gradient(135deg, var(--dark-red), var(--primary-red)); transform: translateY(-2px); box-shadow: 0 12px 32px rgba(200, 16, 46, 0.6); }
+
+/* Curved divider */
+.curve { position:relative; height: 48px; overflow:hidden; }
+.curve::before { content:""; position:absolute; inset:0; background: radial-gradient(60% 100% at 50% 0%, rgba(200, 16, 46, 0.12), transparent 70%); opacity:.6; }
+
+/* Pricing cards polish */
+.pricing .card { border:1px solid #191919; }
+.pricing .card:hover { border-color: var(--primary-red); box-shadow: var(--shadow-red); transform: translateY(-4px); transition: all .25s ease; }
+
+@media (max-width: 1024px) {
+    .alt-left .alt-inner, .alt-right .alt-inner { grid-template-columns: 1fr; }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .nav-toggle { display: inline-flex; }
+    .primary-nav { position: absolute; left: 0; right: 0; top: 62px; background: rgba(0,0,0,.95); border-top: 1px solid #111; display: none; }
+    .primary-nav.open { display: block; }
+    .primary-nav ul { flex-direction: column; padding: 12px 20px; gap: 12px; }
+    .header-cta { display: none; }
+    .hero-title {
+        font-size: 2.5rem;
+    }
+    
+    .features-grid,
+    .campuses-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .paths-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .testimonials-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+}
+
+@media (max-width: 480px) {
+    .section {
+        padding: 60px 15px;
+    }
+    
+    .cta-button {
+        padding: 15px 40px;
+        font-size: 1rem;
+    }
+}

@@ -1,0 +1,4268 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="SiteProc - Professional construction management platform with real-time order tracking, deliveries, expenses, and comprehensive reporting.">
+    <title>SiteProc - Professional Construction Management Platform</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        /* ========================================
+           GLOBAL STYLES
+           ======================================== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #1e40af;
+            --accent-color: #f59e0b;
+            --dark: #0f172a;
+            --dark-light: #1e293b;
+            --text-light: #e2e8f0;
+            --text-gray: #94a3b8;
+            --white: #ffffff;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--dark);
+            color: var(--text-light);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        a {
+            color: var(--primary-color);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        a:hover {
+            color: var(--accent-color);
+        }
+
+        /* ========================================
+           NAVIGATION
+           ======================================== */
+        .site-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            padding: 0;
+            z-index: 1000;
+            border-bottom: 1px solid rgba(37, 99, 235, 0.15);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .site-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, 
+                transparent, 
+                rgba(37, 99, 235, 0.5) 20%, 
+                rgba(37, 99, 235, 0.8) 50%, 
+                rgba(37, 99, 235, 0.5) 80%, 
+                transparent);
+            animation: shimmerLine 3s infinite;
+        }
+
+        @keyframes shimmerLine {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        .site-header.scrolled {
+            background: rgba(15, 23, 42, 0.98);
+            border-bottom-color: rgba(37, 99, 235, 0.3);
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .site-logo {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: var(--white);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .site-logo:hover {
+            transform: translateY(-2px);
+        }
+
+        .logo-icon {
+            width: 42px;
+            height: 42px;
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .logo-icon::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.3), transparent);
+            transform: rotate(45deg);
+            animation: logoShine 3s infinite;
+        }
+
+        @keyframes logoShine {
+            0%, 100% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            50% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+
+        .site-logo:hover .logo-icon {
+            transform: rotate(-5deg) scale(1.05);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.6);
+        }
+
+        .logo-text {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+        }
+
+        .logo-text .brand-name {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff 0%, #e0e7ff 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo-text .brand-tagline {
+            font-size: 0.65rem;
+            color: #94a3b8;
+            font-weight: 500;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .site-logo span.highlight {
+            color: var(--primary-color);
+            position: relative;
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 0.5rem;
+            list-style: none;
+            align-items: center;
+        }
+
+        .nav-menu a {
+            color: var(--text-light);
+            font-weight: 500;
+            padding: 0.65rem 1rem;
+            border-radius: 8px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-menu a::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+            transform: translateX(-50%);
+            transition: width 0.3s ease;
+        }
+
+        .nav-menu a:hover {
+            color: var(--primary-color);
+            background: rgba(37, 99, 235, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .nav-menu a:hover::before {
+            width: 80%;
+        }
+
+        .nav-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0.9rem;
+            background: rgba(34, 197, 94, 0.15);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #22c55e;
+            margin-left: 1rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #22c55e;
+            border-radius: 50%;
+            animation: statusPulse 2s infinite;
+        }
+
+        @keyframes statusPulse {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+            }
+            50% {
+                box-shadow: 0 0 0 6px rgba(34, 197, 94, 0);
+            }
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .nav-icon-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #94a3b8;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .nav-icon-btn:hover {
+            background: rgba(37, 99, 235, 0.2);
+            border-color: rgba(37, 99, 235, 0.4);
+            color: var(--primary-color);
+            transform: translateY(-2px);
+        }
+
+        .nav-icon-btn .notification-badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            width: 18px;
+            height: 18px;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            border-radius: 50%;
+            font-size: 10px;
+            font-weight: 700;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid rgba(15, 23, 42, 1);
+        }
+
+        .nav-cta {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: var(--white) !important;
+            padding: 0.75rem 1.75rem !important;
+            border-radius: 10px;
+            font-weight: 600;
+            border: none !important;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .nav-cta::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .nav-cta:hover::before {
+            left: 100%;
+        }
+
+        .nav-cta:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(37, 99, 235, 0.6);
+        }
+
+        .nav-cta::after {
+            content: '→';
+            margin-left: 0.5rem;
+            display: inline-block;
+            transition: transform 0.3s ease;
+        }
+
+        .nav-cta:hover::after {
+            transform: translateX(4px);
+        }
+
+        /* Mobile Menu Toggle */
+        .mobile-menu-toggle {
+            display: none;
+            background: rgba(37, 99, 235, 0.1);
+            border: 1px solid rgba(37, 99, 235, 0.3);
+            color: var(--white);
+            font-size: 1.5rem;
+            cursor: pointer;
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .mobile-menu-toggle:hover {
+            background: rgba(37, 99, 235, 0.2);
+            transform: scale(1.05);
+        }
+
+        /* ========================================
+           HERO SECTION
+           ======================================== */
+        .hero-section {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: 
+                linear-gradient(135deg, rgba(15, 23, 42, 0.97) 0%, rgba(30, 41, 59, 0.95) 100%),
+                url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="%230f172a"/><path d="M10 10h20v20h-20z M40 10h20v20h-20z M70 10h20v20h-20z M10 40h20v20h-20z M40 40h20v20h-20z M70 40h20v20h-20z M10 70h20v20h-20z M40 70h20v20h-20z M70 70h20v20h-20z" fill="%232563eb" opacity="0.03"/></svg>');
+            background-size: cover, 100px 100px;
+            position: relative;
+            overflow: hidden;
+            padding: 10rem 2rem 4rem;
+        }
+
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 15% 30%, rgba(37, 99, 235, 0.18) 0%, transparent 40%),
+                radial-gradient(circle at 85% 70%, rgba(245, 158, 11, 0.12) 0%, transparent 40%),
+                radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.08) 0%, transparent 50%);
+            pointer-events: none;
+            animation: backgroundPulse 10s ease-in-out infinite;
+        }
+
+        @keyframes backgroundPulse {
+            0%, 100% { 
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% { 
+                opacity: 0.8;
+                transform: scale(1.05);
+            }
+        }
+
+        .hero-section::after {
+            content: '🏗️';
+            position: absolute;
+            font-size: 400px;
+            opacity: 0.02;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-15deg);
+            pointer-events: none;
+            animation: floatIcon 20s ease-in-out infinite;
+        }
+
+        @keyframes floatIcon {
+            0%, 100% { transform: translate(-50%, -50%) rotate(-15deg) scale(1); }
+            50% { transform: translate(-50%, -55%) rotate(-10deg) scale(1.1); }
+        }
+
+        .hero-container {
+            max-width: 1280px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero-content h1 {
+            font-size: 3.5rem;
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, var(--white) 0%, var(--text-gray) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(37, 99, 235, 0.1);
+            border: 1px solid rgba(37, 99, 235, 0.3);
+            border-radius: 2rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-bottom: 1.5rem;
+            animation: slideInDown 0.6s ease-out;
+        }
+
+        @keyframes slideInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .badge-pulse {
+            width: 8px;
+            height: 8px;
+            background: var(--success);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.5;
+                transform: scale(1.2);
+            }
+        }
+
+        .hero-content .highlight {
+            color: var(--primary-color);
+            -webkit-text-fill-color: var(--primary-color);
+        }
+
+        .hero-content p {
+            font-size: 1.25rem;
+            color: var(--text-gray);
+            margin-bottom: 2rem;
+            line-height: 1.8;
+        }
+
+        .hero-stats {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .stat-item {
+            text-align: left;
+            padding: 1rem;
+            background: rgba(37, 99, 235, 0.05);
+            border-radius: 0.75rem;
+            border: 1px solid rgba(37, 99, 235, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .stat-item:hover {
+            background: rgba(37, 99, 235, 0.1);
+            border-color: var(--primary-color);
+            transform: translateY(-3px);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--primary-color);
+            display: block;
+            line-height: 1;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--text-gray);
+            font-weight: 500;
+        }
+
+        .hero-trust {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(37, 99, 235, 0.1);
+        }
+
+        .trust-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--text-gray);
+        }
+
+        .trust-icon {
+            color: var(--success);
+            font-size: 1.25rem;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 1rem 2rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: var(--white);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-light);
+            border: 2px solid var(--primary-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--primary-color);
+            color: var(--white);
+        }
+
+        .hero-visual {
+            position: relative;
+            perspective: 1000px;
+        }
+
+        .dashboard-preview {
+            width: 100%;
+            border-radius: 1rem;
+            box-shadow: 
+                0 0 0 1px rgba(37, 99, 235, 0.3),
+                0 20px 60px rgba(0, 0, 0, 0.6),
+                0 40px 100px rgba(37, 99, 235, 0.3);
+            border: 1px solid rgba(37, 99, 235, 0.3);
+            background: linear-gradient(135deg, #1e293b 0%, #1a2332 100%);
+            padding: 0;
+            min-height: 500px;
+            position: relative;
+            overflow: hidden;
+            transform: perspective(1500px) rotateY(-8deg) rotateX(5deg);
+            transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .dashboard-preview:hover {
+            transform: perspective(1500px) rotateY(0deg) rotateX(0deg) translateY(-15px) scale(1.02);
+            box-shadow: 
+                0 0 0 1px rgba(37, 99, 235, 0.5),
+                0 30px 80px rgba(0, 0, 0, 0.7),
+                0 50px 120px rgba(37, 99, 235, 0.4);
+        }
+
+        .dashboard-preview::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                90deg, 
+                transparent 0%, 
+                rgba(37, 99, 235, 0.3) 50%, 
+                transparent 100%
+            );
+            animation: shimmer 4s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { left: -100%; }
+            50%, 100% { left: 100%; }
+        }
+
+        .browser-chrome {
+            background: rgba(15, 23, 42, 0.95);
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(37, 99, 235, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .chrome-dots {
+            display: flex;
+            gap: 8px;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .chrome-url {
+            flex: 1;
+        }
+
+        .dashboard-content {
+            padding: 32px;
+        }
+
+        .dash-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+        }
+
+        .dash-button {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .dash-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(37, 99, 235, 0.4);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid rgba(37, 99, 235, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            border-color: rgba(37, 99, 235, 0.5);
+            transform: translateY(-4px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: #94a3b8;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+
+        .stat-change {
+            font-size: 12px;
+            color: #94a3b8;
+        }
+
+        .stat-change.positive {
+            color: #22c55e;
+        }
+
+        .activity-section {
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid rgba(37, 99, 235, 0.2);
+            border-radius: 12px;
+            padding: 24px;
+        }
+
+        .activity-chart {
+            display: flex;
+            align-items: flex-end;
+            gap: 16px;
+            height: 200px;
+        }
+
+        .chart-bar {
+            flex: 1;
+            border-radius: 8px 8px 0 0;
+            position: relative;
+            animation: growBar 1.5s ease-out forwards;
+            animation-delay: calc(var(--index) * 0.1s);
+            transform-origin: bottom;
+        }
+
+        .chart-bar:nth-child(1) { --index: 0; }
+        .chart-bar:nth-child(2) { --index: 1; }
+        .chart-bar:nth-child(3) { --index: 2; }
+        .chart-bar:nth-child(4) { --index: 3; }
+        .chart-bar:nth-child(5) { --index: 4; }
+        .chart-bar:nth-child(6) { --index: 5; }
+        .chart-bar:nth-child(7) { --index: 6; }
+
+        @keyframes growBar {
+            from {
+                transform: scaleY(0);
+                opacity: 0;
+            }
+            to {
+                transform: scaleY(1);
+                opacity: 1;
+            }
+        }
+
+        .bar-label {
+            position: absolute;
+            bottom: -24px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        @media (max-width: 968px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .dashboard-content {
+                padding: 20px;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+            }
+
+            .dash-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 16px;
+            }
+        }
+
+        .dashboard-mockup {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .mockup-header {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            padding: 0.75rem;
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 0.5rem;
+        }
+
+        .mockup-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .dot-red { background: #ef4444; }
+        .dot-yellow { background: #f59e0b; }
+        .dot-green { background: #10b981; }
+
+        .mockup-content {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            flex: 1;
+        }
+
+        .mockup-card {
+            background: rgba(30, 41, 59, 0.6);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            border: 1px solid rgba(37, 99, 235, 0.2);
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .mockup-card:nth-child(1) { animation-delay: 0s; }
+        .mockup-card:nth-child(2) { animation-delay: 0.2s; }
+        .mockup-card:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .mockup-card:hover {
+            border-color: var(--primary-color);
+            transform: scale(1.05);
+        }
+
+        .mockup-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .mockup-title {
+            font-size: 0.875rem;
+            color: var(--text-gray);
+            font-weight: 600;
+        }
+
+        .mockup-value {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .mockup-chart {
+            grid-column: 1 / -1;
+            background: rgba(30, 41, 59, 0.6);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            border: 1px solid rgba(37, 99, 235, 0.2);
+            display: flex;
+            align-items: flex-end;
+            gap: 0.5rem;
+            height: 120px;
+        }
+
+        .chart-bar {
+            flex: 1;
+            background: linear-gradient(to top, var(--primary-color), rgba(37, 99, 235, 0.5));
+            border-radius: 0.25rem 0.25rem 0 0;
+            animation: growHeight 1.5s ease-out forwards;
+            transform-origin: bottom;
+        }
+
+        .chart-bar:nth-child(1) { height: 40%; animation-delay: 0.1s; }
+        .chart-bar:nth-child(2) { height: 70%; animation-delay: 0.2s; }
+        .chart-bar:nth-child(3) { height: 55%; animation-delay: 0.3s; }
+        .chart-bar:nth-child(4) { height: 85%; animation-delay: 0.4s; }
+        .chart-bar:nth-child(5) { height: 60%; animation-delay: 0.5s; }
+        .chart-bar:nth-child(6) { height: 95%; animation-delay: 0.6s; }
+
+        @keyframes growHeight {
+            from {
+                transform: scaleY(0);
+                opacity: 0;
+            }
+            to {
+                transform: scaleY(1);
+                opacity: 1;
+            }
+        }
+
+        /* ========================================
+           WORKFLOW SECTION
+           ======================================== */
+        .workflow-section {
+            padding: 8rem 2rem;
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, var(--dark) 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .workflow-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(37, 99, 235, 0.5), transparent);
+        }
+
+        .workflow-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .workflow-header {
+            text-align: center;
+            margin-bottom: 5rem;
+        }
+
+        .workflow-badge {
+            display: inline-block;
+            padding: 0.5rem 1.5rem;
+            background: rgba(37, 99, 235, 0.1);
+            border: 1px solid rgba(37, 99, 235, 0.3);
+            border-radius: 50px;
+            color: var(--primary-color);
+            font-weight: 600;
+            font-size: 0.875rem;
+            letter-spacing: 1px;
+            margin-bottom: 1.5rem;
+        }
+
+        .workflow-title {
+            font-size: 3rem;
+            font-weight: 800;
+            color: var(--white);
+            margin-bottom: 1rem;
+            line-height: 1.2;
+        }
+
+        .workflow-description {
+            font-size: 1.25rem;
+            color: var(--text-gray);
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .workflow-flow {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 2rem;
+            margin-bottom: 4rem;
+            flex-wrap: wrap;
+        }
+
+        .workflow-step {
+            flex: 1;
+            min-width: 250px;
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%);
+            border: 1px solid rgba(37, 99, 235, 0.2);
+            border-radius: 20px;
+            padding: 2.5rem 2rem;
+            position: relative;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+
+        .workflow-step:hover {
+            transform: translateY(-10px);
+            border-color: rgba(37, 99, 235, 0.5);
+            box-shadow: 0 20px 60px rgba(37, 99, 235, 0.2);
+        }
+
+        .workflow-step::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+            border-radius: 20px 20px 0 0;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .workflow-step:hover::before {
+            opacity: 1;
+        }
+
+        .workflow-step-number {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--white);
+            margin-bottom: 1.5rem;
+            box-shadow: 0 10px 30px rgba(37, 99, 235, 0.3);
+        }
+
+        .workflow-step-icon {
+            width: 60px;
+            height: 60px;
+            background: rgba(37, 99, 235, 0.15);
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .workflow-step:hover .workflow-step-icon {
+            background: rgba(37, 99, 235, 0.25);
+            transform: scale(1.1) rotate(5deg);
+        }
+
+        .workflow-step-icon svg {
+            width: 32px;
+            height: 32px;
+            stroke: var(--primary-color);
+        }
+
+        .workflow-step-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--white);
+            margin-bottom: 0.75rem;
+        }
+
+        .workflow-step-description {
+            font-size: 1rem;
+            color: var(--text-gray);
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+
+        .workflow-step-features {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .workflow-step-features li {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--text-light);
+            margin-bottom: 0.5rem;
+        }
+
+        .workflow-step-features li svg {
+            width: 16px;
+            height: 16px;
+            stroke: var(--success);
+            flex-shrink: 0;
+        }
+
+        .workflow-arrow {
+            font-size: 2rem;
+            color: var(--primary-color);
+            flex-shrink: 0;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+
+        .workflow-benefits {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .workflow-benefit {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(37, 99, 235, 0.15);
+            border-radius: 15px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .workflow-benefit:hover {
+            border-color: rgba(37, 99, 235, 0.3);
+            transform: translateY(-5px);
+        }
+
+        .workflow-benefit-icon {
+            width: 50px;
+            height: 50px;
+            background: rgba(34, 197, 94, 0.15);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+        }
+
+        .workflow-benefit-icon svg {
+            width: 24px;
+            height: 24px;
+            stroke: var(--success);
+        }
+
+        .workflow-benefit-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--white);
+            margin-bottom: 0.5rem;
+        }
+
+        .workflow-benefit-text {
+            font-size: 0.9375rem;
+            color: var(--text-gray);
+        }
+
+        @media (max-width: 1024px) {
+            .workflow-flow {
+                flex-direction: column;
+            }
+
+            .workflow-arrow {
+                transform: rotate(90deg);
+                margin: 1rem 0;
+            }
+
+            .workflow-step {
+                min-width: 100%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .workflow-title {
+                font-size: 2rem;
+            }
+
+            .workflow-description {
+                font-size: 1rem;
+            }
+
+            .workflow-section {
+                padding: 4rem 1rem;
+            }
+        }
+
+        /* ========================================
+           FEATURES SECTION
+           ======================================== */
+        .features-section {
+            padding: 8rem 2rem;
+            background: linear-gradient(180deg, var(--dark) 0%, rgba(15, 23, 42, 0.98) 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .features-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(37, 99, 235, 0.5), transparent);
+        }
+
+        .section-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 5rem;
+            position: relative;
+        }
+
+        .section-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.65rem 1.5rem;
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.15), rgba(37, 99, 235, 0.05));
+            border: 1px solid rgba(37, 99, 235, 0.3);
+            color: var(--primary-color);
+            border-radius: 2rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.2);
+        }
+
+        .section-badge::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            animation: badgePulse 2s infinite;
+        }
+
+        @keyframes badgePulse {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7);
+            }
+            50% {
+                box-shadow: 0 0 0 6px rgba(37, 99, 235, 0);
+            }
+        }
+
+        .section-title {
+            font-size: 3rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1.5rem;
+            line-height: 1.2;
+        }
+
+        .section-description {
+            font-size: 1.25rem;
+            color: #94a3b8;
+            max-width: 700px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .features-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1.25rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .features-grid {
+                gap: 1rem;
+            }
+        }
+
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .features-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .feature-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%);
+            padding: 1.5rem;
+            border-radius: 1rem;
+            border: 1px solid rgba(37, 99, 235, 0.15);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary-color), transparent);
+            transform: scaleX(0);
+            transition: transform 0.4s ease;
+        }
+
+        .feature-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .feature-card::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(37, 99, 235, 0.1) 0%, transparent 70%);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s ease, height 0.6s ease;
+        }
+
+        .feature-card:hover::after {
+            width: 500px;
+            height: 500px;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-8px);
+            border-color: rgba(37, 99, 235, 0.5);
+            box-shadow: 
+                0 20px 40px rgba(0, 0, 0, 0.4),
+                0 0 0 1px rgba(37, 99, 235, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .feature-icon {
+            width: 3rem;
+            height: 3rem;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            position: relative;
+            z-index: 1;
+            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover .feature-icon {
+            transform: scale(1.1) rotate(-5deg);
+            box-shadow: 0 12px 30px rgba(37, 99, 235, 0.6);
+        }
+
+        .feature-icon svg {
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+        }
+
+        .feature-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--white);
+            margin-bottom: 0.75rem;
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .feature-title::after {
+            content: '→';
+            font-size: 1.25rem;
+            opacity: 0;
+            transform: translateX(-10px);
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover .feature-title::after {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .feature-description {
+            color: #94a3b8;
+            line-height: 1.6;
+            font-size: 0.9rem;
+            position: relative;
+            z-index: 1;
+            margin-bottom: 1rem;
+        }
+
+        .feature-meta {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(37, 99, 235, 0.1);
+            position: relative;
+            z-index: 1;
+        }
+
+        .feature-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.4rem 0.75rem;
+            background: rgba(37, 99, 235, 0.1);
+            border: 1px solid rgba(37, 99, 235, 0.2);
+            border-radius: 6px;
+            font-size: 0.8rem;
+            color: #60a5fa;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .feature-tag:hover {
+            background: rgba(37, 99, 235, 0.2);
+            border-color: rgba(37, 99, 235, 0.4);
+        }
+
+        .feature-tag svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        /* ========================================
+           PROBLEM SOLUTIONS SECTION
+           ======================================== */
+        .tech-stack-section {
+            padding: 6rem 2rem;
+            background: linear-gradient(180deg, var(--dark) 0%, var(--dark-light) 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tech-stack-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(37, 99, 235, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(245, 158, 11, 0.06) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            margin-top: 4rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .tech-item {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%);
+            padding: 2.5rem 2rem;
+            border-radius: 1.25rem;
+            border: 1px solid rgba(37, 99, 235, 0.2);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+        }
+
+        .tech-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, 
+                var(--primary-color) 0%, 
+                var(--secondary-color) 50%,
+                var(--primary-color) 100%);
+            transform: scaleX(0);
+            transition: transform 0.5s ease;
+        }
+
+        .tech-item:hover::before {
+            transform: scaleX(1);
+        }
+
+        .tech-item::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 50% 50%, rgba(37, 99, 235, 0.1) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .tech-item:hover::after {
+            opacity: 1;
+        }
+
+        .tech-item:hover {
+            transform: translateY(-8px);
+            border-color: rgba(37, 99, 235, 0.5);
+            box-shadow: 
+                0 20px 40px rgba(0, 0, 0, 0.4),
+                0 0 0 1px rgba(37, 99, 235, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .problem-icon {
+            width: 3.5rem;
+            height: 3.5rem;
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.1) 100%);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+            z-index: 1;
+            transition: all 0.3s ease;
+        }
+
+        .solution-icon {
+            width: 3.5rem;
+            height: 3.5rem;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            border-radius: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+            z-index: 1;
+            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .tech-item:hover .solution-icon {
+            transform: scale(1.1) rotate(-5deg);
+            box-shadow: 0 12px 30px rgba(37, 99, 235, 0.6);
+        }
+
+        .tech-name {
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--white);
+            margin-bottom: 0.75rem;
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .tech-name .icon-emoji {
+            font-size: 1.5rem;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+        }
+
+        .tech-purpose {
+            font-size: 0.95rem;
+            color: #94a3b8;
+            line-height: 1.6;
+            position: relative;
+            z-index: 1;
+        }
+
+        .problem-tag {
+            display: inline-block;
+            padding: 0.35rem 0.75rem;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: 6px;
+            font-size: 0.75rem;
+            color: #fca5a5;
+            margin-top: 1rem;
+            font-weight: 500;
+        }
+
+        .solution-tag {
+            display: inline-block;
+            padding: 0.35rem 0.75rem;
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+            border-radius: 6px;
+            font-size: 0.75rem;
+            color: #86efac;
+            margin-top: 1rem;
+            font-weight: 500;
+        }
+
+        /* ========================================
+           SCREENSHOT SECTION
+           ======================================== */
+        .screenshot-section {
+            padding: 6rem 2rem;
+            background: var(--dark);
+        }
+
+        .screenshot-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .screenshot-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%);
+            border-radius: 1.25rem;
+            overflow: hidden;
+            border: 1px solid rgba(37, 99, 235, 0.2);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+        }
+
+        .screenshot-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            border-color: rgba(37, 99, 235, 0.5);
+        }
+
+        .guide-card {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .screenshot-image {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.15), rgba(245, 158, 11, 0.1));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            color: var(--primary-color);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .guide-icon {
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.2) 0%, rgba(34, 197, 94, 0.15) 100%);
+            height: 180px;
+        }
+
+        .guide-icon svg {
+            color: var(--primary-color);
+            filter: drop-shadow(0 4px 8px rgba(37, 99, 235, 0.4));
+            transition: all 0.3s ease;
+        }
+
+        .screenshot-card:hover .guide-icon svg {
+            transform: scale(1.1) translateY(-5px);
+            filter: drop-shadow(0 8px 16px rgba(37, 99, 235, 0.6));
+        }
+
+        .screenshot-info {
+            padding: 1.75rem;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .screenshot-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--white);
+            margin-bottom: 0.75rem;
+        }
+
+        .screenshot-desc {
+            color: #94a3b8;
+            font-size: 0.9375rem;
+            line-height: 1.6;
+            flex: 1;
+            margin-bottom: 1.25rem;
+        }
+
+        .guide-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--primary-color);
+            font-weight: 600;
+            font-size: 0.9375rem;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            margin-top: auto;
+            padding: 0.75rem 1rem;
+            background: rgba(37, 99, 235, 0.1);
+            border-radius: 0.5rem;
+            border: 1px solid rgba(37, 99, 235, 0.2);
+        }
+
+        .guide-link:hover {
+            background: rgba(37, 99, 235, 0.2);
+            transform: translateX(4px);
+            border-color: rgba(37, 99, 235, 0.4);
+        }
+
+        .guide-link svg {
+            transition: transform 0.3s ease;
+        }
+
+        .guide-link:hover svg {
+            transform: translateY(2px);
+        }
+
+        .docs-footer {
+            margin-top: 4rem;
+            padding-top: 3rem;
+            border-top: 1px solid rgba(37, 99, 235, 0.1);
+        }
+
+        .docs-cta {
+            text-align: center;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .docs-cta h3 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--white);
+            margin-bottom: 0.75rem;
+        }
+
+        .docs-cta p {
+            color: #94a3b8;
+            font-size: 1.0625rem;
+            margin-bottom: 1.75rem;
+        }
+
+        .docs-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        /* ========================================
+           CTA SECTION
+           ======================================== */
+        .cta-section {
+            padding: 6rem 2rem;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            text-align: center;
+        }
+
+        .cta-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .cta-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--white);
+            margin-bottom: 1rem;
+        }
+
+        .cta-description {
+            font-size: 1.25rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 2rem;
+        }
+
+        .btn-white {
+            background: var(--white);
+            color: var(--primary-color);
+        }
+
+        .btn-white:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(255, 255, 255, 0.3);
+        }
+
+        /* ========================================
+           PRICING SECTION
+           ======================================== */
+        .pricing-section {
+            padding: 8rem 2rem;
+            background: linear-gradient(180deg, var(--dark) 0%, rgba(15, 23, 42, 0.98) 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .pricing-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(37, 99, 235, 0.5), transparent);
+        }
+
+        .pricing-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .pricing-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%);
+            border: 2px solid rgba(37, 99, 235, 0.3);
+            border-radius: 24px;
+            padding: 4rem 3rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s ease;
+        }
+
+        .pricing-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-10px);
+            border-color: rgba(37, 99, 235, 0.6);
+            box-shadow: 0 30px 80px rgba(37, 99, 235, 0.3);
+        }
+
+        .pricing-badge {
+            display: inline-block;
+            padding: 0.5rem 1.5rem;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border-radius: 50px;
+            color: var(--white);
+            font-weight: 700;
+            font-size: 0.875rem;
+            letter-spacing: 1px;
+            margin-bottom: 2rem;
+        }
+
+        .pricing-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--white);
+            margin-bottom: 1rem;
+        }
+
+        .pricing-subtitle {
+            font-size: 1.25rem;
+            color: var(--text-gray);
+            margin-bottom: 3rem;
+            line-height: 1.6;
+        }
+
+        .pricing-features {
+            list-style: none;
+            padding: 0;
+            margin: 3rem 0;
+            text-align: left;
+        }
+
+        .pricing-features li {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 1.125rem;
+            color: var(--text-light);
+            margin-bottom: 1.5rem;
+            padding-left: 1rem;
+        }
+
+        .pricing-features li svg {
+            width: 24px;
+            height: 24px;
+            stroke: var(--success);
+            flex-shrink: 0;
+        }
+
+        .pricing-cta {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1.25rem 3rem;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: var(--white);
+            font-size: 1.125rem;
+            font-weight: 700;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(37, 99, 235, 0.4);
+        }
+
+        .pricing-cta:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(37, 99, 235, 0.6);
+        }
+
+        .pricing-note {
+            font-size: 0.9375rem;
+            color: var(--text-gray);
+            margin-top: 2rem;
+        }
+
+        /* ========================================
+           COMPARISON SECTION
+           ======================================== */
+        .comparison-section {
+            padding: 8rem 2rem;
+            background: var(--dark);
+            position: relative;
+        }
+
+        .comparison-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .comparison-table {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(37, 99, 235, 0.2);
+            border-radius: 20px;
+            overflow: hidden;
+            margin-top: 3rem;
+        }
+
+        .comparison-header {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.15) 0%, rgba(30, 64, 175, 0.1) 100%);
+            border-bottom: 2px solid rgba(37, 99, 235, 0.3);
+        }
+
+        .comparison-header-cell {
+            padding: 2rem 1.5rem;
+            text-align: center;
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--white);
+        }
+
+        .comparison-header-cell:first-child {
+            text-align: left;
+        }
+
+        .comparison-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            border-bottom: 1px solid rgba(37, 99, 235, 0.1);
+            transition: background 0.3s ease;
+        }
+
+        .comparison-row:hover {
+            background: rgba(37, 99, 235, 0.05);
+        }
+
+        .comparison-cell {
+            padding: 1.5rem;
+            color: var(--text-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .comparison-cell:first-child {
+            justify-content: flex-start;
+            font-weight: 600;
+        }
+
+        .comparison-check {
+            color: var(--success);
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .comparison-cross {
+            color: var(--danger);
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        /* ========================================
+           FAQ SECTION
+           ======================================== */
+        .faq-section {
+            padding: 8rem 2rem;
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.98) 0%, var(--dark) 100%);
+            position: relative;
+        }
+
+        .faq-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .faq-list {
+            margin-top: 4rem;
+        }
+
+        .faq-item {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(37, 99, 235, 0.15);
+            border-radius: 15px;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .faq-item:hover {
+            border-color: rgba(37, 99, 235, 0.3);
+        }
+
+        .faq-question {
+            padding: 1.75rem 2rem;
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--white);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .faq-question:hover {
+            color: var(--primary-color);
+        }
+
+        .faq-icon {
+            font-size: 1.5rem;
+            color: var(--primary-color);
+            transition: transform 0.3s ease;
+        }
+
+        .faq-item.active .faq-icon {
+            transform: rotate(45deg);
+        }
+
+        .faq-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease, padding 0.4s ease;
+        }
+
+        .faq-item.active .faq-answer {
+            max-height: 500px;
+            padding: 0 2rem 1.75rem 2rem;
+        }
+
+        .faq-answer p {
+            color: var(--text-gray);
+            line-height: 1.7;
+            font-size: 1rem;
+        }
+
+        /* ========================================
+           FINAL CTA SECTION
+           ======================================== */
+        .final-cta-section {
+            padding: 8rem 2rem;
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.1) 0%, rgba(30, 64, 175, 0.05) 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .final-cta-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="none" stroke="rgba(37,99,235,0.05)" stroke-width="1"/></svg>');
+            opacity: 0.3;
+        }
+
+        .final-cta-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .final-cta-title {
+            font-size: 3.5rem;
+            font-weight: 900;
+            color: var(--white);
+            margin-bottom: 1.5rem;
+            line-height: 1.2;
+        }
+
+        .final-cta-subtitle {
+            font-size: 1.5rem;
+            color: var(--text-gray);
+            margin-bottom: 3rem;
+            line-height: 1.6;
+        }
+
+        .final-cta-buttons {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .final-cta-stats {
+            display: flex;
+            justify-content: center;
+            gap: 4rem;
+            margin-top: 4rem;
+            flex-wrap: wrap;
+        }
+
+        .final-cta-stat {
+            text-align: center;
+        }
+
+        .final-cta-stat-number {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .final-cta-stat-label {
+            font-size: 1rem;
+            color: var(--text-gray);
+        }
+
+        @media (max-width: 768px) {
+            .pricing-card {
+                padding: 3rem 2rem;
+            }
+
+            .pricing-title {
+                font-size: 2rem;
+            }
+
+            .comparison-header,
+            .comparison-row {
+                grid-template-columns: 1.5fr 1fr 1fr;
+            }
+
+            .comparison-header-cell,
+            .comparison-cell {
+                padding: 1rem 0.75rem;
+                font-size: 0.875rem;
+            }
+
+            .faq-question {
+                font-size: 1rem;
+                padding: 1.25rem 1.5rem;
+            }
+
+            .final-cta-title {
+                font-size: 2rem;
+            }
+
+            .final-cta-subtitle {
+                font-size: 1.125rem;
+            }
+
+            .final-cta-stats {
+                gap: 2rem;
+            }
+        }
+
+        /* ========================================
+           FOOTER
+           ======================================== */
+        .site-footer {
+            background: var(--dark-light);
+            padding: 3rem 2rem 1.5rem;
+            border-top: 1px solid rgba(37, 99, 235, 0.1);
+        }
+
+        .footer-container {
+            max-width: 1280px;
+            margin: 0 auto;
+        }
+
+        .footer-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 3rem;
+            margin-bottom: 3rem;
+        }
+
+        .footer-brand h3 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--white);
+            margin-bottom: 1rem;
+        }
+
+        .footer-description {
+            color: var(--text-gray);
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+
+        .footer-column h4 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--white);
+            margin-bottom: 1rem;
+        }
+
+        .footer-links {
+            list-style: none;
+        }
+
+        .footer-links li {
+            margin-bottom: 0.75rem;
+        }
+
+        .footer-links a {
+            color: var(--text-gray);
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: var(--primary-color);
+        }
+
+        .footer-bottom {
+            border-top: 1px solid rgba(37, 99, 235, 0.1);
+            padding-top: 1.5rem;
+            text-align: center;
+            color: var(--text-gray);
+        }
+
+        /* ========================================
+           RESPONSIVE DESIGN
+           ======================================== */
+        @media (max-width: 1024px) {
+            .hero-container {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+
+            .hero-content h1 {
+                font-size: 2.5rem;
+            }
+
+            .hero-stats {
+                justify-content: center;
+            }
+
+            .hero-buttons {
+                justify-content: center;
+            }
+
+            .features-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1.5rem;
+            }
+
+            .feature-card {
+                padding: 2rem;
+            }
+
+            .feature-icon {
+                width: 3.5rem;
+                height: 3.5rem;
+            }
+
+            .feature-icon svg {
+                width: 28px;
+                height: 28px;
+            }
+
+            .section-title {
+                font-size: 2.5rem;
+            }
+
+            .footer-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .nav-menu {
+                display: none;
+            }
+
+            .nav-actions {
+                display: none;
+            }
+
+            .mobile-menu-toggle {
+                display: flex;
+            }
+
+            .site-logo {
+                font-size: 1.25rem;
+            }
+
+            .logo-icon {
+                width: 36px;
+                height: 36px;
+                font-size: 18px;
+            }
+
+            .logo-text .brand-name {
+                font-size: 1.25rem;
+            }
+
+            .logo-text .brand-tagline {
+                font-size: 0.55rem;
+            }
+
+            .nav-container {
+                padding: 0.75rem 1rem;
+            }
+
+            .hero-section {
+                padding: 8rem 1.5rem 3rem;
+            }
+
+            .hero-content h1 {
+                font-size: 1.875rem;
+                line-height: 1.2;
+            }
+
+            .hero-content p {
+                font-size: 1rem;
+            }
+
+            .hero-stats {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .hero-trust {
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+
+            .trust-item {
+                font-size: 0.875rem;
+            }
+
+            .features-section {
+                padding: 4rem 1.5rem;
+            }
+
+            .section-header {
+                margin-bottom: 3rem;
+            }
+
+            .section-badge {
+                font-size: 0.75rem;
+                padding: 0.5rem 1rem;
+            }
+
+            .section-title {
+                font-size: 1.875rem;
+                line-height: 1.3;
+            }
+
+            .section-description {
+                font-size: 1rem;
+            }
+
+            .features-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1.25rem;
+            }
+
+            .feature-card {
+                padding: 1rem;
+            }
+
+            .feature-icon {
+                width: 2.5rem;
+                height: 2.5rem;
+                margin-bottom: 0.5rem;
+            }
+
+            .feature-icon svg {
+                width: 20px;
+                height: 20px;
+            }
+
+            .feature-title {
+                font-size: 1.125rem;
+                margin-bottom: 0.5rem;
+            }
+
+            .feature-description {
+                font-size: 0.875rem;
+                line-height: 1.5;
+                margin-bottom: 0.75rem;
+            }
+
+            .feature-meta {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+                margin-top: 0.75rem;
+                padding-top: 0.75rem;
+            }
+
+            .feature-tag {
+                font-size: 0.75rem;
+                padding: 0.3rem 0.6rem;
+            }
+
+            .dashboard-preview {
+                transform: perspective(1500px) rotateY(0deg) rotateX(0deg);
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1rem;
+            }
+
+            .tech-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1rem;
+            }
+
+            .tech-item {
+                padding: 1.5rem 1.25rem;
+            }
+
+            .solution-icon {
+                width: 3rem;
+                height: 3rem;
+                margin-bottom: 1rem;
+            }
+
+            .solution-icon svg {
+                width: 24px;
+                height: 24px;
+            }
+
+            .tech-name {
+                font-size: 1.125rem;
+                margin-bottom: 0.5rem;
+            }
+
+            .tech-purpose {
+                font-size: 0.875rem;
+                line-height: 1.5;
+            }
+
+            .screenshot-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1.5rem;
+            }
+
+            .guide-icon {
+                height: 150px;
+            }
+
+            .guide-icon svg {
+                width: 48px;
+                height: 48px;
+            }
+
+            .screenshot-info {
+                padding: 1.25rem;
+            }
+
+            .screenshot-title {
+                font-size: 1.125rem;
+            }
+
+            .screenshot-desc {
+                font-size: 0.875rem;
+            }
+
+            .docs-actions {
+                flex-direction: column;
+            }
+
+            .footer-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .cta-title {
+                font-size: 1.75rem;
+            }
+
+            .cta-description {
+                font-size: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .hero-section {
+                padding: 7rem 1rem 2.5rem;
+            }
+
+            .hero-content h1 {
+                font-size: 1.625rem;
+            }
+
+            .section-title {
+                font-size: 1.625rem;
+            }
+
+            .section-description {
+                font-size: 0.9375rem;
+            }
+
+            .features-section {
+                padding: 3rem 1rem;
+            }
+
+            .feature-card {
+                padding: 1rem;
+            }
+
+            .feature-icon {
+                width: 2.5rem;
+                height: 2.5rem;
+                margin-bottom: 0.5rem;
+            }
+
+            .feature-icon svg {
+                width: 20px;
+                height: 20px;
+            }
+
+            .feature-title {
+                font-size: 1rem;
+                margin-bottom: 0.5rem;
+            }
+
+            .feature-description {
+                font-size: 0.8125rem;
+                line-height: 1.5;
+                margin-bottom: 0.75rem;
+            }
+
+            .feature-meta {
+                margin-top: 0.75rem;
+                padding-top: 0.75rem;
+                gap: 0.5rem;
+            }
+
+            .feature-tag {
+                font-size: 0.75rem;
+                padding: 0.25rem 0.5rem;
+            }
+
+            .tech-item {
+                padding: 1.25rem 1rem;
+            }
+
+            .solution-icon {
+                width: 2.5rem;
+                height: 2.5rem;
+                margin-bottom: 0.75rem;
+            }
+
+            .solution-icon svg {
+                width: 20px;
+                height: 20px;
+            }
+
+            .tech-name {
+                font-size: 1rem;
+            }
+
+            .tech-purpose {
+                font-size: 0.8125rem;
+            }
+
+            .screenshot-grid {
+                grid-template-columns: 1fr;
+                gap: 1.25rem;
+            }
+
+            .guide-icon {
+                height: 140px;
+            }
+
+            .guide-icon svg {
+                width: 40px;
+                height: 40px;
+            }
+
+            .btn {
+                padding: 0.875rem 1.5rem;
+                font-size: 0.9375rem;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .nav-status {
+                display: none;
+            }
+
+            .nav-actions .nav-icon-btn {
+                display: none;
+            }
+
+            .nav-menu {
+                gap: 0.25rem;
+            }
+
+            .nav-menu a {
+                padding: 0.5rem 0.75rem;
+                font-size: 0.9rem;
+            }
+        }
+
+        /* ========================================
+           ANIMATIONS
+           ======================================== */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-in {
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+
+        .delay-1 { animation-delay: 0.1s; opacity: 0; }
+        .delay-2 { animation-delay: 0.2s; opacity: 0; }
+        .delay-3 { animation-delay: 0.3s; opacity: 0; }
+        .delay-4 { animation-delay: 0.4s; opacity: 0; }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <header class="site-header">
+        <div class="nav-container">
+            <div class="site-logo">
+                <div class="logo-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                    </svg>
+                </div>
+                <div class="logo-text">
+                    <div class="brand-name"><span class="highlight">Site</span>Proc</div>
+                    <div class="brand-tagline">Construction Management</div>
+                </div>
+            </div>
+            
+            <nav class="site-navigation">
+                <ul class="nav-menu">
+                    <li><a href="#features">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7"></rect>
+                            <rect x="14" y="3" width="7" height="7"></rect>
+                            <rect x="14" y="14" width="7" height="7"></rect>
+                            <rect x="3" y="14" width="7" height="7"></rect>
+                        </svg>
+                        Features
+                    </a></li>
+                    <li><a href="#documentation">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                        </svg>
+                        Documentation
+                    </a></li>
+                    <li><a href="#pricing">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="1" x2="12" y2="23"></line>
+                            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                        </svg>
+                        Pricing
+                    </a></li>
+                </ul>
+            </nav>
+            
+            <div class="nav-actions">
+                <a href="https://siteproc1.vercel.app/login" target="_blank" 
+                   style="padding: 0.5rem 1.25rem; font-size: 0.9375rem; color: var(--text-light); background: transparent; border: 1px solid rgba(148, 163, 184, 0.3); border-radius: 8px; font-weight: 500; transition: all 0.3s ease; text-decoration: none; display: inline-block;"
+                   onmouseover="this.style.borderColor='rgba(37, 99, 235, 0.5)'; this.style.color='var(--white)'"
+                   onmouseout="this.style.borderColor='rgba(148, 163, 184, 0.3)'; this.style.color='var(--text-light)'">
+                    Login
+                </a>
+                <a href="#contact" class="nav-cta" style="padding: 0.5rem 1.5rem; font-size: 0.9375rem;">Get Started</a>
+            </div>
+            
+            <button class="mobile-menu-toggle">☰</button>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="hero-container">
+            <div class="hero-content">
+                <h1 class="animate-in">
+                    Professional <span class="highlight">Construction Management</span> for the Modern Era
+                </h1>
+                <p class="animate-in delay-1">
+                    Manage projects, orders, deliveries, and expenses all in one powerful platform. 
+                    Built specifically for the U.S. construction industry.
+                </p>
+                
+                <div class="hero-stats animate-in delay-2">
+                    <div class="stat-item">
+                        <span class="stat-number">15+</span>
+                        <span class="stat-label">Core Modules</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">50+</span>
+                        <span class="stat-label">API Endpoints</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">100%</span>
+                        <span class="stat-label">Secure</span>
+                    </div>
+                </div>
+                
+                <div class="hero-buttons animate-in delay-3">
+                    <a href="#contact" class="btn btn-primary">Start Free Trial</a>
+                    <a href="#features" class="btn btn-secondary">Explore Features</a>
+                </div>
+                
+                <div class="hero-trust animate-in delay-4">
+                    <div class="trust-item">
+                        <span class="trust-icon">✓</span>
+                        <span>Save 15+ hours per week on project management</span>
+                    </div>
+                    <div class="trust-item">
+                        <span class="trust-icon">✓</span>
+                        <span>Reduce order errors by 90% with automated tracking</span>
+                    </div>
+                    <div class="trust-item">
+                        <span class="trust-icon">✓</span>
+                        <span>Cut project costs by up to 25% with real-time insights</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="hero-visual animate-in delay-4">
+                <div class="dashboard-preview">
+                    <!-- Browser Chrome -->
+                    <div class="browser-chrome">
+                        <div class="chrome-dots">
+                            <span class="dot" style="background: #ff5f57;"></span>
+                            <span class="dot" style="background: #ffbd2e;"></span>
+                            <span class="dot" style="background: #28c940;"></span>
+                        </div>
+                        <div class="chrome-url">
+                            <div style="display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: rgba(0,0,0,0.3); border-radius: 6px; font-size: 13px; color: #94a3b8;">
+                                <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></span>
+                                <span>siteproc.app/dashboard</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dashboard Content -->
+                    <div class="dashboard-content">
+                        <!-- Dashboard Header -->
+                        <div class="dash-header">
+                            <div>
+                                <div style="font-size: 24px; font-weight: 700; color: #fff; margin-bottom: 4px;">Dashboard</div>
+                                <div style="font-size: 14px; color: #94a3b8;">Welcome back! Here's your project overview.</div>
+                            </div>
+                            <button class="dash-button">+ New Project</button>
+                        </div>
+
+                        <!-- Stats Grid -->
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-icon" style="background: rgba(37, 99, 235, 0.2); color: #2563eb;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"></path><path d="M18 17V9"></path><path d="M13 17V5"></path><path d="M8 17v-3"></path></svg></div>
+                                <div>
+                                    <div class="stat-label">Active Projects</div>
+                                    <div class="stat-value">24</div>
+                                    <div class="stat-change positive">+12% from last month</div>
+                                </div>
+                            </div>
+
+                            <div class="stat-card">
+                                <div class="stat-icon" style="background: rgba(34, 197, 94, 0.2); color: #22c55e;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></div>
+                                <div>
+                                    <div class="stat-label">Total Budget</div>
+                                    <div class="stat-value">$2.4M</div>
+                                    <div class="stat-change positive">+8% this quarter</div>
+                                </div>
+                            </div>
+
+                            <div class="stat-card">
+                                <div class="stat-icon" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg></div>
+                                <div>
+                                    <div class="stat-label">Deliveries</div>
+                                    <div class="stat-value">156</div>
+                                    <div class="stat-change positive">+24 this week</div>
+                                </div>
+                            </div>
+
+                            <div class="stat-card">
+                                <div class="stat-icon" style="background: rgba(168, 85, 247, 0.2); color: #a855f7;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg></div>
+                                <div>
+                                    <div class="stat-label">Orders</div>
+                                    <div class="stat-value">342</div>
+                                    <div class="stat-change">Processing</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Recent Activity Chart -->
+                        <div class="activity-section">
+                            <div style="font-size: 18px; font-weight: 600; color: #fff; margin-bottom: 16px;">Recent Activity</div>
+                            <div class="activity-chart">
+                                <div class="chart-bar" style="height: 45%; background: linear-gradient(180deg, #2563eb, rgba(37, 99, 235, 0.6));">
+                                    <div class="bar-label">Mon</div>
+                                </div>
+                                <div class="chart-bar" style="height: 70%; background: linear-gradient(180deg, #2563eb, rgba(37, 99, 235, 0.6));">
+                                    <div class="bar-label">Tue</div>
+                                </div>
+                                <div class="chart-bar" style="height: 55%; background: linear-gradient(180deg, #2563eb, rgba(37, 99, 235, 0.6));">
+                                    <div class="bar-label">Wed</div>
+                                </div>
+                                <div class="chart-bar" style="height: 85%; background: linear-gradient(180deg, #2563eb, rgba(37, 99, 235, 0.6));">
+                                    <div class="bar-label">Thu</div>
+                                </div>
+                                <div class="chart-bar" style="height: 65%; background: linear-gradient(180deg, #2563eb, rgba(37, 99, 235, 0.6));">
+                                    <div class="bar-label">Fri</div>
+                                </div>
+                                <div class="chart-bar" style="height: 40%; background: linear-gradient(180deg, #64748b, rgba(100, 116, 139, 0.6)); opacity: 0.5;">
+                                    <div class="bar-label">Sat</div>
+                                </div>
+                                <div class="chart-bar" style="height: 35%; background: linear-gradient(180deg, #64748b, rgba(100, 116, 139, 0.6)); opacity: 0.5;">
+                                    <div class="bar-label">Sun</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Workflow Section -->
+    <section class="workflow-section">
+        <div class="workflow-container">
+            <div class="workflow-header">
+                <span class="workflow-badge">HOW IT WORKS</span>
+                <h2 class="workflow-title">Seamless Flow from Order to Delivery</h2>
+                <p class="workflow-description">
+                    Connect suppliers, companies, and customers in one unified platform. Track every step of your construction supply chain in real-time.
+                </p>
+            </div>
+
+            <div class="workflow-flow">
+                <!-- Step 1: Supplier -->
+                <div class="workflow-step">
+                    <div class="workflow-step-number">1</div>
+                    <div class="workflow-step-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                        </svg>
+                    </div>
+                    <h3 class="workflow-step-title">Supplier</h3>
+                    <p class="workflow-step-description">
+                        Material suppliers receive orders instantly and manage their inventory, pricing, and delivery schedules.
+                    </p>
+                    <ul class="workflow-step-features">
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Receive orders in real-time
+                        </li>
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Update product catalog
+                        </li>
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Schedule deliveries
+                        </li>
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Track order status
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="workflow-arrow">→</div>
+
+                <!-- Step 2: Company -->
+                <div class="workflow-step">
+                    <div class="workflow-step-number">2</div>
+                    <div class="workflow-step-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                        </svg>
+                    </div>
+                    <h3 class="workflow-step-title">Company</h3>
+                    <p class="workflow-step-description">
+                        Construction companies manage multiple projects, track budgets, and coordinate between suppliers and sites.
+                    </p>
+                    <ul class="workflow-step-features">
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Create & manage projects
+                        </li>
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Place orders with suppliers
+                        </li>
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Track all deliveries
+                        </li>
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Monitor budgets & expenses
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="workflow-arrow">→</div>
+
+                <!-- Step 3: Site Manager -->
+                <div class="workflow-step">
+                    <div class="workflow-step-number">3</div>
+                    <div class="workflow-step-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        </svg>
+                    </div>
+                    <h3 class="workflow-step-title">Site Manager</h3>
+                    <p class="workflow-step-description">
+                        On-site managers receive deliveries, verify materials, and update project progress in real-time from mobile devices.
+                    </p>
+                    <ul class="workflow-step-features">
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Receive delivery notifications
+                        </li>
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Verify materials on-site
+                        </li>
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Upload proof of delivery
+                        </li>
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Update project progress
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="workflow-arrow">→</div>
+
+                <!-- Step 4: Customer -->
+                <div class="workflow-step">
+                    <div class="workflow-step-number">4</div>
+                    <div class="workflow-step-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                    </div>
+                    <h3 class="workflow-step-title">Customer</h3>
+                    <p class="workflow-step-description">
+                        End customers get complete visibility into their project status, deliveries, and can communicate directly with the team.
+                    </p>
+                    <ul class="workflow-step-features">
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Real-time project updates
+                        </li>
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Track delivery status
+                        </li>
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            View project timeline
+                        </li>
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Direct communication
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Benefits Grid -->
+            <div class="workflow-benefits">
+                <div class="workflow-benefit">
+                    <div class="workflow-benefit-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                        </svg>
+                    </div>
+                    <h4 class="workflow-benefit-title">Real-Time Sync</h4>
+                    <p class="workflow-benefit-text">
+                        All stakeholders see updates instantly. No delays, no miscommunication.
+                    </p>
+                </div>
+
+                <div class="workflow-benefit">
+                    <div class="workflow-benefit-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
+                    </div>
+                    <h4 class="workflow-benefit-title">Secure & Compliant</h4>
+                    <p class="workflow-benefit-text">
+                        Enterprise-grade security with role-based access control and audit trails.
+                    </p>
+                </div>
+
+                <div class="workflow-benefit">
+                    <div class="workflow-benefit-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                            <line x1="8" y1="21" x2="16" y2="21"></line>
+                            <line x1="12" y1="17" x2="12" y2="21"></line>
+                        </svg>
+                    </div>
+                    <h4 class="workflow-benefit-title">Mobile Ready</h4>
+                    <p class="workflow-benefit-text">
+                        Full functionality on mobile devices for on-the-go management.
+                    </p>
+                </div>
+
+                <div class="workflow-benefit">
+                    <div class="workflow-benefit-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 3v18h18"></path>
+                            <path d="M18 17V9"></path>
+                            <path d="M13 17V5"></path>
+                            <path d="M8 17v-3"></path>
+                        </svg>
+                    </div>
+                    <h4 class="workflow-benefit-title">Advanced Analytics</h4>
+                    <p class="workflow-benefit-text">
+                        Comprehensive reporting and insights to optimize operations.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features-section">
+        <div class="section-container">
+            <div class="section-header">
+                <span class="section-badge">FEATURES</span>
+                <h2 class="section-title">Everything You Need to Manage Construction Projects</h2>
+                <p class="section-description">
+                    Comprehensive tools designed specifically for construction professionals to streamline operations and boost productivity
+                </p>
+            </div>
+            
+            <div class="features-grid">
+                <!-- Feature 1: Order Management -->
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                            <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Order Management</h3>
+                    <p class="feature-description">
+                        Create and track purchase orders with automatic status updates, delivery progress tracking, 
+                        and seamless approval workflows. Never lose track of orders again.
+                    </p>
+                    <div class="feature-meta">
+                        <span class="feature-tag">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Auto-sync
+                        </span>
+                        <span class="feature-tag">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+                            Real-time
+                        </span>
+                    </div>
+                </div>
+                
+                <!-- Feature 2: Delivery Management -->
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                            <rect x="1" y="3" width="15" height="13"></rect>
+                            <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+                            <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                            <circle cx="18.5" cy="18.5" r="2.5"></circle>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Delivery Management</h3>
+                    <p class="feature-description">
+                        Record deliveries with complete details including items, quantities, and pricing. Upload proof of delivery documents 
+                        and maintain comprehensive driver information for full transparency.
+                    </p>
+                    <div class="feature-meta">
+                        <span class="feature-tag">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                            POD Upload
+                        </span>
+                        <span class="feature-tag">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"></path></svg>
+                            GPS Track
+                        </span>
+                    </div>
+                </div>
+                
+                <!-- Feature 3: Project Management -->
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Project Management</h3>
+                    <p class="feature-description">
+                        Advanced budget tracking with real-time variance calculation, intelligent project status management, 
+                        and comprehensive cost overview dashboards that give you complete control.
+                    </p>
+                    <div class="feature-meta">
+                        <span class="feature-tag">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+                            Live Budget
+                        </span>
+                        <span class="feature-tag">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                            Variance
+                        </span>
+                    </div>
+                </div>
+                
+                <!-- Feature 4: Financial Management -->
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                            <line x1="12" y1="1" x2="12" y2="23"></line>
+                            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Financial Management</h3>
+                    <p class="feature-description">
+                        Streamlined expense tracking with multi-level approval workflows, automated payment recording, and 
+                        real-time financial calculations that keep your budget on track.
+                    </p>
+                    <div class="feature-meta">
+                        <span class="feature-tag">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                            Approval
+                        </span>
+                        <span class="feature-tag">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+                            Audit Trail
+                        </span>
+                    </div>
+                </div>
+                
+                <!-- Feature 5: Reporting -->
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                            <path d="M3 3v18h18"></path>
+                            <path d="M18 17V9"></path>
+                            <path d="M13 17V5"></path>
+                            <path d="M8 17v-3"></path>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Comprehensive Reporting</h3>
+                    <p class="feature-description">
+                        Generate detailed project financial reports, payment summaries, and delivery performance metrics. 
+                        Export to CSV for external analysis and seamless integration with your existing tools.
+                    </p>
+                    <div class="feature-meta">
+                        <span class="feature-tag">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                            CSV Export
+                        </span>
+                        <span class="feature-tag">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+                            Custom
+                        </span>
+                    </div>
+                </div>
+                
+                <!-- Feature 6: User Management -->
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">User Management</h3>
+                    <p class="feature-description">
+                        Sophisticated role-based access control with 6 permission levels (Owner, Admin, Manager, Accountant, Editor, Viewer). 
+                        Complete company-based data isolation ensures security.
+                    </p>
+                    <div class="feature-meta">
+                        <span class="feature-tag">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                            6 Roles
+                        </span>
+                        <span class="feature-tag">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                            Isolated
+                        </span>
+                    </div>
+                </div>
+                
+                <!-- Feature 7: Activity Logging -->
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Activity Logging</h3>
+                    <p class="feature-description">
+                        Complete audit trail for all system actions with advanced filters by entity, powerful search capabilities, 
+                        and detailed metadata tracking for compliance and accountability.
+                    </p>
+                    <div class="feature-meta">
+                        <span class="feature-tag">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                            Searchable
+                        </span>
+                        <span class="feature-tag">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                            Real-time
+                        </span>
+                    </div>
+                </div>
+                
+                <!-- Feature 8: Security & Compliance -->
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                            <path d="M9 12l2 2 4-4"></path>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Security & Compliance</h3>
+                    <p class="feature-description">
+                        Enterprise-grade Row-Level Security (RLS), role enforcement, full GDPR and CCPA compliance, 
+                        and comprehensive privacy policies to protect your sensitive data.
+                    </p>
+                    <div class="feature-meta">
+                        <span class="feature-tag">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                            RLS
+                        </span>
+                        <span class="feature-tag">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                            GDPR
+                        </span>
+                    </div>
+                </div>
+                
+                <!-- Feature 9: Timezone Support -->
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Timezone Support</h3>
+                    <p class="feature-description">
+                        All dates intelligently display in Eastern Time (ET) with automatic EST/EDT handling 
+                        and timezone-aware CSV exports. Perfect for U.S.-based construction operations.
+                    </p>
+                    <div class="feature-meta">
+                        <span class="feature-tag">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                            EST/EDT
+                        </span>
+                        <span class="feature-tag">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                            Auto
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Problem Solutions Section -->
+    <section id="benefits" class="tech-stack-section">
+        <div class="section-container">
+            <div class="section-header">
+                <span class="section-badge">WHY SITEPROC</span>
+                <h2 class="section-title">Say Goodbye to Construction Chaos</h2>
+                <p class="section-description">
+                    Stop fighting fires. Start preventing them. See how SiteProc eliminates the headaches that slow you down.
+                </p>
+            </div>
+            
+            <div class="tech-grid">
+                <div class="tech-item">
+                    <div class="solution-icon">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                            <path d="M9 11l3 3L22 4"></path>
+                            <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path>
+                        </svg>
+                    </div>
+                    <div class="tech-name">No More Lost Orders</div>
+                    <div class="tech-purpose">
+                        Never lose track of materials again. Every order is documented, searchable, and accessible in seconds—not buried in email threads or filing cabinets.
+                    </div>
+                    <span class="solution-tag">100% Tracked</span>
+                </div>
+
+                <div class="tech-item">
+                    <div class="solution-icon">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                        </svg>
+                    </div>
+                    <div class="tech-name">Eliminate Delays</div>
+                    <div class="tech-purpose">
+                        Stop waiting for updates. Real-time notifications keep your entire team synchronized—no more "I didn't know" excuses.
+                    </div>
+                    <span class="solution-tag">Real-time</span>
+                </div>
+
+                <div class="tech-item">
+                    <div class="solution-icon">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                    </div>
+                    <div class="tech-name">Full Visibility</div>
+                    <div class="tech-purpose">
+                        See exactly where every order stands—from purchase to delivery. No more calling vendors for status updates.
+                    </div>
+                    <span class="solution-tag">End-to-end</span>
+                </div>
+
+                <div class="tech-item">
+                    <div class="solution-icon">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                            <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                            <path d="M13.73 21a2 2 0 01-3.46 0"></path>
+                        </svg>
+                    </div>
+                    <div class="tech-name">Instant Alerts</div>
+                    <div class="tech-purpose">
+                        Get notified the moment something changes. Delivery confirmed? Order updated? You'll know immediately—not tomorrow.
+                    </div>
+                    <span class="solution-tag">Push Alerts</span>
+                </div>
+
+                <div class="tech-item">
+                    <div class="solution-icon">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="9" y1="15" x2="15" y2="15"></line>
+                        </svg>
+                    </div>
+                    <div class="tech-name">Go Paperless</div>
+                    <div class="tech-purpose">
+                        Ditch the filing cabinets and clipboards. Every document is digital, organized, and findable in 3 seconds flat.
+                    </div>
+                    <span class="solution-tag">Zero Paper</span>
+                </div>
+
+                <div class="tech-item">
+                    <div class="solution-icon">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                            <path d="M9 12l2 2 4-4"></path>
+                        </svg>
+                    </div>
+                    <div class="tech-name">Prevent Errors</div>
+                    <div class="tech-purpose">
+                        Catch mistakes before they cost you. Automated validation checks wrong quantities, duplicate orders, and budget overruns.
+                    </div>
+                    <span class="solution-tag">Auto-check</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Documentation & Guides Section -->
+    <section id="documentation" class="screenshot-section">
+        <div class="section-container">
+            <div class="section-header">
+                <span class="section-badge">DOCUMENTATION</span>
+                <h2 class="section-title">How SiteProc Works End-to-End</h2>
+                <p class="section-description">
+                    Complete guides for every role—from suppliers to site managers. Get started in minutes.
+                </p>
+            </div>
+            
+            <div class="screenshot-grid">
+                <div class="screenshot-card guide-card">
+                    <div class="screenshot-image guide-icon">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"></path>
+                            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                            <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                        </svg>
+                    </div>
+                    <div class="screenshot-info">
+                        <h3 class="screenshot-title">Supplier Guide</h3>
+                        <p class="screenshot-desc">
+                            Learn how to receive orders, update delivery status, upload proof of delivery, and manage your supplier profile.
+                        </p>
+                        <a href="docs/supplier-guide.pdf" class="guide-link" download>
+                            <span>Download PDF Guide</span>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="screenshot-card guide-card">
+                    <div class="screenshot-image guide-icon">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path>
+                            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                        </svg>
+                    </div>
+                    <div class="screenshot-info">
+                        <h3 class="screenshot-title">Company Admin Guide</h3>
+                        <p class="screenshot-desc">
+                            Set up your company, manage team members, create projects, track budgets, and configure system settings.
+                        </p>
+                        <a href="docs/company-admin-guide.pdf" class="guide-link" download>
+                            <span>Download PDF Guide</span>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="screenshot-card guide-card">
+                    <div class="screenshot-image guide-icon">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                    </div>
+                    <div class="screenshot-info">
+                        <h3 class="screenshot-title">Site Manager Guide</h3>
+                        <p class="screenshot-desc">
+                            Create orders, track deliveries, manage contractors, approve change orders, and monitor project progress daily.
+                        </p>
+                        <a href="docs/site-manager-guide.pdf" class="guide-link" download>
+                            <span>Download PDF Guide</span>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="screenshot-card guide-card">
+                    <div class="screenshot-image guide-icon">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                        </svg>
+                    </div>
+                    <div class="screenshot-info">
+                        <h3 class="screenshot-title">Quick Start Guide</h3>
+                        <p class="screenshot-desc">
+                            Get up and running in 5 minutes. Step-by-step walkthrough from signup to your first completed order.
+                        </p>
+                        <a href="docs/quick-start-guide.pdf" class="guide-link" download>
+                            <span>Download PDF Guide</span>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="screenshot-card guide-card">
+                    <div class="screenshot-image guide-icon">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="16" x2="12" y2="12"></line>
+                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                        </svg>
+                    </div>
+                    <div class="screenshot-info">
+                        <h3 class="screenshot-title">API Documentation</h3>
+                        <p class="screenshot-desc">
+                            Integrate SiteProc with your existing tools. REST API docs, webhooks, authentication, and code examples.
+                        </p>
+                        <a href="docs/api-documentation.pdf" class="guide-link" target="_blank">
+                            <span>View API Docs</span>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"></path>
+                                <polyline points="15 3 21 3 21 9"></polyline>
+                                <line x1="10" y1="14" x2="21" y2="3"></line>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="screenshot-card guide-card">
+                    <div class="screenshot-image guide-icon">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"></path>
+                        </svg>
+                    </div>
+                    <div class="screenshot-info">
+                        <h3 class="screenshot-title">Troubleshooting & FAQ</h3>
+                        <p class="screenshot-desc">
+                            Common issues, solutions, and frequently asked questions. Get answers fast without contacting support.
+                        </p>
+                        <a href="docs/faq-troubleshooting.pdf" class="guide-link" target="_blank">
+                            <span>View FAQ</span>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"></path>
+                                <polyline points="15 3 21 3 21 9"></polyline>
+                                <line x1="10" y1="14" x2="21" y2="3"></line>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional Resources -->
+            <div class="docs-footer">
+                <div class="docs-cta">
+                    <h3>Need More Help?</h3>
+                    <p>Our support team is available 24/7 to help you get the most out of SiteProc</p>
+                    <div class="docs-actions">
+                        <a href="mailto:support@siteproc.com" class="btn btn-primary">Contact Support</a>
+                        <a href="#video-tutorials" class="btn btn-secondary">Watch Video Tutorials</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section id="contact" class="cta-section">
+        <div class="cta-container">
+            <h2 class="cta-title">Ready to Transform Your Construction Management?</h2>
+            <p class="cta-description">
+                Join construction professionals who trust SiteProc for their project management needs
+            </p>
+            <div class="hero-buttons">
+                <a href="https://calendly.com/chayaponyaibandit/30min" target="_blank" class="btn btn-white">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.5rem;">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    Schedule a Demo
+                </a>
+                <a href="mailto:support@siteproc.com" class="btn btn-secondary" 
+                   style="border-color: white; color: white;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.5rem;">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                        <polyline points="22,6 12,13 2,6"></polyline>
+                    </svg>
+                    Contact Sales
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section id="pricing" class="pricing-section">
+        <div class="pricing-container">
+            <div class="section-header" style="text-align: center;">
+                <span class="section-badge">PRICING</span>
+                <h2 class="section-title">Enterprise-Grade Solution</h2>
+                <p class="section-description">
+                    Tailored pricing for construction companies of all sizes. Get exactly what you need.
+                </p>
+            </div>
+
+            <div class="pricing-card">
+                <span class="pricing-badge">CUSTOM ENTERPRISE PLAN</span>
+                <h3 class="pricing-title">Built for Your Business</h3>
+                <p class="pricing-subtitle">
+                    Every construction company has unique needs. We create a custom solution that fits your workflow, 
+                    team size, and project requirements perfectly.
+                </p>
+
+                <ul class="pricing-features">
+                    <li>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        <span><strong>Unlimited Projects & Users</strong> - Scale without limits</span>
+                    </li>
+                    <li>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        <span><strong>Full Platform Access</strong> - All 15+ core modules included</span>
+                    </li>
+                    <li>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        <span><strong>Dedicated Support</strong> - Priority assistance when you need it</span>
+                    </li>
+                    <li>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        <span><strong>Custom Integrations</strong> - Connect with your existing tools</span>
+                    </li>
+                    <li>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        <span><strong>Onboarding & Training</strong> - Get your team up to speed fast</span>
+                    </li>
+                    <li>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        <span><strong>Data Migration</strong> - Seamless transition from your current system</span>
+                    </li>
+                    <li>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        <span><strong>99.9% Uptime SLA</strong> - Enterprise-grade reliability</span>
+                    </li>
+                    <li>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        <span><strong>Advanced Security</strong> - SOC 2 compliant infrastructure</span>
+                    </li>
+                </ul>
+
+                <button class="pricing-cta" onclick="window.location.href='#contact'">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    Contact Sales for Custom Pricing
+                </button>
+
+                <p class="pricing-note">
+                    💼 Schedule a demo to see how SiteProc can transform your construction management
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Comparison Section -->
+    <section class="comparison-section">
+        <div class="comparison-container">
+            <div class="section-header" style="text-align: center;">
+                <span class="section-badge">COMPARISON</span>
+                <h2 class="section-title">Why Choose SiteProc?</h2>
+                <p class="section-description">
+                    See how SiteProc compares to traditional construction management methods
+                </p>
+            </div>
+
+            <div class="comparison-table">
+                <div class="comparison-header">
+                    <div class="comparison-header-cell">Feature</div>
+                    <div class="comparison-header-cell">Traditional Methods</div>
+                    <div class="comparison-header-cell">SiteProc</div>
+                </div>
+
+                <div class="comparison-row">
+                    <div class="comparison-cell">Real-time order tracking</div>
+                    <div class="comparison-cell"><span class="comparison-cross">✗</span></div>
+                    <div class="comparison-cell"><span class="comparison-check">✓</span></div>
+                </div>
+
+                <div class="comparison-row">
+                    <div class="comparison-cell">Automated delivery notifications</div>
+                    <div class="comparison-cell"><span class="comparison-cross">✗</span></div>
+                    <div class="comparison-cell"><span class="comparison-check">✓</span></div>
+                </div>
+
+                <div class="comparison-row">
+                    <div class="comparison-cell">Centralized project management</div>
+                    <div class="comparison-cell"><span class="comparison-cross">✗</span></div>
+                    <div class="comparison-cell"><span class="comparison-check">✓</span></div>
+                </div>
+
+                <div class="comparison-row">
+                    <div class="comparison-cell">Budget tracking & analytics</div>
+                    <div class="comparison-cell"><span class="comparison-cross">✗</span></div>
+                    <div class="comparison-cell"><span class="comparison-check">✓</span></div>
+                </div>
+
+                <div class="comparison-row">
+                    <div class="comparison-cell">Mobile accessibility</div>
+                    <div class="comparison-cell"><span class="comparison-cross">✗</span></div>
+                    <div class="comparison-cell"><span class="comparison-check">✓</span></div>
+                </div>
+
+                <div class="comparison-row">
+                    <div class="comparison-cell">Proof of delivery uploads</div>
+                    <div class="comparison-cell"><span class="comparison-cross">✗</span></div>
+                    <div class="comparison-cell"><span class="comparison-check">✓</span></div>
+                </div>
+
+                <div class="comparison-row">
+                    <div class="comparison-cell">Multi-user collaboration</div>
+                    <div class="comparison-cell"><span class="comparison-cross">✗</span></div>
+                    <div class="comparison-cell"><span class="comparison-check">✓</span></div>
+                </div>
+
+                <div class="comparison-row">
+                    <div class="comparison-cell">Role-based permissions</div>
+                    <div class="comparison-cell"><span class="comparison-cross">✗</span></div>
+                    <div class="comparison-cell"><span class="comparison-check">✓</span></div>
+                </div>
+
+                <div class="comparison-row">
+                    <div class="comparison-cell">Automated expense tracking</div>
+                    <div class="comparison-cell"><span class="comparison-cross">✗</span></div>
+                    <div class="comparison-cell"><span class="comparison-check">✓</span></div>
+                </div>
+
+                <div class="comparison-row">
+                    <div class="comparison-cell">Comprehensive reporting</div>
+                    <div class="comparison-cell"><span class="comparison-cross">✗</span></div>
+                    <div class="comparison-cell"><span class="comparison-check">✓</span></div>
+                </div>
+
+                <div class="comparison-row">
+                    <div class="comparison-cell">API access for integrations</div>
+                    <div class="comparison-cell"><span class="comparison-cross">✗</span></div>
+                    <div class="comparison-cell"><span class="comparison-check">✓</span></div>
+                </div>
+
+                <div class="comparison-row">
+                    <div class="comparison-cell">Contractor management</div>
+                    <div class="comparison-cell"><span class="comparison-cross">✗</span></div>
+                    <div class="comparison-cell"><span class="comparison-check">✓</span></div>
+                </div>
+
+                <div class="comparison-row">
+                    <div class="comparison-cell">Time saved per week</div>
+                    <div class="comparison-cell">0 hours</div>
+                    <div class="comparison-cell"><strong>15+ hours</strong></div>
+                </div>
+
+                <div class="comparison-row">
+                    <div class="comparison-cell">Error reduction</div>
+                    <div class="comparison-cell">0%</div>
+                    <div class="comparison-cell"><strong>90%</strong></div>
+                </div>
+
+                <div class="comparison-row">
+                    <div class="comparison-cell">Cost savings</div>
+                    <div class="comparison-cell">0%</div>
+                    <div class="comparison-cell"><strong>Up to 25%</strong></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="faq-section">
+        <div class="faq-container">
+            <div class="section-header" style="text-align: center;">
+                <span class="section-badge">FAQ</span>
+                <h2 class="section-title">Frequently Asked Questions</h2>
+                <p class="section-description">
+                    Everything you need to know about SiteProc
+                </p>
+            </div>
+
+            <div class="faq-list">
+                <div class="faq-item">
+                    <div class="faq-question" onclick="this.parentElement.classList.toggle('active')">
+                        <span>What is SiteProc and who is it for?</span>
+                        <span class="faq-icon">+</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>
+                            SiteProc is a comprehensive construction management platform designed specifically for the U.S. construction industry. 
+                            It's perfect for construction companies, contractors, project managers, site supervisors, and material suppliers who need 
+                            to manage projects, track orders, coordinate deliveries, and monitor expenses all in one place.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question" onclick="this.parentElement.classList.toggle('active')">
+                        <span>How long does implementation take?</span>
+                        <span class="faq-icon">+</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>
+                            Most companies are up and running within 1-2 weeks. We provide comprehensive onboarding support including data migration, 
+                            team training, and custom configuration. Our dedicated implementation team works with you to ensure a smooth transition 
+                            from your current system with minimal disruption to your operations.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question" onclick="this.parentElement.classList.toggle('active')">
+                        <span>Can I integrate SiteProc with my existing tools?</span>
+                        <span class="faq-icon">+</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>
+                            Yes! SiteProc offers a robust REST API with 50+ endpoints for seamless integration with your existing tools. 
+                            We support integrations with popular accounting software (QuickBooks, Xero), project management tools, 
+                            and custom internal systems. Our team can help set up custom integrations specific to your workflow.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question" onclick="this.parentElement.classList.toggle('active')">
+                        <span>Is my data secure?</span>
+                        <span class="faq-icon">+</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>
+                            Absolutely. We take security seriously. SiteProc is built on enterprise-grade infrastructure with SOC 2 compliance, 
+                            end-to-end encryption, and company-based data isolation. We implement role-based access control with 6 permission levels, 
+                            maintain regular security audits, and offer 99.9% uptime SLA. Your data is backed up daily and stored in secure, 
+                            geographically distributed data centers.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question" onclick="this.parentElement.classList.toggle('active')">
+                        <span>Do you offer mobile access?</span>
+                        <span class="faq-icon">+</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>
+                            Yes! SiteProc is fully responsive and works seamlessly on mobile devices. Site managers can receive deliveries, 
+                            upload proof of delivery documents, update project progress, and manage orders right from their smartphones or tablets. 
+                            The mobile experience is optimized for on-site use with offline capabilities for areas with poor connectivity.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question" onclick="this.parentElement.classList.toggle('active')">
+                        <span>What kind of support do you provide?</span>
+                        <span class="faq-icon">+</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>
+                            We provide comprehensive support including email support, live chat, and phone support for enterprise customers. 
+                            You'll also get access to detailed documentation, video tutorials, and a dedicated customer success manager. 
+                            Our support team is available during business hours with extended hours for critical issues. We also offer 
+                            on-site training for larger teams.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question" onclick="this.parentElement.classList.toggle('active')">
+                        <span>Can I try SiteProc before committing?</span>
+                        <span class="faq-icon">+</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>
+                            Yes! We offer a personalized demo and trial period so you can test SiteProc with your actual projects and workflows. 
+                            Contact our sales team to schedule a demo where we'll walk you through the platform, answer your specific questions, 
+                            and set up a trial environment configured for your needs.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question" onclick="this.parentElement.classList.toggle('active')">
+                        <span>How does pricing work?</span>
+                        <span class="faq-icon">+</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>
+                            We offer custom enterprise pricing based on your company size, number of projects, and specific feature requirements. 
+                            This ensures you only pay for what you need. Pricing includes unlimited users, full platform access, dedicated support, 
+                            and regular updates. Contact our sales team for a personalized quote tailored to your business.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question" onclick="this.parentElement.classList.toggle('active')">
+                        <span>What if I need custom features?</span>
+                        <span class="faq-icon">+</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>
+                            We understand that every construction company has unique needs. Our enterprise plan includes the option for custom 
+                            feature development. Our development team will work with you to understand your requirements and build custom modules 
+                            or integrations that fit perfectly into your workflow. Contact us to discuss your specific needs.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Final CTA Section -->
+    <section class="final-cta-section">
+        <div class="final-cta-container">
+            <h2 class="final-cta-title">Ready to Transform Your Construction Management?</h2>
+            <p class="final-cta-subtitle">
+                Join forward-thinking construction companies who are saving time, reducing costs, and delivering projects more efficiently with SiteProc.
+            </p>
+
+            <div class="final-cta-buttons">
+                <a href="https://calendly.com/chayaponyaibandit/30min" target="_blank" class="btn btn-primary" style="font-size: 1.25rem; padding: 1.25rem 3rem;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.75rem;">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    Schedule a Demo
+                </a>
+                <a href="#pricing" class="btn btn-secondary" style="font-size: 1.25rem; padding: 1.25rem 3rem;">
+                    View Pricing
+                </a>
+            </div>
+
+            <div class="final-cta-stats">
+                <div class="final-cta-stat">
+                    <div class="final-cta-stat-number">15+</div>
+                    <div class="final-cta-stat-label">Core Modules</div>
+                </div>
+                <div class="final-cta-stat">
+                    <div class="final-cta-stat-number">90%</div>
+                    <div class="final-cta-stat-label">Error Reduction</div>
+                </div>
+                <div class="final-cta-stat">
+                    <div class="final-cta-stat-number">25%</div>
+                    <div class="final-cta-stat-label">Cost Savings</div>
+                </div>
+                <div class="final-cta-stat">
+                    <div class="final-cta-stat-number">99.9%</div>
+                    <div class="final-cta-stat-label">Uptime</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <div class="footer-container">
+            <div class="footer-grid">
+                <!-- Brand Column -->
+                <div class="footer-brand">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem;">
+                        <div style="width: 45px; height: 45px; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
+                                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 style="margin: 0; font-size: 1.5rem; font-weight: 800;">SiteProc</h3>
+                            <p style="margin: 0; font-size: 0.875rem; color: var(--text-gray);">Construction Management</p>
+                        </div>
+                    </div>
+                    <p class="footer-description">
+                        Professional construction management platform designed specifically for the U.S. construction industry. 
+                        Manage projects, orders, deliveries, and expenses all in one place.
+                    </p>
+                    <p class="footer-description" style="margin-top: 1rem;">
+                        <strong>Built for construction professionals who demand excellence.</strong>
+                    </p>
+                    
+                    <!-- Social Links -->
+                    <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                        <a href="https://github.com/12313131dBossza/siteproc" target="_blank" 
+                           style="width: 44px; height: 44px; background: rgba(37, 99, 235, 0.1); border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; color: var(--text-light);"
+                           onmouseover="this.style.background='rgba(37, 99, 235, 0.2)'; this.style.borderColor='rgba(37, 99, 235, 0.4)'; this.style.transform='translateY(-3px)'"
+                           onmouseout="this.style.background='rgba(37, 99, 235, 0.1)'; this.style.borderColor='rgba(37, 99, 235, 0.2)'; this.style.transform='translateY(0)'">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                            </svg>
+                        </a>
+                        <a href="mailto:support@siteproc.com" 
+                           style="width: 44px; height: 44px; background: rgba(37, 99, 235, 0.1); border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; color: var(--text-light);"
+                           onmouseover="this.style.background='rgba(37, 99, 235, 0.2)'; this.style.borderColor='rgba(37, 99, 235, 0.4)'; this.style.transform='translateY(-3px)'"
+                           onmouseout="this.style.background='rgba(37, 99, 235, 0.1)'; this.style.borderColor='rgba(37, 99, 235, 0.2)'; this.style.transform='translateY(0)'">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                                <polyline points="22,6 12,13 2,6"></polyline>
+                            </svg>
+                        </a>
+                        <a href="https://siteproc1.vercel.app" target="_blank"
+                           style="width: 44px; height: 44px; background: rgba(37, 99, 235, 0.1); border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; color: var(--text-light);"
+                           onmouseover="this.style.background='rgba(37, 99, 235, 0.2)'; this.style.borderColor='rgba(37, 99, 235, 0.4)'; this.style.transform='translateY(-3px)'"
+                           onmouseout="this.style.background='rgba(37, 99, 235, 0.1)'; this.style.borderColor='rgba(37, 99, 235, 0.2)'; this.style.transform='translateY(0)'">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                                <polyline points="15 3 21 3 21 9"></polyline>
+                                <line x1="10" y1="14" x2="21" y2="3"></line>
+                            </svg>
+                        </a>
+                        <a href="https://linkedin.com" target="_blank"
+                           style="width: 44px; height: 44px; background: rgba(37, 99, 235, 0.1); border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; color: var(--text-light);"
+                           onmouseover="this.style.background='rgba(37, 99, 235, 0.2)'; this.style.borderColor='rgba(37, 99, 235, 0.4)'; this.style.transform='translateY(-3px)'"
+                           onmouseout="this.style.background='rgba(37, 99, 235, 0.1)'; this.style.borderColor='rgba(37, 99, 235, 0.2)'; this.style.transform='translateY(0)'">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Product Column -->
+                <div class="footer-column">
+                    <h4>Product</h4>
+                    <ul class="footer-links">
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="#pricing">Pricing</a></li>
+                        <li><a href="https://siteproc1.vercel.app" target="_blank">Live Dashboard</a></li>
+                        <li><a href="#documentation">Documentation</a></li>
+                        <li><a href="docs/api-documentation.pdf" target="_blank">API Reference</a></li>
+                        <li><a href="#comparison">Why SiteProc</a></li>
+                    </ul>
+                </div>
+                
+                <!-- Resources Column -->
+                <div class="footer-column">
+                    <h4>Resources</h4>
+                    <ul class="footer-links">
+                        <li><a href="docs/quick-start-guide.pdf" download>Quick Start Guide</a></li>
+                        <li><a href="docs/company-admin-guide.pdf" download>Admin Guide</a></li>
+                        <li><a href="docs/site-manager-guide.pdf" download>Site Manager Guide</a></li>
+                        <li><a href="docs/supplier-guide.pdf" download>Supplier Guide</a></li>
+                        <li><a href="docs/faq-troubleshooting.pdf" target="_blank">FAQ & Troubleshooting</a></li>
+                        <li><a href="https://github.com/12313131dBossza/siteproc" target="_blank">GitHub Repository</a></li>
+                    </ul>
+                </div>
+                
+                <!-- Company Column -->
+                <div class="footer-column">
+                    <h4>Company</h4>
+                    <ul class="footer-links">
+                        <li><a href="#contact">Contact Sales</a></li>
+                        <li><a href="mailto:support@siteproc.com">Support Team</a></li>
+                        <li><a href="#about">About Us</a></li>
+                        <li><a href="#privacy">Privacy Policy</a></li>
+                        <li><a href="#terms">Terms of Service</a></li>
+                        <li><a href="#security">Security</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Footer Bottom -->
+            <div class="footer-bottom" style="margin-top: 3rem; padding-top: 2rem; border-top: 1px solid rgba(37, 99, 235, 0.1);">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem;">
+                    <div>
+                        <p style="margin-bottom: 0.5rem; font-weight: 500;">&copy; <span id="current-year">2025</span> SiteProc. All rights reserved.</p>
+                        <p style="font-size: 0.875rem; color: var(--text-gray);">
+                            Professional construction management platform for the modern era.
+                        </p>
+                    </div>
+                    <div style="display: flex; gap: 2rem; align-items: center; flex-wrap: wrap;">
+                        <span style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; padding: 0.5rem 1rem; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.2); border-radius: 8px;">
+                            <span style="width: 8px; height: 8px; background: #22c55e; border-radius: 50%; animation: pulse 2s infinite;"></span>
+                            <span style="color: var(--success); font-weight: 500;">Production Live</span>
+                        </span>
+                        <a href="https://siteproc1.vercel.app" target="_blank" 
+                           style="font-size: 0.875rem; color: var(--primary-color); font-weight: 600; display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: rgba(37, 99, 235, 0.1); border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 8px; transition: all 0.3s ease;"
+                           onmouseover="this.style.background='rgba(37, 99, 235, 0.2)'; this.style.borderColor='rgba(37, 99, 235, 0.4)'"
+                           onmouseout="this.style.background='rgba(37, 99, 235, 0.1)'; this.style.borderColor='rgba(37, 99, 235, 0.2)'">
+                            Access Dashboard
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="7" y1="17" x2="17" y2="7"></line>
+                                <polyline points="7 7 17 7 17 17"></polyline>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script>
+        // Enhanced Header Scroll Effect
+        const header = document.querySelector('.site-header');
+        let lastScroll = 0;
+
+        window.addEventListener('scroll', () => {
+            const currentScroll = window.pageYOffset;
+            
+            if (currentScroll > 50) {
+                header.classList.add('scrolled');
+            } else {
+                header.classList.remove('scrolled');
+            }
+            
+            lastScroll = currentScroll;
+        });
+
+        // Smooth Scroll
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                const href = this.getAttribute('href');
+                if (href === '#' || !href) return;
+                
+                e.preventDefault();
+                const target = document.querySelector(href);
+                
+                if (target) {
+                    const headerOffset = 90;
+                    const elementPosition = target.getBoundingClientRect().top;
+                    const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+                    window.scrollTo({
+                        top: offsetPosition,
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+
+        // Scroll Animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -100px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('animate-in');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.feature-card, .tech-item, .screenshot-card').forEach(el => {
+            observer.observe(el);
+        });
+
+        // Set current year
+        document.getElementById('current-year').textContent = new Date().getFullYear();
+
+        // Console Easter Egg
+        console.log('%c🏗️ SiteProc', 'font-size: 24px; font-weight: bold; color: #2563eb;');
+        console.log('%cBuilt with Next.js, TypeScript, and Supabase', 'font-size: 14px; color: #94a3b8;');
+        console.log('%cGitHub: https://github.com/12313131dBossza/siteproc', 'font-size: 12px; color: #f59e0b;');
+    </script>
+</body>
+</html>

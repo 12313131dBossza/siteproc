@@ -12,30 +12,22 @@ export default function GlobalError({
   reset: () => void
 }) {
   useEffect(() => {
-    // Log the error to console
+    // Log the error to Sentry with fatal level
     console.error('Global application error:', error)
-    
-    // Try to send to Sentry if available
-    try {
-      if (typeof Sentry !== 'undefined' && Sentry.captureException) {
-        Sentry.captureException(error, {
-          level: 'fatal',
-          tags: {
-            component: 'global-error-boundary',
-            digest: error.digest,
-          },
-          contexts: {
-            errorBoundary: {
-              componentStack: error.stack,
-              errorDigest: error.digest,
-              isCritical: true,
-            },
-          },
-        })
-      }
-    } catch (sentryError) {
-      console.error('Failed to send error to Sentry:', sentryError)
-    }
+    Sentry.captureException(error, {
+      level: 'fatal',
+      tags: {
+        component: 'global-error-boundary',
+        digest: error.digest,
+      },
+      contexts: {
+        errorBoundary: {
+          componentStack: error.stack,
+          errorDigest: error.digest,
+          isCritical: true,
+        },
+      },
+    })
   }, [error])
 
   return (

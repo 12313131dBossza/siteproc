@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Escape the 9-5. Join Elite Wealth Academy and learn from millionaire mentors across 21 skill campuses.">
+    <meta name="keywords" content="online wealth building, financial freedom, business courses, make money online">
+    <title>Elite Wealth Academy – Escape the 9-5</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', Arial, sans-serif;
+            background-color: #000000;
+            color: #D4AF37;
+            overflow-x: hidden;
+        }
+
+        /* Hero Section */
+        .hero {
+            position: relative;
+            min-height: 100vh;
+            background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.8)), url('https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=1920&q=80');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .hero h1 {
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: #D4AF37;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 2px 2px 8px rgba(0,0,0,0.9);
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            color: #FFFFFF;
+            margin-bottom: 30px;
+            max-width: 600px;
+        }
+
+        .cta-button {
+            background-color: #FF0000;
+            color: #FFFFFF;
+            font-size: 1.5rem;
+            font-weight: 700;
+            padding: 20px 50px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            animation: pulse 2s infinite;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .cta-button:hover {
+            background-color: #CC0000;
+            transform: scale(1.05);
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                box-shadow: 0 0 20px rgba(255, 0, 0, 0.7);
+            }
+            50% {
+                box-shadow: 0 0 40px rgba(255, 0, 0, 1);
+            }
+        }
+
+        .video-container {
+            margin-top: 40px;
+            width: 100%;
+            max-width: 800px;
+            aspect-ratio: 16/9;
+        }
+
+        .video-container iframe {
+            width: 100%;
+            height: 100%;
+            border: 3px solid #D4AF37;
+            border-radius: 8px;
+        }
+
+        /* Social Proof Bar */
+        .social-proof {
+            position: sticky;
+            top: 0;
+            background-color: #1a1a1a;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            z-index: 1000;
+            border-bottom: 2px solid #D4AF37;
+        }
+
+        .stat {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #D4AF37;
+            text-align: center;
+        }
+
+        .stat span {
+            display: block;
+            font-size: 1.5rem;
+            color: #FFFFFF;
+        }
+
+        /* Testimonials Section */
+        .testimonials {
+            padding: 80px 20px;
+            background-color: #0a0a0a;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: #D4AF37;
+            margin-bottom: 50px;
+            text-transform: uppercase;
+        }
+
+        .testimonials-carousel {
+            position: relative;
+            max-width: 1200px;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+
+        .testimonials-track {
+            display: flex;
+            gap: 20px;
+            transition: transform 0.5s ease;
+        }
+
+        .testimonial-card {
+            min-width: 300px;
+            background-color: #1a1a1a;
+            border: 2px solid #D4AF37;
+            border-radius: 10px;
+            padding: 30px;
+            flex-shrink: 0;
+        }
+
+        .testimonial-card:hover .testimonials-track {
+            animation-play-state: paused;
+        }
+
+        .testimonial-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            margin-bottom: 15px;
+            border: 2px solid #D4AF37;
+        }
+
+        .testimonial-quote {
+            color: #FFFFFF;
+            font-size: 1rem;
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+
+        .testimonial-author {
+            color: #D4AF37;
+            font-weight: 700;
+        }
+
+        .testimonial-proof {
+            width: 100%;
+            margin-top: 15px;
+            border-radius: 5px;
+            border: 1px solid #D4AF37;
+        }
+
+        /* Campuses Section */
+        .campuses {
+            padding: 80px 20px;
+            background-color: #000000;
+        }
+
+        .campuses-grid {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .campus-card {
+            background-color: #1a1a1a;
+            border: 2px solid #D4AF37;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .campus-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(212, 175, 55, 0.3);
+        }
+
+        .campus-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .campus-title {
+            color: #D4AF37;
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .campus-desc {
+            color: #FFFFFF;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        /* Urgency CTA Section */
+        .urgency-cta {
+            padding: 80px 20px;
+            background: linear-gradient(rgba(0,0,0,0.9), rgba(0,0,0,0.9)), url('https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1920&q=80');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            text-align: center;
+        }
+
+        .countdown-timer {
+            font-size: 2rem;
+            color: #FF0000;
+            font-weight: 900;
+            margin-bottom: 20px;
+        }
+
+        .urgency-text {
+            font-size: 1.5rem;
+            color: #FFFFFF;
+            margin-bottom: 30px;
+        }
+
+        .fomo-text {
+            font-size: 1.1rem;
+            color: #D4AF37;
+            margin-top: 20px;
+        }
+
+        /* Footer */
+        footer {
+            background-color: #0a0a0a;
+            padding: 40px 20px;
+            text-align: center;
+            border-top: 2px solid #D4AF37;
+        }
+
+        footer p {
+            color: #999999;
+            margin-bottom: 10px;
+        }
+
+        footer a {
+            color: #D4AF37;
+            text-decoration: none;
+            margin: 0 15px;
+            transition: color 0.3s ease;
+        }
+
+        footer a:hover {
+            color: #FFFFFF;
+        }
+
+        /* Email Capture Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: #1a1a1a;
+            border: 3px solid #D4AF37;
+            border-radius: 10px;
+            padding: 40px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .modal-close {
+            color: #D4AF37;
+            font-size: 2rem;
+            font-weight: 700;
+            cursor: pointer;
+            float: right;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: #FF0000;
+        }
+
+        .modal h2 {
+            color: #D4AF37;
+            margin-bottom: 20px;
+        }
+
+        .modal input {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 2px solid #D4AF37;
+            background-color: #000000;
+            color: #FFFFFF;
+            font-size: 1rem;
+            border-radius: 5px;
+        }
+
+        .modal button {
+            width: 100%;
+        }
+
+        /* Responsive Design */
+        @media (min-width: 768px) {
+            .hero h1 {
+                font-size: 4rem;
+            }
+
+            .hero p {
+                font-size: 1.5rem;
+            }
+
+            .stat {
+                font-size: 1.2rem;
+            }
+
+            .stat span {
+                font-size: 2rem;
+            }
+
+            .testimonial-card {
+                min-width: 350px;
+            }
+        }
+
+        @media (max-width: 767px) {
+            .social-proof {
+                position: relative;
+            }
+
+            .campuses-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Hero Section -->
+    <section class="hero">
+        <h1>Escape The Matrix – Join Elite Wealth Academy</h1>
+        <p>Learn from millionaire mentors in 21 proven skills. Master wealth-building strategies used by the top 1%.</p>
+        <a href="#checkout" class="cta-button">Join For $49/Month</a>
+        
+        <div class="video-container">
+            <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" 
+                    title="Elite Wealth Academy Introduction" 
+                    frameborder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                    allowfullscreen>
+            </iframe>
+        </div>
+    </section>
+
+    <!-- Social Proof Bar -->
+    <div class="social-proof">
+        <div class="stat">
+            <span id="memberCount">247,892</span>
+            Active Members
+        </div>
+        <div class="stat">
+            <span>$1.2B+</span>
+            Earned by Students
+        </div>
+        <div class="stat">
+            <span>21</span>
+            Skill Campuses
+        </div>
+    </div>
+
+    <!-- Testimonials Section -->
+    <section class="testimonials">
+        <h2 class="section-title">Success Stories</h2>
+        <div class="testimonials-carousel">
+            <div class="testimonials-track" id="testimonialsTrack">
+                <div class="testimonial-card">
+                    <img src="https://i.pravatar.cc/60?img=12" alt="Student" class="testimonial-avatar">
+                    <p class="testimonial-quote">"$0 to $18K in 3 weeks. The crypto campus changed my life completely."</p>
+                    <p class="testimonial-author">- John D.</p>
+                    <img src="https://via.placeholder.com/280x150/1a1a1a/D4AF37?text=Earnings+Screenshot" alt="Proof" class="testimonial-proof">
+                </div>
+                <div class="testimonial-card">
+                    <img src="https://i.pravatar.cc/60?img=25" alt="Student" class="testimonial-avatar">
+                    <p class="testimonial-quote">"Went from broke college student to $50K/month in e-commerce in 6 months."</p>
+                    <p class="testimonial-author">- Marcus T.</p>
+                    <img src="https://via.placeholder.com/280x150/1a1a1a/D4AF37?text=Revenue+Dashboard" alt="Proof" class="testimonial-proof">
+                </div>
+                <div class="testimonial-card">
+                    <img src="https://i.pravatar.cc/60?img=33" alt="Student" class="testimonial-avatar">
+                    <p class="testimonial-quote">"Lost my job, joined EWA, now making $120K+ annually with my online business."</p>
+                    <p class="testimonial-author">- David R.</p>
+                    <img src="https://via.placeholder.com/280x150/1a1a1a/D4AF37?text=Income+Report" alt="Proof" class="testimonial-proof">
+                </div>
+                <div class="testimonial-card">
+                    <img src="https://i.pravatar.cc/60?img=45" alt="Student" class="testimonial-avatar">
+                    <p class="testimonial-quote">"The copywriting campus taught me to charge $5K per client. Booked solid!"</p>
+                    <p class="testimonial-author">- Alex M.</p>
+                    <img src="https://via.placeholder.com/280x150/1a1a1a/D4AF37?text=Client+Payments" alt="Proof" class="testimonial-proof">
+                </div>
+                <div class="testimonial-card">
+                    <img src="https://i.pravatar.cc/60?img=58" alt="Student" class="testimonial-avatar">
+                    <p class="testimonial-quote">"Fitness campus helped me build a $30K/month coaching business in 90 days."</p>
+                    <p class="testimonial-author">- Chris P.</p>
+                    <img src="https://via.placeholder.com/280x150/1a1a1a/D4AF37?text=Bank+Statement" alt="Proof" class="testimonial-proof">
+                </div>
+                <div class="testimonial-card">
+                    <img src="https://i.pravatar.cc/60?img=67" alt="Student" class="testimonial-avatar">
+                    <p class="testimonial-quote">"Real estate strategies here made me $250K profit on my first flip."</p>
+                    <p class="testimonial-author">- Sarah K.</p>
+                    <img src="https://via.placeholder.com/280x150/1a1a1a/D4AF37?text=Deal+Closed" alt="Proof" class="testimonial-proof">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Campuses/Benefits Section -->
+    <section class="campuses">
+        <h2 class="section-title">21 Skill Campuses</h2>
+        <div class="campuses-grid">
+            <div class="campus-card">
+                <div class="campus-icon">💰</div>
+                <h3 class="campus-title">Crypto Investing</h3>
+                <p class="campus-desc">Spot 100x gems before the crowd. Learn from millionaire crypto traders.</p>
+            </div>
+            <div class="campus-card">
+                <div class="campus-icon">🛒</div>
+                <h3 class="campus-title">E-Commerce</h3>
+                <p class="campus-desc">Build 6-figure Shopify stores. Proven scaling strategies.</p>
+            </div>
+            <div class="campus-card">
+                <div class="campus-icon">💪</div>
+                <h3 class="campus-title">Fitness Business</h3>
+                <p class="campus-desc">Launch high-ticket coaching programs. $10K+ per client.</p>
+            </div>
+            <div class="campus-card">
+                <div class="campus-icon">✍️</div>
+                <h3 class="campus-title">Copywriting</h3>
+                <p class="campus-desc">Master persuasion. Write emails that print money.</p>
+            </div>
+            <div class="campus-card">
+                <div class="campus-icon">📱</div>
+                <h3 class="campus-title">Social Media</h3>
+                <p class="campus-desc">Grow viral accounts. Monetize millions of followers.</p>
+            </div>
+            <div class="campus-card">
+                <div class="campus-icon">🏠</div>
+                <h3 class="campus-title">Real Estate</h3>
+                <p class="campus-desc">Flip houses for 6-figure profits. Rental income mastery.</p>
+            </div>
+            <div class="campus-card">
+                <div class="campus-icon">📊</div>
+                <h3 class="campus-title">Stock Trading</h3>
+                <p class="campus-desc">Day trading & swing trading strategies that win consistently.</p>
+            </div>
+            <div class="campus-card">
+                <div class="campus-icon">🎯</div>
+                <h3 class="campus-title">Affiliate Marketing</h3>
+                <p class="campus-desc">Earn passive commissions promoting proven products.</p>
+            </div>
+            <div class="campus-card">
+                <div class="campus-icon">📹</div>
+                <h3 class="campus-title">Content Creation</h3>
+                <p class="campus-desc">YouTube, TikTok monetization. Build a media empire.</p>
+            </div>
+            <div class="campus-card">
+                <div class="campus-icon">💼</div>
+                <h3 class="campus-title">Consulting</h3>
+                <p class="campus-desc">Charge premium rates for your expertise. $500/hour+.</p>
+            </div>
+            <div class="campus-card">
+                <div class="campus-icon">🚀</div>
+                <h3 class="campus-title">Amazon FBA</h3>
+                <p class="campus-desc">Build automated e-commerce. Sell while you sleep.</p>
+            </div>
+            <div class="campus-card">
+                <div class="campus-icon">🎨</div>
+                <h3 class="campus-title">Design & Branding</h3>
+                <p class="campus-desc">High-paying freelance design. Build iconic brands.</p>
+            </div>
+            <div class="campus-card">
+                <div class="campus-icon">💻</div>
+                <h3 class="campus-title">Web Development</h3>
+                <p class="campus-desc">Code websites. Charge $5K-$50K per project.</p>
+            </div>
+            <div class="campus-card">
+                <div class="campus-icon">📧</div>
+                <h3 class="campus-title">Email Marketing</h3>
+                <p class="campus-desc">Build lists that convert. $100K+ in automated funnels.</p>
+            </div>
+            <div class="campus-card">
+                <div class="campus-icon">🎤</div>
+                <h3 class="campus-title">Public Speaking</h3>
+                <p class="campus-desc">Get paid to speak. Command stages worldwide.</p>
+            </div>
+            <div class="campus-card">
+                <div class="campus-icon">📚</div>
+                <h3 class="campus-title">Info Products</h3>
+                <p class="campus-desc">Create & sell courses. Passive income on autopilot.</p>
+            </div>
+            <div class="campus-card">
+                <div class="campus-icon">🔧</div>
+                <h3 class="campus-title">Local Services</h3>
+                <p class="campus-desc">Cleaning, landscaping, pressure washing. $10K/month+.</p>
+            </div>
+            <div class="campus-card">
+                <div class="campus-icon">🌐</div>
+                <h3 class="campus-title">SEO & Ads</h3>
+                <p class="campus-desc">Master Google & Facebook ads. Agency-level skills.</p>
+            </div>
+            <div class="campus-card">
+                <div class="campus-icon">🧠</div>
+                <h3 class="campus-title">Mindset Mastery</h3>
+                <p class="campus-desc">Develop millionaire psychology. Mental toughness training.</p>
+            </div>
+            <div class="campus-card">
+                <div class="campus-icon">🤝</div>
+                <h3 class="campus-title">Sales Closing</h3>
+                <p class="campus-desc">Close high-ticket deals. $100K+ commission checks.</p>
+            </div>
+            <div class="campus-card">
+                <div class="campus-icon">⚡</div>
+                <h3 class="campus-title">AI & Automation</h3>
+                <p class="campus-desc">Leverage AI tools. 10x your productivity & income.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Urgency CTA Section -->
+    <section class="urgency-cta" id="checkout">
+        <h2 class="section-title">Limited Time Offer</h2>
+        <div class="countdown-timer" id="countdown">9:47 LEFT TO JOIN</div>
+        <p class="urgency-text">Secure Your Spot Now</p>
+        <a href="#" class="cta-button" onclick="openModal(); return false;">JOIN FOR $49/MONTH</a>
+        <p class="fomo-text">⚠️ Spots filling fast – Over 247,000 already inside</p>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2025 Elite Wealth Academy. All rights reserved.</p>
+        <div>
+            <a href="#terms">Terms of Service</a>
+            <a href="#privacy">Privacy Policy</a>
+            <a href="#contact">Contact</a>
+        </div>
+    </footer>
+
+    <!-- Email Capture Modal -->
+    <div class="modal" id="emailModal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal()">&times;</span>
+            <h2>Join Elite Wealth Academy</h2>
+            <p style="color: #FFFFFF; margin-bottom: 20px;">Enter your email to get started</p>
+            <form id="emailForm" onsubmit="handleSubmit(event)">
+                <input type="email" id="emailInput" placeholder="your.email@example.com" required>
+                <button type="submit" class="cta-button">GET INSTANT ACCESS</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Countdown Timer
+        let countdownSeconds = 10 * 60; // 10 minutes
+
+        function updateCountdown() {
+            const minutes = Math.floor(countdownSeconds / 60);
+            const seconds = countdownSeconds % 60;
+            document.getElementById('countdown').textContent = 
+                `${minutes}:${seconds.toString().padStart(2, '0')} LEFT TO JOIN`;
+            
+            if (countdownSeconds > 0) {
+                countdownSeconds--;
+            } else {
+                countdownSeconds = 10 * 60; // Reset to 10 minutes
+            }
+        }
+
+        setInterval(updateCountdown, 1000);
+
+        // Testimonials Auto-Scroll
+        let scrollPosition = 0;
+        const track = document.getElementById('testimonialsTrack');
+        const cardWidth = 320; // 300px + 20px gap
+        let isPaused = false;
+
+        function scrollTestimonials() {
+            if (!isPaused) {
+                scrollPosition -= 1;
+                if (Math.abs(scrollPosition) >= track.scrollWidth / 2) {
+                    scrollPosition = 0;
+                }
+                track.style.transform = `translateX(${scrollPosition}px)`;
+            }
+        }
+
+        // Clone testimonials for infinite scroll
+        const testimonials = track.innerHTML;
+        track.innerHTML += testimonials;
+
+        setInterval(scrollTestimonials, 30);
+
+        // Pause on hover
+        track.addEventListener('mouseenter', () => { isPaused = true; });
+        track.addEventListener('mouseleave', () => { isPaused = false; });
+
+        // Member Count Animation
+        let memberCount = 247892;
+        function updateMemberCount() {
+            memberCount += Math.floor(Math.random() * 3) + 1;
+            document.getElementById('memberCount').textContent = memberCount.toLocaleString();
+        }
+        setInterval(updateMemberCount, 5000);
+
+        // Modal Functions
+        function openModal() {
+            document.getElementById('emailModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('emailModal').style.display = 'none';
+        }
+
+        function handleSubmit(event) {
+            event.preventDefault();
+            const email = document.getElementById('emailInput').value;
+            alert(`Thank you! Check ${email} for next steps.`);
+            closeModal();
+            // In production, send to your backend/Stripe checkout
+            // window.location.href = 'https://your-stripe-checkout-link.com';
+        }
+
+        // Close modal on outside click
+        window.onclick = function(event) {
+            const modal = document.getElementById('emailModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                const href = this.getAttribute('href');
+                if (href !== '#' && href !== '#checkout') {
+                    e.preventDefault();
+                    const target = document.querySelector(href);
+                    if (target) {
+                        target.scrollIntoView({ behavior: 'smooth' });
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

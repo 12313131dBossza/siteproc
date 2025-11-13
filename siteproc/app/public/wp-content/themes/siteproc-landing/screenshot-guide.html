@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Screenshot Capture Guide - SiteProc</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            padding: 2rem;
+            color: #1e293b;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 3rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2563eb;
+            margin-bottom: 1rem;
+            font-size: 2.5rem;
+        }
+        .intro {
+            color: #64748b;
+            margin-bottom: 2rem;
+            font-size: 1.125rem;
+        }
+        .step {
+            background: #f1f5f9;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border-radius: 0.5rem;
+            border-left: 4px solid #2563eb;
+        }
+        .step h2 {
+            color: #2563eb;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .step-number {
+            background: #2563eb;
+            color: white;
+            width: 2rem;
+            height: 2rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        .screenshot-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+        .screenshot-example {
+            border: 2px solid #e2e8f0;
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+        .screenshot-header {
+            background: #2563eb;
+            color: white;
+            padding: 1rem;
+            font-weight: 600;
+        }
+        .screenshot-body {
+            padding: 1rem;
+            min-height: 200px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 3rem;
+        }
+        .screenshot-footer {
+            background: #f8fafc;
+            padding: 1rem;
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+        code {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-family: 'Courier New', monospace;
+        }
+        .code-block {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+            font-family: 'Courier New', monospace;
+            line-height: 1.6;
+        }
+        .tip {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 0.25rem;
+        }
+        .tip strong {
+            color: #f59e0b;
+        }
+        ul {
+            margin: 1rem 0 1rem 2rem;
+        }
+        li {
+            margin-bottom: 0.5rem;
+        }
+        .button {
+            display: inline-block;
+            background: #2563eb;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            text-decoration: none;
+            font-weight: 600;
+            margin-top: 1rem;
+        }
+        .button:hover {
+            background: #1e40af;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📸 Screenshot Capture Guide</h1>
+        <p class="intro">
+            Follow these steps to capture professional screenshots from your Vercel deployment
+            and add them to your WordPress landing page.
+        </p>
+
+        <!-- Step 1 -->
+        <div class="step">
+            <h2><span class="step-number">1</span> Open Your Vercel Site</h2>
+            <p>Navigate to your deployed SiteProc application on Vercel.</p>
+            <div class="code-block">https://your-siteproc.vercel.app</div>
+            <p style="margin-top: 1rem;">Make sure you're logged in to see the full dashboard and features.</p>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="step">
+            <h2><span class="step-number">2</span> Prepare Your Browser</h2>
+            <ul>
+                <li>Use <strong>Google Chrome</strong> or <strong>Firefox</strong> for best results</li>
+                <li>Press <code>F12</code> to open Developer Tools</li>
+                <li>Click the device toggle icon (or press <code>Ctrl+Shift+M</code>)</li>
+                <li>Set resolution to <strong>1920 x 1080</strong> for desktop screenshots</li>
+                <li>Set resolution to <strong>375 x 667</strong> for mobile screenshots</li>
+            </ul>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="step">
+            <h2><span class="step-number">3</span> Capture Screenshots</h2>
+            <p><strong>Method 1: Chrome DevTools (Recommended)</strong></p>
+            <ol style="margin-left: 2rem;">
+                <li>Press <code>Ctrl+Shift+P</code> (Windows) or <code>Cmd+Shift+P</code> (Mac)</li>
+                <li>Type "screenshot"</li>
+                <li>Select <strong>"Capture full size screenshot"</strong></li>
+                <li>Image downloads automatically</li>
+            </ol>
+
+            <p style="margin-top: 1rem;"><strong>Method 2: Snipping Tool (Windows)</strong></p>
+            <ol style="margin-left: 2rem;">
+                <li>Press <code>Windows + Shift + S</code></li>
+                <li>Select area to capture</li>
+                <li>Click to capture</li>
+                <li>Save as PNG</li>
+            </ol>
+
+            <div class="tip">
+                <strong>💡 Pro Tip:</strong> Take screenshots at different states (empty, with data, loading, etc.)
+                to show various use cases.
+            </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="step">
+            <h2><span class="step-number">4</span> Pages to Screenshot</h2>
+            <div class="screenshot-grid">
+                <div class="screenshot-example">
+                    <div class="screenshot-header">Dashboard</div>
+                    <div class="screenshot-body">📊</div>
+                    <div class="screenshot-footer">Capture: /dashboard - Show stats and overview</div>
+                </div>
+                <div class="screenshot-example">
+                    <div class="screenshot-header">Orders</div>
+                    <div class="screenshot-body">📦</div>
+                    <div class="screenshot-footer">Capture: /orders - Show orders list</div>
+                </div>
+                <div class="screenshot-example">
+                    <div class="screenshot-header">Projects</div>
+                    <div class="screenshot-body">🏗️</div>
+                    <div class="screenshot-footer">Capture: /projects/[id] - Show project details</div>
+                </div>
+                <div class="screenshot-example">
+                    <div class="screenshot-header">Deliveries</div>
+                    <div class="screenshot-body">🚚</div>
+                    <div class="screenshot-footer">Capture: /deliveries - Show deliveries</div>
+                </div>
+                <div class="screenshot-example">
+                    <div class="screenshot-header">Reports</div>
+                    <div class="screenshot-body">📈</div>
+                    <div class="screenshot-footer">Capture: /reports - Show financial reports</div>
+                </div>
+                <div class="screenshot-example">
+                    <div class="screenshot-header">Expenses</div>
+                    <div class="screenshot-body">💰</div>
+                    <div class="screenshot-footer">Capture: /expenses - Show expense tracking</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 5 -->
+        <div class="step">
+            <h2><span class="step-number">5</span> Optimize Your Screenshots</h2>
+            <p><strong>Recommended Sizes:</strong></p>
+            <ul>
+                <li><strong>Dashboard/Hero:</strong> 1200 x 800px</li>
+                <li><strong>Feature Screenshots:</strong> 800 x 600px</li>
+                <li><strong>Mobile Screenshots:</strong> 375 x 667px</li>
+            </ul>
+
+            <p style="margin-top: 1rem;"><strong>Optimization Steps:</strong></p>
+            <ol style="margin-left: 2rem;">
+                <li>Crop images to desired size using photo editor</li>
+                <li>Visit <strong>tinypng.com</strong> or <strong>squoosh.app</strong></li>
+                <li>Upload and compress images (reduce to < 150KB)</li>
+                <li>Download compressed images</li>
+                <li>Rename descriptively: <code>dashboard-overview.png</code></li>
+            </ol>
+        </div>
+
+        <!-- Step 6 -->
+        <div class="step">
+            <h2><span class="step-number">6</span> Upload to WordPress</h2>
+            
+            <p><strong>Option A: WordPress Media Library</strong></p>
+            <ol style="margin-left: 2rem;">
+                <li>Go to WordPress Admin → <strong>Media</strong> → <strong>Add New</strong></li>
+                <li>Upload all screenshots</li>
+                <li>Note the image IDs or URLs</li>
+            </ol>
+
+            <p style="margin-top: 1rem;"><strong>Option B: Theme Directory (Recommended)</strong></p>
+            <ol style="margin-left: 2rem;">
+                <li>Create folder: <code>wp-content/themes/siteproc-landing/images/</code></li>
+                <li>Upload screenshots via FTP or file manager</li>
+                <li>Images accessible at: <code>get_template_directory_uri() . '/images/filename.png'</code></li>
+            </ol>
+        </div>
+
+        <!-- Step 7 -->
+        <div class="step">
+            <h2><span class="step-number">7</span> Update Landing Page Code</h2>
+            <p>Edit <code>index.php</code> in your theme and replace the emoji placeholders:</p>
+            
+            <div class="code-block">
+&lt;!-- BEFORE (Emoji Placeholder) --&gt;
+&lt;div class="screenshot-image"&gt;📊&lt;/div&gt;
+
+&lt;!-- AFTER (Real Image) --&gt;
+&lt;img src="&lt;?php echo get_template_directory_uri(); ?&gt;/images/dashboard.png" 
+     alt="Dashboard Overview" 
+     style="width: 100%; height: 250px; object-fit: cover;"&gt;
+            </div>
+
+            <div class="tip">
+                <strong>💡 Pro Tip:</strong> Always add descriptive alt text for SEO and accessibility!
+            </div>
+        </div>
+
+        <!-- Step 8 -->
+        <div class="step">
+            <h2><span class="step-number">8</span> Test & Launch</h2>
+            <ul>
+                <li>✅ Check all images load correctly</li>
+                <li>✅ Test responsive design on mobile</li>
+                <li>✅ Verify images are optimized (page loads fast)</li>
+                <li>✅ Check alt text is present</li>
+                <li>✅ Clear cache and test again</li>
+            </ul>
+
+            <div style="text-align: center; margin-top: 2rem;">
+                <a href="../index.php" class="button">View Your Landing Page</a>
+            </div>
+        </div>
+
+        <!-- Checklist -->
+        <div class="step">
+            <h2>📋 Screenshot Checklist</h2>
+            <ul style="list-style: none; margin-left: 0;">
+                <li>☐ Dashboard overview screenshot</li>
+                <li>☐ Orders management screenshot</li>
+                <li>☐ Projects detail screenshot</li>
+                <li>☐ Deliveries list screenshot</li>
+                <li>☐ Reports page screenshot</li>
+                <li>☐ Expenses page screenshot</li>
+                <li>☐ Mobile view screenshots (optional)</li>
+                <li>☐ All images optimized (< 150KB)</li>
+                <li>☐ All images uploaded to theme</li>
+                <li>☐ Code updated in index.php</li>
+                <li>☐ Tested on live site</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center; margin-top: 3rem; padding: 2rem; background: #f1f5f9; border-radius: 0.5rem;">
+            <h3 style="color: #2563eb; margin-bottom: 1rem;">Need Help?</h3>
+            <p style="color: #64748b;">
+                Refer to <strong>screenshot-template.php</strong> for code examples<br>
+                Or read <strong>README.md</strong> for full documentation
+            </p>
+        </div>
+    </div>
+</body>
+</html>

@@ -15,32 +15,13 @@ export async function GET(req: Request) {
 
   if (!orderId) return NextResponse.json({ error: 'orderId_required' }, { status: 400 })
 
-  // Prefer querying by order_id, but also support legacy schemas where job_id was used
-  let data: any[] | null = null
-  let error: any = null
-  try {
-    const res = await supabase
-      .from('change_orders')
-      .select('*')
-      .or(`order_id.eq.${orderId},job_id.eq.${orderId}`)
-      .order('created_at', { ascending: false })
-    data = res.data as any[] | null
-    error = res.error
-  } catch (e: any) {
-    error = e
-  }
+  const { data, error } = await supabase
+    .from('change_orders')
+    .select('*')
+    .eq('order_id', orderId)
+    .order('created_at', { ascending: false })
 
-  // Fallback when job_id column doesn't exist or the OR filter fails
-  if (error) {
-    const fallback = await supabase
-      .from('change_orders')
-      .select('*')
-      .eq('order_id', orderId)
-      .order('created_at', { ascending: false })
-    if (fallback.error) return NextResponse.json({ error: fallback.error.message }, { status: 400 })
-    return NextResponse.json({ data: fallback.data })
-  }
-
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 })
   return NextResponse.json({ data })
 }
 
