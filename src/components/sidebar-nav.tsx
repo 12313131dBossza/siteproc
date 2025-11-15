@@ -101,7 +101,9 @@ export function SidebarNav() {
           </div>
           <div className="flex-1 min-w-0 overflow-hidden">
             <p className="text-sm font-medium text-gray-900 truncate" title="Admin User">Admin User</p>
-            <p className="text-xs text-gray-500 break-all" title="admin@siteproc.com">admin@siteproc.com</p>
+            <p className="text-[10px] text-gray-500 leading-tight" style={{ wordBreak: 'break-all' }} title="admin@siteproc.com">
+              admin@siteproc.com
+            </p>
           </div>
           <button className="p-1 text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0">
             <LogOut className="h-4 w-4" />
