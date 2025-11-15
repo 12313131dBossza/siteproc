@@ -80,9 +80,27 @@ export default function ExpensesPage() {
 
   useEffect(() => {
     if (authenticated === true) {
+      fetchUserProfile();
       fetchExpenses();
     }
   }, [authenticated]);
+
+  const fetchUserProfile = async () => {
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id, email, full_name, role, company_id')
+          .eq('id', user.id)
+          .single();
+        setUserProfile(profile);
+      }
+    } catch (error) {
+      console.error('Failed to fetch user profile:', error);
+    }
+  };
 
   const checkAuth = async () => {
     try {
@@ -395,14 +413,16 @@ export default function ExpensesPage() {
       title="Expenses"
       description="Manage and track project expenses"
       actions={
-        <div className="flex gap-2">
-          <Button variant="ghost" leftIcon={<Download className="h-4 w-4" />}>
-            Export
-          </Button>
-          <Button variant="primary" leftIcon={<Plus className="h-4 w-4" />} onClick={() => { setIsModalOpen(true); loadProjects(); }}>
-            Add Expense
-          </Button>
-        </div>
+        userProfile?.role !== 'viewer' && (
+          <div className="flex gap-2">
+            <Button variant="ghost" leftIcon={<Download className="h-4 w-4" />}>
+              Export
+            </Button>
+            <Button variant="primary" leftIcon={<Plus className="h-4 w-4" />} onClick={() => { setIsModalOpen(true); loadProjects(); }}>
+              Add Expense
+            </Button>
+          </div>
+        )
       }
     >
       <div className="space-y-6">
@@ -589,7 +609,7 @@ export default function ExpensesPage() {
                         </div>
                         <div className="sm:text-right text-left w-full sm:w-auto flex-shrink-0">
                           <div className="text-xl font-bold text-gray-900 whitespace-nowrap sm:whitespace-normal">{formatCurrency(expense.amount)}</div>
-                          {expense.status === 'pending' && (
+                          {expense.status === 'pending' && userProfile?.role && ['manager', 'admin', 'owner'].includes(userProfile.role) && (
                             <div className="flex gap-2 mt-2">
                               <Button
                                 size="sm"
