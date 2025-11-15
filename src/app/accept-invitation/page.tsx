@@ -109,37 +109,27 @@ function AcceptInvitationContent() {
         return;
       }
 
-      // Step 2: Create/update profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: authData.user.id,
+      // Step 2: Create profile via API (bypasses RLS)
+      const profileResponse = await fetch('/api/accept-invitation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: authData.user.id,
           email: invitation.email,
-          full_name: fullName,
-          company_id: invitation.company_id,
+          fullName: fullName,
+          companyId: invitation.company_id,
           role: invitation.role,
-          ...invitation.metadata,
-        });
+          invitationId: invitation.id,
+          metadata: invitation.metadata,
+        }),
+      });
 
-      if (profileError) {
-        console.error('Profile error:', profileError);
+      if (!profileResponse.ok) {
+        const error = await profileResponse.json();
+        console.error('Profile creation error:', error);
         toast.error('Failed to create profile');
         setSubmitting(false);
         return;
-      }
-
-      // Step 3: Update invitation status
-      const { error: updateError } = await supabase
-        .from('user_invitations')
-        .update({
-          status: 'accepted',
-          accepted_at: new Date().toISOString(),
-        })
-        .eq('id', invitation.id);
-
-      if (updateError) {
-        console.error('Update invitation error:', updateError);
-        // Don't fail - user is created, this is just tracking
       }
 
       toast.success('Account created successfully! Redirecting to dashboard...');
