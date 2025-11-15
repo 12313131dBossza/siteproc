@@ -205,7 +205,7 @@ function CompanyTab() {
 function UsersTab() {
   const [users, setUsers] = useState<any[]>([])
   const [email, setEmail] = useState('')
-  const [role, setRole] = useState('foreman')
+  const [role, setRole] = useState('viewer')
   const [loading, setLoading] = useState(false)
   const [inviting, setInviting] = useState(false)
   
@@ -285,8 +285,9 @@ function UsersTab() {
               value={role}
               onChange={(e) => setRole(e.target.value)}
               options={[
-                { value: 'foreman', label: 'Foreman' },
-                { value: 'bookkeeper', label: 'Bookkeeper' },
+                { value: 'viewer', label: 'Viewer' },
+                { value: 'accountant', label: 'Accountant' },
+                { value: 'manager', label: 'Manager' },
                 { value: 'admin', label: 'Admin' },
                 { value: 'owner', label: 'Owner' }
               ]}
