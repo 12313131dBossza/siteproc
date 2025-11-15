@@ -27,7 +27,14 @@ export async function POST(request: NextRequest) {
 
     if (profileError) {
       console.error('Profile creation error:', profileError);
-      return NextResponse.json({ error: 'Failed to create profile', details: profileError }, { status: 500 });
+      console.error('Error details:', JSON.stringify(profileError, null, 2));
+      console.error('Attempted to create profile with:', { userId, email, fullName, companyId, role });
+      return NextResponse.json({ 
+        error: 'Failed to create profile', 
+        details: profileError,
+        message: profileError.message || 'Unknown database error',
+        code: profileError.code || 'UNKNOWN'
+      }, { status: 500 });
     }
 
     // Update invitation status
