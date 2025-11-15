@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 import { Button } from '@/components/ui/Button';
@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/Card';
 import { toast } from 'sonner';
 import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 
-export default function AcceptInvitationPage() {
+function AcceptInvitationContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams.get('token');
@@ -283,5 +283,24 @@ export default function AcceptInvitationPage() {
         </p>
       </Card>
     </div>
+  );
+}
+
+export default function AcceptInvitationPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+          <Card className="p-8 max-w-md w-full">
+            <div className="flex flex-col items-center gap-4">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              <p className="text-gray-600">Loading invitation...</p>
+            </div>
+          </Card>
+        </div>
+      }
+    >
+      <AcceptInvitationContent />
+    </Suspense>
   );
 }
