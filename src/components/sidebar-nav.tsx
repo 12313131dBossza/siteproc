@@ -96,14 +96,14 @@ export function SidebarNav() {
       {/* User Profile Footer */}
       <div className="border-t border-gray-200 p-4">
         <div className="flex items-center gap-3 rounded-lg bg-gray-50 px-3 py-2.5">
-          <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+          <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
             <User className="h-4 w-4 text-white" />
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">Admin User</p>
-            <p className="text-xs text-gray-500 truncate">admin@siteproc.com</p>
+          <div className="flex-1 min-w-0 overflow-hidden">
+            <p className="text-sm font-medium text-gray-900 truncate" title="Admin User">Admin User</p>
+            <p className="text-xs text-gray-500 break-all" title="admin@siteproc.com">admin@siteproc.com</p>
           </div>
-          <button className="p-1 text-gray-400 hover:text-gray-600 transition-colors">
+          <button className="p-1 text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0">
             <LogOut className="h-4 w-4" />
           </button>
         </div>
