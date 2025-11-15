@@ -26,6 +26,11 @@ CREATE INDEX IF NOT EXISTS idx_user_invitations_company_id ON public.user_invita
 -- Enable Row Level Security
 ALTER TABLE public.user_invitations ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "user_invitations_select" ON public.user_invitations;
+DROP POLICY IF EXISTS "user_invitations_insert" ON public.user_invitations;
+DROP POLICY IF EXISTS "user_invitations_update" ON public.user_invitations;
+
 -- RLS Policy: Users can view invitations for their company
 CREATE POLICY "user_invitations_select" ON public.user_invitations
   FOR SELECT
