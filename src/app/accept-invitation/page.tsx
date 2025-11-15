@@ -118,7 +118,6 @@ function AcceptInvitationContent() {
           full_name: fullName,
           company_id: invitation.company_id,
           role: invitation.role,
-          status: 'active',
           ...invitation.metadata,
         });
 
