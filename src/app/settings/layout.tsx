@@ -30,25 +30,9 @@ async function fetchContext() {
 export default async function SettingsLayout({ children }: { children: ReactNode }) {
   const ctx = await fetchContext()
   return (
-    <div className="p-6 space-y-8">
-      <div className="flex flex-wrap items-end gap-6">
-        <div>
-          <h1 className="text-xl font-semibold">Settings</h1>
-          <p className="text-xs text-neutral-400">Manage your profile & organization</p>
-        </div>
-        <nav className="flex gap-3 text-sm">
-          <a href="/settings/profile" className="px-3 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700">Profile</a>
-      {(ctx.role === 'admin' || ctx.role === 'manager') && (
-            <>
-              <a href="/settings/company" className="px-3 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700">Company</a>
-              <a href="/settings/invite" className="px-3 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700">Invite</a>
-        <a href="/settings/members" className="px-3 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700">Members</a>
-            </>
-          )}
-        </nav>
-      </div>
-      <SettingsContextProvider value={ctx}>{children}</SettingsContextProvider>
-    </div>
+    <SettingsContextProvider value={ctx}>
+      {children}
+    </SettingsContextProvider>
   )
 }
 
