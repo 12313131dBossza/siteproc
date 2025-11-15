@@ -13,14 +13,21 @@ export async function POST(request: NextRequest) {
     // Use admin client with service role (bypasses RLS)
     const supabase = sbAdmin();
 
-    // Insert profile using raw SQL to bypass ALL triggers
-    const { error: profileError } = await supabase.rpc('create_profile_direct', {
-      p_id: userId,
-      p_email: email,
-      p_full_name: fullName,
-      p_company_id: companyId,
-      p_role: role
-    });
+    // Try direct insert first - use insert instead of upsert to avoid triggers
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .insert({
+        id: userId,
+        email: email,
+        full_name: fullName,
+        company_id: companyId,
+        role: role,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }, { 
+        // Don't return anything, just do the insert
+        count: 'exact'
+      });
 
     if (profileError) {
       console.error('Profile creation error:', profileError);
