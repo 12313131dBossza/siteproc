@@ -1,4 +1,4 @@
-import { sbServer } from '@/lib/supabase-server';
+import { sbServer, sbAdmin } from '@/lib/supabase-server';
 import { NextRequest, NextResponse } from 'next/server';
 import { sendInvitationEmail } from '@/lib/email';
 
@@ -29,8 +29,9 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const search = searchParams.get('search');
 
-    // Build query
-    let query = supabase
+    // Use admin client to bypass RLS when listing company users
+    const adminClient = sbAdmin();
+    let query = adminClient
       .from('profiles')
       .select('*')
       .eq('company_id', currentProfile.company_id)
