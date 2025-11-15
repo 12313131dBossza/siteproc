@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { createBrowserClient } from '@supabase/ssr';
+import { useState, useEffect } from 'react';
 import {
   LayoutDashboard,
   Package,
@@ -49,6 +50,45 @@ const navigation = [
 export function SidebarNav() {
   const pathname = usePathname();
   const router = useRouter();
+  const [userEmail, setUserEmail] = useState<string>('');
+  const [userName, setUserName] = useState<string>('User');
+
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const supabase = createBrowserClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        );
+        
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          setUserEmail(user.email || '');
+          
+          // Try to get full name from profile
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('full_name, username')
+            .eq('id', user.id)
+            .single();
+          
+          if (profile?.full_name) {
+            setUserName(profile.full_name);
+          } else if (profile?.username) {
+            setUserName(profile.username);
+          } else if (user.email) {
+            // Use email username part as fallback
+            setUserName(user.email.split('@')[0]);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading user:', error);
+      }
+    };
+    
+    loadUser();
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -116,9 +156,11 @@ export function SidebarNav() {
             <User className="h-4 w-4 text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate" title="Admin User">Admin User</p>
-            <p className="text-[10px] text-gray-500 leading-tight break-words" title="admin@siteproc.com">
-              admin@siteproc.com
+            <p className="text-sm font-medium text-gray-900 truncate" title={userName}>
+              {userName}
+            </p>
+            <p className="text-[10px] text-gray-500 leading-tight break-words" title={userEmail}>
+              {userEmail || 'Loading...'}
             </p>
           </div>
           <button 
