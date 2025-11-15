@@ -156,6 +156,14 @@ interface BudgetAlertData {
   dashboardUrl: string
 }
 
+interface InvitationEmailData {
+  to: string
+  inviterName: string
+  companyName: string
+  role: string
+  invitationToken: string
+}
+
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -430,6 +438,100 @@ Review project: ${data.dashboardUrl}`
 
   return sendEmail({
     to: data.adminEmails,
+    subject,
+    html,
+    text
+  })
+}
+
+// User Invitation Email
+export async function sendInvitationEmail(data: InvitationEmailData) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://siteproc1.vercel.app'
+  const acceptUrl = `${appUrl}/accept-invitation?token=${data.invitationToken}`
+  
+  const subject = `You've been invited to join ${data.companyName} on SiteProc`
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Invitation to join ${data.companyName}</title>
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: #ffffff; border-radius: 8px; padding: 32px; border: 1px solid #e5e7eb;">
+          <div style="text-align: center; margin-bottom: 32px;">
+            <h1 style="color: #2563eb; font-size: 28px; margin: 0;">🏗️ SiteProc</h1>
+          </div>
+          
+          <div style="margin-bottom: 32px;">
+            <h2>You've been invited!</h2>
+            <p>Hi there,</p>
+            <p>
+              <strong>${data.inviterName}</strong> has invited you to join 
+              <strong>${data.companyName}</strong> on SiteProc as a <strong>${data.role}</strong>.
+            </p>
+            
+            <div style="background: #f3f4f6; border-radius: 6px; padding: 16px; margin: 24px 0;">
+              <p style="margin: 8px 0;"><strong>Company:</strong> ${data.companyName}</p>
+              <p style="margin: 8px 0;"><strong>Role:</strong> ${data.role}</p>
+              <p style="margin: 8px 0;"><strong>Invited by:</strong> ${data.inviterName}</p>
+            </div>
+
+            <div style="text-align: center; margin: 32px 0;">
+              <a href="${acceptUrl}" style="display: inline-block; background: #2563eb; color: #ffffff; padding: 14px 32px; border-radius: 6px; text-decoration: none; font-weight: 600;">
+                Accept Invitation
+              </a>
+            </div>
+
+            <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; margin: 24px 0; font-size: 14px;">
+              ⏰ <strong>This invitation expires in 7 days.</strong>
+              <br>
+              Click the button above to accept and create your account.
+            </div>
+
+            <p style="font-size: 14px; color: #6b7280;">
+              If the button doesn't work, copy and paste this link into your browser:
+              <br>
+              <a href="${acceptUrl}" style="color: #2563eb; word-break: break-all;">
+                ${acceptUrl}
+              </a>
+            </p>
+          </div>
+
+          <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e5e7eb; font-size: 14px; color: #6b7280; text-align: center;">
+            <p>
+              This invitation was sent from SiteProc, a construction project management platform.
+            </p>
+            <p>
+              If you didn't expect this invitation, you can safely ignore this email.
+            </p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `
+
+  const text = `You've been invited to join ${data.companyName} on SiteProc!
+
+${data.inviterName} has invited you to join ${data.companyName} as a ${data.role}.
+
+Company: ${data.companyName}
+Role: ${data.role}
+Invited by: ${data.inviterName}
+
+Click here to accept the invitation and create your account:
+${acceptUrl}
+
+⏰ This invitation expires in 7 days.
+
+If you didn't expect this invitation, you can safely ignore this email.
+
+---
+This is an automated email from SiteProc.`
+
+  return sendEmail({
+    to: data.to,
     subject,
     html,
     text

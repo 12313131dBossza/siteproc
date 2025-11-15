@@ -1,5 +1,6 @@
 import { sbServer } from '@/lib/supabase-server';
 import { NextRequest, NextResponse } from 'next/server';
+import { sendInvitationEmail } from '@/lib/email';
 
 // GET /api/users - List all users in company
 export async function GET(request: NextRequest) {
@@ -142,8 +143,38 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create invitation' }, { status: 500 });
     }
 
-    // TODO: Send invitation email (integrate with email service)
-    // For now, we'll just return the invitation details
+    // Send invitation email
+    try {
+      // Get inviter's full name for personalized email
+      const { data: inviterProfile } = await supabase
+        .from('profiles')
+        .select('full_name, email')
+        .eq('id', user.id)
+        .single();
+
+      // Get company name
+      const { data: company } = await supabase
+        .from('companies')
+        .select('name')
+        .eq('id', currentProfile.company_id)
+        .single();
+
+      const inviterName = inviterProfile?.full_name || inviterProfile?.email || 'A team member';
+      const companyName = company?.name || 'your company';
+
+      await sendInvitationEmail({
+        to: email,
+        inviterName,
+        companyName,
+        role,
+        invitationToken,
+      });
+
+      console.log(`Invitation email sent to ${email}`);
+    } catch (emailError) {
+      console.error('Error sending invitation email:', emailError);
+      // Don't fail the request if email fails - invitation is still created
+    }
 
     // Log activity
     await supabase.rpc('log_user_activity', {
