@@ -71,6 +71,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Drop existing trigger if it exists
+DROP TRIGGER IF EXISTS trigger_user_invitations_updated_at ON public.user_invitations;
+
 CREATE TRIGGER trigger_user_invitations_updated_at
   BEFORE UPDATE ON public.user_invitations
   FOR EACH ROW
