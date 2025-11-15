@@ -137,7 +137,7 @@ function CompanyTab() {
   }
   
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6">
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-1">Company Information</h3>
         <p className="text-sm text-gray-500">Manage your company details and preferences</p>
@@ -157,7 +157,7 @@ function CompanyTab() {
           <p className="text-xs text-gray-500">This name will appear on reports and invoices</p>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700">
               Currency
@@ -266,7 +266,7 @@ function UsersTab() {
   }
   
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6">
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-1">User Management</h3>
         <p className="text-sm text-gray-500">Invite team members and manage their roles</p>
@@ -394,7 +394,7 @@ function UsersTab() {
 
 function SuppliersTab() {
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6">
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-1">Supplier Management</h3>
         <p className="text-sm text-gray-500">Manage your vendors and suppliers</p>
@@ -436,7 +436,7 @@ function SuppliersTab() {
 
 function CostCodesTab() {
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6">
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-1">Cost Codes</h3>
         <p className="text-sm text-gray-500">Track and categorize project costs</p>
@@ -465,7 +465,7 @@ function CostCodesTab() {
       <div className="space-y-4">
         <h4 className="font-semibold text-gray-900">How Cost Codes Work</h4>
         
-        <div className="grid gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="flex gap-3 p-4 bg-white border border-gray-200 rounded-lg">
             <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
               <span className="text-sm font-semibold text-blue-600">1</span>
