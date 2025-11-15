@@ -1,4 +1,4 @@
-import { sbServer } from '@/lib/supabase-server';
+import { sbAdmin } from '@/lib/supabase-server';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
@@ -10,8 +10,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Use server-side Supabase client with service role privileges
-    const supabase = await sbServer();
+    // Use admin client with service role (bypasses RLS)
+    const supabase = sbAdmin();
 
     // Create profile (bypasses RLS with service role)
     const { error: profileError } = await supabase
