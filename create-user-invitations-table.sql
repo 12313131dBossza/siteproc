@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS public.user_invitations (
   invited_by UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   invitation_token TEXT UNIQUE DEFAULT encode(gen_random_bytes(32), 'hex'),
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'expired', 'cancelled')),
+  metadata JSONB DEFAULT '{}'::jsonb,
   expires_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '7 days'),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
