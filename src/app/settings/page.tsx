@@ -32,11 +32,8 @@ export default function SettingsPage() {
   const [tab, setTab] = useState<TabId>('company')
   
   return (
-    <AppLayout 
-      title="Settings"
-      description="Manage your company settings and preferences"
-    >
-      <div className="space-y-6">
+    <AppLayout title="Settings">
+      <div className="space-y-4">
         {/* Tabs Navigation */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
           <nav className="flex border-b border-gray-200 overflow-x-auto">
@@ -47,7 +44,7 @@ export default function SettingsPage() {
                   key={t.id}
                   onClick={() => setTab(t.id)}
                   className={cn(
-                    "flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap",
+                    "flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap",
                     tab === t.id
                       ? "border-blue-500 text-blue-600 bg-blue-50"
                       : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50"
@@ -137,13 +134,8 @@ function CompanyTab() {
   }
   
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-1">Company Information</h3>
-        <p className="text-sm text-gray-500">Manage your company details and preferences</p>
-      </div>
-
-      <div className="space-y-4">
+    <div className="space-y-4">
+      <div className="space-y-3">
         <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-700">
             Company Name *
@@ -154,10 +146,9 @@ function CompanyTab() {
             onChange={(e) => setName(e.target.value)}
             fullWidth
           />
-          <p className="text-xs text-gray-500">This name will appear on reports and invoices</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700">
               Currency
@@ -168,7 +159,6 @@ function CompanyTab() {
               onChange={(e) => setCurrency(e.target.value)}
               fullWidth
             />
-            <p className="text-xs text-gray-500">Default: USD</p>
           </div>
 
           <div className="space-y-2">
@@ -186,7 +176,7 @@ function CompanyTab() {
           </div>
         </div>
 
-        <div className="flex gap-3 pt-4 border-t border-gray-200">
+        <div className="flex gap-3 pt-3 border-t border-gray-200">
           <Button
             variant="primary"
             onClick={save}
@@ -266,15 +256,10 @@ function UsersTab() {
   }
   
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-1">User Management</h3>
-        <p className="text-sm text-gray-500">Invite team members and manage their roles</p>
-      </div>
-
+    <div className="space-y-4">
       {/* Invite User Section */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <div className="flex items-start gap-3 mb-4">
+        <div className="flex items-start gap-3 mb-3">
           <div className="p-2 bg-blue-100 rounded-lg">
             <UserPlus className="h-5 w-5 text-blue-600" />
           </div>
@@ -315,6 +300,7 @@ function UsersTab() {
             onClick={invite}
             disabled={inviting || !email}
             leftIcon={<UserPlus className="h-4 w-4" />}
+            size="sm"
           >
             {inviting ? 'Sending...' : 'Send Invitation'}
           </Button>
@@ -394,20 +380,15 @@ function UsersTab() {
 
 function SuppliersTab() {
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-1">Supplier Management</h3>
-        <p className="text-sm text-gray-500">Manage your vendors and suppliers</p>
-      </div>
-
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+    <div className="space-y-4">
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <div className="flex items-start gap-4">
           <div className="p-3 bg-blue-100 rounded-lg">
             <Package className="h-6 w-6 text-blue-600" />
           </div>
           <div className="flex-1">
             <h4 className="font-semibold text-gray-900 mb-2">Manage Suppliers</h4>
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-gray-600 mb-3">
               Use the dedicated Suppliers page to add, edit, and manage all your vendors and suppliers in one place.
             </p>
             <Link href="/suppliers">
@@ -418,38 +399,21 @@ function SuppliersTab() {
           </div>
         </div>
       </div>
-
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-        <div className="flex items-start gap-3">
-          <AlertCircle className="h-5 w-5 text-gray-500 flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="text-sm text-gray-700">
-              <strong>Note:</strong> Suppliers and vendors are managed separately to maintain better organization. 
-              You can link suppliers to expenses, orders, and payments from their respective pages.
-            </p>
-          </div>
-        </div>
-      </div>
     </div>
   )
 }
 
 function CostCodesTab() {
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-1">Cost Codes</h3>
-        <p className="text-sm text-gray-500">Track and categorize project costs</p>
-      </div>
-
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+    <div className="space-y-4">
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <div className="flex items-start gap-4">
           <div className="p-3 bg-blue-100 rounded-lg">
             <Code className="h-6 w-6 text-blue-600" />
           </div>
           <div className="flex-1">
             <h4 className="font-semibold text-gray-900 mb-2">Project Cost Codes</h4>
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-gray-600 mb-3">
               Cost codes are automatically created and managed within individual project dashboards. 
               They help you categorize and track expenses by type, making reporting and analysis easier.
             </p>
@@ -462,44 +426,40 @@ function CostCodesTab() {
         </div>
       </div>
 
-      <div className="space-y-4">
-        <h4 className="font-semibold text-gray-900">How Cost Codes Work</h4>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="flex gap-3 p-4 bg-white border border-gray-200 rounded-lg">
-            <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-              <span className="text-sm font-semibold text-blue-600">1</span>
-            </div>
-            <div>
-              <h5 className="font-medium text-gray-900 mb-1">Create in Projects</h5>
-              <p className="text-sm text-gray-600">
-                Cost codes are defined at the project level, allowing you to customize them based on project needs.
-              </p>
-            </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="flex gap-3 p-4 bg-white border border-gray-200 rounded-lg">
+          <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+            <span className="text-sm font-semibold text-blue-600">1</span>
           </div>
-
-          <div className="flex gap-3 p-4 bg-white border border-gray-200 rounded-lg">
-            <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-              <span className="text-sm font-semibold text-blue-600">2</span>
-            </div>
-            <div>
-              <h5 className="font-medium text-gray-900 mb-1">Track Expenses</h5>
-              <p className="text-sm text-gray-600">
-                Link expenses to specific cost codes for detailed budget tracking and analysis.
-              </p>
-            </div>
+          <div>
+            <h5 className="font-medium text-gray-900 mb-1">Create in Projects</h5>
+            <p className="text-sm text-gray-600">
+              Cost codes are defined at the project level, allowing you to customize them based on project needs.
+            </p>
           </div>
+        </div>
 
-          <div className="flex gap-3 p-4 bg-white border border-gray-200 rounded-lg">
-            <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-              <span className="text-sm font-semibold text-blue-600">3</span>
-            </div>
-            <div>
-              <h5 className="font-medium text-gray-900 mb-1">Generate Reports</h5>
-              <p className="text-sm text-gray-600">
-                Cost codes appear in exports and reports, giving you clear visibility into where money is being spent.
-              </p>
-            </div>
+        <div className="flex gap-3 p-4 bg-white border border-gray-200 rounded-lg">
+          <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+            <span className="text-sm font-semibold text-blue-600">2</span>
+          </div>
+          <div>
+            <h5 className="font-medium text-gray-900 mb-1">Track Expenses</h5>
+            <p className="text-sm text-gray-600">
+              Link expenses to specific cost codes for detailed budget tracking and analysis.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex gap-3 p-4 bg-white border border-gray-200 rounded-lg">
+          <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+            <span className="text-sm font-semibold text-blue-600">3</span>
+          </div>
+          <div>
+            <h5 className="font-medium text-gray-900 mb-1">Generate Reports</h5>
+            <p className="text-sm text-gray-600">
+              Cost codes appear in exports and reports, giving you clear visibility into where money is being spent.
+            </p>
           </div>
         </div>
       </div>
