@@ -6,6 +6,7 @@ import { supabaseService } from '@/lib/supabase'
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const orderId = searchParams.get('orderId')
+  const includeOrder = searchParams.get('include_order') === 'true'
   const cookieStore = await cookies()
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -24,11 +25,16 @@ export async function GET(req: Request) {
 
   if (!profile?.company_id) return NextResponse.json({ error: 'No company' }, { status: 400 })
 
+  // Build select query
+  const selectQuery = includeOrder 
+    ? `*, order:order_id(product_name, vendor, amount)`
+    : '*'
+
   // If orderId provided, filter by it (for specific order)
   if (orderId) {
     const { data, error } = await supabase
       .from('change_orders')
-      .select('*')
+      .select(selectQuery)
       .eq('company_id', profile.company_id)
       .eq('order_id', orderId)
       .order('created_at', { ascending: false })
@@ -40,7 +46,7 @@ export async function GET(req: Request) {
   // Otherwise, return all change orders for the company
   const { data, error } = await supabase
     .from('change_orders')
-    .select('*')
+    .select(selectQuery)
     .eq('company_id', profile.company_id)
     .order('created_at', { ascending: false })
 

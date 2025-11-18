@@ -9,13 +9,20 @@ import { cn } from '@/lib/utils'
 type ChangeOrder = {
   id: string
   job_id: string | null
+  order_id: string | null
   cost_delta: number
   description: string | null
+  reason: string | null
   status: 'pending' | 'approved' | 'rejected'
   created_at: string
   approved_at?: string
   created_by?: string
   approver_email?: string | null
+  order?: {
+    product_name: string | null
+    vendor: string | null
+    amount: number | null
+  }
 }
 
 const statusConfig = {
@@ -55,13 +62,13 @@ export default function ChangeOrdersPage() {
   })
 
   async function loadPending() {
-    const res = await fetch(`/api/change-orders`)
+    const res = await fetch(`/api/change-orders?include_order=true`)
     const json = await res.json()
     if (res.ok) setPending(json.data || [])
   }
 
   async function loadHistory() {
-    const res = await fetch(`/api/change-orders`)
+    const res = await fetch(`/api/change-orders?include_order=true`)
     const json = await res.json()
     if (res.ok) {
       const all = json.data || []
@@ -188,9 +195,9 @@ export default function ChangeOrdersPage() {
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
-              {order.job_id && (
-                <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
-                  Job: {order.job_id.slice(0, 8)}...
+              {order.order && (
+                <span className="font-medium text-sm bg-blue-50 text-blue-700 px-3 py-1 rounded-lg">
+                  {order.order.product_name || order.order.vendor || 'Order'}
                 </span>
               )}
               <div className={cn("flex items-center gap-1.5 px-2 py-1 rounded-full border text-xs font-medium", color)}>
@@ -198,13 +205,25 @@ export default function ChangeOrdersPage() {
                 {label}
               </div>
             </div>
+            {order.order && (
+              <div className="text-sm text-gray-600 mb-2">
+                <span className="font-medium">Original Cost:</span> ${(order.order.amount || 0).toLocaleString()}
+                {order.status === 'approved' && (
+                  <span className="ml-2">
+                    → <span className="font-medium text-green-600">${((order.order.amount || 0) + order.cost_delta).toLocaleString()}</span>
+                  </span>
+                )}
+              </div>
+            )}
             <div className="text-lg font-semibold text-gray-900 mb-1">
-              Cost Change: ${order.cost_delta.toLocaleString()}
+              Cost Change: <span className={order.cost_delta >= 0 ? 'text-red-600' : 'text-green-600'}>
+                {order.cost_delta >= 0 ? '+' : ''}${order.cost_delta.toLocaleString()}
+              </span>
             </div>
-            {order.description && (
+            {(order.description || order.reason) && (
               <div className="text-gray-600 mb-3">
-                <span className="text-sm font-medium text-gray-500">Description: </span>
-                {order.description}
+                <span className="text-sm font-medium text-gray-500">Reason: </span>
+                {order.description || order.reason}
               </div>
             )}
           </div>

@@ -13,25 +13,51 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   const { data: co, error: coErr } = await supabase
     .from('change_orders')
-    .select('id, job_id, cost_delta, status, company_id, created_by')
+    .select('id, order_id, job_id, cost_delta, status, company_id, created_by')
     .eq('id', coId)
     .single()
   if (coErr || !co) return NextResponse.json({ error: 'not_found' }, { status: 404 })
   if (co.status !== 'pending') return NextResponse.json({ error: 'already_decided' }, { status: 400 })
 
-  // Change orders track cost changes to jobs, not quantity changes to orders
-  // Simply approve the change order by updating status and timestamp
-
   const { data: user } = await supabase.auth.getUser()
   const uid = user?.user?.id
   if (!uid) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
+  // Get user's email for approver_email
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('email')
+    .eq('id', uid)
+    .single()
+
+  // Approve the change order
   const up = await supabase
     .from('change_orders')
-    .update({ status: 'approved', approved_at: new Date().toISOString() })
+    .update({ 
+      status: 'approved', 
+      approved_at: new Date().toISOString(),
+      approver_email: profile?.email || null
+    })
     .eq('id', co.id)
   if (up.error) return NextResponse.json({ error: up.error.message }, { status: 400 })
 
-  // TODO: email requester + admins
+  // Update the order's cost if order_id exists
+  if (co.order_id && co.cost_delta) {
+    // Get current order amount
+    const { data: order } = await supabase
+      .from('purchase_orders')
+      .select('amount')
+      .eq('id', co.order_id)
+      .single()
+
+    if (order) {
+      const newAmount = (order.amount || 0) + co.cost_delta
+      await supabase
+        .from('purchase_orders')
+        .update({ amount: newAmount })
+        .eq('id', co.order_id)
+    }
+  }
+
   return NextResponse.json({ ok: true })
 }
