@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { createServiceClient } from '@/lib/supabase-service'
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   const cookieStore = await cookies()
@@ -43,19 +44,34 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   // Update the order's cost if order_id exists
   if (co.order_id && co.cost_delta) {
+    console.log('💰 Updating order cost for order_id:', co.order_id, 'cost_delta:', co.cost_delta)
+    
+    // Use service client to bypass RLS for the update
+    const serviceSb = createServiceClient()
+    
     // Get current order amount
-    const { data: order } = await supabase
+    const { data: order, error: fetchError } = await serviceSb
       .from('purchase_orders')
       .select('amount')
       .eq('id', co.order_id)
       .single()
 
-    if (order) {
+    if (fetchError) {
+      console.error('❌ Failed to fetch order:', fetchError)
+    } else if (order) {
       const newAmount = (order.amount || 0) + co.cost_delta
-      await supabase
+      console.log('📊 Old amount:', order.amount, '→ New amount:', newAmount)
+      
+      const { error: updateError } = await serviceSb
         .from('purchase_orders')
         .update({ amount: newAmount })
         .eq('id', co.order_id)
+      
+      if (updateError) {
+        console.error('❌ Failed to update order amount:', updateError)
+      } else {
+        console.log('✅ Successfully updated order amount')
+      }
     }
   }
 
