@@ -339,7 +339,10 @@ export default function ChangeOrdersPage() {
         <>
           {/* Backdrop with opacity and animation */}
           <div 
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 animate-fadeIn"
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
+            style={{
+              animation: 'fadeIn 0.2s ease-out'
+            }}
             onClick={() => {
               setShowNewModal(false)
               setNewForm({ project_id: '', order_id: '', cost_delta: '', description: '' })
@@ -350,7 +353,10 @@ export default function ChangeOrdersPage() {
           {/* Modal with slide up animation */}
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
             <div 
-              className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl animate-slideUp pointer-events-auto"
+              className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl pointer-events-auto"
+              style={{
+                animation: 'slideUp 0.3s ease-out'
+              }}
               onClick={(e) => e.stopPropagation()}
             >
               <h3 className="text-xl font-bold text-gray-900 mb-6">New Change Order Request</h3>
@@ -450,8 +456,7 @@ export default function ChangeOrdersPage() {
         </>
       )}
 
-      {/* Animations */}
-      <style jsx>{`
+      <style dangerouslySetInnerHTML={{__html: `
         @keyframes fadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
@@ -466,13 +471,7 @@ export default function ChangeOrdersPage() {
             transform: translateY(0) scale(1);
           }
         }
-        :global(.animate-fadeIn) {
-          animation: fadeIn 0.2s ease-out;
-        }
-        :global(.animate-slideUp) {
-          animation: slideUp 0.3s ease-out;
-        }
-      `}</style>
+      `}} />
     </AppLayout>
   )
 }
