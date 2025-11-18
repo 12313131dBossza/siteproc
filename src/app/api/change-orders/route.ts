@@ -13,12 +13,35 @@ export async function GET(req: Request) {
     { cookies: { get(name: string) { return cookieStore.get(name)?.value } } as any }
   )
 
-  if (!orderId) return NextResponse.json({ error: 'orderId_required' }, { status: 400 })
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('company_id')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile?.company_id) return NextResponse.json({ error: 'No company' }, { status: 400 })
+
+  // If orderId provided, filter by it (for specific order)
+  if (orderId) {
+    const { data, error } = await supabase
+      .from('change_orders')
+      .select('*')
+      .eq('company_id', profile.company_id)
+      .eq('order_id', orderId)
+      .order('created_at', { ascending: false })
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+    return NextResponse.json({ data })
+  }
+
+  // Otherwise, return all change orders for the company
   const { data, error } = await supabase
     .from('change_orders')
     .select('*')
-    .eq('order_id', orderId)
+    .eq('company_id', profile.company_id)
     .order('created_at', { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
