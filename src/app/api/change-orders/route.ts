@@ -91,6 +91,7 @@ export async function POST(req: Request) {
   const payload = {
     order_id,
     proposed_qty,
+    cost_delta: proposed_qty, // Set cost_delta to the same value as proposed_qty
     reason: reason ?? null,
     status: 'pending' as const,
     created_by: uid,
