@@ -129,16 +129,24 @@ END $$;
 -- Add status constraint
 DO $$
 BEGIN
-  IF NOT EXISTS (
+  -- Drop old constraint if exists
+  IF EXISTS (
     SELECT 1 FROM pg_constraint c
     JOIN pg_class t ON t.oid = c.conrelid
     JOIN pg_namespace n ON n.oid = t.relnamespace
     WHERE n.nspname='public' AND t.relname='change_orders' AND c.conname='change_orders_status_chk'
   ) THEN
-    ALTER TABLE public.change_orders
-      ADD CONSTRAINT change_orders_status_chk CHECK (status IN ('pending','approved','rejected','completed'));
-    RAISE NOTICE 'Added status constraint';
+    ALTER TABLE public.change_orders DROP CONSTRAINT change_orders_status_chk;
+    RAISE NOTICE 'Dropped old status constraint';
   END IF;
+  
+  -- Add new constraint
+  ALTER TABLE public.change_orders
+    ADD CONSTRAINT change_orders_status_chk CHECK (status IN ('pending','approved','rejected'));
+  RAISE NOTICE 'Added status constraint';
+EXCEPTION
+  WHEN OTHERS THEN
+    RAISE NOTICE 'Status constraint already exists or cannot be added: %', SQLERRM;
 END $$;
 
 -- Create indexes
