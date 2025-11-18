@@ -133,6 +133,13 @@ export function OrderForm({ isModal = false, onSuccess, onCancel }: OrderFormPro
 
       toast.success('Order request submitted successfully!');
       
+      // Refresh products list to update stock quantities
+      await fetchProducts();
+      
+      // Reset form
+      setFormData({ product_id: '', qty: '', notes: '', projectId: formData.projectId });
+      setSelectedProduct(null);
+      
       if (onSuccess) {
         onSuccess(order);
       }

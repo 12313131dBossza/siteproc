@@ -433,6 +433,8 @@ export async function POST(request: NextRequest) {
         console.error('Error during inventory deduction:', inventoryError)
         // Don't fail the order creation if inventory update fails
       }
+    } else {
+      console.log('⏭️ Skipping inventory deduction - product_id:', product_id, 'order_quantity:', order_quantity)
     }
 
     // Send notification to admins
