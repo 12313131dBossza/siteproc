@@ -189,6 +189,46 @@ export default function ProductsPage() {
     }
   };
 
+  const handleInventoryAdjust = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedProduct) return;
+
+    const formData = new FormData(e.target as HTMLFormElement);
+    const transaction_type = formData.get('transaction_type') as string;
+    const quantity = parseInt(formData.get('quantity') as string);
+    const unit_cost = parseFloat(formData.get('unit_cost') as string) || 0;
+    const notes = formData.get('notes') as string;
+
+    const quantity_change = ['purchase', 'return', 'adjustment'].includes(transaction_type) && quantity > 0
+      ? quantity
+      : -Math.abs(quantity);
+
+    try {
+      const response = await fetch(`/api/products/${selectedProduct.id}/adjust`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          transaction_type,
+          quantity_change,
+          unit_cost: unit_cost || null,
+          notes
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to adjust inventory');
+      }
+
+      toast.success('Inventory adjusted successfully');
+      setIsAdjustModalOpen(false);
+      fetchProducts();
+    } catch (error: any) {
+      console.error('Error adjusting inventory:', error);
+      toast.error(error.message || 'Failed to adjust inventory');
+    }
+  };
+
   if (loading) {
     return (
       <AppLayout title="Products" description="Product catalog and inventory management">
@@ -350,6 +390,16 @@ export default function ProductsPage() {
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setSelectedProduct(product);
+                              setIsModalOpen(true);
+                            }}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
                         </div>
                       </div>
 
@@ -392,6 +442,21 @@ export default function ProductsPage() {
                             Last ordered: {format(new Date(product.last_ordered), 'MMM dd, yyyy')}
                           </div>
                         )}
+
+                        <div className="pt-3 border-t border-gray-200">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="w-full"
+                            leftIcon={<Package className="w-4 h-4" />}
+                            onClick={() => {
+                              setSelectedProduct(product);
+                              setIsAdjustModalOpen(true);
+                            }}
+                          >
+                            Adjust Stock
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -798,6 +863,112 @@ export default function ProductsPage() {
                   )}
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Inventory Adjustment Modal */}
+        {isAdjustModalOpen && selectedProduct && (
+          <div 
+            className="fixed inset-0 bg-gradient-to-br from-gray-900/80 via-gray-900/70 to-purple-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setIsAdjustModalOpen(false);
+                setSelectedProduct(null);
+              }
+            }}
+          >
+            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in slide-in-from-bottom-4 zoom-in-95 duration-300">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Adjust Inventory: {selectedProduct.name}
+                </h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setIsAdjustModalOpen(false);
+                    setSelectedProduct(null);
+                  }}
+                >
+                  <XCircle className="w-5 h-5" />
+                </Button>
+              </div>
+              <div className="mb-4 p-4 bg-blue-50 rounded-lg">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Current Stock:</span>
+                  <span className="text-lg font-bold text-gray-900">
+                    {selectedProduct.stock_quantity} {selectedProduct.unit}
+                  </span>
+                </div>
+              </div>
+              <form onSubmit={handleInventoryAdjust} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Transaction Type</label>
+                  <select 
+                    name="transaction_type"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  >
+                    <option value="purchase">Purchase (Add Stock)</option>
+                    <option value="sale">Sale (Remove Stock)</option>
+                    <option value="adjustment">Adjustment</option>
+                    <option value="return">Return (Add Stock)</option>
+                    <option value="damaged">Damaged (Remove Stock)</option>
+                    <option value="theft">Theft (Remove Stock)</option>
+                    <option value="count">Stock Count Correction</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+                  <input 
+                    type="number" 
+                    name="quantity"
+                    min="1"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter quantity"
+                    required 
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    For removals (sale, damaged, theft), enter positive number
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Unit Cost (Optional)</label>
+                  <input 
+                    type="number" 
+                    name="unit_cost"
+                    step="0.01"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Cost per unit"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                  <textarea 
+                    name="notes"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                    rows={3}
+                    placeholder="Add notes about this transaction..."
+                  />
+                </div>
+                <div className="flex gap-2 pt-4">
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    onClick={() => {
+                      setIsAdjustModalOpen(false);
+                      setSelectedProduct(null);
+                    }} 
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" variant="primary" className="flex-1">
+                    Adjust Inventory
+                  </Button>
+                </div>
+              </form>
             </div>
           </div>
         )}
