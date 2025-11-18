@@ -89,7 +89,10 @@ export default function ChangeOrdersPage() {
     const res = await fetch('/api/projects')
     if (res.ok) {
       const json = await res.json()
+      // API returns { success: true, data: [...] }
       setProjects(json.data || [])
+    } else {
+      console.error('Failed to load projects:', await res.text())
     }
   }
 
@@ -102,7 +105,11 @@ export default function ChangeOrdersPage() {
     const res = await fetch(`/api/orders?project_id=${projectId}`)
     if (res.ok) {
       const json = await res.json()
+      // API returns { data: [...] }
       setOrders(json.data || [])
+    } else {
+      console.error('Failed to load orders:', await res.text())
+      setOrders([])
     }
     setLoadingOrders(false)
   }
