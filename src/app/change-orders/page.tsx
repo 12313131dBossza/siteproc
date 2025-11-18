@@ -18,11 +18,11 @@ type ChangeOrder = {
   approved_at?: string
   created_by?: string
   approver_email?: string | null
-  order?: {
+  purchase_orders?: {
     product_name: string | null
     vendor: string | null
     amount: number | null
-  }
+  } | null
 }
 
 const statusConfig = {
@@ -202,9 +202,9 @@ export default function ChangeOrdersPage() {
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
-              {order.order && (
+              {order.purchase_orders && (
                 <span className="font-medium text-sm bg-blue-50 text-blue-700 px-3 py-1 rounded-lg">
-                  {order.order.product_name || order.order.vendor || 'Order'}
+                  {order.purchase_orders.product_name || order.purchase_orders.vendor || 'Order'}
                 </span>
               )}
               <div className={cn("flex items-center gap-1.5 px-2 py-1 rounded-full border text-xs font-medium", color)}>
@@ -212,12 +212,12 @@ export default function ChangeOrdersPage() {
                 {label}
               </div>
             </div>
-            {order.order && (
+            {order.purchase_orders && (
               <div className="text-sm text-gray-600 mb-2">
-                <span className="font-medium">Original Cost:</span> ${(order.order.amount || 0).toLocaleString()}
+                <span className="font-medium">Original Cost:</span> ${(order.purchase_orders.amount || 0).toLocaleString()}
                 {order.status === 'approved' && (
                   <span className="ml-2">
-                    → <span className="font-medium text-green-600">${((order.order.amount || 0) + order.cost_delta).toLocaleString()}</span>
+                    → <span className="font-medium text-green-600">${((order.purchase_orders.amount || 0) + order.cost_delta).toLocaleString()}</span>
                   </span>
                 )}
               </div>

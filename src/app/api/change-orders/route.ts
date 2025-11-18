@@ -25,9 +25,9 @@ export async function GET(req: Request) {
 
   if (!profile?.company_id) return NextResponse.json({ error: 'No company' }, { status: 400 })
 
-  // Build select query
+  // Build select query - join with purchase_orders table
   const selectQuery = includeOrder 
-    ? `*, order:order_id(product_name, vendor, amount)`
+    ? `*, purchase_orders!order_id(product_name, vendor, amount)`
     : '*'
 
   // If orderId provided, filter by it (for specific order)
