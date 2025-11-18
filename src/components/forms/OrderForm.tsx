@@ -116,7 +116,10 @@ export function OrderForm({ isModal = false, onSuccess, onCancel }: OrderFormPro
           project_id: formData.projectId || null,
           amount: totalAmount,
           description: description,
-          category: selectedProduct.category || 'General'
+          category: selectedProduct.category || 'General',
+          product_id: selectedProduct.id,
+          quantity: qty,
+          unit: selectedProduct.unit
         })
       });
 

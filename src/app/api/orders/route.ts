@@ -290,6 +290,10 @@ export async function POST(request: NextRequest) {
     if (orderData.quantity) insertData.quantity = orderData.quantity
     if (orderData.unit_price) insertData.unit_price = orderData.unit_price
     
+    // Store product_id for inventory deduction
+    const product_id = body.product_id
+    const order_quantity = body.quantity || orderData.quantity
+    
     console.log('📝 Inserting order data:', insertData)
     
     let order
@@ -385,6 +389,50 @@ export async function POST(request: NextRequest) {
       })
     } catch (logError) {
       console.error('Failed to log activity:', logError)
+    }
+
+    // Deduct inventory if product_id is provided
+    if (product_id && order_quantity) {
+      try {
+        console.log(`📦 Deducting inventory: product_id=${product_id}, quantity=${order_quantity}`)
+        
+        const serviceSb = createServiceClient()
+        
+        // Get current stock
+        const { data: product, error: fetchError } = await serviceSb
+          .from('products')
+          .select('stock, stock_quantity')
+          .eq('id', product_id)
+          .single()
+        
+        if (fetchError) {
+          console.error('Failed to fetch product for inventory deduction:', fetchError)
+        } else if (product) {
+          // Use stock_quantity if available, otherwise use stock
+          const currentStock = product.stock_quantity || product.stock || 0
+          const newStock = Math.max(0, currentStock - order_quantity)
+          
+          console.log(`📊 Stock update: ${currentStock} -> ${newStock}`)
+          
+          // Update both stock fields to keep them in sync
+          const { error: updateError } = await serviceSb
+            .from('products')
+            .update({ 
+              stock: newStock,
+              stock_quantity: newStock 
+            })
+            .eq('id', product_id)
+          
+          if (updateError) {
+            console.error('Failed to update product inventory:', updateError)
+          } else {
+            console.log('✅ Inventory deducted successfully')
+          }
+        }
+      } catch (inventoryError) {
+        console.error('Error during inventory deduction:', inventoryError)
+        // Don't fail the order creation if inventory update fails
+      }
     }
 
     // Send notification to admins
