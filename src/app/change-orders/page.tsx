@@ -24,6 +24,17 @@ const statusConfig = {
   rejected: { icon: XCircle, color: 'text-red-600 bg-red-50 border-red-200', label: 'Rejected' }
 }
 
+type Project = {
+  id: string
+  name: string
+}
+
+type Order = {
+  id: string
+  order_number: string
+  total_cost: number
+}
+
 export default function ChangeOrdersPage() {
   const [pending, setPending] = useState<ChangeOrder[]>([])
   const [history, setHistory] = useState<ChangeOrder[]>([])
@@ -31,8 +42,12 @@ export default function ChangeOrdersPage() {
   const [showHistory, setShowHistory] = useState(false)
   const [processing, setProcessing] = useState<string | null>(null)
   const [showNewModal, setShowNewModal] = useState(false)
+  const [projects, setProjects] = useState<Project[]>([])
+  const [orders, setOrders] = useState<Order[]>([])
+  const [loadingOrders, setLoadingOrders] = useState(false)
   const [newForm, setNewForm] = useState({
-    job_id: '',
+    project_id: '',
+    order_id: '',
     cost_delta: '',
     description: ''
   })
@@ -60,6 +75,42 @@ export default function ChangeOrdersPage() {
   }
 
   useEffect(() => { load() }, [showHistory])
+
+  async function loadProjects() {
+    const res = await fetch('/api/projects')
+    if (res.ok) {
+      const json = await res.json()
+      setProjects(json.data || [])
+    }
+  }
+
+  async function loadOrders(projectId: string) {
+    if (!projectId) {
+      setOrders([])
+      return
+    }
+    setLoadingOrders(true)
+    const res = await fetch(`/api/orders?project_id=${projectId}`)
+    if (res.ok) {
+      const json = await res.json()
+      setOrders(json.data || [])
+    }
+    setLoadingOrders(false)
+  }
+
+  useEffect(() => {
+    if (showNewModal) {
+      loadProjects()
+    }
+  }, [showNewModal])
+
+  useEffect(() => {
+    if (newForm.project_id) {
+      loadOrders(newForm.project_id)
+    } else {
+      setOrders([])
+    }
+  }, [newForm.project_id])
 
   async function approve(id: string) {
     setProcessing(id)
@@ -94,7 +145,7 @@ export default function ChangeOrdersPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          order_id: newForm.job_id,
+          order_id: newForm.order_id,
           proposed_qty: parseFloat(newForm.cost_delta),
           reason: newForm.description
         })
@@ -102,7 +153,8 @@ export default function ChangeOrdersPage() {
       
       if (res.ok) {
         setShowNewModal(false)
-        setNewForm({ job_id: '', cost_delta: '', description: '' })
+        setNewForm({ project_id: '', order_id: '', cost_delta: '', description: '' })
+        setOrders([])
         await load()
       } else {
         const error = await res.json()
@@ -289,16 +341,41 @@ export default function ChangeOrdersPage() {
             <form onSubmit={createChangeOrder} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Job ID
+                  Project
                 </label>
-                <input
-                  type="text"
-                  value={newForm.job_id}
-                  onChange={(e) => setNewForm({...newForm, job_id: e.target.value})}
+                <select
+                  value={newForm.project_id}
+                  onChange={(e) => setNewForm({...newForm, project_id: e.target.value, order_id: ''})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Enter job ID"
                   required
-                />
+                >
+                  <option value="">Select a project</option>
+                  {projects.map(project => (
+                    <option key={project.id} value={project.id}>{project.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Order
+                </label>
+                <select
+                  value={newForm.order_id}
+                  onChange={(e) => setNewForm({...newForm, order_id: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                  disabled={!newForm.project_id || loadingOrders}
+                  required
+                >
+                  <option value="">
+                    {!newForm.project_id ? 'Select a project first' : loadingOrders ? 'Loading orders...' : 'Select an order'}
+                  </option>
+                  {orders.map(order => (
+                    <option key={order.id} value={order.id}>
+                      {order.order_number} - ${order.total_cost.toLocaleString()}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
@@ -336,7 +413,8 @@ export default function ChangeOrdersPage() {
                   variant="ghost"
                   onClick={() => {
                     setShowNewModal(false)
-                    setNewForm({ job_id: '', cost_delta: '', description: '' })
+                    setNewForm({ project_id: '', order_id: '', cost_delta: '', description: '' })
+                    setOrders([])
                   }}
                   disabled={processing === 'new'}
                 >
