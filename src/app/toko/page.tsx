@@ -520,7 +520,9 @@ export default function TokoPage() {
                             <h3 className="font-semibold text-gray-900 truncate">{product.name}</h3>
                           </div>
                           <div className="flex items-center gap-2 mb-2">
-                            <span className="text-sm text-gray-500">{product.category}</span>
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                              {product.category}
+                            </span>
                             <div className={cn("flex items-center gap-1 px-2 py-1 rounded-full border text-xs font-medium", statusConfig.color)}>
                               <StatusIcon className="w-3 h-3" />
                               {statusConfig.label}
