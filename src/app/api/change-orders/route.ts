@@ -25,33 +25,36 @@ export async function GET(req: Request) {
 
   if (!profile?.company_id) return NextResponse.json({ error: 'No company' }, { status: 400 })
 
-  // Build select query - join with purchase_orders table
-  const selectQuery = includeOrder 
-    ? `*, purchase_orders!order_id(product_name, vendor, amount)`
-    : '*'
-
-  // If orderId provided, filter by it (for specific order)
-  if (orderId) {
-    const { data, error } = await supabase
-      .from('change_orders')
-      .select(selectQuery)
-      .eq('company_id', profile.company_id)
-      .eq('order_id', orderId)
-      .order('created_at', { ascending: false })
-
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
-    return NextResponse.json({ data })
-  }
-
-  // Otherwise, return all change orders for the company
-  const { data, error } = await supabase
+  // Get all change orders for the company first
+  const { data: changeOrders, error } = await supabase
     .from('change_orders')
-    .select(selectQuery)
+    .select('*')
     .eq('company_id', profile.company_id)
     .order('created_at', { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
-  return NextResponse.json({ data })
+
+  // If includeOrder is true, fetch order details separately
+  let enrichedData = changeOrders
+  if (includeOrder && changeOrders && changeOrders.length > 0) {
+    const orderIds = changeOrders.map(co => co.order_id).filter(Boolean)
+    
+    if (orderIds.length > 0) {
+      const { data: orders } = await supabase
+        .from('purchase_orders')
+        .select('id, product_name, vendor, amount')
+        .in('id', orderIds)
+      
+      // Map orders to change orders
+      const ordersMap = new Map(orders?.map(o => [o.id, o]) || [])
+      enrichedData = changeOrders.map(co => ({
+        ...co,
+        purchase_orders: co.order_id ? ordersMap.get(co.order_id) : null
+      }))
+    }
+  }
+
+  return NextResponse.json({ data: enrichedData })
 }
 
 export async function POST(req: Request) {
