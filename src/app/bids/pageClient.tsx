@@ -389,53 +389,51 @@ export default function BidsPageClient() {
             )}
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredBids.map((bid) => {
               const StatusIcon = getStatusIcon(bid.status);
               const isExpired = new Date(bid.valid_until) < new Date();
               
               return (
-                <div key={bid.id} className="bg-white border rounded-lg p-6 hover:shadow-md transition-shadow">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="font-semibold text-gray-900">{bid.vendor_name}</h3>
-                        <span className={cn('px-2 py-1 rounded-full text-xs font-medium border flex items-center gap-1', getStatusBadge(bid.status))}>
-                          <StatusIcon className="h-3 w-3" />
-                          {bid.status}
-                        </span>
-                        {isExpired && bid.status === 'pending' && (
-                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 border border-red-200">
-                            Expired
-                          </span>
-                        )}
+                <div key={bid.id} className="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow flex flex-col">
+                  <div className="mb-3">
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-gray-900 text-sm truncate">{bid.vendor_name}</h3>
+                        <p className="text-xs text-gray-600 line-clamp-2 mt-1">{bid.item_description}</p>
                       </div>
-                      <p className="text-gray-600 mb-2">{bid.item_description}</p>
-                      {bid.project_name && (
-                        <p className="text-sm text-gray-500">Project: {bid.project_name}</p>
-                      )}
+                      <span className={cn('px-2 py-1 rounded-full text-xs font-medium border flex-shrink-0', getStatusBadge(bid.status))}>
+                        {bid.status}
+                      </span>
                     </div>
-                    <div className="text-right">
-                      <div className="text-2xl font-bold text-gray-900">{formatCurrency(bid.total_amount)}</div>
-                      <div className="text-sm text-gray-500">
-                        {bid.quantity} × {formatCurrency(bid.unit_price)}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
-                      Valid until: {format(new Date(bid.valid_until), 'MMM d, yyyy')}
-                    </div>
-                    {bid.vendor_email && (
-                      <div className="flex items-center gap-1">
-                        <span>Email: {bid.vendor_email}</span>
-                      </div>
+                    {isExpired && bid.status === 'pending' && (
+                      <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 border border-red-200">
+                        Expired
+                      </span>
+                    )}
+                    {bid.project_name && (
+                      <p className="text-xs text-gray-500 mt-1">Project: {bid.project_name}</p>
                     )}
                   </div>
 
-                  <div className="flex gap-2">
+                  <div className="mb-3 pb-3 border-t">
+                    <div className="text-lg font-bold text-gray-900 mt-2">{formatCurrency(bid.total_amount)}</div>
+                    <div className="text-xs text-gray-500">
+                      {bid.quantity} × {formatCurrency(bid.unit_price)}
+                    </div>
+                  </div>
+
+                  <div className="text-xs text-gray-500 mb-3 space-y-1">
+                    <div className="flex items-center gap-1 truncate">
+                      <Calendar className="h-3 w-3 flex-shrink-0" />
+                      <span className="truncate">Until: {format(new Date(bid.valid_until), 'MMM d')}</span>
+                    </div>
+                    {bid.vendor_email && (
+                      <div className="truncate text-xs">Email: {bid.vendor_email}</div>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2 mt-auto">
                     {bid.status === 'pending' && (
                       <>
                         <Button

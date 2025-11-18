@@ -208,7 +208,7 @@ export default function ClientsPageClient() {
     >
       <div className="space-y-6 p-6">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-white border rounded-lg p-4">
             <div className="text-sm text-gray-500 mb-1">Total Clients</div>
             <div className="text-2xl font-bold text-gray-900">{clients.length}</div>
@@ -223,12 +223,6 @@ export default function ClientsPageClient() {
             <div className="text-sm text-blue-700 mb-1">Total Projects</div>
             <div className="text-2xl font-bold text-blue-900">
               {clients.reduce((sum, c) => sum + (c.total_projects || 0), 0)}
-            </div>
-          </div>
-          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-            <div className="text-sm text-purple-700 mb-1">Total Value</div>
-            <div className="text-2xl font-bold text-purple-900">
-              {formatCurrency(clients.reduce((sum, c) => sum + (c.total_value || 0), 0))}
             </div>
           </div>
         </div>

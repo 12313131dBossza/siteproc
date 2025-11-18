@@ -209,7 +209,7 @@ export default function ContractorsPageClient() {
     >
       <div className="space-y-6 p-6">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-white border rounded-lg p-4">
             <div className="text-sm text-gray-500 mb-1">Total Contractors</div>
             <div className="text-2xl font-bold text-gray-900">{contractors.length}</div>
@@ -218,18 +218,6 @@ export default function ContractorsPageClient() {
             <div className="text-sm text-green-700 mb-1">Active</div>
             <div className="text-2xl font-bold text-green-900">
               {contractors.filter(c => c.status === 'active').length}
-            </div>
-          </div>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="text-sm text-blue-700 mb-1">Total Orders</div>
-            <div className="text-2xl font-bold text-blue-900">
-              {contractors.reduce((sum, c) => sum + (c.total_orders || 0), 0)}
-            </div>
-          </div>
-          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-            <div className="text-sm text-purple-700 mb-1">Total Spent</div>
-            <div className="text-2xl font-bold text-purple-900">
-              {formatCurrency(contractors.reduce((sum, c) => sum + (c.total_spent || 0), 0))}
             </div>
           </div>
         </div>
