@@ -32,13 +32,13 @@ export default function ChangeOrdersPage() {
   const [processing, setProcessing] = useState<string | null>(null)
 
   async function loadPending() {
-    const res = await fetch(`/api/admin/change-orders`)
+    const res = await fetch(`/api/change-orders`)
     const json = await res.json()
     if (res.ok) setPending(json.data || [])
   }
 
   async function loadHistory() {
-    const res = await fetch(`/api/admin/change-orders?include_history=true`)
+    const res = await fetch(`/api/change-orders`)
     const json = await res.json()
     if (res.ok) {
       const all = json.data || []
