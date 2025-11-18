@@ -30,6 +30,12 @@ export default function ChangeOrdersPage() {
   const [loading, setLoading] = useState(true)
   const [showHistory, setShowHistory] = useState(false)
   const [processing, setProcessing] = useState<string | null>(null)
+  const [showNewModal, setShowNewModal] = useState(false)
+  const [newForm, setNewForm] = useState({
+    job_id: '',
+    cost_delta: '',
+    description: ''
+  })
 
   async function loadPending() {
     const res = await fetch(`/api/change-orders`)
@@ -76,6 +82,36 @@ export default function ChangeOrdersPage() {
       const error = await res.json()
       alert(`Failed to reject: ${error.error || 'Unknown error'}`)
     }
+    setProcessing(null)
+  }
+
+  async function createChangeOrder(e: React.FormEvent) {
+    e.preventDefault()
+    setProcessing('new')
+    
+    try {
+      const res = await fetch('/api/change-orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          order_id: newForm.job_id,
+          proposed_qty: parseFloat(newForm.cost_delta),
+          reason: newForm.description
+        })
+      })
+      
+      if (res.ok) {
+        setShowNewModal(false)
+        setNewForm({ job_id: '', cost_delta: '', description: '' })
+        await load()
+      } else {
+        const error = await res.json()
+        alert(`Failed to create: ${error.error || 'Unknown error'}`)
+      }
+    } catch (err) {
+      alert('Failed to create change order')
+    }
+    
     setProcessing(null)
   }
 
@@ -184,7 +220,11 @@ export default function ChangeOrdersPage() {
           >
             {showHistory ? 'Hide History' : 'Show History'}
           </Button>
-          <Button variant="primary" leftIcon={<Plus className="h-4 w-4" />}>
+          <Button 
+            variant="primary" 
+            leftIcon={<Plus className="h-4 w-4" />}
+            onClick={() => setShowNewModal(true)}
+          >
             New Request
           </Button>
         </div>
@@ -239,6 +279,81 @@ export default function ChangeOrdersPage() {
           </div>
         )}
       </div>
+
+      {/* New Request Modal */}
+      {showNewModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">New Change Order Request</h3>
+            
+            <form onSubmit={createChangeOrder} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Job ID
+                </label>
+                <input
+                  type="text"
+                  value={newForm.job_id}
+                  onChange={(e) => setNewForm({...newForm, job_id: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter job ID"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Cost Change ($)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={newForm.cost_delta}
+                  onChange={(e) => setNewForm({...newForm, cost_delta: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="0.00"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Description
+                </label>
+                <textarea
+                  value={newForm.description}
+                  onChange={(e) => setNewForm({...newForm, description: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  rows={3}
+                  placeholder="Describe the reason for this change"
+                  required
+                />
+              </div>
+
+              <div className="flex gap-2 justify-end pt-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setShowNewModal(false)
+                    setNewForm({ job_id: '', cost_delta: '', description: '' })
+                  }}
+                  disabled={processing === 'new'}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  disabled={processing === 'new'}
+                >
+                  {processing === 'new' ? 'Creating...' : 'Create Request'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </AppLayout>
   )
 }
