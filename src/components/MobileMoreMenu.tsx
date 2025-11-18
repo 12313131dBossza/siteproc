@@ -5,11 +5,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Users,
-  Building2,
   FileText,
   HardHat,
   Settings,
-  User,
   CreditCard,
   BarChart3,
   X,
@@ -42,12 +40,6 @@ const moreMenuItems: MenuItem[] = [
     description: "View and manage bids",
   },
   {
-    name: "Companies",
-    href: "/companies",
-    icon: Building2,
-    description: "Company management",
-  },
-  {
     name: "Change Orders",
     href: "/change-orders",
     icon: FileText,
@@ -64,12 +56,6 @@ const moreMenuItems: MenuItem[] = [
     href: "/reports",
     icon: BarChart3,
     description: "Analytics and reports",
-  },
-  {
-    name: "Profile",
-    href: "/profile",
-    icon: User,
-    description: "Your profile settings",
   },
   {
     name: "Settings",
@@ -127,8 +113,8 @@ export function MobileMoreMenu({ isOpen, onClose }: MobileMoreMenuProps) {
         </div>
 
         {/* Menu Items */}
-        <div className="overflow-y-auto px-3 py-3 pb-20" style={{ maxHeight: "calc(85vh - 140px)" }}>
-          <div className="grid grid-cols-2 gap-3">
+        <div className="overflow-y-auto px-4 py-3 pb-20" style={{ maxHeight: "calc(85vh - 140px)" }}>
+          <div className="space-y-2">
             {moreMenuItems.map((item) => {
               const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
               const Icon = item.icon;
@@ -139,7 +125,7 @@ export function MobileMoreMenu({ isOpen, onClose }: MobileMoreMenuProps) {
                   href={item.href}
                   onClick={onClose}
                   className={`
-                    flex flex-col items-center justify-center gap-2 p-4 rounded-2xl transition-all active:scale-95
+                    flex items-center gap-4 p-4 rounded-xl transition-all active:scale-95
                     ${
                       isActive
                         ? "bg-blue-50 border-2 border-blue-200"
@@ -149,17 +135,17 @@ export function MobileMoreMenu({ isOpen, onClose }: MobileMoreMenuProps) {
                 >
                   <div
                     className={`
-                    p-3 rounded-xl
+                    p-2.5 rounded-lg flex-shrink-0
                     ${isActive ? "bg-blue-600" : "bg-gray-100"}
                   `}
                   >
                     <Icon
-                      className={`h-6 w-6 ${isActive ? "text-white" : "text-gray-600"}`}
+                      className={`h-5 w-5 ${isActive ? "text-white" : "text-gray-600"}`}
                       strokeWidth={2.5}
                     />
                   </div>
 
-                  <div className="flex flex-col items-center text-center">
+                  <div className="flex-1 min-w-0">
                     <div
                       className={`font-semibold text-sm ${
                         isActive ? "text-blue-900" : "text-gray-900"
@@ -168,7 +154,7 @@ export function MobileMoreMenu({ isOpen, onClose }: MobileMoreMenuProps) {
                       {item.name}
                     </div>
                     <div
-                      className={`text-xs mt-1 line-clamp-2 ${
+                      className={`text-xs mt-0.5 truncate ${
                         isActive ? "text-blue-600" : "text-gray-500"
                       }`}
                     >
