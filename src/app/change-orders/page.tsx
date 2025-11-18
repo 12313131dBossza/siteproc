@@ -452,6 +452,7 @@ export default function ChangeOrdersPage() {
                 </Button>
               </div>
             </form>
+            </div>
           </div>
         </>
       )}
