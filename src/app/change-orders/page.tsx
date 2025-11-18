@@ -336,9 +336,24 @@ export default function ChangeOrdersPage() {
 
       {/* New Request Modal */}
       {showNewModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">New Change Order Request</h3>
+        <>
+          {/* Backdrop with opacity and animation */}
+          <div 
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 animate-fadeIn"
+            onClick={() => {
+              setShowNewModal(false)
+              setNewForm({ project_id: '', order_id: '', cost_delta: '', description: '' })
+              setOrders([])
+            }}
+          />
+          
+          {/* Modal with slide up animation */}
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+            <div 
+              className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl animate-slideUp pointer-events-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-xl font-bold text-gray-900 mb-6">New Change Order Request</h3>
             
             <form onSubmit={createChangeOrder} className="space-y-4">
               <div>
@@ -432,8 +447,32 @@ export default function ChangeOrdersPage() {
               </div>
             </form>
           </div>
-        </div>
+        </>
       )}
+
+      {/* Animations */}
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes slideUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px) scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+        :global(.animate-fadeIn) {
+          animation: fadeIn 0.2s ease-out;
+        }
+        :global(.animate-slideUp) {
+          animation: slideUp 0.3s ease-out;
+        }
+      `}</style>
     </AppLayout>
   )
 }
