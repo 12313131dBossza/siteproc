@@ -1,23 +1,467 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { AppLayout } from "@/components/app-layout";
+import { Button } from "@/components/ui/Button";
+import { StatCard } from "@/components/StatCard";
+import {
+  Package,
+  Search,
+  Plus,
+  Download,
+  Eye,
+  Edit,
+  BarChart3,
+  DollarSign,
+  Star,
+  Users,
+  CheckCircle,
+  XCircle,
+  AlertTriangle
+} from "lucide-react";
+import { format } from "@/lib/date-format";
+import { cn, formatCurrency } from "@/lib/utils";
+import { toast } from 'sonner';
+
+interface Product {
+  id: string;
+  name: string;
+  category: string;
+  price: number;
+  unit: string;
+  stock_quantity: number;
+  min_stock_level: number;
+  reorder_point?: number;
+  reorder_quantity?: number;
+  supplier_name?: string;
+  supplier_email?: string;
+  supplier_phone?: string;
+  lead_time_days?: number;
+  description?: string;
+  status: 'active' | 'inactive' | 'discontinued';
+  last_ordered?: string;
+  total_orders: number;
+  rating: number;
+  created_at: string;
+  updated_at: string;
+}
+
+interface ProductStats {
+  total_products: number;
+  active_products: number;
+  low_stock_items: number;
+  total_value: number;
+  top_category: string;
+  monthly_orders: number;
+}
 
 export default function ProductsPage() {
-  const router = useRouter();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedTab, setSelectedTab] = useState<'all' | 'active' | 'low-stock' | 'inactive'>('all');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
+  const [stats, setStats] = useState<ProductStats>({
+    total_products: 0,
+    active_products: 0,
+    low_stock_items: 0,
+    total_value: 0,
+    top_category: '',
+    monthly_orders: 0
+  });
 
   useEffect(() => {
-    // Redirect to toko page immediately
-    router.replace("/toko");
-  }, [router]);
+    fetchProducts();
+  }, []);
 
-  // Show minimal loading state while redirecting
+  const fetchProducts = async () => {
+    try {
+      const response = await fetch('/api/products');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      
+      if (!Array.isArray(data)) {
+        console.error('API returned non-array data:', data);
+        throw new Error('Invalid data format from API');
+      }
+      
+      setProducts(data);
+      
+      const statsData: ProductStats = {
+        total_products: data.length,
+        active_products: data.filter((p: Product) => p.status === 'active').length,
+        low_stock_items: data.filter((p: Product) => p.stock_quantity <= p.min_stock_level).length,
+        total_value: data.reduce((sum: number, p: Product) => sum + (p.price * p.stock_quantity), 0),
+        top_category: data.length > 0 ? data[0].category : '',
+        monthly_orders: data.reduce((sum: number, p: Product) => sum + (p.total_orders || 0), 0)
+      };
+      
+      setStats(statsData);
+    } catch (error) {
+      console.error('Failed to fetch products:', error);
+      toast.error('Failed to load products');
+    }
+    setLoading(false);
+  };
+
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         product.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         product.supplier_name?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesTab = selectedTab === 'all' || 
+                      (selectedTab === 'active' && product.status === 'active') ||
+                      (selectedTab === 'low-stock' && product.stock_quantity <= product.min_stock_level) ||
+                      (selectedTab === 'inactive' && product.status === 'inactive');
+    
+    return matchesSearch && matchesTab;
+  });
+
+  const getStockStatus = (product: Product) => {
+    if (product.stock_quantity <= product.min_stock_level) {
+      return { status: 'low', color: 'text-red-600 bg-red-50 border-red-200', label: 'Low Stock' };
+    } else if (product.stock_quantity <= product.min_stock_level * 1.5) {
+      return { status: 'medium', color: 'text-yellow-600 bg-yellow-50 border-yellow-200', label: 'Medium Stock' };
+    } else {
+      return { status: 'good', color: 'text-green-600 bg-green-50 border-green-200', label: 'Good Stock' };
+    }
+  };
+
+  const getStatusConfig = (status: string) => {
+    const configs = {
+      active: { color: 'text-green-600 bg-green-50 border-green-200', label: 'Active', icon: CheckCircle },
+      inactive: { color: 'text-gray-600 bg-gray-50 border-gray-200', label: 'Inactive', icon: XCircle },
+      discontinued: { color: 'text-red-600 bg-red-50 border-red-200', label: 'Discontinued', icon: AlertTriangle }
+    };
+    return configs[status as keyof typeof configs] || configs.active;
+  };
+
+  if (loading) {
+    return (
+      <AppLayout title="Products" description="Product catalog and inventory management">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="bg-white rounded-xl border border-gray-200 p-6 animate-pulse">
+              <div className="h-6 bg-gray-200 rounded mb-2" />
+              <div className="h-8 bg-gray-200 rounded mb-2" />
+              <div className="h-4 bg-gray-200 rounded" />
+            </div>
+          ))}
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-        <p className="mt-4 text-gray-600">Redirecting to Products...</p>
+    <AppLayout
+      title="Products"
+      description="Product catalog and inventory management"
+      actions={
+        <div className="flex gap-2">
+          <Button variant="ghost" leftIcon={<Download className="h-4 w-4" />}>
+            Export
+          </Button>
+          <Button variant="ghost" leftIcon={<BarChart3 className="h-4 w-4" />}>
+            Analytics
+          </Button>
+          <Button variant="primary" leftIcon={<Plus className="h-4 w-4" />} onClick={() => setIsModalOpen(true)}>
+            Add Product
+          </Button>
+        </div>
+      }
+    >
+      <div className="space-y-6">
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4">
+          <StatCard
+            title="Total Products"
+            value={stats.total_products.toString()}
+            icon={Package}
+            iconColor="text-blue-600"
+            iconBgColor="bg-blue-50"
+          />
+
+          <StatCard
+            title="Active Products"
+            value={stats.active_products.toString()}
+            icon={CheckCircle}
+            iconColor="text-green-600"
+            iconBgColor="bg-green-50"
+          />
+
+          <StatCard
+            title="Low Stock Items"
+            value={stats.low_stock_items.toString()}
+            icon={AlertTriangle}
+            iconColor="text-red-600"
+            iconBgColor="bg-red-50"
+          />
+
+          <StatCard
+            title="Inventory Value"
+            value={formatCurrency(stats.total_value)}
+            icon={DollarSign}
+            iconColor="text-purple-600"
+            iconBgColor="bg-purple-50"
+            badge="+12%"
+            badgeColor="text-purple-600"
+          />
+        </div>
+
+        {/* Filters and Search */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+          <div className="p-6">
+            <div className="flex flex-col md:flex-row gap-4 mb-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <input
+                    type="text"
+                    placeholder="Search products, categories, or suppliers..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+          <div className="border-b border-gray-200">
+            <nav className="flex space-x-8 px-6">
+              {[
+                { key: 'all', label: 'All Products', count: products.length },
+                { key: 'active', label: 'Active', count: products.filter(p => p.status === 'active').length },
+                { key: 'low-stock', label: 'Low Stock', count: products.filter(p => p.stock_quantity <= p.min_stock_level).length },
+                { key: 'inactive', label: 'Inactive', count: products.filter(p => p.status === 'inactive').length }
+              ].map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setSelectedTab(tab.key as any)}
+                  className={cn(
+                    "py-4 px-2 border-b-2 font-medium text-sm transition-colors",
+                    selectedTab === tab.key
+                      ? "border-blue-500 text-blue-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  )}
+                >
+                  {tab.label} ({tab.count})
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          {/* Product List */}
+          <div className="p-6">
+            {filteredProducts.length === 0 ? (
+              <div className="text-center py-12">
+                <Package className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No products found</h3>
+                <p className="text-gray-500">Try adjusting your filters or add a new product.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredProducts.map((product) => {
+                  const stockStatus = getStockStatus(product);
+                  const statusConfig = getStatusConfig(product.status);
+                  const StatusIcon = statusConfig.icon;
+                  
+                  return (
+                    <div key={product.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h3 className="font-semibold text-gray-900 truncate">{product.name}</h3>
+                          </div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                              {product.category}
+                            </span>
+                            <div className={cn("flex items-center gap-1 px-2 py-1 rounded-full border text-xs font-medium", statusConfig.color)}>
+                              <StatusIcon className="w-3 h-3" />
+                              {statusConfig.label}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setSelectedProduct(product);
+                              setIsDetailsModalOpen(true);
+                            }}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-lg font-bold text-gray-900">{formatCurrency(product.price)}</span>
+                          <span className="text-sm text-gray-500">per {product.unit}</span>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">Stock: {product.stock_quantity} {product.unit}</span>
+                          <div className={cn("px-2 py-1 rounded-full text-xs font-medium border", stockStatus.color)}>
+                            {stockStatus.label}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                              <Star
+                                key={i}
+                                className={cn(
+                                  "w-4 h-4",
+                                  i < Math.floor(product.rating) ? "text-yellow-400 fill-current" : "text-gray-300"
+                                )}
+                              />
+                            ))}
+                          </div>
+                          <span className="text-sm text-gray-500">({product.total_orders} orders)</span>
+                        </div>
+
+                        {product.supplier_name && (
+                          <div className="text-sm text-gray-500">
+                            Supplier: {product.supplier_name}
+                          </div>
+                        )}
+
+                        {product.last_ordered && (
+                          <div className="text-xs text-gray-400">
+                            Last ordered: {format(new Date(product.last_ordered), 'MMM dd, yyyy')}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Product Details Modal */}
+        {isDetailsModalOpen && selectedProduct && (
+          <div 
+            className="fixed inset-0 bg-gradient-to-br from-gray-900/80 via-gray-900/70 to-blue-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setIsDetailsModalOpen(false);
+              }
+            }}
+          >
+            <div className="bg-white rounded-2xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
+              <div className="flex items-start justify-between mb-6">
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">{selectedProduct.name}</h3>
+                  <p className="text-gray-600">{selectedProduct.category}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  onClick={() => setIsDetailsModalOpen(false)}
+                >
+                  <XCircle className="w-5 h-5" />
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-2">Pricing</h4>
+                    <p className="text-2xl font-bold text-gray-900">{formatCurrency(selectedProduct.price)}</p>
+                    <p className="text-sm text-gray-500">per {selectedProduct.unit}</p>
+                  </div>
+
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-2">Stock Information</h4>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Current Stock:</span>
+                        <span className="font-medium">{selectedProduct.stock_quantity} {selectedProduct.unit}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Min Level:</span>
+                        <span className="font-medium">{selectedProduct.min_stock_level} {selectedProduct.unit}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Status:</span>
+                        <span className={cn("px-2 py-1 rounded-full text-xs font-medium border", getStockStatus(selectedProduct).color)}>
+                          {getStockStatus(selectedProduct).label}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-2">Performance</h4>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Total Orders:</span>
+                        <span className="font-medium">{selectedProduct.total_orders}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Rating:</span>
+                        <div className="flex items-center gap-1">
+                          <span className="font-medium">{selectedProduct.rating}</span>
+                          <div className="flex">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                              <Star
+                                key={i}
+                                className={cn(
+                                  "w-4 h-4",
+                                  i < Math.floor(selectedProduct.rating) ? "text-yellow-400 fill-current" : "text-gray-300"
+                                )}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {selectedProduct.supplier_name && (
+                    <div>
+                      <h4 className="font-medium text-gray-900 mb-2">Supplier</h4>
+                      <p className="text-gray-600">{selectedProduct.supplier_name}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {selectedProduct.description && (
+                <div className="mt-6">
+                  <h4 className="font-medium text-gray-900 mb-2">Description</h4>
+                  <p className="text-gray-600">{selectedProduct.description}</p>
+                </div>
+              )}
+
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <div className="flex justify-between text-sm text-gray-500">
+                  <span>Created: {format(new Date(selectedProduct.created_at), 'MMM dd, yyyy')}</span>
+                  {selectedProduct.last_ordered && (
+                    <span>Last ordered: {format(new Date(selectedProduct.last_ordered), 'MMM dd, yyyy')}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-    </div>
+    </AppLayout>
   );
 }
