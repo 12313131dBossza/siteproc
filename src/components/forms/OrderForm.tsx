@@ -60,14 +60,23 @@ export function OrderForm({ isModal = false, onSuccess, onCancel }: OrderFormPro
 
   const fetchProducts = async () => {
     try {
-      const { data: productsData, error } = await supabase
-        .from('products')
-        .select('*')
-        .gt('stock', 0)
-        .order('name');
-
-      if (error) throw error;
-      setProducts(productsData || []);
+      const response = await fetch('/api/products');
+      if (!response.ok) {
+        throw new Error('Failed to fetch products');
+      }
+      
+      const productsData = await response.json();
+      
+      // Normalize stock field - use stock_quantity if stock is not available
+      // Filter to only show products with stock > 0
+      const normalizedProducts = (productsData || [])
+        .map(p => ({
+          ...p,
+          stock: p.stock || p.stock_quantity || 0
+        }))
+        .filter(p => p.stock > 0);
+      
+      setProducts(normalizedProducts);
     } catch (error) {
       console.error('Error fetching products:', error);
       toast.error('Failed to load products');
