@@ -31,8 +31,10 @@ type Project = {
 
 type Order = {
   id: string
-  order_number: string
-  total_cost: number
+  product_name: string | null
+  vendor: string | null
+  amount: number | null
+  status: string
 }
 
 export default function ChangeOrdersPage() {
@@ -372,7 +374,7 @@ export default function ChangeOrdersPage() {
                   </option>
                   {orders.map(order => (
                     <option key={order.id} value={order.id}>
-                      {order.order_number} - ${order.total_cost.toLocaleString()}
+                      {order.product_name || order.vendor || 'Order'} - ${(order.amount || 0).toLocaleString()}
                     </option>
                   ))}
                 </select>
