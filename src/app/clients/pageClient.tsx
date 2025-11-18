@@ -327,21 +327,6 @@ export default function ClientsPageClient() {
                   )}
                 </div>
 
-                {(client.total_projects || client.total_value) && (
-                  <div className="flex gap-4 mb-4 pt-4 border-t">
-                    {client.total_projects !== undefined && (
-                      <div className="text-xs text-gray-500">
-                        <span className="font-medium text-gray-700">{client.total_projects}</span> projects
-                      </div>
-                    )}
-                    {client.total_value !== undefined && (
-                      <div className="text-xs text-gray-500">
-                        <span className="font-medium text-gray-700">{formatCurrency(client.total_value)}</span> value
-                      </div>
-                    )}
-                  </div>
-                )}
-
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleEdit(client)}
