@@ -1,16 +1,14 @@
-import { redirect } from 'next/navigation'
-import { cookies } from 'next/headers'
-
 export default async function RootPage() {
-  // Check if user is logged in
-  const cookieStore = cookies()
-  const hasSession = cookieStore.get('sb-access-token') || cookieStore.get('supabase-auth-token')
-  
-  // If logged in, go to dashboard
-  if (hasSession) {
-    redirect('/dashboard')
-  }
-  
-  // Otherwise show landing page
-  redirect('/landing')
+  // Redirect to the standalone landing page in public folder
+  // This landing page has all your custom styling and animations
+  return (
+    <html>
+      <head>
+        <meta httpEquiv="refresh" content="0; url=/landing.html" />
+      </head>
+      <body>
+        <p>Redirecting to landing page...</p>
+      </body>
+    </html>
+  );
 }
