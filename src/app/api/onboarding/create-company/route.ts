@@ -19,7 +19,7 @@ export async function POST(req: Request) {
   if (!name) return NextResponse.json({ error: 'name_required' }, { status: 400 })
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  let serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  let serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE
   
   // Temporary fallback to hardcoded key if env var is missing
   if (!serviceKey) {
