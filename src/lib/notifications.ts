@@ -11,21 +11,33 @@ export async function sendExpenseNotifications(
   try {
     const supabase = await sbServer();
     
-    // Get expense details with user info
+    // Get expense details - just get the expense data
     const { data: expense, error } = await supabase
       .from('expenses')
-      .select(`
-        *,
-        creator:user_id(email),
-        approver:approved_by(email),
-        profiles!user_id(role, full_name)
-      `)
+      .select('*')
       .eq('id', expenseId)
       .single();
 
     if (error || !expense) {
       console.error('Failed to fetch expense for notification:', error);
       return;
+    }
+
+    // Fetch creator profile if submitted_by exists
+    let creatorEmail = null;
+    let creatorName = null;
+    if (expense.submitted_by || expense.user_id) {
+      const userId = expense.submitted_by || expense.user_id;
+      const { data: creatorProfile } = await supabase
+        .from('profiles')
+        .select('email, full_name')
+        .eq('id', userId)
+        .single();
+      
+      if (creatorProfile) {
+        creatorEmail = creatorProfile.email;
+        creatorName = creatorProfile.full_name;
+      }
     }
 
     const notifications = [];
@@ -48,7 +60,7 @@ export async function sendExpenseNotifications(
                 action: 'created',
                 expense,
                 recipientName: adminProfile.full_name || 'Admin',
-                actionBy: expense.profiles?.full_name || 'Unknown User'
+                actionBy: creatorName || 'Unknown User'
               })
             });
           }
@@ -56,14 +68,14 @@ export async function sendExpenseNotifications(
       }
     } else if (action === 'approved' || action === 'rejected') {
       // Notify expense creator about status change
-      if (expense.creator?.email) {
+      if (creatorEmail) {
         notifications.push({
-          to: expense.creator.email,
+          to: creatorEmail,
           subject: `Expense ${action.charAt(0).toUpperCase() + action.slice(1)} - $${expense.amount}`,
           html: createExpenseEmailHtml({
             action,
             expense,
-            recipientName: expense.profiles?.full_name || 'User',
+            recipientName: creatorName || 'User',
             actionBy: actionBy || 'Admin'
           })
         });
