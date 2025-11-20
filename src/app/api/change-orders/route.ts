@@ -67,7 +67,7 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}))
   const { order_id, proposed_qty, reason } = body as { order_id?: string; proposed_qty?: number; reason?: string }
 
-  if (!order_id || !proposed_qty || proposed_qty <= 0) {
+  if (!order_id || proposed_qty === undefined || proposed_qty === null) {
     return NextResponse.json({ error: 'invalid_payload' }, { status: 400 })
   }
 
