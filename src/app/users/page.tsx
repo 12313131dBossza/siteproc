@@ -493,7 +493,7 @@ export default function UsersPage() {
 
         {/* Invite/Edit User Modal */}
         {isModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center p-4 z-50">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-xl max-w-md w-full p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 {selectedUser ? 'Edit User' : 'Invite User'}
@@ -589,7 +589,7 @@ export default function UsersPage() {
 
         {/* User Details Modal */}
         {isDetailsModalOpen && selectedUser && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-xl max-w-md w-full p-6">
               <div className="flex items-start justify-between mb-6">
                 <div className="flex items-center gap-3">
