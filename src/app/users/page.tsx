@@ -131,23 +131,57 @@ export default function UsersPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // TODO: Replace with real API call to POST /api/users
-    const newUser: UserData = {
-      id: Date.now().toString(),
-      full_name: formData.name,
-      email: formData.email,
-      role: formData.role as any,
-      status: 'pending',
-      created_at: new Date().toISOString(),
-      last_login: null,
-      department: formData.department,
-      phone: formData.phone
-    };
-    
-    setUsers(prev => [...prev, newUser]);
-    setFormData({ name: '', email: '', role: '', department: '', phone: '' });
-    setIsModalOpen(false);
-    toast.success('Invitation sent successfully!');
+    if (selectedUser) {
+      // Update existing user
+      try {
+        const response = await fetch(`/api/users/${selectedUser.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            full_name: formData.name,
+            role: formData.role,
+            department: formData.department,
+            phone: formData.phone
+          })
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to update user');
+        }
+
+        const updatedUser = await response.json();
+        
+        // Update local state
+        setUsers(prev => prev.map(u => u.id === selectedUser.id ? updatedUser : u));
+        toast.success('User updated successfully!');
+        
+        setFormData({ name: '', email: '', role: '', department: '', phone: '' });
+        setSelectedUser(null);
+        setIsModalOpen(false);
+      } catch (error: any) {
+        console.error('Error updating user:', error);
+        toast.error(error.message || 'Failed to update user');
+      }
+    } else {
+      // Create new user (invite)
+      const newUser: UserData = {
+        id: Date.now().toString(),
+        full_name: formData.name,
+        email: formData.email,
+        role: formData.role as any,
+        status: 'pending',
+        created_at: new Date().toISOString(),
+        last_login: null,
+        department: formData.department,
+        phone: formData.phone
+      };
+      
+      setUsers(prev => [...prev, newUser]);
+      setFormData({ name: '', email: '', role: '', department: '', phone: '' });
+      setIsModalOpen(false);
+      toast.success('Invitation sent successfully!');
+    }
   };
 
   const handleEditUser = (user: UserData) => {
@@ -193,7 +227,11 @@ export default function UsersPage() {
           <Button variant="ghost" leftIcon={<Download className="h-4 w-4" />}>
             Export
           </Button>
-          <Button variant="primary" leftIcon={<UserPlus className="h-4 w-4" />} onClick={() => setIsModalOpen(true)}>
+          <Button variant="primary" leftIcon={<UserPlus className="h-4 w-4" />} onClick={() => {
+            setSelectedUser(null);
+            setFormData({ name: '', email: '', role: '', department: '', phone: '' });
+            setIsModalOpen(true);
+          }}>
             Invite User
           </Button>
         </div>
@@ -451,7 +489,7 @@ export default function UsersPage() {
 
         {/* Invite/Edit User Modal */}
         {isModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-xl max-w-md w-full p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 {selectedUser ? 'Edit User' : 'Invite User'}
