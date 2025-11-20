@@ -4,12 +4,8 @@ import "../globals.css";
 import "../mobile.css";
 import Link from 'next/link'
 import { Suspense } from 'react'
-import { ToastProvider } from '@/components/ui/Toast'
-import { Toaster } from 'sonner'
 import PWAInitializer from '@/components/PWAInitializer'
-import { SentryInitializer } from '@/components/SentryInitializer'
 import { NotificationBell } from '@/components/NotificationBell'
-import { NotificationProvider } from '@/contexts/NotificationContext'
 import { MobileBottomNav } from '@/components/MobileBottomNav'
 import GlobalSearch from '@/components/GlobalSearch'
 
@@ -47,7 +43,7 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({
+export default function AppLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
@@ -72,42 +68,33 @@ export default function RootLayout({
         <link rel="icon" type="image/png" href="/icons/icon-192.png" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <SentryInitializer />
-        <ToastProvider>
-          <NotificationProvider>
-            <Toaster position="top-right" />
-            
-            {/* Simple top bar - Desktop only */}
-            <nav className="hidden md:flex w-full p-3 justify-between items-center border-b border-black/10 dark:border-white/10 bg-white">
-              <Link href="/" className="font-semibold">SiteProc</Link>
-              <Suspense>
-                <div className="flex items-center gap-4">
-                  <GlobalSearch />
-                  <NotificationBell />
-                  <div id="offline-indicator" className="flex items-center gap-2">
-                    <span id="offline-badge" className="text-sm bg-yellow-200 text-yellow-900 px-2 py-1 rounded hidden">
-                      Sync pending
-                    </span>
-                    <span id="install-badge" className="text-sm bg-blue-200 text-blue-900 px-2 py-1 rounded cursor-pointer hidden">
-                      Install App
-                    </span>
-                  </div>
-                </div>
-              </Suspense>
-            </nav>
-            
-            {/* Main content */}
-            {children}
-            
-            {/* Footer - REMOVED per user request */}
-            
-            {/* Mobile Bottom Navigation */}
-            <MobileBottomNav />
-            
-            {/* PWA Initializer */}
-            <PWAInitializer />
-          </NotificationProvider>
-        </ToastProvider>
+        {/* Simple top bar - Desktop only */}
+        <nav className="hidden md:flex w-full p-3 justify-between items-center border-b border-black/10 dark:border-white/10 bg-white">
+          <Link href="/" className="font-semibold">SiteProc</Link>
+          <Suspense>
+            <div className="flex items-center gap-4">
+              <GlobalSearch />
+              <NotificationBell />
+              <div id="offline-indicator" className="flex items-center gap-2">
+                <span id="offline-badge" className="text-sm bg-yellow-200 text-yellow-900 px-2 py-1 rounded hidden">
+                  Sync pending
+                </span>
+                <span id="install-badge" className="text-sm bg-blue-200 text-blue-900 px-2 py-1 rounded cursor-pointer hidden">
+                  Install App
+                </span>
+              </div>
+            </div>
+          </Suspense>
+        </nav>
+        
+        {/* Main content */}
+        {children}
+        
+        {/* Mobile Bottom Navigation */}
+        <MobileBottomNav />
+        
+        {/* PWA Initializer */}
+        <PWAInitializer />
       </body>
     </html>
   );
