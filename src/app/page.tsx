@@ -1,14 +1,13 @@
+import fs from 'fs';
+import path from 'path';
+
 export default async function RootPage() {
-  // Redirect to the standalone landing page in public folder
-  // This landing page has all your custom styling and animations
+  // Read the landing page HTML from public folder
+  const landingPath = path.join(process.cwd(), 'public', 'landing.html');
+  const landingHTML = fs.readFileSync(landingPath, 'utf-8');
+  
+  // Serve the landing page directly at siteproc.com
   return (
-    <html>
-      <head>
-        <meta httpEquiv="refresh" content="0; url=/landing.html" />
-      </head>
-      <body>
-        <p>Redirecting to landing page...</p>
-      </body>
-    </html>
+    <div dangerouslySetInnerHTML={{ __html: landingHTML }} />
   );
 }
