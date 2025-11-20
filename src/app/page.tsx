@@ -1,13 +1,16 @@
 import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 
-// Placeholder auth check (replace with real session logic later)
-async function getSession(): Promise<{ userId: string | null }> {
-  // In real app, verify cookies / headers
-  return { userId: null }
-}
-
-export default async function Landing() {
-  const { userId } = await getSession()
-  if (userId) redirect('/dashboard')
-  redirect('/login')
+export default async function RootPage() {
+  // Check if user is logged in
+  const cookieStore = cookies()
+  const hasSession = cookieStore.get('sb-access-token') || cookieStore.get('supabase-auth-token')
+  
+  // If logged in, go to dashboard
+  if (hasSession) {
+    redirect('/dashboard')
+  }
+  
+  // Otherwise show landing page
+  redirect('/landing')
 }
