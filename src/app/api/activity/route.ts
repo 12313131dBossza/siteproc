@@ -285,9 +285,265 @@ export async function logActivity(params: {
       return null;
     }
 
+    // 🔔 NEW: Trigger email notifications based on activity type and action
+    // Run asynchronously - don't block activity logging if email fails
+    triggerActivityEmail(data, companyId).catch(error => {
+      console.error('Failed to send activity email notification:', error);
+    });
+
     return data;
   } catch (error) {
     console.error('Error in logActivity helper:', error);
     return null;
+  }
+}
+
+// 🔔 NEW: Email notification trigger based on activity logs
+async function triggerActivityEmail(activity: any, companyId: string) {
+  try {
+    // Dynamically import email functions to avoid circular dependencies
+    const emailLib = await import('@/lib/email');
+    const { getCompanyAdminEmails } = await import('@/lib/server-utils');
+    
+    if (!emailLib.isEmailEnabled()) {
+      console.log('📧 Email notifications disabled - skipping');
+      return;
+    }
+
+    const supabase = await sbServer();
+    const dashboardUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    
+    // Determine who to notify and what email to send based on activity
+    const emailType = `${activity.type}_${activity.action}`;
+    
+    console.log(`📧 Processing email for activity: ${emailType}`);
+
+    switch (emailType) {
+      // ORDER NOTIFICATIONS
+      case 'order_approved':
+      case 'order_rejected': {
+        // Notify the person who created the order
+        if (activity.metadata?.created_by || activity.metadata?.order_creator_id) {
+          const creatorId = activity.metadata.created_by || activity.metadata.order_creator_id;
+          const { data: creator } = await supabase
+            .from('profiles')
+            .select('email, full_name')
+            .eq('id', creatorId)
+            .single();
+
+          if (creator?.email) {
+            const isApproval = activity.action === 'approved';
+            const notificationFn = isApproval ? emailLib.sendOrderApprovalNotification : emailLib.sendOrderRejectionNotification;
+            
+            await notificationFn({
+              orderId: activity.entity_id || 'N/A',
+              projectName: activity.metadata?.project_name || 'Project',
+              companyName: activity.metadata?.company_name || 'Company',
+              requestedBy: creator.full_name || creator.email,
+              requestedByEmail: creator.email,
+              amount: activity.amount || 0,
+              description: activity.description || activity.title,
+              category: activity.metadata?.category || 'General',
+              approverName: activity.user_name || 'Admin',
+              dashboardUrl: `${dashboardUrl}/orders`,
+              ...(isApproval ? { approvedBy: activity.user_name || 'Admin' } : { 
+                rejectedBy: activity.user_name || 'Admin',
+                reason: activity.metadata?.rejection_reason || activity.metadata?.notes || 'No reason provided'
+              })
+            });
+            console.log(`✅ Order ${activity.action} email sent to ${creator.email}`);
+          }
+        }
+        break;
+      }
+
+      // EXPENSE NOTIFICATIONS
+      case 'expense_created':
+      case 'expense_submitted': {
+        // Notify admins when expense is submitted
+        const adminEmails = await getCompanyAdminEmails(companyId);
+        if (adminEmails.length > 0) {
+          await emailLib.sendExpenseSubmissionNotification({
+            expenseId: activity.entity_id || 'N/A',
+            vendor: activity.metadata?.vendor || 'Vendor',
+            category: activity.metadata?.category || 'General',
+            amount: activity.amount || 0,
+            description: activity.description || activity.title,
+            submittedBy: activity.user_name || 'User',
+            submittedByEmail: activity.user_email || 'user@example.com',
+            companyName: activity.metadata?.company_name || 'Company',
+            approverName: adminEmails[0],
+            dashboardUrl: `${dashboardUrl}/expenses`,
+          });
+          console.log(`✅ Expense submission email sent to ${adminEmails.length} admins`);
+        }
+        break;
+      }
+
+      case 'expense_approved':
+      case 'expense_rejected': {
+        // Notify the person who submitted the expense
+        if (activity.metadata?.submitted_by) {
+          const { data: submitter } = await supabase
+            .from('profiles')
+            .select('email, full_name')
+            .eq('id', activity.metadata.submitted_by)
+            .single();
+
+          if (submitter?.email) {
+            // Use generic approval/rejection email template
+            const status = activity.action === 'approved' ? 'Approved' : 'Rejected';
+            await emailLib.sendEmail({
+              to: submitter.email,
+              subject: `Expense ${status}`,
+              html: `
+                <h2>Expense ${status}</h2>
+                <p>Hi ${submitter.full_name || 'there'},</p>
+                <p>Your expense for <strong>${activity.metadata?.vendor || 'Unknown'}</strong> (${activity.amount ? `$${activity.amount}` : 'Amount N/A'}) has been <strong>${status.toLowerCase()}</strong>.</p>
+                ${activity.metadata?.notes ? `<p><strong>Note:</strong> ${activity.metadata.notes}</p>` : ''}
+                <p>${status} by: ${activity.user_name || 'Admin'}</p>
+                <p><a href="${dashboardUrl}/expenses" style="background: #3b82f6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">View Expenses</a></p>
+              `,
+              text: `Expense ${status}\n\nYour expense for ${activity.metadata?.vendor || 'Unknown'} has been ${status.toLowerCase()}.\n\nView at: ${dashboardUrl}/expenses`
+            });
+            console.log(`✅ Expense ${activity.action} email sent to ${submitter.email}`);
+          }
+        }
+        break;
+      }
+
+      // DELIVERY NOTIFICATIONS
+      case 'delivery_updated':
+      case 'delivery_completed': {
+        // Notify order creator when delivery is completed
+        if (activity.metadata?.order_id) {
+          const { data: order } = await supabase
+            .from('purchase_orders')
+            .select('created_by')
+            .eq('id', activity.metadata.order_id)
+            .single();
+
+          if (order?.created_by) {
+            const { data: creator } = await supabase
+              .from('profiles')
+              .select('email, full_name')
+              .eq('id', order.created_by)
+              .single();
+
+            if (creator?.email) {
+              await emailLib.sendDeliveryConfirmationNotification({
+                deliveryId: activity.entity_id || 'N/A',
+                projectName: activity.metadata?.project_name || 'Project',
+                companyName: activity.metadata?.company_name || 'Company',
+                orderId: activity.metadata.order_id,
+                orderDescription: activity.description || 'Order',
+                deliveredBy: activity.user_name || 'System',
+                deliveredByEmail: activity.user_email || 'system@example.com',
+                adminName: creator.full_name || creator.email,
+                dashboardUrl: `${dashboardUrl}/deliveries`,
+                photoUrls: activity.metadata?.photo_urls || []
+              });
+              console.log(`✅ Delivery completed email sent to ${creator.email}`);
+            }
+          }
+        }
+        break;
+      }
+
+      // PAYMENT NOTIFICATIONS
+      case 'payment_created':
+      case 'payment_status_changed':
+      case 'payment_updated': {
+        // Notify admins for payment requests
+        const adminEmails = await getCompanyAdminEmails(companyId);
+        if (adminEmails.length > 0 && activity.action === 'created') {
+          await emailLib.sendEmail({
+            to: adminEmails,
+            subject: 'New Payment Request',
+            html: `
+              <h2>New Payment Request</h2>
+              <p>A new payment has been recorded:</p>
+              <ul>
+                <li><strong>Vendor:</strong> ${activity.metadata?.vendor_name || 'Unknown'}</li>
+                <li><strong>Amount:</strong> $${activity.amount || 0}</li>
+                <li><strong>Status:</strong> ${activity.metadata?.status || 'Pending'}</li>
+                <li><strong>Created by:</strong> ${activity.user_name || 'User'}</li>
+              </ul>
+              <p><a href="${dashboardUrl}/payments" style="background: #3b82f6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Review Payment</a></p>
+            `,
+            text: `New payment request from ${activity.user_name}: $${activity.amount || 0} to ${activity.metadata?.vendor_name || 'Unknown'}\n\nView at: ${dashboardUrl}/payments`
+          });
+          console.log(`✅ Payment ${activity.action} email sent to ${adminEmails.length} admins`);
+        }
+        
+        // Notify creator when payment status changes
+        if (activity.action !== 'created' && activity.metadata?.created_by) {
+          const { data: creator } = await supabase
+            .from('profiles')
+            .select('email, full_name')
+            .eq('id', activity.metadata.created_by)
+            .single();
+
+          if (creator?.email) {
+            await emailLib.sendEmail({
+              to: creator.email,
+              subject: 'Payment Status Updated',
+              html: `
+                <h2>Payment Status Updated</h2>
+                <p>Hi ${creator.full_name || 'there'},</p>
+                <p>Payment to <strong>${activity.metadata?.vendor_name || 'Unknown'}</strong> (${activity.amount ? `$${activity.amount}` : 'Amount N/A'}) status has been updated to <strong>${activity.metadata?.new_status || activity.metadata?.status || 'Updated'}</strong>.</p>
+                <p>Updated by: ${activity.user_name || 'Admin'}</p>
+                <p><a href="${dashboardUrl}/payments" style="background: #3b82f6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">View Payments</a></p>
+              `,
+              text: `Payment status updated for ${activity.metadata?.vendor_name || 'Unknown'}: ${activity.metadata?.new_status || 'Updated'}\n\nView at: ${dashboardUrl}/payments`
+            });
+            console.log(`✅ Payment status email sent to ${creator.email}`);
+          }
+        }
+        break;
+      }
+
+      // CHANGE ORDER NOTIFICATIONS
+      case 'change_order_approved':
+      case 'change_order_rejected': {
+        // Notify the person who created the change order
+        if (activity.metadata?.created_by) {
+          const { data: creator } = await supabase
+            .from('profiles')
+            .select('email, full_name')
+            .eq('id', activity.metadata.created_by)
+            .single();
+
+          if (creator?.email) {
+            const status = activity.action === 'approved' ? 'Approved' : 'Rejected';
+            await emailLib.sendEmail({
+              to: creator.email,
+              subject: `Change Order ${status}`,
+              html: `
+                <h2>Change Order ${status}</h2>
+                <p>Hi ${creator.full_name || 'there'},</p>
+                <p>Your change order request has been <strong>${status.toLowerCase()}</strong>.</p>
+                <ul>
+                  <li><strong>Cost Change:</strong> $${activity.metadata?.cost_delta || 0}</li>
+                  <li><strong>Reason:</strong> ${activity.metadata?.reason || 'N/A'}</li>
+                  <li><strong>${status} by:</strong> ${activity.user_name || 'Admin'}</li>
+                </ul>
+                ${activity.metadata?.notes ? `<p><strong>Note:</strong> ${activity.metadata.notes}</p>` : ''}
+                <p><a href="${dashboardUrl}/change-orders" style="background: #3b82f6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">View Change Orders</a></p>
+              `,
+              text: `Change Order ${status}\n\nYour change order has been ${status.toLowerCase()}.\nCost change: $${activity.metadata?.cost_delta || 0}\n\nView at: ${dashboardUrl}/change-orders`
+            });
+            console.log(`✅ Change order ${activity.action} email sent to ${creator.email}`);
+          }
+        }
+        break;
+      }
+
+      default:
+        console.log(`📧 No email template for activity type: ${emailType}`);
+    }
+  } catch (error) {
+    console.error('Error sending activity-triggered email:', error);
+    throw error; // Re-throw to be caught by caller
   }
 }
