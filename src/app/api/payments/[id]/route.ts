@@ -4,6 +4,7 @@ import { supabaseService } from '@/lib/supabase'
 import { audit } from '@/lib/audit'
 import { broadcastDashboardUpdated } from '@/lib/realtime'
 import { logActivity } from '@/app/api/activity/route'
+import { notifyPaymentUpdated } from '@/lib/notification-triggers'
 
 export const runtime = 'nodejs'
 
@@ -108,6 +109,46 @@ export async function PATCH(req: NextRequest, ctx: any) {
       })
     } catch (logError) {
       console.error('Failed to log payment update activity:', logError)
+    }
+
+    // Create in-app notification for payment status change
+    if (existing.status !== updated.status) {
+      try {
+        // Fetch payment creator to notify them
+        const { data: payment, error: paymentError } = await (sb as any)
+          .from('payments')
+          .select('created_by, company_id')
+          .eq('id', updated.id)
+          .single()
+
+        if (!paymentError && payment && payment.created_by && payment.company_id) {
+          // Fetch approver profile for name
+          const { data: approverProfile } = await (sb as any)
+            .from('profiles')
+            .select('full_name')
+            .eq('id', session.user.id)
+            .single()
+
+          const approverName = approverProfile?.full_name || session.user.email || 'Admin'
+
+          console.log(`🔔 PAYMENT NOTIFICATION: Notifying user ${payment.created_by} about payment status change to ${updated.status}`)
+
+          await notifyPaymentUpdated({
+            paymentId: updated.id,
+            creatorId: payment.created_by,
+            companyId: payment.company_id,
+            newStatus: updated.status,
+            vendor: updated.vendor_name,
+            amount: updated.amount,
+            updaterName: approverName
+          })
+
+          console.log(`✅ Payment notification sent to user ${payment.created_by}`)
+        }
+      } catch (notifError) {
+        console.error('Failed to create payment notification:', notifError)
+        // Don't fail the request if notification fails
+      }
     }
 
     // Keep old audit for compatibility

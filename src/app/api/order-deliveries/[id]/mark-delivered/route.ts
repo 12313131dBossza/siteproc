@@ -157,24 +157,40 @@ export async function PATCH(
 
     // Create in-app notification for delivery completion
     try {
+      console.log(`🔔 DELIVERY: Attempting to create notification for delivery ${deliveryId}`)
+      console.log(`🔔 DELIVERY: Order ID is ${delivery.order_id}`)
+      
       // Get order details to find who to notify
-      const { data: orderData } = await supabase
+      const { data: orderData, error: orderFetchError } = await supabase
         .from('purchase_orders')
         .select('created_by, company_id, order_number, projects(name)')
         .eq('id', delivery.order_id)
         .single()
 
+      console.log(`🔔 DELIVERY: Order data fetched:`, { orderData, error: orderFetchError })
+
       if (orderData && orderData.created_by && orderData.company_id) {
+        console.log(`🔔 DELIVERY: Sending notification to user ${orderData.created_by}`)
+        
+        // Extract project name from projects array
+        const projectName = (orderData.projects as any)?.name || undefined
+        
         await notifyDeliveryStatus({
           deliveryId: deliveryId,
           recipientUserIds: [orderData.created_by], // Notify order creator
           companyId: orderData.company_id,
           deliveryNumber: delivery.delivery_number || undefined,
-          projectName: orderData.projects?.name || undefined,
+          projectName: projectName,
           newStatus: 'delivered',
           orderId: delivery.order_id || undefined
         })
         console.log(`✅ Delivery notification sent to user ${orderData.created_by}`)
+      } else {
+        console.warn(`⚠️ DELIVERY: Cannot send notification - missing data`, {
+          hasOrderData: !!orderData,
+          hasCreatedBy: orderData?.created_by,
+          hasCompanyId: orderData?.company_id
+        })
       }
     } catch (notifError) {
       console.error('Failed to create delivery notification:', notifError)

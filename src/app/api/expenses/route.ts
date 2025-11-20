@@ -122,6 +122,7 @@ export async function POST(request: NextRequest) {
       company_id: profile.company_id,
       spent_at: spendDate,
       user_id: user.id,
+      submitted_by: user.id, // Set submitted_by for notification triggers
       receipt_url: body.receipt_url || null,
     }
 
@@ -172,32 +173,6 @@ export async function POST(request: NextRequest) {
         amount: expense.amount
       })
     } catch {}
-
-    // Send email notification to admins (only if pending approval)
-    if (expense.status === 'pending') {
-      try {
-        const adminEmails = await getCompanyAdminEmails(profile.company_id)
-        const submitterName = profile.full_name || user.email || 'User'
-        
-        if (adminEmails.length > 0) {
-          await sendExpenseSubmissionNotification({
-            expenseId: expense.id,
-            vendor: expense.vendor || 'Vendor',
-            category: expense.category,
-            amount: expense.amount,
-            description: expense.description || '',
-            submittedBy: submitterName,
-            submittedByEmail: user.email || '',
-            companyName: profile.company?.name || 'Your Company',
-            approverName: adminEmails[0],
-            dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL}/expenses`
-          })
-        }
-      } catch (emailError) {
-        console.error('Failed to send expense submission notification:', emailError)
-        // Don't fail the request if email fails
-      }
-    }
 
     return NextResponse.json({
       id: expense.id,
