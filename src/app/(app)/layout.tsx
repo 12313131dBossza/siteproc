@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-import "./mobile.css";
+import "../globals.css";
+import "../mobile.css";
 import Link from 'next/link'
 import { Suspense } from 'react'
 import { ToastProvider } from '@/components/ui/Toast'
