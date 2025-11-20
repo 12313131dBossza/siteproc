@@ -32,15 +32,15 @@ import { toast } from 'sonner';
 
 interface UserData {
   id: string;
-  full_name: string;
-  email: string;
-  role: 'owner' | 'admin' | 'manager' | 'accountant' | 'viewer';
+  full_name: string | null;
+  email: string | null;
+  role: 'owner' | 'admin' | 'manager' | 'accountant' | 'viewer' | null;
   status: 'active' | 'pending' | 'inactive';
   created_at: string;
   last_login: string | null;
-  avatar_url?: string;
-  phone?: string;
-  department?: string;
+  avatar_url?: string | null;
+  phone?: string | null;
+  department?: string | null;
 }
 
 function useUsers() {
@@ -99,7 +99,8 @@ export default function UsersPage() {
   });
 
   const roleCounts = users.reduce((acc, user) => {
-    acc[user.role] = (acc[user.role] || 0) + 1;
+    const role = user.role || 'viewer';
+    acc[role] = (acc[role] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 
@@ -108,7 +109,7 @@ export default function UsersPage() {
     return acc;
   }, {} as Record<string, number>);
 
-  const getRoleConfig = (role: string) => {
+  const getRoleConfig = (role: string | null) => {
     const configs = {
       owner: { icon: Crown, color: 'text-purple-600 bg-purple-50 border-purple-200', label: 'Owner' },
       admin: { icon: Shield, color: 'text-blue-600 bg-blue-50 border-blue-200', label: 'Admin' },
@@ -116,7 +117,7 @@ export default function UsersPage() {
       accountant: { icon: Settings, color: 'text-orange-600 bg-orange-50 border-orange-200', label: 'Accountant' },
       viewer: { icon: Eye, color: 'text-gray-600 bg-gray-50 border-gray-200', label: 'Viewer' }
     };
-    return configs[role as keyof typeof configs] || configs.viewer;
+    return configs[(role as keyof typeof configs) || 'viewer'] || configs.viewer;
   };
 
   const getStatusConfig = (status: string) => {
@@ -187,17 +188,20 @@ export default function UsersPage() {
   const handleEditUser = (user: UserData) => {
     setSelectedUser(user);
     setFormData({
-      name: user.full_name,
-      email: user.email,
-      role: user.role,
+      name: user.full_name || '',
+      email: user.email || '',
+      role: user.role || '',
       department: user.department || '',
       phone: user.phone || ''
     });
     setIsModalOpen(true);
   };
 
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  const getInitials = (name: string | null | undefined) => {
+    if (!name || typeof name !== 'string') return '?';
+    const parts = name.trim().split(' ').filter(Boolean);
+    if (parts.length === 0) return '?';
+    return parts.map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
   if (loading) {
