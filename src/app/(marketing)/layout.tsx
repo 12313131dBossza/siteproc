@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import '@/app/globals.css';
 
 export const metadata: Metadata = {
   title: 'SiteProc - Construction Management Platform',
@@ -13,7 +12,7 @@ export default function MarketingLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body style={{ margin: 0, padding: 0 }}>{children}</body>
     </html>
   );
 }

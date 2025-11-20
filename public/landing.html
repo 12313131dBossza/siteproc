@@ -2361,9 +2361,10 @@
         }
 
         @media (max-width: 768px) {
-            /* Hide header on mobile */
+            /* Show header on mobile but hide menu items */
             .site-header {
-                display: none;
+                display: block;
+                padding: 0.75rem 1rem;
             }
 
             .nav-menu {
@@ -2378,13 +2379,15 @@
                 display: none;
             }
 
-            /* Add extra bottom padding for iOS Safari bar */
+            /* Add side padding to prevent edge-to-edge content */
             body {
-                padding-bottom: calc(env(safe-area-inset-bottom) + 80px);
+                padding-left: 1rem;
+                padding-right: 1rem;
+                padding-bottom: calc(env(safe-area-inset-bottom) + 40px);
             }
 
             .hero-section {
-                padding: 3rem 1.5rem 3rem;
+                padding: 5rem 0 3rem;
                 min-height: auto;
             }
 
@@ -2435,7 +2438,7 @@
             }
 
             .features-section {
-                padding: 4rem 1.5rem;
+                padding: 4rem 0;
             }
 
             .section-header {
