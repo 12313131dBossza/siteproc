@@ -1,23 +1,30 @@
+import './globals.css'
+import './mobile.css'
 import { ToastProvider } from '@/components/ui/Toast'
 import { Toaster } from 'sonner'
 import { NotificationProvider } from '@/contexts/NotificationContext'
 import { SentryInitializer } from '@/components/SentryInitializer'
 
-// Minimal root layout with only providers - route groups handle their own navigation
+// Root layout provides html/body structure and providers for all routes
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <>
-      <SentryInitializer />
-      <ToastProvider>
-        <NotificationProvider>
-          <Toaster position="top-right" />
-          {children}
-        </NotificationProvider>
-      </ToastProvider>
-    </>
+    <html lang="en">
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+      </head>
+      <body>
+        <SentryInitializer />
+        <ToastProvider>
+          <NotificationProvider>
+            <Toaster position="top-right" />
+            {children}
+          </NotificationProvider>
+        </ToastProvider>
+      </body>
+    </html>
   );
 }

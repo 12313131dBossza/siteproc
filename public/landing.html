@@ -2361,8 +2361,9 @@
         }
 
         @media (max-width: 768px) {
-            /* Show header on mobile but make it more transparent */
+            /* Show header on mobile but make it non-sticky */
             .site-header {
+                position: relative;
                 display: block;
                 padding: 0.75rem 1rem;
                 background: rgba(15, 23, 42, 0.95);
@@ -2388,7 +2389,7 @@
             }
 
             .hero-section {
-                padding: 6rem 0 3rem;
+                padding: 2rem 0 3rem;
                 min-height: auto;
             }
 
