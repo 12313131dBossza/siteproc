@@ -2,6 +2,71 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
+// GET - Fetch invitation details (no auth required)
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url)
+    const token = searchParams.get('token')
+
+    if (!token) {
+      return NextResponse.json({ error: 'Token is required' }, { status: 400 })
+    }
+
+    // Use admin client to bypass RLS
+    const adminSupabase = createAdminClient()
+
+    // Find the pending invitation by token
+    const { data: member, error: findError } = await adminSupabase
+      .from('project_members')
+      .select('*, projects(name, company_id)')
+      .eq('invitation_token', token)
+      .eq('status', 'pending')
+      .single()
+
+    if (findError || !member) {
+      console.error('Find invitation error:', findError)
+      return NextResponse.json({ 
+        error: 'Invalid or expired invitation. The invitation may have already been used or revoked.' 
+      }, { status: 404 })
+    }
+
+    // Check if invitation has expired (24 hours)
+    const invitedAt = new Date(member.invitation_sent_at || member.created_at)
+    const now = new Date()
+    const hoursDiff = (now.getTime() - invitedAt.getTime()) / (1000 * 60 * 60)
+    
+    if (hoursDiff > 24) {
+      return NextResponse.json({ 
+        error: 'This invitation has expired. Please ask the project owner to send a new invitation.' 
+      }, { status: 410 })
+    }
+
+    // Get company name
+    let companyName = ''
+    if ((member.projects as any)?.company_id) {
+      const { data: company } = await adminSupabase
+        .from('companies')
+        .select('name')
+        .eq('id', (member.projects as any).company_id)
+        .single()
+      companyName = company?.name || ''
+    }
+
+    // Return invitation details (without sensitive data)
+    return NextResponse.json({
+      email: member.external_email || '',
+      projectName: (member.projects as any)?.name || 'Unknown Project',
+      projectId: member.project_id,
+      companyName,
+      role: member.role || 'viewer'
+    })
+
+  } catch (err: any) {
+    console.error('Get invitation info error:', err)
+    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 })
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { token } = await req.json()
