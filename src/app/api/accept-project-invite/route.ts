@@ -97,16 +97,43 @@ export async function POST(req: NextRequest) {
       .eq('id', member.project_id)
       .single()
 
-    // If user doesn't have a company yet, add them to the project's company
-    const { data: userProfile } = await adminSupabase
+    // Check if user has a profile, create one if not
+    const { data: userProfile, error: profileError } = await adminSupabase
       .from('profiles')
-      .select('company_id')
+      .select('id, company_id')
       .eq('id', user.id)
       .single()
 
-    if (project?.company_id && (!userProfile?.company_id)) {
-      // Add user to the company as a viewer (limited role for external collaborators)
-      await adminSupabase
+    if (profileError || !userProfile) {
+      // User doesn't have a profile yet - create one
+      console.log(`Creating profile for user ${user.id}`)
+      const { error: createError } = await adminSupabase
+        .from('profiles')
+        .insert({
+          id: user.id,
+          email: user.email,
+          full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+          company_id: project?.company_id,
+          role: 'viewer'
+        })
+      
+      if (createError) {
+        console.error('Failed to create profile:', createError)
+        // Try upsert instead
+        await adminSupabase
+          .from('profiles')
+          .upsert({
+            id: user.id,
+            email: user.email,
+            full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+            company_id: project?.company_id,
+            role: 'viewer'
+          })
+      }
+      console.log(`Created profile for user ${user.id} in company ${project?.company_id}`)
+    } else if (project?.company_id && (!userProfile?.company_id)) {
+      // User has profile but no company - add them to the project's company
+      const { error: updateProfileError } = await adminSupabase
         .from('profiles')
         .update({ 
           company_id: project.company_id,
@@ -114,7 +141,11 @@ export async function POST(req: NextRequest) {
         })
         .eq('id', user.id)
       
-      console.log(`Added user ${user.id} to company ${project.company_id} as viewer`)
+      if (updateProfileError) {
+        console.error('Failed to update profile with company:', updateProfileError)
+      } else {
+        console.log(`Added user ${user.id} to company ${project.company_id} as viewer`)
+      }
     }
 
     const projectName = (member.projects as any)?.name || 'the project'
