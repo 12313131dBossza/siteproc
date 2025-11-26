@@ -34,6 +34,16 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next()
   }
   
+  // Skip for accept-project-invite page (external users accepting invitations)
+  if (url.pathname.startsWith('/accept-project-invite')) {
+    return NextResponse.next()
+  }
+  
+  // Skip for the API endpoint that handles invitation acceptance
+  if (url.pathname.startsWith('/api/accept-project-invite')) {
+    return NextResponse.next()
+  }
+  
   // Handle authentication for protected routes
   const isProtectedRoute = protectedRoutes.some(route => url.pathname.startsWith(route))
   
@@ -224,4 +234,4 @@ export async function middleware(req: NextRequest) {
   return res
 }
 
-export const config = { matcher: ['/((?!onboarding|api|_next|static|favicon.ico).*)'] }
+export const config = { matcher: ['/((?!onboarding|accept-project-invite|api|_next|static|favicon.ico).*)'] }

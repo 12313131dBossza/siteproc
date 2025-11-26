@@ -90,6 +90,33 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to accept invitation' }, { status: 500 })
     }
 
+    // Get the project's company_id so we can add the user to it
+    const { data: project } = await adminSupabase
+      .from('projects')
+      .select('company_id')
+      .eq('id', member.project_id)
+      .single()
+
+    // If user doesn't have a company yet, add them to the project's company
+    const { data: userProfile } = await adminSupabase
+      .from('profiles')
+      .select('company_id')
+      .eq('id', user.id)
+      .single()
+
+    if (project?.company_id && (!userProfile?.company_id)) {
+      // Add user to the company as a viewer (limited role for external collaborators)
+      await adminSupabase
+        .from('profiles')
+        .update({ 
+          company_id: project.company_id,
+          role: 'viewer' // External collaborators get viewer role
+        })
+        .eq('id', user.id)
+      
+      console.log(`Added user ${user.id} to company ${project.company_id} as viewer`)
+    }
+
     const projectName = (member.projects as any)?.name || 'the project'
 
     return NextResponse.json({
