@@ -1,5 +1,6 @@
 import { sbServer } from '@/lib/supabase-server';
 import { NextRequest, NextResponse } from 'next/server';
+import { sendProjectInvitationEmail } from '@/lib/email';
 
 // GET /api/projects/[id]/members - List project members
 export async function GET(
@@ -150,7 +151,42 @@ export async function POST(
       return NextResponse.json({ error: `Failed to add member: ${insertError.message}` }, { status: 500 });
     }
 
-    // TODO: Send invitation email for external users
+    // Send invitation email for external users
+    if (isExternal && memberData.invitation_token) {
+      try {
+        // Get project and inviter info
+        const { data: project } = await supabase
+          .from('projects')
+          .select('name, company_id')
+          .eq('id', projectId)
+          .single();
+
+        const { data: inviterProfile } = await supabase
+          .from('profiles')
+          .select('full_name, companies:company_id(name)')
+          .eq('id', user.id)
+          .single();
+
+        const companyName = (inviterProfile?.companies as any)?.name || 'Unknown Company';
+        const inviterName = inviterProfile?.full_name || 'A team member';
+
+        await sendProjectInvitationEmail({
+          to: external_email,
+          inviterName,
+          projectName: project?.name || 'Project',
+          companyName,
+          role,
+          invitationToken: memberData.invitation_token,
+          externalName: external_name,
+          permissions: memberData.permissions,
+        });
+
+        console.log(`Project invitation email sent to ${external_email}`);
+      } catch (emailError) {
+        console.error('Failed to send invitation email:', emailError);
+        // Don't fail the request if email fails - member was still added
+      }
+    }
 
     return NextResponse.json({ member }, { status: 201 });
   } catch (error) {

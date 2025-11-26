@@ -552,3 +552,121 @@ This is an automated email from SiteProc.`
     text
   })
 }
+
+// Project Access Invitation Email
+interface ProjectInvitationEmailData {
+  to: string
+  inviterName: string
+  projectName: string
+  companyName: string
+  role: string
+  invitationToken: string
+  externalName?: string
+  permissions?: Record<string, boolean>
+}
+
+export async function sendProjectInvitationEmail(data: ProjectInvitationEmailData) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://siteproc1.vercel.app'
+  const acceptUrl = `${appUrl}/accept-project-invite?token=${data.invitationToken}`
+  
+  const permissionsList = data.permissions 
+    ? Object.entries(data.permissions)
+        .filter(([_, v]) => v)
+        .map(([k]) => k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()))
+        .join(', ')
+    : 'View Project'
+
+  const subject = `You've been invited to project "${data.projectName}" on SiteProc`
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Project Invitation - ${data.projectName}</title>
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: #ffffff; border-radius: 8px; padding: 32px; border: 1px solid #e5e7eb;">
+          <div style="text-align: center; margin-bottom: 32px;">
+            <h1 style="color: #2563eb; font-size: 28px; margin: 0;">🏗️ SiteProc</h1>
+          </div>
+          
+          <div style="margin-bottom: 32px;">
+            <h2>You've been invited to a project!</h2>
+            <p>Hi${data.externalName ? ` ${data.externalName}` : ''},</p>
+            <p>
+              <strong>${data.inviterName}</strong> from <strong>${data.companyName}</strong> has invited you 
+              to collaborate on the project <strong>"${data.projectName}"</strong>.
+            </p>
+            
+            <div style="background: #f3f4f6; border-radius: 6px; padding: 16px; margin: 24px 0;">
+              <p style="margin: 8px 0;"><strong>Project:</strong> ${data.projectName}</p>
+              <p style="margin: 8px 0;"><strong>Company:</strong> ${data.companyName}</p>
+              <p style="margin: 8px 0;"><strong>Your Role:</strong> ${data.role}</p>
+              <p style="margin: 8px 0;"><strong>Permissions:</strong> ${permissionsList}</p>
+              <p style="margin: 8px 0;"><strong>Invited by:</strong> ${data.inviterName}</p>
+            </div>
+
+            <div style="text-align: center; margin: 32px 0;">
+              <a href="${acceptUrl}" style="display: inline-block; background: #2563eb; color: #ffffff; padding: 14px 32px; border-radius: 6px; text-decoration: none; font-weight: 600;">
+                Accept Invitation
+              </a>
+            </div>
+
+            <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; margin: 24px 0; font-size: 14px;">
+              ⏰ <strong>This invitation expires in 7 days.</strong>
+              <br>
+              Click the button above to access the project.
+            </div>
+
+            <p style="font-size: 14px; color: #6b7280;">
+              If the button doesn't work, copy and paste this link into your browser:
+              <br>
+              <a href="${acceptUrl}" style="color: #2563eb; word-break: break-all;">
+                ${acceptUrl}
+              </a>
+            </p>
+          </div>
+
+          <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e5e7eb; font-size: 14px; color: #6b7280; text-align: center;">
+            <p>
+              This invitation was sent from SiteProc, a construction project management platform.
+            </p>
+            <p>
+              If you didn't expect this invitation, you can safely ignore this email.
+            </p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `
+
+  const text = `You've been invited to project "${data.projectName}" on SiteProc!
+
+Hi${data.externalName ? ` ${data.externalName}` : ''},
+
+${data.inviterName} from ${data.companyName} has invited you to collaborate on the project "${data.projectName}".
+
+Project: ${data.projectName}
+Company: ${data.companyName}
+Your Role: ${data.role}
+Permissions: ${permissionsList}
+Invited by: ${data.inviterName}
+
+Click here to accept the invitation:
+${acceptUrl}
+
+⏰ This invitation expires in 7 days.
+
+If you didn't expect this invitation, you can safely ignore this email.
+
+---
+This is an automated email from SiteProc.`
+
+  return sendEmail({
+    to: data.to,
+    subject,
+    html,
+    text
+  })
+}
