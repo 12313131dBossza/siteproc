@@ -63,12 +63,15 @@ export async function POST(req: NextRequest) {
 
     const userEmail = profile?.email || user.email
 
-    // If invitation was sent to a specific email, verify it matches
+    // Note: We're allowing any authenticated user to accept the invitation
+    // If you want strict email matching, uncomment the block below:
+    /*
     if (member.external_email && userEmail && member.external_email.toLowerCase() !== userEmail.toLowerCase()) {
       return NextResponse.json({ 
         error: `This invitation was sent to ${member.external_email}. Please log in with that email address.` 
       }, { status: 403 })
     }
+    */
 
     // Accept the invitation - update the member record
     const { error: updateError } = await adminSupabase
