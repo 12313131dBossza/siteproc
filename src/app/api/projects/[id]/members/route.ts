@@ -16,17 +16,10 @@ export async function GET(
 
     const projectId = params.id;
 
-    // Get members with profile info for internal users
+    // Get members (without join - we'll enrich separately)
     const { data: members, error } = await supabase
       .from('project_members')
-      .select(`
-        *,
-        profiles:user_id (
-          full_name,
-          email,
-          avatar_url
-        )
-      `)
+      .select('*')
       .eq('project_id', projectId)
       .order('created_at', { ascending: true });
 
@@ -35,7 +28,24 @@ export async function GET(
       return NextResponse.json({ error: 'Failed to fetch members' }, { status: 500 });
     }
 
-    return NextResponse.json({ members });
+    // Enrich internal members with profile data
+    const enrichedMembers = await Promise.all(
+      (members || []).map(async (member) => {
+        if (member.user_id) {
+          // Fetch profile for internal users
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('full_name, email, avatar_url')
+            .eq('id', member.user_id)
+            .single();
+          
+          return { ...member, profiles: profile };
+        }
+        return { ...member, profiles: null };
+      })
+    );
+
+    return NextResponse.json({ members: enrichedMembers });
   } catch (error) {
     console.error('Unexpected error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
