@@ -57,6 +57,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
     }
 
+    // Enrich users with status and last_login if missing
+    // Users with a profile are 'active', users from invitations are 'pending'
+    const enrichedUsers = (users || []).map(u => ({
+      ...u,
+      status: u.status || 'active', // Default to active for users with profiles
+      last_login: u.last_login || null,
+    }));
+
     // Log activity
     await supabase.rpc('log_user_activity', {
       action_name: 'users.list',
@@ -64,7 +72,7 @@ export async function GET(request: NextRequest) {
       details_json: { filters: { role, status, search } }
     });
 
-    return NextResponse.json(users);
+    return NextResponse.json(enrichedUsers);
   } catch (error) {
     console.error('Unexpected error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
