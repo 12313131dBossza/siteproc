@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -111,6 +110,19 @@ const DEFAULT_PERMISSIONS = {
   create_orders: false,
   upload_documents: false,
   invite_others: false,
+};
+
+// Permission display names for better readability
+const PERMISSION_LABELS: Record<string, string> = {
+  view_project: 'View Project',
+  view_orders: 'View Orders',
+  view_expenses: 'View Expenses',
+  view_payments: 'View Payments',
+  view_documents: 'View Documents',
+  edit_project: 'Edit Project',
+  create_orders: 'Create Orders',
+  upload_documents: 'Upload Documents',
+  invite_others: 'Invite Others',
 };
 
 export function ProjectAccessModal({ projectId, projectName, isOpen, onClose }: Props) {
@@ -286,375 +298,423 @@ export function ProjectAccessModal({ projectId, projectName, isOpen, onClose }: 
     }
   }
 
+  // Don't render if not open
+  if (!isOpen) return null;
+
   return (
-    <Modal open={isOpen} onClose={onClose} title="">
-      <div className="min-w-[500px] max-w-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div 
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm" 
+        onClick={onClose} 
+      />
+      
+      {/* Modal Container */}
+      <div className="relative w-full max-w-xl bg-white rounded-xl shadow-2xl animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between p-5 border-b">
           <div>
-            <h2 className="text-xl font-semibold text-gray-900">Project Access</h2>
-            <p className="text-sm text-gray-500 mt-1">{projectName}</p>
+            <h2 className="text-lg font-semibold text-gray-900">Project Access</h2>
+            <p className="text-sm text-gray-500 mt-0.5 truncate max-w-[300px]" title={projectName}>
+              {projectName}
+            </p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
+          <button 
+            onClick={onClose} 
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
             <X className="h-5 w-5 text-gray-500" />
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 border-b mb-6">
+        <div className="flex border-b px-5">
           <button
             onClick={() => setTab('members')}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            className={`px-4 py-3 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-2 ${
               tab === 'members' 
                 ? 'border-blue-600 text-blue-600' 
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
-            <Users className="h-4 w-4 inline-block mr-2" />
+            <Users className="h-4 w-4" />
             Members ({members.length})
           </button>
           <button
             onClick={() => setTab('settings')}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            className={`px-4 py-3 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-2 ${
               tab === 'settings' 
                 ? 'border-blue-600 text-blue-600' 
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
-            <Settings className="h-4 w-4 inline-block mr-2" />
+            <Settings className="h-4 w-4" />
             Settings
           </button>
         </div>
 
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin h-8 w-8 border-2 border-blue-600 border-t-transparent rounded-full" />
-          </div>
-        ) : (
-          <>
-            {/* Members Tab */}
-            {tab === 'members' && (
-              <div className="space-y-4">
-                {/* Invite Button */}
-                {!showInviteForm ? (
-                  <button
-                    onClick={() => setShowInviteForm(true)}
-                    className="w-full flex items-center justify-center gap-2 p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                  >
-                    <UserPlus className="h-5 w-5" />
-                    <span>Invite Member</span>
-                  </button>
-                ) : (
-                  /* Invite Form */
-                  <div className="p-4 border rounded-lg bg-gray-50 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-medium text-gray-900">Invite Member</h3>
-                      <button onClick={() => { setShowInviteForm(false); resetInviteForm(); }}>
-                        <X className="h-4 w-4 text-gray-500" />
-                      </button>
-                    </div>
-
-                    {/* Invite Type Toggle */}
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setInviteType('internal')}
-                        className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
-                          inviteType === 'internal'
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-white border text-gray-700 hover:bg-gray-50'
-                        }`}
-                      >
-                        <Users className="h-4 w-4 inline-block mr-2" />
-                        Team Member
-                      </button>
-                      <button
-                        onClick={() => setInviteType('external')}
-                        className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
-                          inviteType === 'external'
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-white border text-gray-700 hover:bg-gray-50'
-                        }`}
-                      >
-                        <ExternalLink className="h-4 w-4 inline-block mr-2" />
-                        External
-                      </button>
-                    </div>
-
-                    {/* Email */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                      <Input
-                        type="email"
-                        value={inviteEmail}
-                        onChange={(e) => setInviteEmail(e.target.value)}
-                        placeholder={inviteType === 'internal' ? 'colleague@company.com' : 'client@theircompany.com'}
-                        leftIcon={<Mail className="h-4 w-4" />}
-                        fullWidth
-                      />
-                    </div>
-
-                    {/* External-only fields */}
-                    {inviteType === 'external' && (
-                      <>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                            <Input
-                              value={inviteName}
-                              onChange={(e) => setInviteName(e.target.value)}
-                              placeholder="John Doe"
-                              fullWidth
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Company</label>
-                            <Input
-                              value={inviteCompany}
-                              onChange={(e) => setInviteCompany(e.target.value)}
-                              placeholder="Their Company"
-                              fullWidth
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                          <Select
-                            value={inviteExternalType}
-                            onChange={(e) => setInviteExternalType(e.target.value)}
-                            options={EXTERNAL_TYPE_OPTIONS}
-                          />
-                        </div>
-                      </>
-                    )}
-
-                    {/* Role */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                      <Select
-                        value={inviteRole}
-                        onChange={(e) => setInviteRole(e.target.value)}
-                        options={ROLE_OPTIONS.map(r => ({ value: r.value, label: r.label }))}
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        {ROLE_OPTIONS.find(r => r.value === inviteRole)?.description}
-                      </p>
-                    </div>
-
-                    {/* Permissions (for external/collaborator) */}
-                    {inviteType === 'external' && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Permissions</label>
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          {Object.entries(invitePermissions).map(([key, value]) => (
-                            <label key={key} className="flex items-center gap-2 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={value}
-                                onChange={(e) => setInvitePermissions(prev => ({ ...prev, [key]: e.target.checked }))}
-                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                              />
-                              <span className="text-gray-700">{key.replace(/_/g, ' ')}</span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Submit */}
-                    <div className="flex gap-2 pt-2">
-                      <Button
-                        variant="ghost"
-                        onClick={() => { setShowInviteForm(false); resetInviteForm(); }}
-                        className="flex-1"
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        variant="primary"
-                        onClick={handleInvite}
-                        disabled={saving || !inviteEmail}
-                        className="flex-1"
-                      >
-                        {saving ? 'Sending...' : 'Send Invitation'}
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Members List */}
-                <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                  {members.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <Users className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                      <p>No members yet</p>
-                      <p className="text-sm">Invite team members or external collaborators</p>
-                    </div>
+        {/* Content */}
+        <div className="p-5 max-h-[60vh] overflow-y-auto">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin h-8 w-8 border-2 border-blue-600 border-t-transparent rounded-full" />
+            </div>
+          ) : (
+            <>
+              {/* Members Tab */}
+              {tab === 'members' && (
+                <div className="space-y-4">
+                  {/* Invite Button */}
+                  {!showInviteForm ? (
+                    <button
+                      onClick={() => setShowInviteForm(true)}
+                      className="w-full flex items-center justify-center gap-2 py-3 px-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50/50 transition-colors"
+                    >
+                      <UserPlus className="h-5 w-5" />
+                      <span className="font-medium">Invite Member</span>
+                    </button>
                   ) : (
-                    members.map(member => (
-                      <div
-                        key={member.id}
-                        className="flex items-center justify-between p-3 bg-white border rounded-lg hover:shadow-sm transition-shadow"
-                      >
-                        <div className="flex items-center gap-3">
-                          {/* Avatar */}
-                          <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-medium">
-                            {member.external_email ? (
-                              <Building2 className="h-5 w-5" />
-                            ) : (
-                              (member.profiles?.full_name?.[0] || member.external_name?.[0] || '?').toUpperCase()
-                            )}
-                          </div>
-                          
-                          {/* Info */}
-                          <div>
-                            <div className="font-medium text-gray-900">
-                              {member.profiles?.full_name || member.external_name || 'Unknown'}
-                              {member.external_company && (
-                                <span className="text-gray-500 font-normal ml-1">
-                                  @ {member.external_company}
-                                </span>
-                              )}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {member.profiles?.email || member.external_email}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          {/* Status */}
-                          {getStatusBadge(member.status)}
-                          
-                          {/* Role */}
-                          {member.role !== 'owner' ? (
-                            <select
-                              value={member.role}
-                              onChange={(e) => handleUpdateMemberRole(member.id, e.target.value)}
-                              className={`text-xs px-2 py-1 rounded-full border font-medium ${getRoleColor(member.role)}`}
-                            >
-                              {ROLE_OPTIONS.map(r => (
-                                <option key={r.value} value={r.value}>{r.label}</option>
-                              ))}
-                            </select>
-                          ) : (
-                            <span className={`text-xs px-2 py-1 rounded-full border font-medium ${getRoleColor('owner')}`}>
-                              Owner
-                            </span>
-                          )}
-
-                          {/* Remove */}
-                          {member.role !== 'owner' && (
-                            <button
-                              onClick={() => handleRemoveMember(member.id)}
-                              className="p-1 text-gray-400 hover:text-red-600 transition-colors"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          )}
-                        </div>
+                    /* Invite Form */
+                    <div className="p-5 border rounded-xl bg-gray-50/50">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-semibold text-gray-900">Invite Member</h3>
+                        <button 
+                          onClick={() => { setShowInviteForm(false); resetInviteForm(); }}
+                          className="p-1 hover:bg-gray-200 rounded transition-colors"
+                        >
+                          <X className="h-4 w-4 text-gray-500" />
+                        </button>
                       </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
 
-            {/* Settings Tab */}
-            {tab === 'settings' && settings && (
-              <div className="space-y-6">
-                {/* Visibility */}
-                <div>
-                  <h3 className="text-sm font-medium text-gray-900 mb-3">Project Visibility</h3>
-                  <div className="space-y-2">
-                    {VISIBILITY_OPTIONS.map(option => {
-                      const Icon = option.icon;
-                      const isSelected = settings.visibility === option.value;
-                      return (
+                      {/* Invite Type Toggle */}
+                      <div className="flex gap-2 mb-5">
                         <button
-                          key={option.value}
-                          onClick={() => handleUpdateVisibility(option.value)}
-                          disabled={saving}
-                          className={`w-full flex items-start gap-3 p-3 rounded-lg border-2 text-left transition-all ${
-                            isSelected
-                              ? 'border-blue-500 bg-blue-50'
-                              : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                          onClick={() => setInviteType('internal')}
+                          className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                            inviteType === 'internal'
+                              ? 'bg-blue-600 text-white shadow-md'
+                              : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
                           }`}
                         >
-                          <div className={`p-2 rounded-lg ${option.color}`}>
-                            <Icon className="h-5 w-5" />
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-gray-900">{option.label}</span>
-                              {isSelected && <Check className="h-4 w-4 text-blue-600" />}
-                            </div>
-                            <p className="text-sm text-gray-500 mt-0.5">{option.description}</p>
-                          </div>
+                          <Users className="h-4 w-4" />
+                          Team Member
                         </button>
-                      );
-                    })}
-                  </div>
-                </div>
+                        <button
+                          onClick={() => setInviteType('external')}
+                          className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                            inviteType === 'external'
+                              ? 'bg-blue-600 text-white shadow-md'
+                              : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                          External
+                        </button>
+                      </div>
 
-                {/* External Sharing */}
-                <div>
-                  <h3 className="text-sm font-medium text-gray-900 mb-3">External Sharing</h3>
-                  <div className="space-y-3">
-                    <label className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer">
-                      <div>
-                        <div className="font-medium text-gray-900">Allow external sharing</div>
-                        <div className="text-sm text-gray-500">
-                          Allow inviting clients, suppliers, and other external users
+                      {/* Type Description */}
+                      <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                        <p className="text-xs text-blue-700">
+                          {inviteType === 'internal' 
+                            ? '💡 Team members are existing users from your company who need access to this project.'
+                            : '💡 External users are clients, suppliers, or contractors who will receive an email invitation.'
+                          }
+                        </p>
+                      </div>
+
+                      {/* Email Field */}
+                      <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                          Email <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                          <input
+                            type="email"
+                            value={inviteEmail}
+                            onChange={(e) => setInviteEmail(e.target.value)}
+                            placeholder={inviteType === 'internal' ? 'colleague@yourcompany.com' : 'contact@external.com'}
+                            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                          />
                         </div>
                       </div>
-                      <input
-                        type="checkbox"
-                        checked={settings.allow_external_sharing}
-                        onChange={async (e) => {
-                          const res = await fetch(`/api/projects/${projectId}/settings`, {
-                            method: 'PATCH',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ allow_external_sharing: e.target.checked }),
-                          });
-                          if (res.ok) {
-                            setSettings(prev => prev ? { ...prev, allow_external_sharing: e.target.checked } : null);
-                          }
-                        }}
-                        className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                    </label>
 
-                    <label className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer">
-                      <div>
-                        <div className="font-medium text-gray-900">Require approval</div>
-                        <div className="text-sm text-gray-500">
-                          External invitations require owner approval
-                        </div>
+                      {/* External-only fields */}
+                      {inviteType === 'external' && (
+                        <>
+                          <div className="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1.5">Name</label>
+                              <input
+                                type="text"
+                                value={inviteName}
+                                onChange={(e) => setInviteName(e.target.value)}
+                                placeholder="John Doe"
+                                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1.5">Company</label>
+                              <input
+                                type="text"
+                                value={inviteCompany}
+                                onChange={(e) => setInviteCompany(e.target.value)}
+                                placeholder="Company Name"
+                                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="mb-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Type</label>
+                            <select
+                              value={inviteExternalType}
+                              onChange={(e) => setInviteExternalType(e.target.value)}
+                              className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                            >
+                              {EXTERNAL_TYPE_OPTIONS.map(opt => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Role */}
+                      <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Role</label>
+                        <select
+                          value={inviteRole}
+                          onChange={(e) => setInviteRole(e.target.value)}
+                          className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                        >
+                          {ROLE_OPTIONS.map(r => (
+                            <option key={r.value} value={r.value}>{r.label}</option>
+                          ))}
+                        </select>
+                        <p className="text-xs text-gray-500 mt-1.5">
+                          {ROLE_OPTIONS.find(r => r.value === inviteRole)?.description}
+                        </p>
                       </div>
-                      <input
-                        type="checkbox"
-                        checked={settings.require_approval_for_external}
-                        onChange={async (e) => {
-                          const res = await fetch(`/api/projects/${projectId}/settings`, {
-                            method: 'PATCH',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ require_approval_for_external: e.target.checked }),
-                          });
-                          if (res.ok) {
-                            setSettings(prev => prev ? { ...prev, require_approval_for_external: e.target.checked } : null);
-                          }
-                        }}
-                        className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                    </label>
+
+                      {/* Permissions (for external) */}
+                      {inviteType === 'external' && (
+                        <div className="mb-4">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Permissions</label>
+                          <div className="bg-white border border-gray-200 rounded-lg p-3">
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                              {Object.entries(invitePermissions).map(([key, value]) => (
+                                <label key={key} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded">
+                                  <input
+                                    type="checkbox"
+                                    checked={value}
+                                    onChange={(e) => setInvitePermissions(prev => ({ ...prev, [key]: e.target.checked }))}
+                                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                  />
+                                  <span className="text-sm text-gray-700">{PERMISSION_LABELS[key] || key}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Submit Buttons */}
+                      <div className="flex gap-3 pt-2">
+                        <button
+                          onClick={() => { setShowInviteForm(false); resetInviteForm(); }}
+                          className="flex-1 py-2.5 px-4 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleInvite}
+                          disabled={saving || !inviteEmail}
+                          className="flex-1 py-2.5 px-4 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {saving ? 'Sending...' : 'Send Invitation'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Members List */}
+                  <div className="space-y-2">
+                    {members.length === 0 ? (
+                      <div className="text-center py-10">
+                        <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                          <Users className="h-8 w-8 text-gray-400" />
+                        </div>
+                        <p className="font-medium text-gray-900">No members yet</p>
+                        <p className="text-sm text-gray-500 mt-1">Invite team members or external collaborators</p>
+                      </div>
+                    ) : (
+                      members.map(member => (
+                        <div
+                          key={member.id}
+                          className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            {/* Avatar */}
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-medium text-sm">
+                              {member.external_email ? (
+                                <Building2 className="h-5 w-5" />
+                              ) : (
+                                (member.profiles?.full_name?.[0] || member.external_name?.[0] || '?').toUpperCase()
+                              )}
+                            </div>
+                            
+                            {/* Info */}
+                            <div className="min-w-0">
+                              <div className="font-medium text-gray-900 truncate">
+                                {member.profiles?.full_name || member.external_name || 'Unknown'}
+                                {member.external_company && (
+                                  <span className="text-gray-400 font-normal text-sm ml-1">
+                                    @ {member.external_company}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-sm text-gray-500 truncate">
+                                {member.profiles?.email || member.external_email}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            {/* Status */}
+                            {getStatusBadge(member.status)}
+                            
+                            {/* Role */}
+                            {member.role !== 'owner' ? (
+                              <select
+                                value={member.role}
+                                onChange={(e) => handleUpdateMemberRole(member.id, e.target.value)}
+                                className={`text-xs px-2.5 py-1 rounded-full border font-medium cursor-pointer ${getRoleColor(member.role)}`}
+                              >
+                                {ROLE_OPTIONS.map(r => (
+                                  <option key={r.value} value={r.value}>{r.label}</option>
+                                ))}
+                              </select>
+                            ) : (
+                              <span className={`text-xs px-2.5 py-1 rounded-full border font-medium ${getRoleColor('owner')}`}>
+                                Owner
+                              </span>
+                            )}
+
+                            {/* Remove */}
+                            {member.role !== 'owner' && (
+                              <button
+                                onClick={() => handleRemoveMember(member.id)}
+                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
-              </div>
-            )}
-          </>
-        )}
+              )}
+
+              {/* Settings Tab */}
+              {tab === 'settings' && settings && (
+                <div className="space-y-6">
+                  {/* Visibility */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-900 mb-3">Project Visibility</h3>
+                    <div className="space-y-2">
+                      {VISIBILITY_OPTIONS.map(option => {
+                        const Icon = option.icon;
+                        const isSelected = settings.visibility === option.value;
+                        return (
+                          <button
+                            key={option.value}
+                            onClick={() => handleUpdateVisibility(option.value)}
+                            disabled={saving}
+                            className={`w-full flex items-start gap-3 p-4 rounded-xl border-2 text-left transition-all ${
+                              isSelected
+                                ? 'border-blue-500 bg-blue-50/50'
+                                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                            }`}
+                          >
+                            <div className={`p-2 rounded-lg ${option.color}`}>
+                              <Icon className="h-5 w-5" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-gray-900">{option.label}</span>
+                                {isSelected && <Check className="h-4 w-4 text-blue-600" />}
+                              </div>
+                              <p className="text-sm text-gray-500 mt-0.5">{option.description}</p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* External Sharing */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-900 mb-3">External Sharing</h3>
+                    <div className="space-y-3">
+                      <label className="flex items-center justify-between p-4 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
+                        <div>
+                          <div className="font-medium text-gray-900">Allow external sharing</div>
+                          <div className="text-sm text-gray-500">
+                            Allow inviting clients, suppliers, and other external users
+                          </div>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={settings.allow_external_sharing}
+                          onChange={async (e) => {
+                            const res = await fetch(`/api/projects/${projectId}/settings`, {
+                              method: 'PATCH',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ allow_external_sharing: e.target.checked }),
+                            });
+                            if (res.ok) {
+                              setSettings(prev => prev ? { ...prev, allow_external_sharing: e.target.checked } : null);
+                            }
+                          }}
+                          className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                      </label>
+
+                      <label className="flex items-center justify-between p-4 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
+                        <div>
+                          <div className="font-medium text-gray-900">Require approval</div>
+                          <div className="text-sm text-gray-500">
+                            External invitations require owner approval
+                          </div>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={settings.require_approval_for_external}
+                          onChange={async (e) => {
+                            const res = await fetch(`/api/projects/${projectId}/settings`, {
+                              method: 'PATCH',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ require_approval_for_external: e.target.checked }),
+                            });
+                            if (res.ok) {
+                              setSettings(prev => prev ? { ...prev, require_approval_for_external: e.target.checked } : null);
+                            }
+                          }}
+                          className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
-    </Modal>
+    </div>
   );
 }
 
