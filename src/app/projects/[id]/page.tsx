@@ -3,7 +3,8 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { AppLayout } from '@/components/app-layout'
 import { AddItemModal } from '@/components/AddItemModal'
-import { Plus } from 'lucide-react'
+import { ProjectAccessModal } from '@/components/ProjectAccessModal'
+import { Plus, Users, Lock, Building2 } from 'lucide-react'
 import { format } from '@/lib/date-format'
 
 class Boundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; message: string }> {
@@ -22,6 +23,8 @@ export default function ProjectDetailPage() {
   const [tab, setTab] = useState<'overview'|'orders'|'expenses'|'deliveries'>('overview')
   // Modal state for adding items
   const [showAddModal, setShowAddModal] = useState<'order' | 'expense' | 'delivery' | null>(null)
+  // Modal state for project access
+  const [showAccessModal, setShowAccessModal] = useState(false)
   // Assignment textarea state (kept for fallback bulk paste modal later)
   const [assign, setAssign] = useState({ orders: '', expenses: '', deliveries: '' })
   // Loaded items for each tab
@@ -220,6 +223,14 @@ export default function ProjectDetailPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
             Refresh
+          </button>
+          <button 
+            onClick={() => setShowAccessModal(true)} 
+            className="h-9 px-3 rounded-lg border bg-white hover:bg-gray-50 text-sm shadow-sm flex items-center gap-2"
+            title="Manage project access"
+          >
+            <Users className="h-4 w-4" />
+            Access
           </button>
           <button 
             onClick={() => setShowAddModal('order')} 
@@ -584,6 +595,14 @@ export default function ProjectDetailPage() {
           }}
         />
       )}
+
+      {/* Project Access Modal */}
+      <ProjectAccessModal
+        projectId={id}
+        projectName={project?.name || 'Project'}
+        isOpen={showAccessModal}
+        onClose={() => setShowAccessModal(false)}
+      />
     </AppLayout>
   )
 }
