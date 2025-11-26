@@ -130,6 +130,26 @@ export async function POST(request: NextRequest) {
     // Do NOT set job_id as it references a different table (jobs vs projects)
     if (body.project_id) {
       baseData.project_id = body.project_id
+      
+      // Check if user is a full company member or has project-level permission
+      const isFullCompanyMember = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(profile.role || '')
+      
+      if (!isFullCompanyMember) {
+        // External user - check project_members for create_orders permission (expenses use same permission)
+        const svc = supabaseService()
+        const { data: membership } = await svc
+          .from('project_members')
+          .select('permissions')
+          .eq('project_id', body.project_id)
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+          .single()
+        
+        const permissions = (membership as { permissions?: { create_orders?: boolean } } | null)?.permissions
+        if (!permissions?.create_orders) {
+          return NextResponse.json({ error: 'You do not have permission to create expenses on this project' }, { status: 403 })
+        }
+      }
     }
 
     // If status is 'approved', set approval metadata

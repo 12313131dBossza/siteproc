@@ -271,6 +271,25 @@ export async function POST(request: NextRequest) {
       return response.error('Failed to verify project', 500)
     }
 
+    // Check if user is a full company member or has project-level permission
+    const isFullCompanyMember = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(profile.role || '')
+    
+    if (!isFullCompanyMember) {
+      // External user - check project_members for create_orders permission
+      const serviceSb = createServiceClient()
+      const { data: membership } = await serviceSb
+        .from('project_members')
+        .select('permissions')
+        .eq('project_id', project_id)
+        .eq('user_id', profile.id)
+        .eq('status', 'active')
+        .single()
+      
+      if (!membership?.permissions?.create_orders) {
+        return response.error('You do not have permission to create orders on this project', 403)
+      }
+    }
+
     // Create order with company_id directly set
     const insertData: any = {
       project_id,

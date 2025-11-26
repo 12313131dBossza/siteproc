@@ -54,6 +54,23 @@ export default function ProjectDetailPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string|undefined>()
 
+  // Extract user permissions from project data
+  const permissions = project?.userPermissions || {
+    view_project: true,
+    view_orders: true,
+    view_expenses: false,
+    view_payments: false,
+    view_documents: true,
+    edit_project: false,
+    create_orders: false,
+    upload_documents: false,
+    invite_others: false,
+  }
+  const userRole = project?.userRole || 'viewer'
+  const canEdit = permissions.edit_project
+  const canCreate = permissions.create_orders
+  const canInvite = permissions.invite_others
+
   async function load() {
     setError(undefined)
     try {
@@ -249,46 +266,62 @@ export default function ProjectDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <select 
-            id="project-status" 
-            value={project.status} 
-            onChange={e=>updateStatus(e.target.value)} 
-            className="h-10 border rounded-lg px-3 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 text-sm font-medium cursor-pointer"
-          >
-            <option value="active">● Active</option>
-            <option value="on_hold">◐ On Hold</option>
-            <option value="closed">○ Closed</option>
-          </select>
+          {canEdit ? (
+            <select 
+              id="project-status" 
+              value={project.status} 
+              onChange={e=>updateStatus(e.target.value)} 
+              className="h-10 border rounded-lg px-3 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 text-sm font-medium cursor-pointer"
+            >
+              <option value="active">● Active</option>
+              <option value="on_hold">◐ On Hold</option>
+              <option value="closed">○ Closed</option>
+            </select>
+          ) : (
+            <span className={`text-xs px-2.5 py-1 rounded-full font-medium border ${
+              project.status === 'active' 
+                ? 'bg-green-50 text-green-700 border-green-200' 
+                : project.status === 'on_hold'
+                ? 'bg-amber-50 text-amber-700 border-amber-200'
+                : 'bg-gray-50 text-gray-700 border-gray-200'
+            }`}>
+              {project.status === 'active' ? '● Active' : project.status === 'on_hold' ? '◐ On Hold' : '○ Closed'}
+            </span>
+          )}
           <button onClick={()=>load()} className="h-10 px-4 rounded-lg border bg-white hover:bg-gray-50 text-sm shadow-sm flex items-center gap-2 font-medium transition-all hover:shadow-md">
             <RefreshCw className="h-4 w-4" />
             <span className="hidden sm:inline">Refresh</span>
           </button>
-          <button 
-            onClick={() => setShowAccessModal(true)} 
-            className="h-10 px-4 rounded-lg border bg-white hover:bg-gray-50 text-sm shadow-sm flex items-center gap-2 font-medium transition-all hover:shadow-md"
-            title="Manage project access"
-          >
-            <Users className="h-4 w-4" />
-            <span className="hidden sm:inline">Access</span>
-          </button>
-          <button 
-            onClick={() => setShowAddModal('order')} 
-            className="h-10 px-4 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm shadow-sm flex items-center gap-2 font-medium transition-all hover:shadow-md"
-          >
-            <Plus className="h-4 w-4" />
-            Quick Add
-          </button>
+          {canInvite && (
+            <button 
+              onClick={() => setShowAccessModal(true)} 
+              className="h-10 px-4 rounded-lg border bg-white hover:bg-gray-50 text-sm shadow-sm flex items-center gap-2 font-medium transition-all hover:shadow-md"
+              title="Manage project access"
+            >
+              <Users className="h-4 w-4" />
+              <span className="hidden sm:inline">Access</span>
+            </button>
+          )}
+          {canCreate && (
+            <button 
+              onClick={() => setShowAddModal('order')} 
+              className="h-10 px-4 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm shadow-sm flex items-center gap-2 font-medium transition-all hover:shadow-md"
+            >
+              <Plus className="h-4 w-4" />
+              Quick Add
+            </button>
+          )}
         </div>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-1 border-b border-gray-200 overflow-x-auto scrollbar-none -mx-6 px-6 sticky top-0 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 z-10">
         {([
-          { key: 'overview', label: 'Overview', icon: BarChart3, count: null },
-          { key: 'orders', label: 'Orders', icon: Package, count: rollup?.counts?.orders || 0 },
-          { key: 'expenses', label: 'Expenses', icon: Receipt, count: rollup?.counts?.expenses || 0 },
-          { key: 'deliveries', label: 'Deliveries', icon: Truck, count: rollup?.counts?.deliveries || 0 },
-        ] as const).map(t => {
+          { key: 'overview', label: 'Overview', icon: BarChart3, count: null, permission: 'view_project' },
+          { key: 'orders', label: 'Orders', icon: Package, count: rollup?.counts?.orders || 0, permission: 'view_orders' },
+          { key: 'expenses', label: 'Expenses', icon: Receipt, count: rollup?.counts?.expenses || 0, permission: 'view_expenses' },
+          { key: 'deliveries', label: 'Deliveries', icon: Truck, count: rollup?.counts?.deliveries || 0, permission: 'view_orders' },
+        ] as const).filter(t => permissions[t.permission as keyof typeof permissions]).map(t => {
           const active = tab === t.key
           const Icon = t.icon
           return (
@@ -459,13 +492,15 @@ export default function ProjectDetailPage() {
               {tab === 'deliveries' && <Truck className="h-5 w-5 text-green-500" />}
               {tab}
             </h2>
-            <button
-              onClick={() => setShowAddModal(tab === 'orders' ? 'order' : tab === 'expenses' ? 'expense' : 'delivery')}
-              className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all text-sm font-medium shadow-sm hover:shadow-md"
-            >
-              <Plus className="h-4 w-4" />
-              Add {tab === 'orders' ? 'Order' : tab === 'expenses' ? 'Expense' : 'Delivery'}
-            </button>
+            {canCreate && (
+              <button
+                onClick={() => setShowAddModal(tab === 'orders' ? 'order' : tab === 'expenses' ? 'expense' : 'delivery')}
+                className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all text-sm font-medium shadow-sm hover:shadow-md"
+              >
+                <Plus className="h-4 w-4" />
+                Add {tab === 'orders' ? 'Order' : tab === 'expenses' ? 'Expense' : 'Delivery'}
+              </button>
+            )}
           </div>
           
           {loadingTab && (
@@ -508,9 +543,10 @@ export default function ProjectDetailPage() {
               <EmptyState 
                 icon={<Receipt className="h-12 w-12" />}
                 title="No expenses yet"
-                description="Get started by adding your first expense to this project."
+                description={canCreate ? "Get started by adding your first expense to this project." : "No expenses have been added to this project yet."}
                 actionLabel="Add Expense"
                 onAction={() => setShowAddModal('expense')}
+                showAction={canCreate}
               />
             )
           )}
@@ -558,9 +594,10 @@ export default function ProjectDetailPage() {
               <EmptyState 
                 icon={<Package className="h-12 w-12" />}
                 title="No orders yet"
-                description="Create your first purchase order for this project."
+                description={canCreate ? "Create your first purchase order for this project." : "No orders have been created for this project yet."}
                 actionLabel="Add Order"
                 onAction={() => setShowAddModal('order')}
+                showAction={canCreate}
               />
             )
           )}
@@ -623,9 +660,10 @@ export default function ProjectDetailPage() {
               <EmptyState 
                 icon={<Truck className="h-12 w-12" />}
                 title="No deliveries yet"
-                description="Track deliveries for this project."
+                description={canCreate ? "Track deliveries for this project." : "No deliveries have been recorded for this project yet."}
                 actionLabel="Add Delivery"
                 onAction={() => setShowAddModal('delivery')}
+                showAction={canCreate}
               />
             )
           )}
@@ -736,13 +774,15 @@ function EmptyState({
   title,
   description,
   actionLabel,
-  onAction
+  onAction,
+  showAction = true
 }: {
   icon: React.ReactNode
   title: string
   description: string
-  actionLabel: string
-  onAction: () => void
+  actionLabel?: string
+  onAction?: () => void
+  showAction?: boolean
 }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4 bg-gray-50/50 rounded-xl border border-dashed border-gray-200">
@@ -751,13 +791,15 @@ function EmptyState({
       </div>
       <h3 className="text-base font-semibold text-gray-900 mb-1">{title}</h3>
       <p className="text-sm text-gray-500 mb-6 text-center max-w-sm">{description}</p>
-      <button
-        onClick={onAction}
-        className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all text-sm font-medium shadow-sm hover:shadow-md"
-      >
-        <Plus className="h-4 w-4" />
-        {actionLabel}
-      </button>
+      {showAction && actionLabel && onAction && (
+        <button
+          onClick={onAction}
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all text-sm font-medium shadow-sm hover:shadow-md"
+        >
+          <Plus className="h-4 w-4" />
+          {actionLabel}
+        </button>
+      )}
     </div>
   )
 }

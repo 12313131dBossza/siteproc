@@ -132,28 +132,12 @@ function AcceptInvitationContent() {
         return;
       }
 
-      toast.success('Account created successfully! Logging you in...');
+      toast.success('Account created successfully! Redirecting to dashboard...');
       
-      // Step 3: Sign in the user with the credentials they just created
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: invitation.email,
-        password: password,
-      });
-
-      if (signInError) {
-        console.error('Auto sign-in error:', signInError);
-        toast.error('Account created but auto-login failed. Please login manually.');
-        setTimeout(() => {
-          router.push('/login');
-        }, 2000);
-        return;
-      }
-
-      // Wait a moment then redirect to dashboard
+      // Wait a moment then redirect
       setTimeout(() => {
         router.push('/dashboard');
-        router.refresh();
-      }, 1500);
+      }, 2000);
     } catch (err: any) {
       console.error('Error accepting invitation:', err);
       toast.error(err.message || 'Failed to accept invitation');
@@ -275,7 +259,7 @@ function AcceptInvitationContent() {
           <Button
             type="submit"
             variant="primary"
-            fullWidth
+            className="w-full"
             disabled={submitting}
             leftIcon={submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
           >

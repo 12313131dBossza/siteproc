@@ -46,6 +46,31 @@ async function handleProjectDelivery(body: any, session: any) {
     return NextResponse.json({ error: 'Project not found or access denied' }, { status: 404 })
   }
   
+  // Check if user has permission to create deliveries on this project
+  // Get user's profile role
+  const { data: profile } = await (sb as any)
+    .from('profiles')
+    .select('role')
+    .eq('id', session.user.id)
+    .single()
+  
+  const isFullCompanyMember = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(profile?.role || '')
+  
+  if (!isFullCompanyMember) {
+    // External user - check project_members for create_orders permission
+    const { data: membership } = await (sb as any)
+      .from('project_members')
+      .select('permissions')
+      .eq('project_id', project_id)
+      .eq('user_id', session.user.id)
+      .eq('status', 'active')
+      .single()
+    
+    if (!membership?.permissions?.create_orders) {
+      return NextResponse.json({ error: 'You do not have permission to create deliveries on this project' }, { status: 403 })
+    }
+  }
+  
   // Create simple delivery with optional proof_url
   const { data: delivery, error } = await (sb as any)
     .from('deliveries')

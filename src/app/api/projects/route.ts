@@ -36,40 +36,33 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
 
-    // Get all projects for this company (broadened filter for visibility)
-    console.log('🔍 Fetching projects for company_id:', profile.company_id)
-    let query = supabase
-      .from('projects')
-      .select('*')
-      .or(`company_id.eq.${profile.company_id},created_by.eq.${user.id}`)
-      .order('created_at', { ascending: false })
+    // Check if user is a full company member (admin/owner/manager/bookkeeper/member)
+    // or just an external viewer with project-specific access
+    const isFullCompanyMember = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(profile.role || '')
+    
+    let projects: any[] = []
+    
+    if (isFullCompanyMember) {
+      // Full company members can see all company projects
+      console.log('🔍 Fetching ALL projects for company member, company_id:', profile.company_id)
+      let query = supabase
+        .from('projects')
+        .select('*')
+        .or(`company_id.eq.${profile.company_id},created_by.eq.${user.id}`)
+        .order('created_at', { ascending: false })
 
-    // Apply filters
-    if (status) {
-      query = query.eq('status', status)
-    }
-    if (minBudget) {
-      query = query.gte('budget', Number(minBudget))
-    }
-    if (maxBudget) {
-      query = query.lte('budget', Number(maxBudget))
-    }
-    if (startDate) {
-      query = query.gte('created_at', startDate)
-    }
-    if (endDate) {
-      query = query.lte('created_at', endDate)
-    }
+      // Apply filters
+      if (status) query = query.eq('status', status)
+      if (minBudget) query = query.gte('budget', Number(minBudget))
+      if (maxBudget) query = query.lte('budget', Number(maxBudget))
+      if (startDate) query = query.gte('created_at', startDate)
+      if (endDate) query = query.lte('created_at', endDate)
 
-    const { data: projects, error } = await query
-
-    if (error) {
-      console.error('❌ Projects fetch error (RLS):', error)
+      const { data, error } = await query
       
-      // Service-role fallback for admins/managers/bookkeepers
-      if (['admin', 'owner', 'manager', 'bookkeeper'].includes(profile.role || '')) {
-        console.log('🔄 Using service-role fallback for projects')
-        
+      if (error) {
+        console.error('❌ Projects fetch error:', error)
+        // Fallback to service role
         const serviceSb = createServiceClient()
         let fallbackQuery = serviceSb
           .from('projects')
@@ -77,49 +70,74 @@ export async function GET(request: NextRequest) {
           .eq('company_id', profile.company_id)
           .order('created_at', { ascending: false })
 
-        // Apply same filters to fallback query
-        if (status) {
-          fallbackQuery = fallbackQuery.eq('status', status)
-        }
-        if (minBudget) {
-          fallbackQuery = fallbackQuery.gte('budget', Number(minBudget))
-        }
-        if (maxBudget) {
-          fallbackQuery = fallbackQuery.lte('budget', Number(maxBudget))
-        }
-        if (startDate) {
-          fallbackQuery = fallbackQuery.gte('created_at', startDate)
-        }
-        if (endDate) {
-          fallbackQuery = fallbackQuery.lte('created_at', endDate)
-        }
+        if (status) fallbackQuery = fallbackQuery.eq('status', status)
+        if (minBudget) fallbackQuery = fallbackQuery.gte('budget', Number(minBudget))
+        if (maxBudget) fallbackQuery = fallbackQuery.lte('budget', Number(maxBudget))
+        if (startDate) fallbackQuery = fallbackQuery.gte('created_at', startDate)
+        if (endDate) fallbackQuery = fallbackQuery.lte('created_at', endDate)
 
-        const { data: fallbackProjects, error: fallbackError } = await fallbackQuery
-
-        if (fallbackError) {
-          console.error('Service-role fallback also failed:', fallbackError)
-          return NextResponse.json({ error: 'Failed to fetch projects' }, { status: 500 })
-        }
-
-        // Map project_number to code for frontend compatibility
-        const projectsWithCode = fallbackProjects?.map(p => ({
-          ...p,
-          code: p.project_number
-        })) || []
-
-        return NextResponse.json({ success: true, data: projectsWithCode })
+        const { data: fallbackData } = await fallbackQuery
+        projects = fallbackData || []
+      } else {
+        projects = data || []
+      }
+    } else {
+      // External users (viewers) only see projects they're members of
+      console.log('🔍 Fetching projects for external viewer, user_id:', user.id)
+      
+      const serviceSb = createServiceClient()
+      
+      // First get project IDs the user has access to
+      const { data: memberProjects, error: memberError } = await serviceSb
+        .from('project_members')
+        .select('project_id')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+      
+      if (memberError) {
+        console.error('Error fetching project memberships:', memberError)
+        return NextResponse.json({ error: 'Failed to fetch projects' }, { status: 500 })
       }
       
-      return NextResponse.json({ error: 'Failed to fetch projects' }, { status: 500 })
+      if (!memberProjects || memberProjects.length === 0) {
+        console.log('User has no project memberships')
+        return NextResponse.json({ success: true, data: [] })
+      }
+      
+      const projectIds = memberProjects.map(m => m.project_id)
+      console.log('User has access to projects:', projectIds)
+      
+      // Fetch only those projects
+      let query = serviceSb
+        .from('projects')
+        .select('*')
+        .in('id', projectIds)
+        .order('created_at', { ascending: false })
+
+      // Apply filters
+      if (status) query = query.eq('status', status)
+      if (minBudget) query = query.gte('budget', Number(minBudget))
+      if (maxBudget) query = query.lte('budget', Number(maxBudget))
+      if (startDate) query = query.gte('created_at', startDate)
+      if (endDate) query = query.lte('created_at', endDate)
+
+      const { data, error } = await query
+      
+      if (error) {
+        console.error('Error fetching projects for viewer:', error)
+        return NextResponse.json({ error: 'Failed to fetch projects' }, { status: 500 })
+      }
+      
+      projects = data || []
     }
 
-    console.log('✅ Projects found:', projects?.length || 0)
+    console.log('✅ Projects found:', projects.length)
 
     // Map project_number to code for frontend compatibility
-    const projectsWithCode = projects?.map(p => ({
+    const projectsWithCode = projects.map(p => ({
       ...p,
       code: p.project_number
-    })) || []
+    }))
 
     // Return in consistent format for dashboard
     return NextResponse.json({ success: true, data: projectsWithCode })
