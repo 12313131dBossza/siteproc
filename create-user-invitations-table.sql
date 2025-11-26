@@ -28,6 +28,7 @@ ALTER TABLE public.user_invitations ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing policies if they exist
 DROP POLICY IF EXISTS "user_invitations_select" ON public.user_invitations;
+DROP POLICY IF EXISTS "user_invitations_select_by_token" ON public.user_invitations;
 DROP POLICY IF EXISTS "user_invitations_insert" ON public.user_invitations;
 DROP POLICY IF EXISTS "user_invitations_update" ON public.user_invitations;
 
@@ -38,6 +39,14 @@ CREATE POLICY "user_invitations_select" ON public.user_invitations
     company_id IN (
       SELECT company_id FROM public.profiles WHERE id = auth.uid()
     )
+  );
+
+-- RLS Policy: Anyone can view pending invitations by token (for accept-invitation page)
+-- This allows unauthenticated users to validate their invitation token
+CREATE POLICY "user_invitations_select_by_token" ON public.user_invitations
+  FOR SELECT
+  USING (
+    status = 'pending' AND invitation_token IS NOT NULL
   );
 
 -- RLS Policy: Admins and owners can create invitations
