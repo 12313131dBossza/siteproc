@@ -63,8 +63,9 @@ export default function DocumentUpload({
         try {
           const response = await fetch('/api/projects');
           if (response.ok) {
-            const data = await response.json();
-            setProjects(data || []);
+            const result = await response.json();
+            // API returns { success: true, data: [...] }
+            setProjects(result.data || []);
           }
         } catch (error) {
           console.error('Error fetching projects:', error);
