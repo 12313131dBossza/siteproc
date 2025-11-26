@@ -122,37 +122,52 @@ function AcceptProjectInviteContent() {
     setSubmitting(true)
     
     try {
-      const supabase = createClient()
-      
-      // Create the account
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: invitation!.email,
-        password,
-        options: {
-          data: {
-            full_name: fullName.trim()
-          }
-        }
+      // Use our special API that bypasses email confirmation for invited users
+      const registerRes = await fetch('/api/accept-project-invite/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: invitation!.email,
+          password,
+          fullName: fullName.trim(),
+          token
+        })
       })
       
-      if (signUpError) {
-        // Check if user already exists
-        if (signUpError.message?.includes('already registered')) {
+      const registerData = await registerRes.json()
+      
+      if (!registerRes.ok) {
+        if (registerData.code === 'USER_EXISTS') {
           setFormError('This email is already registered. Please log in instead.')
           return
         }
-        throw signUpError
+        throw new Error(registerData.error || 'Failed to create account')
       }
       
-      if (!signUpData.user) {
-        throw new Error('Failed to create account')
+      // Account created and invitation accepted!
+      // Now sign in the user
+      const supabase = createClient()
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: invitation!.email,
+        password
+      })
+      
+      if (signInError) {
+        console.error('Auto sign-in failed:', signInError)
+        // Still show success - user can log in manually
       }
       
-      // Wait a moment for the session to be established
-      await new Promise(resolve => setTimeout(resolve, 500))
+      // Update invitation state with project info from response
+      if (registerData.projectName) {
+        setInvitation(prev => prev ? { 
+          ...prev, 
+          projectName: registerData.projectName, 
+          projectId: registerData.projectId 
+        } : null)
+      }
       
-      // Now accept the invitation
-      await acceptInvitation()
+      setStatus('success')
+      setMessage(registerData.message || 'Account created successfully! You have joined the project.')
       
     } catch (err: any) {
       console.error('Registration error:', err)
