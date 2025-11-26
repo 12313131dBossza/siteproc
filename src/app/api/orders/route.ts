@@ -123,7 +123,7 @@ export async function GET(request: NextRequest) {
       const projectIds = memberProjects
         .filter(m => {
           const perms = m.permissions as { view_orders?: boolean } | null
-          return perms?.view_orders !== false // Default to true if not specified
+          return perms?.view_orders === true // Must explicitly have permission
         })
         .map(m => m.project_id)
       

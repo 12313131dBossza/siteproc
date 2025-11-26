@@ -66,14 +66,14 @@ export async function GET(request: NextRequest) {
 
     const userRole = profile?.role as string | null;
 
-    // For external viewers: only show documents from projects they have access to
+    // For external viewers: only show documents from projects they have access to AND have view_documents permission
     if (userRole === 'viewer') {
       const adminClient = createAdminClient();
       
-      // Get project IDs the viewer has access to
+      // Get project IDs the viewer has access to WITH their permissions
       const { data: memberProjects, error: memberError } = await adminClient
         .from('project_members')
-        .select('project_id')
+        .select('project_id, permissions')
         .eq('user_id', user.id)
         .eq('status', 'active');
       
@@ -86,7 +86,17 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ documents: [], pagination: { total: 0, limit, offset, hasMore: false } });
       }
       
-      const projectIds = memberProjects.map(p => p.project_id);
+      // Filter to only projects where user has view_documents permission
+      const projectsWithDocAccess = memberProjects.filter(p => {
+        const perms = p.permissions as Record<string, boolean> | null;
+        return perms?.view_documents === true;
+      });
+      
+      if (projectsWithDocAccess.length === 0) {
+        return NextResponse.json({ documents: [], pagination: { total: 0, limit, offset, hasMore: false } });
+      }
+      
+      const projectIds = projectsWithDocAccess.map(p => p.project_id);
       
       // If specific project requested, verify access
       if (projectId && !projectIds.includes(projectId)) {

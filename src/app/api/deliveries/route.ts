@@ -282,12 +282,13 @@ export async function GET(req: NextRequest) {
     
     const userRole = profile?.role as string | null
     
-    // For external viewers: only show deliveries from projects they have access to
+    // For external viewers: only show deliveries from projects they have access to AND have view_orders permission
+    // (deliveries are part of orders, so we use view_orders permission)
     if (userRole === 'viewer') {
-      // Get project IDs the viewer has access to
+      // Get project IDs the viewer has access to WITH their permissions
       const { data: memberProjects, error: memberError } = await (sb as any)
         .from('project_members')
-        .select('project_id')
+        .select('project_id, permissions')
         .eq('user_id', session.user.id)
         .eq('status', 'active')
       
@@ -300,7 +301,17 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ success: true, data: [] })
       }
       
-      const projectIds = memberProjects.map((p: any) => p.project_id)
+      // Filter to only projects where user has view_orders permission (deliveries are part of orders)
+      const projectsWithAccess = memberProjects.filter((p: any) => {
+        const perms = p.permissions as Record<string, boolean> | null
+        return perms?.view_orders === true
+      })
+      
+      if (projectsWithAccess.length === 0) {
+        return NextResponse.json({ success: true, data: [] })
+      }
+      
+      const projectIds = projectsWithAccess.map((p: any) => p.project_id)
       
       // If specific project/job requested, verify access
       if (projectId && !projectIds.includes(projectId)) {

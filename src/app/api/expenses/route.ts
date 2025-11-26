@@ -28,14 +28,14 @@ export async function GET(request: NextRequest) {
     const userId = user.id
     const userRole = profile?.role as string | null
 
-    // For external viewers: only show expenses from projects they have access to
+    // For external viewers: only show expenses from projects they have access to AND have view_expenses permission
     if (userRole === 'viewer') {
       const adminClient = createAdminClient()
       
-      // Get project IDs the viewer has access to
+      // Get project IDs the viewer has access to WITH their permissions
       const { data: memberProjects, error: memberError } = await adminClient
         .from('project_members')
-        .select('project_id')
+        .select('project_id, permissions')
         .eq('user_id', userId)
         .eq('status', 'active')
       
@@ -48,7 +48,18 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ success: true, data: [] })
       }
       
-      const projectIds = memberProjects.map(p => p.project_id)
+      // Filter to only projects where user has view_expenses permission
+      const projectsWithExpenseAccess = memberProjects.filter(p => {
+        const perms = p.permissions as Record<string, boolean> | null
+        return perms?.view_expenses === true
+      })
+      
+      if (projectsWithExpenseAccess.length === 0) {
+        // User doesn't have view_expenses permission on any project
+        return NextResponse.json({ success: true, data: [] })
+      }
+      
+      const projectIds = projectsWithExpenseAccess.map(p => p.project_id)
       
       // Build query to filter expenses by accessible project IDs
       let query = adminClient
