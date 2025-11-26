@@ -1,11 +1,11 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { CheckCircle, XCircle, Loader2, FolderOpen } from 'lucide-react'
 
-export default function AcceptProjectInvitePage() {
+function AcceptProjectInviteContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const token = searchParams.get('token')
@@ -162,5 +162,31 @@ export default function AcceptProjectInvitePage() {
         )}
       </div>
     </div>
+  )
+}
+
+// Loading fallback for Suspense
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8">
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-6">
+            <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Loading...</h1>
+          <p className="text-gray-500">Please wait...</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Main export wrapped in Suspense
+export default function AcceptProjectInvitePage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <AcceptProjectInviteContent />
+    </Suspense>
   )
 }
