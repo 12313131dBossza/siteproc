@@ -1,7 +1,13 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { Upload, X, File, Image, FileText, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { useState, useCallback, useEffect } from 'react';
+import { Upload, X, File, Image, FileText, CheckCircle2, AlertCircle, Loader2, FolderOpen } from 'lucide-react';
+
+interface Project {
+  id: string;
+  name: string;
+  code?: string;
+}
 
 interface DocumentUploadProps {
   onUploadComplete?: (document: any) => void;
@@ -43,6 +49,32 @@ export default function DocumentUpload({
   }>({
     category: defaultCategory,
   });
+  
+  // Project selection state
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(projectId || '');
+  const [loadingProjects, setLoadingProjects] = useState(false);
+
+  // Fetch projects if no projectId is provided
+  useEffect(() => {
+    if (!projectId) {
+      const fetchProjects = async () => {
+        setLoadingProjects(true);
+        try {
+          const response = await fetch('/api/projects');
+          if (response.ok) {
+            const data = await response.json();
+            setProjects(data || []);
+          }
+        } catch (error) {
+          console.error('Error fetching projects:', error);
+        } finally {
+          setLoadingProjects(false);
+        }
+      };
+      fetchProjects();
+    }
+  }, [projectId]);
 
   const validateFile = (file: File): string | null => {
     // Check file size
@@ -151,7 +183,10 @@ export default function DocumentUpload({
     if (metadata.description) formData.append('description', metadata.description);
     if (metadata.category) formData.append('category', metadata.category);
     if (metadata.tags) formData.append('tags', metadata.tags);
-    if (projectId) formData.append('project_id', projectId);
+    
+    // Use selectedProjectId if projectId prop is not provided
+    const effectiveProjectId = projectId || selectedProjectId;
+    if (effectiveProjectId) formData.append('project_id', effectiveProjectId);
     if (orderId) formData.append('order_id', orderId);
     if (expenseId) formData.append('expense_id', expenseId);
     if (deliveryId) formData.append('delivery_id', deliveryId);
@@ -254,6 +289,35 @@ export default function DocumentUpload({
       {/* Metadata inputs */}
       {files.length > 0 && (
         <div className="grid grid-cols-2 gap-4">
+          {/* Project Selection - only show if no projectId prop is provided */}
+          {!projectId && (
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                <FolderOpen className="inline-block w-4 h-4 mr-1" />
+                Project
+              </label>
+              {loadingProjects ? (
+                <div className="flex items-center gap-2 text-gray-500 py-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Loading projects...
+                </div>
+              ) : (
+                <select
+                  value={selectedProjectId}
+                  onChange={(e) => setSelectedProjectId(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                >
+                  <option value="">Select a project (optional)</option>
+                  {projects.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.code ? `${project.code} - ` : ''}{project.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Title (Optional)
