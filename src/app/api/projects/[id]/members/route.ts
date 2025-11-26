@@ -123,10 +123,21 @@ export async function POST(
 
     if (insertError) {
       console.error('Error adding member:', insertError);
+      // Table doesn't exist
+      if (insertError.code === '42P01') {
+        return NextResponse.json({ 
+          error: 'Project access control is not set up. Please run the PROJECT-ACCESS-CONTROL-SCHEMA.sql in Supabase.' 
+        }, { status: 500 });
+      }
+      // Duplicate entry
       if (insertError.code === '23505') {
         return NextResponse.json({ error: 'This user is already a member of this project' }, { status: 400 });
       }
-      return NextResponse.json({ error: 'Failed to add member' }, { status: 500 });
+      // RLS policy violation
+      if (insertError.code === '42501') {
+        return NextResponse.json({ error: 'You do not have permission to add members to this project' }, { status: 403 });
+      }
+      return NextResponse.json({ error: `Failed to add member: ${insertError.message}` }, { status: 500 });
     }
 
     // TODO: Send invitation email for external users
