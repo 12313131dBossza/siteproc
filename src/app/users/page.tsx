@@ -165,23 +165,48 @@ export default function UsersPage() {
         toast.error(error.message || 'Failed to update user');
       }
     } else {
-      // Create new user (invite)
-      const newUser: UserData = {
-        id: Date.now().toString(),
-        full_name: formData.name,
-        email: formData.email,
-        role: formData.role as any,
-        status: 'pending',
-        created_at: new Date().toISOString(),
-        last_login: null,
-        department: formData.department,
-        phone: formData.phone
-      };
-      
-      setUsers(prev => [...prev, newUser]);
-      setFormData({ name: '', email: '', role: '', department: '', phone: '' });
-      setIsModalOpen(false);
-      toast.success('Invitation sent successfully!');
+      // Create new user (invite) - Call the API to send invitation
+      try {
+        const response = await fetch('/api/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: formData.email,
+            role: formData.role,
+            full_name: formData.name,
+            department: formData.department,
+            phone: formData.phone
+          })
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to send invitation');
+        }
+
+        const result = await response.json();
+        
+        // Add pending user to local state for immediate UI feedback
+        const newUser: UserData = {
+          id: result.invitation?.id || Date.now().toString(),
+          full_name: formData.name,
+          email: formData.email,
+          role: formData.role as any,
+          status: 'pending',
+          created_at: new Date().toISOString(),
+          last_login: null,
+          department: formData.department,
+          phone: formData.phone
+        };
+        
+        setUsers(prev => [...prev, newUser]);
+        setFormData({ name: '', email: '', role: '', department: '', phone: '' });
+        setIsModalOpen(false);
+        toast.success('Invitation sent successfully!');
+      } catch (error: any) {
+        console.error('Error sending invitation:', error);
+        toast.error(error.message || 'Failed to send invitation');
+      }
     }
   };
 
