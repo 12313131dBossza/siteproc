@@ -141,6 +141,10 @@ export function ProjectAccessModal({ projectId, projectName, isOpen, onClose }: 
   const [inviteExternalType, setInviteExternalType] = useState('client');
   const [inviteRole, setInviteRole] = useState('viewer');
   const [invitePermissions, setInvitePermissions] = useState(DEFAULT_PERMISSIONS);
+  
+  // Edit permissions state
+  const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
+  const [editingPermissions, setEditingPermissions] = useState<Record<string, boolean>>(DEFAULT_PERMISSIONS);
 
   // Load data
   useEffect(() => {
@@ -260,12 +264,49 @@ export function ProjectAccessModal({ projectId, projectName, isOpen, onClose }: 
         body: JSON.stringify({ role }),
       });
 
-      if (!res.ok) throw new Error('Failed to update');
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Failed to update');
+      }
 
       setMembers(prev => prev.map(m => m.id === memberId ? { ...m, role: role as any } : m));
       toast.success('Role updated');
-    } catch (error) {
-      toast.error('Failed to update role');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update role');
+    }
+  }
+
+  function startEditingPermissions(member: ProjectMember) {
+    setEditingMemberId(member.id);
+    setEditingPermissions(member.permissions || DEFAULT_PERMISSIONS);
+  }
+
+  function cancelEditingPermissions() {
+    setEditingMemberId(null);
+    setEditingPermissions(DEFAULT_PERMISSIONS);
+  }
+
+  async function savePermissions(memberId: string) {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/members/${memberId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ permissions: editingPermissions }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Failed to update');
+      }
+
+      setMembers(prev => prev.map(m => m.id === memberId ? { ...m, permissions: editingPermissions } : m));
+      setEditingMemberId(null);
+      toast.success('Permissions updated');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update permissions');
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -539,7 +580,7 @@ export function ProjectAccessModal({ projectId, projectName, isOpen, onClose }: 
                   )}
 
                   {/* Members List */}
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {members.length === 0 ? (
                       <div className="text-center py-10">
                         <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
@@ -552,65 +593,118 @@ export function ProjectAccessModal({ projectId, projectName, isOpen, onClose }: 
                       members.map(member => (
                         <div
                           key={member.id}
-                          className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+                          className="bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
                         >
-                          <div className="flex items-center gap-3">
-                            {/* Avatar */}
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-medium text-sm">
-                              {member.external_email ? (
-                                <Building2 className="h-5 w-5" />
-                              ) : (
-                                (member.profiles?.full_name?.[0] || member.external_name?.[0] || '?').toUpperCase()
-                              )}
-                            </div>
-                            
-                            {/* Info */}
-                            <div className="min-w-0">
-                              <div className="font-medium text-gray-900 truncate">
-                                {member.profiles?.full_name || member.external_name || 'Unknown'}
-                                {member.external_company && (
-                                  <span className="text-gray-400 font-normal text-sm ml-1">
-                                    @ {member.external_company}
-                                  </span>
+                          {/* Member Header */}
+                          <div className="flex items-center justify-between p-3">
+                            <div className="flex items-center gap-3">
+                              {/* Avatar */}
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-medium text-sm">
+                                {member.external_email ? (
+                                  <Building2 className="h-5 w-5" />
+                                ) : (
+                                  (member.profiles?.full_name?.[0] || member.external_name?.[0] || '?').toUpperCase()
                                 )}
                               </div>
-                              <div className="text-sm text-gray-500 truncate">
-                                {member.profiles?.email || member.external_email}
+                              
+                              {/* Info */}
+                              <div className="min-w-0">
+                                <div className="font-medium text-gray-900 truncate">
+                                  {member.profiles?.full_name || member.external_name || 'Unknown'}
+                                  {member.external_company && (
+                                    <span className="text-gray-400 font-normal text-sm ml-1">
+                                      @ {member.external_company}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-sm text-gray-500 truncate">
+                                  {member.profiles?.email || member.external_email}
+                                </div>
                               </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              {/* Status */}
+                              {getStatusBadge(member.status)}
+                              
+                              {/* Role */}
+                              {member.role !== 'owner' ? (
+                                <select
+                                  value={member.role}
+                                  onChange={(e) => handleUpdateMemberRole(member.id, e.target.value)}
+                                  className={`text-xs px-2.5 py-1 rounded-full border font-medium cursor-pointer ${getRoleColor(member.role)}`}
+                                >
+                                  {ROLE_OPTIONS.map(r => (
+                                    <option key={r.value} value={r.value}>{r.label}</option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <span className={`text-xs px-2.5 py-1 rounded-full border font-medium ${getRoleColor('owner')}`}>
+                                  Owner
+                                </span>
+                              )}
+
+                              {/* Edit Permissions Button */}
+                              {member.role !== 'owner' && (
+                                <button
+                                  onClick={() => editingMemberId === member.id ? cancelEditingPermissions() : startEditingPermissions(member)}
+                                  className={`p-1.5 rounded transition-colors ${
+                                    editingMemberId === member.id 
+                                      ? 'text-blue-600 bg-blue-50' 
+                                      : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
+                                  }`}
+                                  title="Edit permissions"
+                                >
+                                  <Shield className="h-4 w-4" />
+                                </button>
+                              )}
+
+                              {/* Remove */}
+                              {member.role !== 'owner' && (
+                                <button
+                                  onClick={() => handleRemoveMember(member.id)}
+                                  className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              )}
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            {/* Status */}
-                            {getStatusBadge(member.status)}
-                            
-                            {/* Role */}
-                            {member.role !== 'owner' ? (
-                              <select
-                                value={member.role}
-                                onChange={(e) => handleUpdateMemberRole(member.id, e.target.value)}
-                                className={`text-xs px-2.5 py-1 rounded-full border font-medium cursor-pointer ${getRoleColor(member.role)}`}
-                              >
-                                {ROLE_OPTIONS.map(r => (
-                                  <option key={r.value} value={r.value}>{r.label}</option>
+                          {/* Permissions Editor (expandable) */}
+                          {editingMemberId === member.id && (
+                            <div className="border-t border-gray-100 p-4 bg-gray-50/50">
+                              <h4 className="text-sm font-medium text-gray-700 mb-3">Edit Permissions</h4>
+                              <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-4">
+                                {Object.entries(editingPermissions).map(([key, value]) => (
+                                  <label key={key} className="flex items-center gap-2 cursor-pointer hover:bg-white p-1.5 rounded">
+                                    <input
+                                      type="checkbox"
+                                      checked={value}
+                                      onChange={(e) => setEditingPermissions(prev => ({ ...prev, [key]: e.target.checked }))}
+                                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                    />
+                                    <span className="text-sm text-gray-700">{PERMISSION_LABELS[key] || key}</span>
+                                  </label>
                                 ))}
-                              </select>
-                            ) : (
-                              <span className={`text-xs px-2.5 py-1 rounded-full border font-medium ${getRoleColor('owner')}`}>
-                                Owner
-                              </span>
-                            )}
-
-                            {/* Remove */}
-                            {member.role !== 'owner' && (
-                              <button
-                                onClick={() => handleRemoveMember(member.id)}
-                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            )}
-                          </div>
+                              </div>
+                              <div className="flex gap-2 justify-end">
+                                <button
+                                  onClick={cancelEditingPermissions}
+                                  className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-200 rounded transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  onClick={() => savePermissions(member.id)}
+                                  disabled={saving}
+                                  className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                                >
+                                  {saving ? 'Saving...' : 'Save Permissions'}
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ))
                     )}

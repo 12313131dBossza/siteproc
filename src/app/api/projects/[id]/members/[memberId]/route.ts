@@ -1,4 +1,5 @@
 import { sbServer } from '@/lib/supabase-server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
 
 // PATCH /api/projects/[id]/members/[memberId] - Update a member
@@ -14,16 +15,43 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { memberId } = await params;
+    const { id: projectId, memberId } = await params;
     const body = await request.json();
     const { role, permissions, status } = body;
 
-    const updateData: any = { updated_at: new Date().toISOString() };
-    if (role) updateData.role = role;
-    if (permissions) updateData.permissions = permissions;
-    if (status) updateData.status = status;
+    // Use admin client to bypass RLS for updates
+    const adminClient = createAdminClient();
 
-    const { data: member, error } = await supabase
+    // Verify the user has permission to manage this project
+    const { data: userProfile } = await adminClient
+      .from('profiles')
+      .select('role, company_id')
+      .eq('id', user.id)
+      .single();
+
+    // Check if user is admin/owner/manager or project owner
+    const isCompanyAdmin = ['admin', 'owner', 'manager'].includes(userProfile?.role || '');
+    
+    if (!isCompanyAdmin) {
+      // Check if user is project owner
+      const { data: projectOwner } = await adminClient
+        .from('project_members')
+        .select('role')
+        .eq('project_id', projectId)
+        .eq('user_id', user.id)
+        .single();
+      
+      if (projectOwner?.role !== 'owner' && projectOwner?.role !== 'manager') {
+        return NextResponse.json({ error: 'You do not have permission to manage this project' }, { status: 403 });
+      }
+    }
+
+    const updateData: any = { updated_at: new Date().toISOString() };
+    if (role !== undefined) updateData.role = role;
+    if (permissions !== undefined) updateData.permissions = permissions;
+    if (status !== undefined) updateData.status = status;
+
+    const { data: member, error } = await adminClient
       .from('project_members')
       .update(updateData)
       .eq('id', memberId)
@@ -32,7 +60,7 @@ export async function PATCH(
 
     if (error) {
       console.error('Error updating member:', error);
-      return NextResponse.json({ error: 'Failed to update member' }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to update member: ' + error.message }, { status: 500 });
     }
 
     return NextResponse.json({ member });
@@ -55,10 +83,35 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { memberId } = await params;
+    const { id: projectId, memberId } = await params;
+
+    // Use admin client to bypass RLS
+    const adminClient = createAdminClient();
+
+    // Verify the user has permission to manage this project
+    const { data: userProfile } = await adminClient
+      .from('profiles')
+      .select('role, company_id')
+      .eq('id', user.id)
+      .single();
+
+    const isCompanyAdmin = ['admin', 'owner', 'manager'].includes(userProfile?.role || '');
+    
+    if (!isCompanyAdmin) {
+      const { data: projectOwner } = await adminClient
+        .from('project_members')
+        .select('role')
+        .eq('project_id', projectId)
+        .eq('user_id', user.id)
+        .single();
+      
+      if (projectOwner?.role !== 'owner' && projectOwner?.role !== 'manager') {
+        return NextResponse.json({ error: 'You do not have permission to manage this project' }, { status: 403 });
+      }
+    }
 
     // Don't allow removing the owner
-    const { data: member } = await supabase
+    const { data: member } = await adminClient
       .from('project_members')
       .select('role')
       .eq('id', memberId)
@@ -68,7 +121,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Cannot remove project owner' }, { status: 403 });
     }
 
-    const { error } = await supabase
+    const { error } = await adminClient
       .from('project_members')
       .delete()
       .eq('id', memberId);
