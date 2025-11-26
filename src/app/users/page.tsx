@@ -222,11 +222,29 @@ export default function UsersPage() {
     setIsModalOpen(true);
   };
 
-  const getInitials = (name: string | null | undefined) => {
-    if (!name || typeof name !== 'string') return '?';
-    const parts = name.trim().split(' ').filter(Boolean);
-    if (parts.length === 0) return '?';
-    return parts.map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  const getInitials = (name: string | null | undefined, email?: string | null) => {
+    if (name && typeof name === 'string' && name.trim()) {
+      const parts = name.trim().split(' ').filter(Boolean);
+      if (parts.length > 0) {
+        return parts.map(n => n[0]).join('').toUpperCase().slice(0, 2);
+      }
+    }
+    // Fallback to email
+    if (email && typeof email === 'string') {
+      return email[0].toUpperCase();
+    }
+    return '?';
+  };
+
+  const getDisplayName = (user: UserData) => {
+    if (user.full_name && user.full_name.trim()) {
+      return user.full_name;
+    }
+    if (user.email) {
+      // Use part before @ as display name
+      return user.email.split('@')[0];
+    }
+    return 'Unknown User';
   };
 
   if (loading) {
@@ -441,11 +459,11 @@ export default function UsersPage() {
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center gap-3">
                           <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                            <span className="text-sm font-semibold text-blue-600">{getInitials(user.full_name)}</span>
+                            <span className="text-sm font-semibold text-blue-600">{getInitials(user.full_name, user.email)}</span>
                           </div>
                           <div>
-                            <h3 className="font-semibold text-gray-900">{user.full_name}</h3>
-                            <p className="text-sm text-gray-500">{user.email}</p>
+                            <h3 className="font-semibold text-gray-900">{getDisplayName(user)}</h3>
+                            <p className="text-sm text-gray-500">{user.email || 'No email'}</p>
                           </div>
                         </div>
                         <div className="flex gap-1">
@@ -619,11 +637,11 @@ export default function UsersPage() {
               <div className="flex items-start justify-between mb-6">
                 <div className="flex items-center gap-3">
                   <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-                    <span className="text-lg font-bold text-blue-600">{getInitials(selectedUser.full_name)}</span>
+                    <span className="text-lg font-bold text-blue-600">{getInitials(selectedUser.full_name, selectedUser.email)}</span>
                   </div>
                   <div>
-                    <h3 className="text-xl font-semibold text-gray-900">{selectedUser.full_name}</h3>
-                    <p className="text-gray-600">{selectedUser.email}</p>
+                    <h3 className="text-xl font-semibold text-gray-900">{getDisplayName(selectedUser)}</h3>
+                    <p className="text-gray-600">{selectedUser.email || 'No email'}</p>
                   </div>
                 </div>
                 <Button
