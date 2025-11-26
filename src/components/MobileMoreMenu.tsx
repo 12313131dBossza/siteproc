@@ -18,6 +18,7 @@ interface MenuItem {
   href: string;
   icon: React.ElementType;
   description: string;
+  access: 'all' | 'internal' | 'admin';
 }
 
 const moreMenuItems: MenuItem[] = [
@@ -26,54 +27,79 @@ const moreMenuItems: MenuItem[] = [
     href: "/clients",
     icon: Users,
     description: "Manage client relationships",
+    access: 'internal',
   },
   {
     name: "Contractors",
     href: "/contractors",
     icon: HardHat,
     description: "Contractor directory",
+    access: 'internal',
   },
   {
     name: "Bids",
     href: "/bids",
     icon: FileText,
     description: "View and manage bids",
+    access: 'internal',
   },
   {
     name: "Change Orders",
     href: "/change-orders",
     icon: FileText,
     description: "Track change orders",
+    access: 'internal',
   },
   {
     name: "Payments",
     href: "/payments",
     icon: CreditCard,
     description: "Payment tracking",
+    access: 'internal',
   },
   {
     name: "Reports",
     href: "/reports",
     icon: BarChart3,
     description: "Analytics and reports",
+    access: 'internal',
   },
   {
     name: "Settings",
     href: "/settings",
     icon: Settings,
     description: "App preferences",
+    access: 'internal',
   },
 ];
 
 interface MobileMoreMenuProps {
   isOpen: boolean;
   onClose: () => void;
+  userRole?: string;
 }
 
-export function MobileMoreMenu({ isOpen, onClose }: MobileMoreMenuProps) {
+export function MobileMoreMenu({ isOpen, onClose, userRole = '' }: MobileMoreMenuProps) {
   const pathname = usePathname();
 
   if (!isOpen) return null;
+
+  // Filter menu items based on user role
+  const isInternalMember = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(userRole);
+  const isAdmin = ['admin', 'owner'].includes(userRole);
+  
+  const filteredMenuItems = moreMenuItems.filter(item => {
+    if (item.access === 'all') return true;
+    if (item.access === 'internal' && isInternalMember) return true;
+    if (item.access === 'admin' && isAdmin) return true;
+    return false;
+  });
+
+  // If no items to show, don't render the menu
+  if (filteredMenuItems.length === 0) {
+    onClose();
+    return null;
+  }
 
   return (
     <>
@@ -115,7 +141,7 @@ export function MobileMoreMenu({ isOpen, onClose }: MobileMoreMenuProps) {
         {/* Menu Items */}
         <div className="overflow-y-auto px-4 py-3 pb-20" style={{ maxHeight: "calc(85vh - 140px)" }}>
           <div className="space-y-2">
-            {moreMenuItems.map((item) => {
+            {filteredMenuItems.map((item) => {
               const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
               const Icon = item.icon;
 

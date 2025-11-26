@@ -27,24 +27,28 @@ import {
   Files
 } from "lucide-react";
 
+// Full navigation with required roles
+// 'all' = all authenticated users can see
+// 'internal' = only internal company members (admin, owner, manager, bookkeeper, member)
+// 'admin' = only admin/owner
 const navigation = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Analytics", href: "/analytics", icon: BarChart3 },
-  { name: "Documents", href: "/documents", icon: Files },
-  { name: "Deliveries", href: "/deliveries", icon: Package },
-  { name: "Expenses", href: "/expenses", icon: Receipt },
-  { name: "Change Orders", href: "/change-orders", icon: FileText },
-  { name: "Orders", href: "/orders", icon: ShoppingCart },
-  { name: "Products", href: "/products", icon: PackageSearch },
-  { name: "Users & Roles", href: "/users", icon: Users },
-  { name: "Activity Log", href: "/activity", icon: Activity },
-  { name: "Projects", href: "/projects", icon: FolderOpen },
-  { name: "Bids", href: "/bids", icon: FileSignature },
-  { name: "Contractors", href: "/contractors", icon: Building2 },
-  { name: "Clients", href: "/clients", icon: UserCheck },
-  { name: "Payments", href: "/payments", icon: CreditCard },
-  { name: "Reports", href: "/reports", icon: BarChart3 },
-  { name: "Settings", href: "/settings", icon: Settings },
+  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, access: 'internal' },
+  { name: "Analytics", href: "/analytics", icon: BarChart3, access: 'internal' },
+  { name: "Documents", href: "/documents", icon: Files, access: 'internal' },
+  { name: "Deliveries", href: "/deliveries", icon: Package, access: 'internal' },
+  { name: "Expenses", href: "/expenses", icon: Receipt, access: 'internal' },
+  { name: "Change Orders", href: "/change-orders", icon: FileText, access: 'internal' },
+  { name: "Orders", href: "/orders", icon: ShoppingCart, access: 'internal' },
+  { name: "Products", href: "/products", icon: PackageSearch, access: 'internal' },
+  { name: "Users & Roles", href: "/users", icon: Users, access: 'admin' },
+  { name: "Activity Log", href: "/activity", icon: Activity, access: 'internal' },
+  { name: "Projects", href: "/projects", icon: FolderOpen, access: 'all' }, // All users can see their projects
+  { name: "Bids", href: "/bids", icon: FileSignature, access: 'internal' },
+  { name: "Contractors", href: "/contractors", icon: Building2, access: 'internal' },
+  { name: "Clients", href: "/clients", icon: UserCheck, access: 'internal' },
+  { name: "Payments", href: "/payments", icon: CreditCard, access: 'internal' },
+  { name: "Reports", href: "/reports", icon: BarChart3, access: 'internal' },
+  { name: "Settings", href: "/settings", icon: Settings, access: 'internal' },
 ];
 
 export function SidebarNav() {
@@ -52,6 +56,8 @@ export function SidebarNav() {
   const router = useRouter();
   const [userEmail, setUserEmail] = useState<string>('');
   const [userName, setUserName] = useState<string>('User');
+  const [userRole, setUserRole] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -66,10 +72,10 @@ export function SidebarNav() {
         if (user) {
           setUserEmail(user.email || '');
           
-          // Try to get full name from profile
+          // Get profile with role
           const { data: profile } = await supabase
             .from('profiles')
-            .select('full_name, username')
+            .select('full_name, username, role')
             .eq('id', user.id)
             .single();
           
@@ -78,12 +84,16 @@ export function SidebarNav() {
           } else if (profile?.username) {
             setUserName(profile.username);
           } else if (user.email) {
-            // Use email username part as fallback
             setUserName(user.email.split('@')[0]);
           }
+          
+          // Set user role
+          setUserRole(profile?.role || 'viewer');
         }
       } catch (error) {
         console.error('Error loading user:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
     
@@ -104,6 +114,20 @@ export function SidebarNav() {
     }
   };
 
+  // Filter navigation based on user role
+  const filteredNavigation = navigation.filter(item => {
+    // Internal company members
+    const isInternalMember = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(userRole);
+    // Admin only items
+    const isAdmin = ['admin', 'owner'].includes(userRole);
+    
+    if (item.access === 'all') return true;
+    if (item.access === 'internal' && isInternalMember) return true;
+    if (item.access === 'admin' && isAdmin) return true;
+    
+    return false;
+  });
+
   // Don't render on mobile - bottom nav handles it
   return (
     <div className="hidden md:flex h-full w-64 flex-col bg-white border-r border-gray-200 shadow-sm">
@@ -121,32 +145,38 @@ export function SidebarNav() {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-3 py-4">
-        <ul className="space-y-1">
-          {navigation.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-            const Icon = item.icon;
-            
-            return (
-              <li key={item.name}>
-                <Link
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
-                    isActive
-                      ? "bg-blue-50 text-blue-700 border border-blue-100 shadow-sm"
-                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                  )}
-                >
-                  <Icon className="h-5 w-5 flex-shrink-0" />
-                  <span className="flex-1">{item.name}</span>
-                  {isActive && (
-                    <ChevronRight className="h-4 w-4 text-blue-500" />
-                  )}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin h-6 w-6 border-2 border-blue-600 border-t-transparent rounded-full" />
+          </div>
+        ) : (
+          <ul className="space-y-1">
+            {filteredNavigation.map((item) => {
+              const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+              const Icon = item.icon;
+              
+              return (
+                <li key={item.name}>
+                  <Link
+                    href={item.href}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                      isActive
+                        ? "bg-blue-50 text-blue-700 border border-blue-100 shadow-sm"
+                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                    )}
+                  >
+                    <Icon className="h-5 w-5 flex-shrink-0" />
+                    <span className="flex-1">{item.name}</span>
+                    {isActive && (
+                      <ChevronRight className="h-4 w-4 text-blue-500" />
+                    )}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </nav>
 
       {/* User Profile Footer */}
