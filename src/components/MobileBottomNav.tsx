@@ -15,11 +15,14 @@ import {
 import { MobileMoreMenu } from './MobileMoreMenu';
 
 // Mobile nav items with access levels
+// 'all' = all users
+// 'internal' = internal company members only
+// 'viewer' = external viewers can see (project-scoped)
 const mobileNavItems = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, access: 'internal' },
   { name: 'Projects', href: '/projects', icon: FolderOpen, access: 'all' },
-  { name: 'Orders', href: '/orders', icon: ShoppingCart, access: 'internal' },
-  { name: 'Expenses', href: '/expenses', icon: Receipt, access: 'internal' },
+  { name: 'Orders', href: '/orders', icon: ShoppingCart, access: 'viewer' },
+  { name: 'Expenses', href: '/expenses', icon: Receipt, access: 'viewer' },
 ];
 
 export function MobileBottomNav() {
@@ -56,10 +59,13 @@ export function MobileBottomNav() {
 
   // Filter navigation based on user role
   const isInternalMember = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(userRole);
+  const isViewer = userRole === 'viewer';
   
   const filteredNavItems = mobileNavItems.filter(item => {
     if (item.access === 'all') return true;
     if (item.access === 'internal' && isInternalMember) return true;
+    // Viewers can see 'viewer' items, internal members can too
+    if (item.access === 'viewer' && (isViewer || isInternalMember)) return true;
     return false;
   });
 

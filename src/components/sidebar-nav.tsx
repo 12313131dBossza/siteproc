@@ -31,18 +31,19 @@ import {
 // 'all' = all authenticated users can see
 // 'internal' = only internal company members (admin, owner, manager, bookkeeper, member)
 // 'admin' = only admin/owner
+// 'viewer' = external viewers can see (project-scoped data)
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, access: 'internal' },
   { name: "Analytics", href: "/analytics", icon: BarChart3, access: 'internal' },
-  { name: "Documents", href: "/documents", icon: Files, access: 'internal' },
-  { name: "Deliveries", href: "/deliveries", icon: Package, access: 'internal' },
-  { name: "Expenses", href: "/expenses", icon: Receipt, access: 'internal' },
+  { name: "Projects", href: "/projects", icon: FolderOpen, access: 'all' }, // All users can see their projects
+  { name: "Orders", href: "/orders", icon: ShoppingCart, access: 'viewer' }, // Viewers see project-filtered orders
+  { name: "Expenses", href: "/expenses", icon: Receipt, access: 'viewer' }, // Viewers see project-filtered expenses
+  { name: "Deliveries", href: "/deliveries", icon: Package, access: 'viewer' }, // Viewers see project-filtered deliveries
+  { name: "Documents", href: "/documents", icon: Files, access: 'viewer' }, // Viewers see project-filtered documents
   { name: "Change Orders", href: "/change-orders", icon: FileText, access: 'internal' },
-  { name: "Orders", href: "/orders", icon: ShoppingCart, access: 'internal' },
   { name: "Products", href: "/products", icon: PackageSearch, access: 'internal' },
   { name: "Users & Roles", href: "/users", icon: Users, access: 'admin' },
   { name: "Activity Log", href: "/activity", icon: Activity, access: 'internal' },
-  { name: "Projects", href: "/projects", icon: FolderOpen, access: 'all' }, // All users can see their projects
   { name: "Bids", href: "/bids", icon: FileSignature, access: 'internal' },
   { name: "Contractors", href: "/contractors", icon: Building2, access: 'internal' },
   { name: "Clients", href: "/clients", icon: UserCheck, access: 'internal' },
@@ -120,10 +121,14 @@ export function SidebarNav() {
     const isInternalMember = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(userRole);
     // Admin only items
     const isAdmin = ['admin', 'owner'].includes(userRole);
+    // External viewer
+    const isViewer = userRole === 'viewer';
     
     if (item.access === 'all') return true;
     if (item.access === 'internal' && isInternalMember) return true;
     if (item.access === 'admin' && isAdmin) return true;
+    // Viewers can see 'viewer' access items (project-scoped data)
+    if (item.access === 'viewer' && (isViewer || isInternalMember)) return true;
     
     return false;
   });

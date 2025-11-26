@@ -24,173 +24,141 @@ export async function GET(request: NextRequest) {
     const maxAmount = searchParams.get('maxAmount')
     const deliveryProgress = searchParams.get('delivery_progress')
     
-    // Broadened filter: company_id OR created_by (for visibility during migration)
-    let query = supabase
-      .from('purchase_orders')
-      .select(`
-        id,
-        project_id,
-        company_id,
-        created_by,
-        amount,
-        description,
-        category,
-        vendor,
-        product_name,
-        quantity,
-        unit_price,
-        status,
-        requested_by,
-        requested_at,
-        approved_by,
-        approved_at,
-        rejected_by,
-        rejected_at,
-        rejection_reason,
-        created_at,
-        updated_at,
-        delivery_progress,
-        ordered_qty,
-        delivered_qty,
-        remaining_qty,
-        delivered_value,
-        projects(
+    // Check if user is internal company member or external viewer
+    const isInternalMember = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(profile.role || '')
+    
+    let orders: any[] = []
+    
+    if (isInternalMember) {
+      // Internal members see all company orders
+      let query = supabase
+        .from('purchase_orders')
+        .select(`
           id,
-          name,
-          company_id
-        )
-      `)
-      .or(`company_id.eq.${profile.company_id},created_by.eq.${profile.id}`)
-      .order('created_at', { ascending: false })
-
-    // Apply filters
-    if (projectId) {
-      query = query.eq('project_id', projectId)
-    }
-
-    if (status) {
-      query = query.eq('status', status)
-    }
-
-    if (vendor) {
-      query = query.ilike('vendor', `%${vendor}%`)
-    }
-
-    if (startDate) {
-      query = query.gte('created_at', startDate)
-    }
-
-    if (endDate) {
-      query = query.lte('created_at', endDate)
-    }
-
-    if (minAmount) {
-      query = query.gte('amount', Number(minAmount))
-    }
-
-    if (maxAmount) {
-      query = query.lte('amount', Number(maxAmount))
-    }
-
-    if (deliveryProgress) {
-      query = query.eq('delivery_progress', deliveryProgress)
-    }
-
-    const { data: orders, error } = await query
-
-    if (error) {
-      console.error('Error fetching orders (RLS):', error)
-      
-      // If schema cache error, provide helpful message
-      if (error.message?.includes('schema cache') || error.message?.includes('could not find')) {
-        return NextResponse.json({
-          ok: false,
-          error: 'Database schema cache needs refresh',
-          message: 'Run this in Supabase SQL Editor: NOTIFY pgrst, \'reload schema\';',
-          details: error.message
-        }, { status: 503 })
-      }
-      
-      // Service-role fallback for admins/managers/bookkeepers
-      if (['admin', 'owner', 'manager', 'bookkeeper'].includes(profile.role || '')) {
-        console.log('🔄 Using service-role fallback for orders (admin/manager)')
-        
-        const serviceSb = createServiceClient()
-        let fallbackQuery = serviceSb
-          .from('purchase_orders')
-          .select(`
+          project_id,
+          company_id,
+          created_by,
+          amount,
+          description,
+          category,
+          vendor,
+          product_name,
+          quantity,
+          unit_price,
+          status,
+          requested_by,
+          requested_at,
+          approved_by,
+          approved_at,
+          rejected_by,
+          rejected_at,
+          rejection_reason,
+          created_at,
+          updated_at,
+          delivery_progress,
+          ordered_qty,
+          delivered_qty,
+          remaining_qty,
+          delivered_value,
+          projects(
             id,
-            project_id,
-            company_id,
-            created_by,
-            amount,
-            description,
-            category,
-            vendor,
-            product_name,
-            quantity,
-            unit_price,
-            status,
-            requested_by,
-            requested_at,
-            approved_by,
-            approved_at,
-            rejected_by,
-            rejected_at,
-            rejection_reason,
-            created_at,
-            updated_at,
-            delivery_progress,
-            ordered_qty,
-            delivered_qty,
-            remaining_qty,
-            delivered_value,
-            projects(
-              id,
-              name,
-              company_id
-            )
-          `)
-          .eq('company_id', profile.company_id)
-          .order('created_at', { ascending: false })
+            name,
+            company_id
+          )
+        `)
+        .or(`company_id.eq.${profile.company_id},created_by.eq.${profile.id}`)
+        .order('created_at', { ascending: false })
 
-        // Apply same filters to fallback query
-        if (projectId) {
-          fallbackQuery = fallbackQuery.eq('project_id', projectId)
-        }
-        if (status) {
-          fallbackQuery = fallbackQuery.eq('status', status)
-        }
-        if (vendor) {
-          fallbackQuery = fallbackQuery.ilike('vendor', `%${vendor}%`)
-        }
-        if (startDate) {
-          fallbackQuery = fallbackQuery.gte('created_at', startDate)
-        }
-        if (endDate) {
-          fallbackQuery = fallbackQuery.lte('created_at', endDate)
-        }
-        if (minAmount) {
-          fallbackQuery = fallbackQuery.gte('amount', Number(minAmount))
-        }
-        if (maxAmount) {
-          fallbackQuery = fallbackQuery.lte('amount', Number(maxAmount))
-        }
-        if (deliveryProgress) {
-          fallbackQuery = fallbackQuery.eq('delivery_progress', deliveryProgress)
-        }
+      // Apply filters
+      if (projectId) query = query.eq('project_id', projectId)
+      if (status) query = query.eq('status', status)
+      if (vendor) query = query.ilike('vendor', `%${vendor}%`)
+      if (startDate) query = query.gte('created_at', startDate)
+      if (endDate) query = query.lte('created_at', endDate)
+      if (minAmount) query = query.gte('amount', Number(minAmount))
+      if (maxAmount) query = query.lte('amount', Number(maxAmount))
+      if (deliveryProgress) query = query.eq('delivery_progress', deliveryProgress)
 
-        const { data: fallbackOrders, error: fallbackError } = await fallbackQuery
-        
-        if (fallbackError) {
-          console.error('Service-role fallback also failed:', fallbackError)
-          return response.error('Failed to fetch orders', 500)
+      const { data, error } = await query
+      
+      if (error) {
+        console.error('Error fetching orders (RLS):', error)
+        // Service-role fallback for admins/managers/bookkeepers
+        if (['admin', 'owner', 'manager', 'bookkeeper'].includes(profile.role || '')) {
+          const serviceSb = createServiceClient()
+          let fallbackQuery = serviceSb
+            .from('purchase_orders')
+            .select(`*`)
+            .eq('company_id', profile.company_id)
+            .order('created_at', { ascending: false })
+          
+          if (projectId) fallbackQuery = fallbackQuery.eq('project_id', projectId)
+          if (status) fallbackQuery = fallbackQuery.eq('status', status)
+          
+          const { data: fallbackData } = await fallbackQuery
+          orders = fallbackData || []
         }
-        
-        return NextResponse.json({ success: true, data: fallbackOrders })
+      } else {
+        orders = data || []
+      }
+    } else {
+      // External viewers - only see orders from their assigned projects
+      console.log('🔍 Fetching orders for external viewer:', profile.id)
+      
+      const serviceSb = createServiceClient()
+      
+      // Get project IDs the user has access to with view_orders permission
+      const { data: memberProjects } = await serviceSb
+        .from('project_members')
+        .select('project_id, permissions')
+        .eq('user_id', profile.id)
+        .eq('status', 'active')
+      
+      if (!memberProjects || memberProjects.length === 0) {
+        console.log('External viewer has no project memberships')
+        return NextResponse.json({ success: true, data: [] })
       }
       
-      return response.error('Failed to fetch orders', 500)
+      // Filter to projects where user has view_orders permission
+      const projectIds = memberProjects
+        .filter(m => {
+          const perms = m.permissions as { view_orders?: boolean } | null
+          return perms?.view_orders !== false // Default to true if not specified
+        })
+        .map(m => m.project_id)
+      
+      if (projectIds.length === 0) {
+        console.log('External viewer has no projects with view_orders permission')
+        return NextResponse.json({ success: true, data: [] })
+      }
+      
+      console.log('External viewer can view orders for projects:', projectIds)
+      
+      // Fetch orders only from those projects
+      let query = serviceSb
+        .from('purchase_orders')
+        .select(`*`)
+        .in('project_id', projectIds)
+        .order('created_at', { ascending: false })
+      
+      // Apply filters
+      if (projectId) query = query.eq('project_id', projectId)
+      if (status) query = query.eq('status', status)
+      if (vendor) query = query.ilike('vendor', `%${vendor}%`)
+      if (startDate) query = query.gte('created_at', startDate)
+      if (endDate) query = query.lte('created_at', endDate)
+      if (minAmount) query = query.gte('amount', Number(minAmount))
+      if (maxAmount) query = query.lte('amount', Number(maxAmount))
+      if (deliveryProgress) query = query.eq('delivery_progress', deliveryProgress)
+      
+      const { data, error } = await query
+      
+      if (error) {
+        console.error('Error fetching orders for viewer:', error)
+        return response.error('Failed to fetch orders', 500)
+      }
+      
+      orders = data || []
     }
 
     return NextResponse.json({ success: true, data: orders })

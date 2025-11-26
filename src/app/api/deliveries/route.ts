@@ -263,16 +263,71 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
-  const session = await getSessionProfile()
-  if (!session.user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
-  if (!session.companyId) return NextResponse.json({ error: 'no_company' }, { status: 400 })
+    const session = await getSessionProfile()
+    if (!session.user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
+    if (!session.companyId) return NextResponse.json({ error: 'no_company' }, { status: 400 })
     const url = new URL(req.url)
     const jobId = url.searchParams.get('job_id')
+    const projectId = url.searchParams.get('project_id')
     const limit = Math.min(Number(url.searchParams.get('limit') || 50), 200)
     const cursor = url.searchParams.get('cursor')
     const sb = supabaseService()
     
-    // If no job_id, return all deliveries for company (for dashboard)
+    // Get user's profile role
+    const { data: profile } = await (sb as any)
+      .from('profiles')
+      .select('role')
+      .eq('id', session.user.id)
+      .single()
+    
+    const userRole = profile?.role as string | null
+    
+    // For external viewers: only show deliveries from projects they have access to
+    if (userRole === 'viewer') {
+      // Get project IDs the viewer has access to
+      const { data: memberProjects, error: memberError } = await (sb as any)
+        .from('project_members')
+        .select('project_id')
+        .eq('user_id', session.user.id)
+        .eq('status', 'active')
+      
+      if (memberError) {
+        console.error('Error fetching project memberships:', memberError)
+        return NextResponse.json({ success: true, data: [] })
+      }
+      
+      if (!memberProjects || memberProjects.length === 0) {
+        return NextResponse.json({ success: true, data: [] })
+      }
+      
+      const projectIds = memberProjects.map((p: any) => p.project_id)
+      
+      // If specific project/job requested, verify access
+      if (projectId && !projectIds.includes(projectId)) {
+        return NextResponse.json({ error: 'Access denied to this project' }, { status: 403 })
+      }
+      if (jobId && !projectIds.includes(jobId)) {
+        return NextResponse.json({ error: 'Access denied to this project' }, { status: 403 })
+      }
+      
+      // Build query to filter deliveries by accessible project IDs
+      let query = (sb as any)
+        .from('deliveries')
+        .select('*')
+        .in('project_id', projectIds)
+        .order('created_at', { ascending: false })
+        .limit(limit)
+      
+      if (projectId) query = query.eq('project_id', projectId)
+      if (jobId) query = query.eq('job_id', jobId)
+      if (cursor) query = query.lt('created_at', cursor)
+      
+      const { data, error } = await query
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ success: true, data: data || [] })
+    }
+    
+    // If no job_id, return all deliveries for company (for dashboard) - internal users
     if (!jobId) {
       const { data, error } = await (sb as any)
         .from('deliveries')
@@ -285,11 +340,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: true, data: data || [] })
     }
     
-    // Original job-specific query
+    // Original job-specific query for internal users
     let q = sb
       .from('deliveries')
       .select('id,job_id,po_id,status,delivered_at,created_at')
-  .eq('company_id', session.companyId)
+      .eq('company_id', session.companyId)
       .eq('job_id', jobId)
       .order('created_at', { ascending: false })
       .limit(limit + 1)

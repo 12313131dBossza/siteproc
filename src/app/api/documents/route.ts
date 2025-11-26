@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB (aligned with storage bucket limit)
@@ -44,7 +45,7 @@ export async function GET(request: NextRequest) {
     // Get user's profile and company
     const { data: profile } = await supabase
       .from('profiles')
-      .select('company_id')
+      .select('company_id, role')
       .eq('id', user.id)
       .single();
 
@@ -63,6 +64,73 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
 
+    const userRole = profile?.role as string | null;
+
+    // For external viewers: only show documents from projects they have access to
+    if (userRole === 'viewer') {
+      const adminClient = createAdminClient();
+      
+      // Get project IDs the viewer has access to
+      const { data: memberProjects, error: memberError } = await adminClient
+        .from('project_members')
+        .select('project_id')
+        .eq('user_id', user.id)
+        .eq('status', 'active');
+      
+      if (memberError) {
+        console.error('Error fetching project memberships:', memberError);
+        return NextResponse.json({ documents: [], pagination: { total: 0, limit, offset, hasMore: false } });
+      }
+      
+      if (!memberProjects || memberProjects.length === 0) {
+        return NextResponse.json({ documents: [], pagination: { total: 0, limit, offset, hasMore: false } });
+      }
+      
+      const projectIds = memberProjects.map(p => p.project_id);
+      
+      // If specific project requested, verify access
+      if (projectId && !projectIds.includes(projectId)) {
+        return NextResponse.json({ error: 'Access denied to this project' }, { status: 403 });
+      }
+      
+      // Build query to filter documents by accessible project IDs
+      let query = adminClient
+        .from('documents')
+        .select('*', { count: 'exact' })
+        .in('project_id', projectIds)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false });
+      
+      // Apply filters
+      if (category) query = query.eq('category', category);
+      if (projectId) query = query.eq('project_id', projectId);
+      if (orderId) query = query.eq('order_id', orderId);
+      if (expenseId) query = query.eq('expense_id', expenseId);
+      if (deliveryId) query = query.eq('delivery_id', deliveryId);
+      if (search) query = query.or(`file_name.ilike.%${search}%,title.ilike.%${search}%,description.ilike.%${search}%`);
+      
+      // Apply pagination
+      query = query.range(offset, offset + limit - 1);
+      
+      const { data: documents, error, count } = await query;
+      
+      if (error) {
+        console.error('Error fetching documents:', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      
+      return NextResponse.json({
+        documents: documents || [],
+        pagination: {
+          total: count || 0,
+          limit,
+          offset,
+          hasMore: (count || 0) > offset + limit,
+        },
+      });
+    }
+
+    // Regular logic for internal company members
     // Build query - fetch documents first, then manually join profiles
     let query = supabase
       .from('documents')

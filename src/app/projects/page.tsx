@@ -10,6 +10,7 @@ import { FormModal, FormModalActions, Input, Select, SearchBar } from '@/compone
 import { ProjectsFilterPanel } from "@/components/ProjectsFilterPanel";
 import { SortControl, sortArray } from "@/components/SortControl";
 import { exportToCSV, formatCurrencyForExport, formatDateForExport } from "@/lib/export-csv";
+import { createBrowserClient } from '@supabase/ssr';
 
 interface Project {
   id: string;
@@ -42,7 +43,39 @@ export default function ProjectsPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [sortBy, setSortBy] = useState('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [userRole, setUserRole] = useState<string>('');
   const router = useRouter();
+
+  // Check if user can create projects (internal members only)
+  const canCreateProject = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(userRole);
+
+  // Fetch user role on mount
+  useEffect(() => {
+    const loadUserRole = async () => {
+      try {
+        const supabase = createBrowserClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        );
+        
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+          
+          setUserRole(profile?.role || 'viewer');
+        }
+      } catch (error) {
+        console.error('Error loading user role:', error);
+      }
+    };
+    
+    loadUserRole();
+  }, []);
 
   async function load() {
     setLoading(true);
@@ -208,10 +241,12 @@ export default function ProjectsPage() {
               <Download className="h-4 w-4" />
               Export CSV
             </Button>
-            <Button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              New Project
-            </Button>
+            {canCreateProject && (
+              <Button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                New Project
+              </Button>
+            )}
           </div>
         </div>
 

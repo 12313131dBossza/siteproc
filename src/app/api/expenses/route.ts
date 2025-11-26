@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sbServer } from '@/lib/supabase-server'
 import { supabaseService } from '@/lib/supabase'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { logActivity } from '@/app/api/activity/route'
 import { sendExpenseSubmissionNotification } from '@/lib/email'
 import { getCompanyAdminEmails } from '@/lib/server-utils'
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
       .select('company_id, role')
       .eq('id', user.id)
       .single()
-  if (profileError) return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+    if (profileError) return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
 
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search')
@@ -25,6 +26,61 @@ export async function GET(request: NextRequest) {
 
     const companyId = profile?.company_id as string | null
     const userId = user.id
+    const userRole = profile?.role as string | null
+
+    // For external viewers: only show expenses from projects they have access to
+    if (userRole === 'viewer') {
+      const adminClient = createAdminClient()
+      
+      // Get project IDs the viewer has access to
+      const { data: memberProjects, error: memberError } = await adminClient
+        .from('project_members')
+        .select('project_id')
+        .eq('user_id', userId)
+        .eq('status', 'active')
+      
+      if (memberError) {
+        console.error('Error fetching project memberships:', memberError)
+        return NextResponse.json({ success: true, data: [] })
+      }
+      
+      if (!memberProjects || memberProjects.length === 0) {
+        return NextResponse.json({ success: true, data: [] })
+      }
+      
+      const projectIds = memberProjects.map(p => p.project_id)
+      
+      // Build query to filter expenses by accessible project IDs
+      let query = adminClient
+        .from('expenses')
+        .select('*')
+        .in('project_id', projectIds)
+        .order('created_at', { ascending: false })
+      
+      if (search) query = query.ilike('memo', `%${search}%`)
+      if (status) query = query.eq('status', status)
+      
+      const { data: expenses, error } = await query
+      if (error) return NextResponse.json({ error: 'Failed to fetch expenses', details: error.message }, { status: 500 })
+      
+      const formatted = (expenses || []).map((e: any) => ({
+        id: e.id,
+        vendor: e.vendor || (e.description ? String(e.description).slice(0, 50) : 'Expense'),
+        category: e.category || 'other',
+        amount: Number(e.amount) || 0,
+        description: e.description || e.memo || '',
+        status: e.status || 'pending',
+        created_at: e.created_at,
+        approved_at: e.approved_at,
+        approved_by: e.approved_by,
+        project_id: e.project_id || e.job_id,
+        receipt_url: e.receipt_url
+      }))
+      
+      return NextResponse.json({ success: true, data: formatted })
+    }
+
+    // Regular logic for internal company users
     let query = supabase
       .from('expenses')
       .select('*')
