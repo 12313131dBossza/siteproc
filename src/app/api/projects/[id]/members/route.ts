@@ -5,7 +5,7 @@ import { sendProjectInvitationEmail } from '@/lib/email';
 // GET /api/projects/[id]/members - List project members
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await sbServer();
@@ -15,7 +15,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const projectId = params.id;
+    const { id: projectId } = await params;
 
     // Get members (without join - we'll enrich separately)
     const { data: members, error } = await supabase
@@ -56,7 +56,7 @@ export async function GET(
 // POST /api/projects/[id]/members - Add a member
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await sbServer();
@@ -66,7 +66,7 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const projectId = params.id;
+    const { id: projectId } = await params;
     const body = await request.json();
     const { 
       email, // For internal users - we look up their user_id

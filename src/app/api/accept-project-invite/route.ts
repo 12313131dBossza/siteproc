@@ -30,12 +30,12 @@ export async function GET(req: NextRequest) {
       }, { status: 404 })
     }
 
-    // Check if invitation has expired (24 hours)
+    // Check if invitation has expired (7 days)
     const invitedAt = new Date(member.invitation_sent_at || member.created_at)
     const now = new Date()
-    const hoursDiff = (now.getTime() - invitedAt.getTime()) / (1000 * 60 * 60)
+    const daysDiff = (now.getTime() - invitedAt.getTime()) / (1000 * 60 * 60 * 24)
     
-    if (hoursDiff > 24) {
+    if (daysDiff > 7) {
       return NextResponse.json({ 
         error: 'This invitation has expired. Please ask the project owner to send a new invitation.' 
       }, { status: 410 })
@@ -101,12 +101,12 @@ export async function POST(req: NextRequest) {
       }, { status: 404 })
     }
 
-    // Check if invitation has expired (24 hours)
+    // Check if invitation has expired (7 days)
     const invitedAt = new Date(member.invitation_sent_at || member.created_at)
     const now = new Date()
-    const hoursDiff = (now.getTime() - invitedAt.getTime()) / (1000 * 60 * 60)
+    const daysDiff = (now.getTime() - invitedAt.getTime()) / (1000 * 60 * 60 * 24)
     
-    if (hoursDiff > 24) {
+    if (daysDiff > 7) {
       // Mark as expired
       await adminSupabase
         .from('project_members')

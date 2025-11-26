@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 // PATCH /api/projects/[id]/members/[memberId] - Update a member
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string; memberId: string } }
+  { params }: { params: Promise<{ id: string; memberId: string }> }
 ) {
   try {
     const supabase = await sbServer();
@@ -14,7 +14,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { memberId } = params;
+    const { memberId } = await params;
     const body = await request.json();
     const { role, permissions, status } = body;
 
@@ -45,7 +45,7 @@ export async function PATCH(
 // DELETE /api/projects/[id]/members/[memberId] - Remove a member
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string; memberId: string } }
+  { params }: { params: Promise<{ id: string; memberId: string }> }
 ) {
   try {
     const supabase = await sbServer();
@@ -55,7 +55,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { memberId } = params;
+    const { memberId } = await params;
 
     // Don't allow removing the owner
     const { data: member } = await supabase
