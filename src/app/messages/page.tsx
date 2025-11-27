@@ -201,6 +201,8 @@ export default function MessagesPage() {
 
   // Determine what the user can see based on role
   const isCompanyMember = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(userRole);
+  const isSupplier = userRole === 'supplier';
+  const isClient = userRole === 'viewer' || userRole === 'client';
 
   // Filter projects by search
   const filteredProjects = projects.filter(p => 
@@ -226,7 +228,7 @@ export default function MessagesPage() {
               )}
             </h1>
             <p className="text-sm text-gray-500 mt-1">
-              Chat with clients & suppliers
+              {isSupplier ? 'Chat with project team' : isClient ? 'Chat with project team' : 'Chat with clients & suppliers'}
             </p>
           </div>
 
@@ -297,67 +299,75 @@ export default function MessagesPage() {
 
                     {/* Channel Buttons */}
                     <div className="p-2 space-y-2">
-                      {/* Supplier Channel */}
-                      <button
-                        onClick={() => {
-                          setSelectedProject(project);
-                          setSelectedChannel('company_supplier');
-                        }}
-                        className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all ${
-                          isSelected && selectedChannel === 'company_supplier'
-                            ? 'bg-purple-100 border-2 border-purple-300'
-                            : 'bg-purple-50 hover:bg-purple-100 border-2 border-transparent'
-                        }`}
-                      >
-                        <div className="w-9 h-9 rounded-full bg-purple-200 flex items-center justify-center flex-shrink-0">
-                          <Truck className="w-4 h-4 text-purple-700" />
-                        </div>
-                        <div className="flex-1 min-w-0 text-left">
-                          <div className="flex items-center justify-between">
-                            <span className="font-medium text-purple-900 text-sm">Suppliers</span>
-                            {supplierConv?.unread_count ? (
-                              <span className="px-1.5 py-0.5 text-xs bg-purple-600 text-white rounded-full">
-                                {supplierConv.unread_count}
-                              </span>
-                            ) : null}
+                      {/* Supplier Channel - Show for Company and Suppliers */}
+                      {(isCompanyMember || isSupplier) && (
+                        <button
+                          onClick={() => {
+                            setSelectedProject(project);
+                            setSelectedChannel('company_supplier');
+                          }}
+                          className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all ${
+                            isSelected && selectedChannel === 'company_supplier'
+                              ? 'bg-purple-100 border-2 border-purple-300'
+                              : 'bg-purple-50 hover:bg-purple-100 border-2 border-transparent'
+                          }`}
+                        >
+                          <div className="w-9 h-9 rounded-full bg-purple-200 flex items-center justify-center flex-shrink-0">
+                            <Truck className="w-4 h-4 text-purple-700" />
                           </div>
-                          <p className="text-xs text-purple-700 truncate">
-                            {supplierConv?.last_message || 'Start a conversation'}
-                          </p>
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-purple-400 flex-shrink-0" />
-                      </button>
+                          <div className="flex-1 min-w-0 text-left">
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium text-purple-900 text-sm">
+                                {isSupplier ? 'Project Team' : 'Suppliers'}
+                              </span>
+                              {supplierConv?.unread_count ? (
+                                <span className="px-1.5 py-0.5 text-xs bg-purple-600 text-white rounded-full">
+                                  {supplierConv.unread_count}
+                                </span>
+                              ) : null}
+                            </div>
+                            <p className="text-xs text-purple-700 truncate">
+                              {supplierConv?.last_message || 'Start a conversation'}
+                            </p>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                        </button>
+                      )}
 
-                      {/* Client Channel */}
-                      <button
-                        onClick={() => {
-                          setSelectedProject(project);
-                          setSelectedChannel('company_client');
-                        }}
-                        className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all ${
-                          isSelected && selectedChannel === 'company_client'
-                            ? 'bg-blue-100 border-2 border-blue-300'
-                            : 'bg-blue-50 hover:bg-blue-100 border-2 border-transparent'
-                        }`}
-                      >
-                        <div className="w-9 h-9 rounded-full bg-blue-200 flex items-center justify-center flex-shrink-0">
-                          <Building2 className="w-4 h-4 text-blue-700" />
-                        </div>
-                        <div className="flex-1 min-w-0 text-left">
-                          <div className="flex items-center justify-between">
-                            <span className="font-medium text-blue-900 text-sm">Clients</span>
-                            {clientConv?.unread_count ? (
-                              <span className="px-1.5 py-0.5 text-xs bg-blue-600 text-white rounded-full">
-                                {clientConv.unread_count}
-                              </span>
-                            ) : null}
+                      {/* Client Channel - Show for Company and Clients */}
+                      {(isCompanyMember || isClient) && (
+                        <button
+                          onClick={() => {
+                            setSelectedProject(project);
+                            setSelectedChannel('company_client');
+                          }}
+                          className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all ${
+                            isSelected && selectedChannel === 'company_client'
+                              ? 'bg-blue-100 border-2 border-blue-300'
+                              : 'bg-blue-50 hover:bg-blue-100 border-2 border-transparent'
+                          }`}
+                        >
+                          <div className="w-9 h-9 rounded-full bg-blue-200 flex items-center justify-center flex-shrink-0">
+                            <Building2 className="w-4 h-4 text-blue-700" />
                           </div>
-                          <p className="text-xs text-blue-700 truncate">
-                            {clientConv?.last_message || 'Start a conversation'}
-                          </p>
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-blue-400 flex-shrink-0" />
-                      </button>
+                          <div className="flex-1 min-w-0 text-left">
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium text-blue-900 text-sm">
+                                {isClient ? 'Project Team' : 'Clients'}
+                              </span>
+                              {clientConv?.unread_count ? (
+                                <span className="px-1.5 py-0.5 text-xs bg-blue-600 text-white rounded-full">
+                                  {clientConv.unread_count}
+                                </span>
+                              ) : null}
+                            </div>
+                            <p className="text-xs text-blue-700 truncate">
+                              {clientConv?.last_message || 'Start a conversation'}
+                            </p>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 );

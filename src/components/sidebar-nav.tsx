@@ -41,7 +41,7 @@ const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, access: 'internal' },
   { name: "Analytics", href: "/analytics", icon: BarChart3, access: 'internal' },
   { name: "Projects", href: "/projects", icon: FolderOpen, access: 'all' }, // All users can see their projects
-  { name: "Messages", href: "/messages", icon: MessageCircle, access: 'all_except_supplier' }, // Company + Clients can message
+  { name: "Messages", href: "/messages", icon: MessageCircle, access: 'all' }, // Everyone can message (supplier sees their channel)
   { name: "Orders", href: "/orders", icon: ShoppingCart, access: 'viewer' }, // Viewers see project-filtered orders
   { name: "Expenses", href: "/expenses", icon: Receipt, access: 'viewer' }, // Viewers see project-filtered expenses
   { name: "Deliveries", href: "/deliveries", icon: Package, access: 'viewer' }, // Viewers see project-filtered deliveries

@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
     const userRole = profile?.role || 'viewer';
     const isCompanyMember = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(userRole);
     const isClient = userRole === 'viewer' || userRole === 'client';
+    const isSupplier = userRole === 'supplier';
 
     // Get project info
     const { data: project } = await adminClient
@@ -50,7 +51,30 @@ export async function GET(request: NextRequest) {
     if (isCompanyMember && profile?.company_id === project.company_id) {
       // Company member with matching company
       hasAccess = true;
-    } else if (isClient) {
+    } else if (isSupplier && channel === 'company_supplier') {
+      // Check if supplier is assigned to this project
+      const { data: assignment } = await adminClient
+        .from('supplier_assignments')
+        .select('id')
+        .eq('supplier_id', user.id)
+        .eq('project_id', projectId)
+        .eq('status', 'active')
+        .maybeSingle();
+      
+      // Also check project_members
+      const { data: membership } = await adminClient
+        .from('project_members')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('project_id', projectId)
+        .eq('status', 'active')
+        .eq('external_type', 'supplier')
+        .maybeSingle();
+      
+      if (assignment || membership) {
+        hasAccess = true;
+      }
+    } else if (isClient && channel === 'company_client') {
       // Check if client is member of this project
       const { data: membership } = await adminClient
         .from('project_members')
@@ -60,7 +84,7 @@ export async function GET(request: NextRequest) {
         .eq('status', 'active')
         .single();
       
-      if (membership && channel === 'company_client') {
+      if (membership) {
         hasAccess = true;
       }
     }
@@ -140,6 +164,7 @@ export async function POST(request: NextRequest) {
     const userRole = profile?.role || 'viewer';
     const isCompanyMember = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(userRole);
     const isClient = userRole === 'viewer' || userRole === 'client';
+    const isSupplier = userRole === 'supplier';
 
     // Get project info
     const { data: project } = await adminClient
@@ -159,6 +184,30 @@ export async function POST(request: NextRequest) {
     if (isCompanyMember && profile?.company_id === project.company_id) {
       senderType = 'company';
       hasAccess = true;
+    } else if (isSupplier && channel === 'company_supplier') {
+      // Verify supplier is assigned to this project
+      const { data: assignment } = await adminClient
+        .from('supplier_assignments')
+        .select('id')
+        .eq('supplier_id', user.id)
+        .eq('project_id', project_id)
+        .eq('status', 'active')
+        .maybeSingle();
+      
+      // Also check project_members for supplier
+      const { data: membership } = await adminClient
+        .from('project_members')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('project_id', project_id)
+        .eq('status', 'active')
+        .eq('external_type', 'supplier')
+        .maybeSingle();
+      
+      if (assignment || membership) {
+        senderType = 'supplier';
+        hasAccess = true;
+      }
     } else if (isClient && channel === 'company_client') {
       // Verify client is member of project
       const { data: membership } = await adminClient

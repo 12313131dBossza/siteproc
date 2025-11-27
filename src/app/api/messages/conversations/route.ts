@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { NextResponse } from 'next/server';
 
-// GET all conversations for the user (company member or client)
+// GET all conversations for the user (company member, client, or supplier)
 export async function GET() {
   try {
     const supabase = await createClient();
@@ -23,6 +23,7 @@ export async function GET() {
     const userRole = profile?.role || 'viewer';
     const isCompanyMember = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(userRole);
     const isClient = userRole === 'viewer' || userRole === 'client';
+    const isSupplier = userRole === 'supplier';
 
     let projectIds: string[] = [];
     let projectMap = new Map<string, { name: string; code?: string }>();
@@ -39,8 +40,43 @@ export async function GET() {
         projectIds = projects.map(p => p.id);
         projectMap = new Map(projects.map(p => [p.id, { name: p.name, code: p.code }]));
       }
+    } else if (isSupplier) {
+      // Suppliers see projects they're assigned to
+      const { data: assignments } = await adminClient
+        .from('supplier_assignments')
+        .select('project_id, projects(id, name, code)')
+        .eq('supplier_id', user.id)
+        .eq('status', 'active');
+
+      if (assignments && assignments.length > 0) {
+        for (const sa of assignments) {
+          const proj = sa.projects as any;
+          if (proj && !projectIds.includes(proj.id)) {
+            projectIds.push(proj.id);
+            projectMap.set(proj.id, { name: proj.name, code: proj.code });
+          }
+        }
+      }
+      
+      // Also check project_members for suppliers
+      const { data: memberProjects } = await adminClient
+        .from('project_members')
+        .select('project_id, projects(id, name, code)')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .eq('external_type', 'supplier');
+
+      if (memberProjects && memberProjects.length > 0) {
+        for (const mp of memberProjects) {
+          const proj = mp.projects as any;
+          if (proj && !projectIds.includes(proj.id)) {
+            projectIds.push(proj.id);
+            projectMap.set(proj.id, { name: proj.name, code: proj.code });
+          }
+        }
+      }
     } else if (isClient) {
-      // Clients only see projects they're members of
+      // Clients see projects they're members of
       const { data: memberProjects } = await adminClient
         .from('project_members')
         .select('project_id, projects(id, name, code)')
@@ -76,7 +112,13 @@ export async function GET() {
     }
 
     // Determine which channel to filter by based on role
-    let channelFilter = isCompanyMember ? null : 'company_client'; // Clients only see company_client channel
+    let channelFilter: string | null = null;
+    if (isClient) {
+      channelFilter = 'company_client'; // Clients only see company_client channel
+    } else if (isSupplier) {
+      channelFilter = 'company_supplier'; // Suppliers only see company_supplier channel
+    }
+    // Company members see all channels (null filter)
 
     // Get messages for conversations
     let messagesQuery = adminClient
@@ -141,7 +183,7 @@ export async function GET() {
       .from('project_members')
       .select('user_id, project_id')
       .in('project_id', projectIds)
-      .in('role', ['client', 'viewer']);
+      .in('external_type', ['client']);
 
     // Build supplier and client maps
     const supplierMapByProject = new Map<string, Set<string>>();
@@ -188,14 +230,14 @@ export async function GET() {
               participantName = nameMap.get(participantId) || 'Client';
             }
           }
-        } else if (isClient) {
-          // Client sees company as participant
+        } else if (isClient || isSupplier) {
+          // Client/Supplier sees company as participant
           participantType = 'company';
           participantName = 'Project Team';
         }
 
         // Fallback: use message sender if participant not found
-        if (!participantId && !isClient && msg.sender_type !== 'company') {
+        if (!participantId && !isClient && !isSupplier && msg.sender_type !== 'company') {
           participantId = msg.sender_id;
           participantType = msg.sender_type;
           participantName = nameMap.get(msg.sender_id) || msg.sender_type;
