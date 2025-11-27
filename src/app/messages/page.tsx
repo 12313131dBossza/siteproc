@@ -1,27 +1,12 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { AppLayout } from '@/components/app-layout';
 import {
-  MessageCircle,
-  Send,
-  Search,
-  User,
-  Users,
-  Truck,
-  Building2,
-  FolderOpen,
-  ChevronRight,
-  X,
-  Loader2,
-  Filter,
-  CheckCheck,
-  Clock,
-  Paperclip,
-  Image as ImageIcon,
-  ArrowLeft,
-  Plus
+  MessageCircle, Send, Search, Truck, Building2, FolderOpen, ChevronRight,
+  X, Loader2, CheckCheck, Paperclip, ArrowLeft, Smile, Reply, 
+  Edit2, Trash2, Pin, FileText, Image as ImageIcon
 } from 'lucide-react';
 
 interface Project {
@@ -29,8 +14,6 @@ interface Project {
   name: string;
   code?: string;
   status: string;
-  supplier_count?: number;
-  client_count?: number;
 }
 
 interface Participant {
@@ -39,22 +22,23 @@ interface Participant {
   type: 'supplier' | 'client';
   project_id: string;
   project_name: string;
-  project_code?: string;
 }
 
 interface Conversation {
   id: string;
   project_id: string;
   project_name: string;
-  project_code?: string;
   channel: 'company_supplier' | 'company_client';
   participant_id: string;
   participant_name: string;
-  participant_type: 'supplier' | 'client' | 'company';
   last_message: string;
-  last_message_time: string;
   unread_count: number;
-  delivery_id?: string;
+}
+
+interface Reaction {
+  emoji: string;
+  count: number;
+  hasReacted: boolean;
 }
 
 interface Message {
@@ -65,9 +49,17 @@ interface Message {
   sender_name: string;
   created_at: string;
   is_read: boolean;
+  is_edited?: boolean;
+  is_pinned?: boolean;
+  deleted_at?: string;
+  parent_message_id?: string;
   attachment_url?: string;
   attachment_name?: string;
+  attachment_type?: string;
+  reactions?: Reaction[];
 }
+
+const EMOJI_OPTIONS = ['👍', '❤️', '😂', '😮', '🎉', '✅'];
 
 export default function MessagesPage() {
   const [loading, setLoading] = useState(true);
@@ -84,10 +76,20 @@ export default function MessagesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentUserId, setCurrentUserId] = useState('');
   const [userRole, setUserRole] = useState<string>('');
+  
+  // New feature states
+  const [replyTo, setReplyTo] = useState<Message | null>(null);
+  const [editingMessage, setEditingMessage] = useState<Message | null>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
+  const [typingUsers, setTypingUsers] = useState<string[]>([]);
+  const [isTyping, setIsTyping] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Supabase client for realtime
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -97,83 +99,24 @@ export default function MessagesPage() {
     loadData();
   }, []);
 
-  // Realtime subscription for new messages + polling fallback
+  // Polling for messages
   useEffect(() => {
     if (!selectedProject || !selectedChannel) {
-      // Clear polling when no conversation selected
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current);
-        pollingRef.current = null;
-      }
+      if (pollingRef.current) clearInterval(pollingRef.current);
       return;
     }
 
-    console.log('Setting up realtime subscription for project:', selectedProject.id, 'channel:', selectedChannel);
-
-    // Set up Supabase Realtime subscription
-    const realtimeChannel = supabase
-      .channel(`messages-${selectedProject.id}-${selectedChannel}-${Date.now()}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'project_messages',
-          filter: `project_id=eq.${selectedProject.id}`,
-        },
-        async (payload) => {
-          console.log('Realtime: New message received:', payload);
-          const newMsg = payload.new as any;
-          
-          // Only add if it's for our channel
-          if (newMsg.channel === selectedChannel) {
-            // Fetch sender name
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('full_name, username')
-              .eq('id', newMsg.sender_id)
-              .single();
-
-            const messageWithName: Message = {
-              ...newMsg,
-              sender_name: profile?.full_name || profile?.username || 'Unknown',
-            };
-
-            setMessages((prev) => {
-              // Avoid duplicates
-              if (prev.some(m => m.id === newMsg.id)) return prev;
-              return [...prev, messageWithName];
-            });
-          }
-        }
-      )
-      .subscribe((status) => {
-        console.log('Realtime subscription status:', status);
-      });
-
-    // Polling fallback - check for new messages every 3 seconds
     const pollMessages = async () => {
-      if (!selectedProject || !selectedChannel) return;
-      
       try {
-        let url = `/api/messages?project_id=${selectedProject.id}&channel=${selectedChannel}`;
+        const url = `/api/messages?project_id=${selectedProject.id}&channel=${selectedChannel}`;
         const response = await fetch(url);
         if (response.ok) {
           const data = await response.json();
-          const newMessages = data.messages || [];
-          
-          setMessages((prev) => {
-            // Only update if there are new messages
-            if (newMessages.length !== prev.length) {
-              return newMessages;
-            }
-            // Check if last message is different
-            if (newMessages.length > 0 && prev.length > 0) {
-              const lastNew = newMessages[newMessages.length - 1];
-              const lastPrev = prev[prev.length - 1];
-              if (lastNew.id !== lastPrev.id) {
-                return newMessages;
-              }
+          setMessages(prev => {
+            const newMsgs = data.messages || [];
+            if (newMsgs.length !== prev.length || 
+                (newMsgs.length > 0 && prev.length > 0 && newMsgs[newMsgs.length-1].id !== prev[prev.length-1].id)) {
+              return newMsgs;
             }
             return prev;
           });
@@ -183,32 +126,37 @@ export default function MessagesPage() {
       }
     };
 
-    // Start polling every 3 seconds
     pollingRef.current = setInterval(pollMessages, 3000);
+    return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
+  }, [selectedProject?.id, selectedChannel]);
 
-    return () => {
-      console.log('Cleaning up realtime subscription and polling');
-      supabase.removeChannel(realtimeChannel);
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current);
-        pollingRef.current = null;
-      }
+  // Polling for typing indicators
+  useEffect(() => {
+    if (!selectedProject || !selectedChannel) return;
+
+    const pollTyping = async () => {
+      try {
+        const res = await fetch(`/api/messages/typing?project_id=${selectedProject.id}&channel=${selectedChannel}`);
+        if (res.ok) {
+          const data = await res.json();
+          setTypingUsers((data.typing || []).map((t: any) => t.userName));
+        }
+      } catch (e) { /* ignore */ }
     };
+
+    const interval = setInterval(pollTyping, 2000);
+    return () => clearInterval(interval);
   }, [selectedProject?.id, selectedChannel]);
 
   useEffect(() => {
     if (selectedProject && selectedChannel) {
-      loadMessages(selectedProject.id, selectedChannel, selectedParticipant?.id);
+      loadMessages(selectedProject.id, selectedChannel);
     }
-  }, [selectedProject, selectedChannel, selectedParticipant]);
+  }, [selectedProject, selectedChannel]);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  }, [messages]);
 
   const loadData = async () => {
     try {
@@ -229,26 +177,17 @@ export default function MessagesPage() {
     }
   };
 
-  const loadMessages = async (projectId: string, channel: string, participantId?: string) => {
+  const loadMessages = async (projectId: string, channel: string) => {
     try {
       setLoadingMessages(true);
-      let url = `/api/messages?project_id=${projectId}&channel=${channel}`;
-      if (participantId) {
-        url += `&participant_id=${participantId}`;
-      }
-      const response = await fetch(url);
+      const response = await fetch(`/api/messages?project_id=${projectId}&channel=${channel}`);
       if (response.ok) {
         const data = await response.json();
         setMessages(data.messages || []);
-        
-        // Mark as read
         await fetch('/api/messages/mark-read', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            project_id: projectId,
-            channel: channel,
-          }),
+          body: JSON.stringify({ project_id: projectId, channel }),
         });
       }
     } catch (error) {
@@ -258,41 +197,157 @@ export default function MessagesPage() {
     }
   };
 
+  // Handle typing indicator
+  const handleTyping = useCallback(() => {
+    if (!selectedProject || !selectedChannel || isTyping) return;
+    
+    setIsTyping(true);
+    fetch('/api/messages/typing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ project_id: selectedProject.id, channel: selectedChannel, is_typing: true }),
+    });
+
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      setIsTyping(false);
+      fetch('/api/messages/typing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project_id: selectedProject.id, channel: selectedChannel, is_typing: false }),
+      });
+    }, 3000);
+  }, [selectedProject, selectedChannel, isTyping]);
+
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !selectedProject || !selectedChannel || sending) return;
+    if ((!newMessage.trim() && !editingMessage) || !selectedProject || !selectedChannel || sending) return;
 
     try {
       setSending(true);
-      const payload: any = {
-        project_id: selectedProject.id,
-        channel: selectedChannel,
-        message: newMessage.trim(),
-      };
-      
-      // If company is messaging a specific participant, include recipient_id
-      if (isCompanyMember && selectedParticipant) {
-        payload.recipient_id = selectedParticipant.id;
-      }
 
-      const response = await fetch('/api/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setMessages(prev => [...prev, data.message]);
-        setNewMessage('');
+      if (editingMessage) {
+        // Edit existing message
+        const res = await fetch(`/api/messages/${editingMessage.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: newMessage.trim() }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setMessages(prev => prev.map(m => m.id === editingMessage.id ? { ...m, ...data.message } : m));
+          setEditingMessage(null);
+        }
       } else {
-        const err = await response.json();
-        console.error('Send error:', err);
-        alert(err.error || 'Failed to send message');
+        // Send new message
+        const payload: any = {
+          project_id: selectedProject.id,
+          channel: selectedChannel,
+          message: newMessage.trim(),
+        };
+        if (replyTo) payload.parent_message_id = replyTo.id;
+        if (isCompanyMember && selectedParticipant) payload.recipient_id = selectedParticipant.id;
+
+        const response = await fetch('/api/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setMessages(prev => [...prev, data.message]);
+          setReplyTo(null);
+        }
       }
+      setNewMessage('');
     } catch (error) {
       console.error('Error sending message:', error);
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleReaction = async (messageId: string, emoji: string) => {
+    try {
+      const res = await fetch('/api/messages/reactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message_id: messageId, emoji }),
+      });
+      if (res.ok && selectedProject && selectedChannel) {
+        loadMessages(selectedProject.id, selectedChannel);
+      }
+    } catch (error) {
+      console.error('Error adding reaction:', error);
+    }
+    setShowEmojiPicker(null);
+  };
+
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!confirm('Delete this message?')) return;
+    try {
+      const res = await fetch(`/api/messages/${messageId}`, { method: 'DELETE' });
+      if (res.ok) {
+        setMessages(prev => prev.map(m => 
+          m.id === messageId ? { ...m, message: '[This message was deleted]', deleted_at: new Date().toISOString() } : m
+        ));
+      }
+    } catch (error) {
+      console.error('Error deleting message:', error);
+    }
+  };
+
+  const handlePinMessage = async (messageId: string) => {
+    try {
+      const res = await fetch('/api/messages/pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message_id: messageId }),
+      });
+      if (res.ok && selectedProject && selectedChannel) {
+        loadMessages(selectedProject.id, selectedChannel);
+      }
+    } catch (error) {
+      console.error('Error pinning message:', error);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedProject || !selectedChannel) return;
+
+    try {
+      setUploading(true);
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('project_id', selectedProject.id);
+
+      const res = await fetch('/api/messages/upload', { method: 'POST', body: formData });
+      if (res.ok) {
+        const data = await res.json();
+        const payload = {
+          project_id: selectedProject.id,
+          channel: selectedChannel,
+          message: file.name,
+          attachment_url: data.attachment.url,
+          attachment_name: data.attachment.name,
+          attachment_type: data.attachment.type,
+        };
+        const msgRes = await fetch('/api/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (msgRes.ok) {
+          const msgData = await msgRes.json();
+          setMessages(prev => [...prev, msgData.message]);
+        }
+      }
+    } catch (error) {
+      console.error('Error uploading file:', error);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -301,77 +356,50 @@ export default function MessagesPage() {
     const date = new Date(dateString);
     const now = new Date();
     const diff = now.getTime() - date.getTime();
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const mins = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
 
-    if (days === 0) {
-      return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-    } else if (days === 1) {
-      return 'Yesterday';
-    } else if (days < 7) {
-      return date.toLocaleDateString('en-US', { weekday: 'short' });
-    } else {
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    }
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    if (days === 1) return 'Yesterday';
+    if (days < 7) return date.toLocaleDateString('en-US', { weekday: 'short' });
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  // Get conversations for a project and channel
-  const getProjectChannelConversation = (projectId: string, channel: string) => {
-    return conversations.find(c => c.project_id === projectId && c.channel === channel);
-  };
-
-  // Get participants for a specific project and type
   const getProjectParticipants = (projectId: string, type: 'supplier' | 'client') => {
     return participants.filter(p => p.project_id === projectId && p.type === type);
   };
 
-  // Get conversation for a specific participant
-  const getParticipantConversation = (participantId: string, projectId: string) => {
-    return conversations.find(c => c.participant_id === participantId && c.project_id === projectId);
-  };
-
-  // Count unread for a project
   const getProjectUnread = (projectId: string) => {
-    return conversations
-      .filter(c => c.project_id === projectId)
-      .reduce((sum, c) => sum + c.unread_count, 0);
+    return conversations.filter(c => c.project_id === projectId).reduce((sum, c) => sum + c.unread_count, 0);
   };
 
   const totalUnread = conversations.reduce((sum, c) => sum + c.unread_count, 0);
-
-  // Determine what the user can see based on role
   const isCompanyMember = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(userRole);
   const isSupplier = userRole === 'supplier';
   const isClient = userRole === 'viewer' || userRole === 'client';
 
-  // Filter projects by search
   const filteredProjects = projects.filter(p => 
     !searchTerm || p.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const getReplyMessage = (parentId: string) => messages.find(m => m.id === parentId);
+
   return (
     <AppLayout>
       <div className="h-[calc(100vh-4rem)] flex bg-white">
-        {/* Projects List (Left Panel) - Shows project boxes */}
-        <div className={`w-full md:w-96 border-r border-gray-200 flex flex-col ${
-          selectedProject ? 'hidden md:flex' : 'flex'
-        }`}>
-          {/* Header */}
+        {/* Left Panel - Projects */}
+        <div className={`w-full md:w-96 border-r border-gray-200 flex flex-col ${selectedProject ? 'hidden md:flex' : 'flex'}`}>
           <div className="p-4 border-b border-gray-200">
             <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
               <MessageCircle className="w-6 h-6 text-blue-600" />
               Messages
-              {totalUnread > 0 && (
-                <span className="px-2 py-0.5 text-xs bg-red-500 text-white rounded-full">
-                  {totalUnread}
-                </span>
-              )}
+              {totalUnread > 0 && <span className="px-2 py-0.5 text-xs bg-red-500 text-white rounded-full">{totalUnread}</span>}
             </h1>
-            <p className="text-sm text-gray-500 mt-1">
-              {isSupplier ? 'Chat with project team' : isClient ? 'Chat with project team' : 'Chat with clients & suppliers'}
-            </p>
           </div>
 
-          {/* Search */}
           <div className="p-3 border-b border-gray-100">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -380,252 +408,118 @@ export default function MessagesPage() {
                 placeholder="Search projects..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
 
-          {/* Project Boxes List */}
           <div className="flex-1 overflow-y-auto p-3 space-y-3">
             {loading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
               </div>
             ) : filteredProjects.length === 0 ? (
-              <div className="text-center py-12 px-4">
+              <div className="text-center py-12">
                 <FolderOpen className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500 font-medium">No projects found</p>
-                <p className="text-sm text-gray-400 mt-1">
-                  {projects.length === 0 
-                    ? 'Create a project to start messaging'
-                    : 'Try a different search term'
-                  }
-                </p>
+                <p className="text-gray-500">No projects found</p>
               </div>
             ) : (
               filteredProjects.map(project => {
-                const supplierConv = getProjectChannelConversation(project.id, 'company_supplier');
-                const clientConv = getProjectChannelConversation(project.id, 'company_client');
                 const unreadCount = getProjectUnread(project.id);
                 const isSelected = selectedProject?.id === project.id;
 
                 return (
-                  <div
-                    key={project.id}
-                    className={`bg-white border-2 rounded-xl overflow-hidden transition-all ${
-                      isSelected ? 'border-blue-500 shadow-md' : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
-                    }`}
-                  >
-                    {/* Project Header */}
+                  <div key={project.id} className={`bg-white border-2 rounded-xl overflow-hidden ${isSelected ? 'border-blue-500 shadow-md' : 'border-gray-200 hover:border-gray-300'}`}>
                     <div className="p-3 bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
                           <FolderOpen className="w-5 h-5 text-white" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <h3 className="font-semibold text-gray-900 truncate">{project.name}</h3>
-                          {project.code && (
-                            <span className="text-xs text-gray-500">{project.code}</span>
-                          )}
+                          {project.code && <span className="text-xs text-gray-500">{project.code}</span>}
                         </div>
-                        {unreadCount > 0 && (
-                          <span className="px-2 py-0.5 text-xs bg-red-500 text-white rounded-full">
-                            {unreadCount}
-                          </span>
-                        )}
+                        {unreadCount > 0 && <span className="px-2 py-0.5 text-xs bg-red-500 text-white rounded-full">{unreadCount}</span>}
                       </div>
                     </div>
 
-                    {/* Channel Buttons */}
                     <div className="p-2 space-y-2">
-                      {/* Supplier Channel - Show for Company and Suppliers */}
                       {(isCompanyMember || isSupplier) && (
-                        <>
-                          {isCompanyMember ? (
-                            // Company sees individual suppliers
-                            <>
-                              {getProjectParticipants(project.id, 'supplier').length > 0 ? (
-                                getProjectParticipants(project.id, 'supplier').map(participant => {
-                                  const conv = getParticipantConversation(participant.id, project.id);
-                                  return (
-                                    <button
-                                      key={participant.id}
-                                      onClick={() => {
-                                        setSelectedProject(project);
-                                        setSelectedChannel('company_supplier');
-                                        setSelectedParticipant(participant);
-                                      }}
-                                      className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all ${
-                                        isSelected && selectedChannel === 'company_supplier' && selectedParticipant?.id === participant.id
-                                          ? 'bg-purple-100 border-2 border-purple-300'
-                                          : 'bg-purple-50 hover:bg-purple-100 border-2 border-transparent'
-                                      }`}
-                                    >
-                                      <div className="w-9 h-9 rounded-full bg-purple-200 flex items-center justify-center flex-shrink-0">
-                                        <Truck className="w-4 h-4 text-purple-700" />
-                                      </div>
-                                      <div className="flex-1 min-w-0 text-left">
-                                        <div className="flex items-center justify-between">
-                                          <span className="font-medium text-purple-900 text-sm">
-                                            {participant.name}
-                                          </span>
-                                          {conv?.unread_count ? (
-                                            <span className="px-1.5 py-0.5 text-xs bg-purple-600 text-white rounded-full">
-                                              {conv.unread_count}
-                                            </span>
-                                          ) : null}
-                                        </div>
-                                        <p className="text-xs text-purple-700 truncate">
-                                          {conv?.last_message || 'Start a conversation'}
-                                        </p>
-                                      </div>
-                                      <span className="text-[10px] bg-purple-200 text-purple-700 px-1.5 py-0.5 rounded">
-                                        Supplier
-                                      </span>
-                                      <ChevronRight className="w-4 h-4 text-purple-400 flex-shrink-0" />
-                                    </button>
-                                  );
-                                })
-                              ) : (
-                                <div className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-50 text-gray-400">
-                                  <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                                    <Truck className="w-4 h-4" />
-                                  </div>
-                                  <span className="text-sm">No suppliers assigned</span>
+                        isCompanyMember ? (
+                          getProjectParticipants(project.id, 'supplier').length > 0 ? (
+                            getProjectParticipants(project.id, 'supplier').map(participant => (
+                              <button
+                                key={participant.id}
+                                onClick={() => { setSelectedProject(project); setSelectedChannel('company_supplier'); setSelectedParticipant(participant); }}
+                                className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all ${isSelected && selectedChannel === 'company_supplier' && selectedParticipant?.id === participant.id ? 'bg-purple-100 border-2 border-purple-300' : 'bg-purple-50 hover:bg-purple-100 border-2 border-transparent'}`}
+                              >
+                                <div className="w-9 h-9 rounded-full bg-purple-200 flex items-center justify-center">
+                                  <Truck className="w-4 h-4 text-purple-700" />
                                 </div>
-                              )}
-                            </>
+                                <div className="flex-1 min-w-0 text-left">
+                                  <span className="font-medium text-purple-900 text-sm">{participant.name}</span>
+                                </div>
+                                <span className="text-[10px] bg-purple-200 text-purple-700 px-1.5 py-0.5 rounded">Supplier</span>
+                                <ChevronRight className="w-4 h-4 text-purple-400" />
+                              </button>
+                            ))
                           ) : (
-                            // Supplier sees project team
-                            <button
-                              onClick={() => {
-                                setSelectedProject(project);
-                                setSelectedChannel('company_supplier');
-                                setSelectedParticipant(null);
-                              }}
-                              className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all ${
-                                isSelected && selectedChannel === 'company_supplier'
-                                  ? 'bg-purple-100 border-2 border-purple-300'
-                                  : 'bg-purple-50 hover:bg-purple-100 border-2 border-transparent'
-                              }`}
-                            >
-                              <div className="w-9 h-9 rounded-full bg-purple-200 flex items-center justify-center flex-shrink-0">
-                                <Truck className="w-4 h-4 text-purple-700" />
-                              </div>
-                              <div className="flex-1 min-w-0 text-left">
-                                <div className="flex items-center justify-between">
-                                  <span className="font-medium text-purple-900 text-sm">
-                                    Project Team
-                                  </span>
-                                  {supplierConv?.unread_count ? (
-                                    <span className="px-1.5 py-0.5 text-xs bg-purple-600 text-white rounded-full">
-                                      {supplierConv.unread_count}
-                                    </span>
-                                  ) : null}
-                                </div>
-                                <p className="text-xs text-purple-700 truncate">
-                                  {supplierConv?.last_message || 'Start a conversation'}
-                                </p>
-                              </div>
-                              <ChevronRight className="w-4 h-4 text-purple-400 flex-shrink-0" />
-                            </button>
-                          )}
-                        </>
+                            <div className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-50 text-gray-400">
+                              <Truck className="w-4 h-4" />
+                              <span className="text-sm">No suppliers assigned</span>
+                            </div>
+                          )
+                        ) : (
+                          <button
+                            onClick={() => { setSelectedProject(project); setSelectedChannel('company_supplier'); setSelectedParticipant(null); }}
+                            className={`w-full flex items-center gap-3 p-3 rounded-lg ${isSelected && selectedChannel === 'company_supplier' ? 'bg-purple-100 border-2 border-purple-300' : 'bg-purple-50 hover:bg-purple-100 border-2 border-transparent'}`}
+                          >
+                            <div className="w-9 h-9 rounded-full bg-purple-200 flex items-center justify-center">
+                              <Truck className="w-4 h-4 text-purple-700" />
+                            </div>
+                            <span className="font-medium text-purple-900 text-sm">Project Team</span>
+                            <ChevronRight className="w-4 h-4 text-purple-400" />
+                          </button>
+                        )
                       )}
 
-                      {/* Client Channel - Show for Company and Clients */}
                       {(isCompanyMember || isClient) && (
-                        <>
-                          {isCompanyMember ? (
-                            // Company sees individual clients
-                            <>
-                              {getProjectParticipants(project.id, 'client').length > 0 ? (
-                                getProjectParticipants(project.id, 'client').map(participant => {
-                                  const conv = getParticipantConversation(participant.id, project.id);
-                                  return (
-                                    <button
-                                      key={participant.id}
-                                      onClick={() => {
-                                        setSelectedProject(project);
-                                        setSelectedChannel('company_client');
-                                        setSelectedParticipant(participant);
-                                      }}
-                                      className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all ${
-                                        isSelected && selectedChannel === 'company_client' && selectedParticipant?.id === participant.id
-                                          ? 'bg-blue-100 border-2 border-blue-300'
-                                          : 'bg-blue-50 hover:bg-blue-100 border-2 border-transparent'
-                                      }`}
-                                    >
-                                      <div className="w-9 h-9 rounded-full bg-blue-200 flex items-center justify-center flex-shrink-0">
-                                        <Building2 className="w-4 h-4 text-blue-700" />
-                                      </div>
-                                      <div className="flex-1 min-w-0 text-left">
-                                        <div className="flex items-center justify-between">
-                                          <span className="font-medium text-blue-900 text-sm">
-                                            {participant.name}
-                                          </span>
-                                          {conv?.unread_count ? (
-                                            <span className="px-1.5 py-0.5 text-xs bg-blue-600 text-white rounded-full">
-                                              {conv.unread_count}
-                                            </span>
-                                          ) : null}
-                                        </div>
-                                        <p className="text-xs text-blue-700 truncate">
-                                          {conv?.last_message || 'Start a conversation'}
-                                        </p>
-                                      </div>
-                                      <span className="text-[10px] bg-blue-200 text-blue-700 px-1.5 py-0.5 rounded">
-                                        Client
-                                      </span>
-                                      <ChevronRight className="w-4 h-4 text-blue-400 flex-shrink-0" />
-                                    </button>
-                                  );
-                                })
-                              ) : (
-                                <div className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-50 text-gray-400">
-                                  <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                                    <Building2 className="w-4 h-4" />
-                                  </div>
-                                  <span className="text-sm">No clients assigned</span>
+                        isCompanyMember ? (
+                          getProjectParticipants(project.id, 'client').length > 0 ? (
+                            getProjectParticipants(project.id, 'client').map(participant => (
+                              <button
+                                key={participant.id}
+                                onClick={() => { setSelectedProject(project); setSelectedChannel('company_client'); setSelectedParticipant(participant); }}
+                                className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all ${isSelected && selectedChannel === 'company_client' && selectedParticipant?.id === participant.id ? 'bg-blue-100 border-2 border-blue-300' : 'bg-blue-50 hover:bg-blue-100 border-2 border-transparent'}`}
+                              >
+                                <div className="w-9 h-9 rounded-full bg-blue-200 flex items-center justify-center">
+                                  <Building2 className="w-4 h-4 text-blue-700" />
                                 </div>
-                              )}
-                            </>
+                                <div className="flex-1 min-w-0 text-left">
+                                  <span className="font-medium text-blue-900 text-sm">{participant.name}</span>
+                                </div>
+                                <span className="text-[10px] bg-blue-200 text-blue-700 px-1.5 py-0.5 rounded">Client</span>
+                                <ChevronRight className="w-4 h-4 text-blue-400" />
+                              </button>
+                            ))
                           ) : (
-                            // Client sees project team
-                            <button
-                              onClick={() => {
-                                setSelectedProject(project);
-                                setSelectedChannel('company_client');
-                                setSelectedParticipant(null);
-                              }}
-                              className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all ${
-                                isSelected && selectedChannel === 'company_client'
-                                  ? 'bg-blue-100 border-2 border-blue-300'
-                                  : 'bg-blue-50 hover:bg-blue-100 border-2 border-transparent'
-                              }`}
-                            >
-                              <div className="w-9 h-9 rounded-full bg-blue-200 flex items-center justify-center flex-shrink-0">
-                                <Building2 className="w-4 h-4 text-blue-700" />
-                              </div>
-                              <div className="flex-1 min-w-0 text-left">
-                                <div className="flex items-center justify-between">
-                                  <span className="font-medium text-blue-900 text-sm">
-                                    Project Team
-                                  </span>
-                                  {clientConv?.unread_count ? (
-                                    <span className="px-1.5 py-0.5 text-xs bg-blue-600 text-white rounded-full">
-                                      {clientConv.unread_count}
-                                    </span>
-                                  ) : null}
-                                </div>
-                                <p className="text-xs text-blue-700 truncate">
-                                  {clientConv?.last_message || 'Start a conversation'}
-                                </p>
-                              </div>
-                              <ChevronRight className="w-4 h-4 text-blue-400 flex-shrink-0" />
-                            </button>
-                          )}
-                        </>
+                            <div className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-50 text-gray-400">
+                              <Building2 className="w-4 h-4" />
+                              <span className="text-sm">No clients assigned</span>
+                            </div>
+                          )
+                        ) : (
+                          <button
+                            onClick={() => { setSelectedProject(project); setSelectedChannel('company_client'); setSelectedParticipant(null); }}
+                            className={`w-full flex items-center gap-3 p-3 rounded-lg ${isSelected && selectedChannel === 'company_client' ? 'bg-blue-100 border-2 border-blue-300' : 'bg-blue-50 hover:bg-blue-100 border-2 border-transparent'}`}
+                          >
+                            <div className="w-9 h-9 rounded-full bg-blue-200 flex items-center justify-center">
+                              <Building2 className="w-4 h-4 text-blue-700" />
+                            </div>
+                            <span className="font-medium text-blue-900 text-sm">Project Team</span>
+                            <ChevronRight className="w-4 h-4 text-blue-400" />
+                          </button>
+                        )
                       )}
                     </div>
                   </div>
@@ -635,135 +529,130 @@ export default function MessagesPage() {
           </div>
         </div>
 
-        {/* Chat Area (Right Panel) */}
-        <div className={`flex-1 flex flex-col ${
-          selectedProject && selectedChannel ? 'flex' : 'hidden md:flex'
-        }`}>
+        {/* Right Panel - Chat */}
+        <div className={`flex-1 flex flex-col ${selectedProject && selectedChannel ? 'flex' : 'hidden md:flex'}`}>
           {selectedProject && selectedChannel ? (
             <>
-              {/* Chat Header */}
-              <div className={`p-4 border-b border-gray-200 ${
-                selectedChannel === 'company_supplier' 
-                  ? 'bg-gradient-to-r from-purple-50 to-white' 
-                  : 'bg-gradient-to-r from-blue-50 to-white'
-              }`}>
+              {/* Header */}
+              <div className={`p-4 border-b border-gray-200 ${selectedChannel === 'company_supplier' ? 'bg-gradient-to-r from-purple-50 to-white' : 'bg-gradient-to-r from-blue-50 to-white'}`}>
                 <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => {
-                      setSelectedProject(null);
-                      setSelectedChannel(null);
-                      setSelectedParticipant(null);
-                      setMessages([]);
-                    }}
-                    className="p-1.5 hover:bg-gray-100 rounded-lg md:hidden"
-                  >
+                  <button onClick={() => { setSelectedProject(null); setSelectedChannel(null); setSelectedParticipant(null); setMessages([]); }} className="p-1.5 hover:bg-gray-100 rounded-lg md:hidden">
                     <ArrowLeft className="w-5 h-5" />
                   </button>
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                    selectedChannel === 'company_supplier'
-                      ? 'bg-purple-200 text-purple-700'
-                      : 'bg-blue-200 text-blue-700'
-                  }`}>
-                    {selectedChannel === 'company_supplier' ? (
-                      <Truck className="w-6 h-6" />
-                    ) : (
-                      <Building2 className="w-6 h-6" />
-                    )}
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${selectedChannel === 'company_supplier' ? 'bg-purple-200 text-purple-700' : 'bg-blue-200 text-blue-700'}`}>
+                    {selectedChannel === 'company_supplier' ? <Truck className="w-6 h-6" /> : <Building2 className="w-6 h-6" />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h2 className="font-bold text-gray-900">
-                      {selectedParticipant?.name || (selectedChannel === 'company_supplier' ? 'Supplier Chat' : 'Client Chat')}
-                    </h2>
+                    <h2 className="font-bold text-gray-900">{selectedParticipant?.name || 'Project Team'}</h2>
                     <div className="flex items-center gap-2 text-sm text-gray-500">
                       <FolderOpen className="w-3.5 h-3.5" />
                       <span className="truncate">{selectedProject.name}</span>
                     </div>
                   </div>
-                  <div className={`px-3 py-1.5 rounded-full text-xs font-medium ${
-                    selectedChannel === 'company_supplier'
-                      ? 'bg-purple-100 text-purple-700'
-                      : 'bg-blue-100 text-blue-700'
-                  }`}>
-                    {selectedParticipant?.type || (selectedChannel === 'company_supplier' ? 'Supplier' : 'Client')}
-                  </div>
                 </div>
               </div>
 
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
                 {loadingMessages ? (
-                  <div className="flex items-center justify-center h-full">
-                    <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-                  </div>
+                  <div className="flex items-center justify-center h-full"><Loader2 className="w-8 h-8 animate-spin text-gray-400" /></div>
                 ) : messages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-gray-500">
-                    <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${
-                      selectedChannel === 'company_supplier'
-                        ? 'bg-purple-100 text-purple-400'
-                        : 'bg-blue-100 text-blue-400'
-                    }`}>
-                      {selectedChannel === 'company_supplier' ? (
-                        <Truck className="w-8 h-8" />
-                      ) : (
-                        <Building2 className="w-8 h-8" />
-                      )}
-                    </div>
-                    <p className="font-medium text-gray-900">No messages yet</p>
-                    <p className="text-sm text-gray-500 mt-1">
-                      Send a message to start the conversation with {selectedChannel === 'company_supplier' ? 'suppliers' : 'clients'}
-                    </p>
+                    <MessageCircle className="w-16 h-16 text-gray-300 mb-4" />
+                    <p className="font-medium">No messages yet</p>
                   </div>
                 ) : (
                   <>
                     {messages.map(msg => {
                       const isOwn = msg.sender_id === currentUserId;
+                      const isDeleted = !!msg.deleted_at;
+                      const parentMsg = msg.parent_message_id ? getReplyMessage(msg.parent_message_id) : null;
+
                       return (
-                        <div
-                          key={msg.id}
-                          className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
-                        >
-                          <div className={`max-w-[70%] ${isOwn ? 'order-2' : 'order-1'}`}>
+                        <div key={msg.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'} group`}>
+                          <div className={`max-w-[75%] ${isOwn ? 'order-2' : 'order-1'}`}>
                             {!isOwn && (
                               <p className="text-xs text-gray-500 mb-1 ml-1">
                                 {msg.sender_name}
-                                <span className={`ml-2 px-1.5 py-0.5 rounded text-[10px] ${
-                                  msg.sender_type === 'supplier'
-                                    ? 'bg-purple-100 text-purple-700'
-                                    : msg.sender_type === 'client'
-                                    ? 'bg-blue-100 text-blue-700'
-                                    : 'bg-green-100 text-green-700'
-                                }`}>
+                                <span className={`ml-2 px-1.5 py-0.5 rounded text-[10px] ${msg.sender_type === 'supplier' ? 'bg-purple-100 text-purple-700' : msg.sender_type === 'client' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
                                   {msg.sender_type}
                                 </span>
                               </p>
                             )}
-                            <div className={`rounded-2xl px-4 py-2 ${
-                              isOwn
-                                ? 'bg-blue-600 text-white rounded-br-md'
-                                : 'bg-white text-gray-900 rounded-bl-md border border-gray-200'
-                            }`}>
+
+                            {parentMsg && (
+                              <div className={`text-xs px-3 py-1 mb-1 rounded-t-lg border-l-2 ${isOwn ? 'bg-blue-500/20 border-blue-300 text-blue-100' : 'bg-gray-200 border-gray-400 text-gray-600'}`}>
+                                <span className="font-medium">{parentMsg.sender_name}:</span> {parentMsg.message.substring(0, 50)}...
+                              </div>
+                            )}
+
+                            {msg.is_pinned && (
+                              <div className="flex items-center gap-1 text-xs text-amber-600 mb-1">
+                                <Pin className="w-3 h-3" /> Pinned
+                              </div>
+                            )}
+
+                            <div className={`relative rounded-2xl px-4 py-2 ${isOwn ? 'bg-blue-600 text-white rounded-br-md' : 'bg-white text-gray-900 rounded-bl-md border border-gray-200'} ${isDeleted ? 'opacity-60 italic' : ''}`}>
                               <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
-                              {msg.attachment_url && (
-                                <a
-                                  href={msg.attachment_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className={`flex items-center gap-1 text-xs mt-2 ${
-                                    isOwn ? 'text-blue-200 hover:text-white' : 'text-blue-600 hover:text-blue-700'
-                                  }`}
-                                >
-                                  <Paperclip className="w-3 h-3" />
-                                  {msg.attachment_name || 'Attachment'}
+
+                              {msg.attachment_url && !isDeleted && (
+                                <a href={msg.attachment_url} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-2 mt-2 p-2 rounded-lg ${isOwn ? 'bg-blue-500/30' : 'bg-gray-100'}`}>
+                                  {msg.attachment_type?.startsWith('image/') ? <ImageIcon className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
+                                  <span className="text-xs truncate">{msg.attachment_name}</span>
                                 </a>
                               )}
-                            </div>
-                            <p className={`text-[10px] mt-1 flex items-center gap-1 ${
-                              isOwn ? 'text-right text-gray-400 justify-end' : 'text-gray-400'
-                            }`}>
-                              {formatTime(msg.created_at)}
-                              {isOwn && msg.is_read && (
-                                <CheckCheck className="w-3 h-3 text-blue-500" />
+
+                              {!isDeleted && (
+                                <div className={`absolute ${isOwn ? '-left-24' : '-right-24'} top-0 hidden group-hover:flex items-center gap-1 bg-white rounded-lg shadow-lg border p-1`}>
+                                  <button onClick={() => setShowEmojiPicker(showEmojiPicker === msg.id ? null : msg.id)} className="p-1 hover:bg-gray-100 rounded" title="React">
+                                    <Smile className="w-4 h-4 text-gray-500" />
+                                  </button>
+                                  <button onClick={() => setReplyTo(msg)} className="p-1 hover:bg-gray-100 rounded" title="Reply">
+                                    <Reply className="w-4 h-4 text-gray-500" />
+                                  </button>
+                                  {isOwn && (
+                                    <>
+                                      <button onClick={() => { setEditingMessage(msg); setNewMessage(msg.message); }} className="p-1 hover:bg-gray-100 rounded" title="Edit">
+                                        <Edit2 className="w-4 h-4 text-gray-500" />
+                                      </button>
+                                      <button onClick={() => handleDeleteMessage(msg.id)} className="p-1 hover:bg-gray-100 rounded" title="Delete">
+                                        <Trash2 className="w-4 h-4 text-red-500" />
+                                      </button>
+                                    </>
+                                  )}
+                                  {isCompanyMember && (
+                                    <button onClick={() => handlePinMessage(msg.id)} className="p-1 hover:bg-gray-100 rounded" title={msg.is_pinned ? 'Unpin' : 'Pin'}>
+                                      <Pin className={`w-4 h-4 ${msg.is_pinned ? 'text-amber-500' : 'text-gray-500'}`} />
+                                    </button>
+                                  )}
+                                </div>
                               )}
+
+                              {showEmojiPicker === msg.id && (
+                                <div className={`absolute ${isOwn ? 'right-0' : 'left-0'} -bottom-10 flex gap-1 bg-white rounded-full shadow-lg border p-1 z-10`}>
+                                  {EMOJI_OPTIONS.map(emoji => (
+                                    <button key={emoji} onClick={() => handleReaction(msg.id, emoji)} className="p-1 hover:bg-gray-100 rounded-full text-lg">
+                                      {emoji}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
+                            {msg.reactions && msg.reactions.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {msg.reactions.map(r => (
+                                  <button key={r.emoji} onClick={() => handleReaction(msg.id, r.emoji)} className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${r.hasReacted ? 'bg-blue-100 border-blue-300' : 'bg-gray-100'} border`}>
+                                    {r.emoji} {r.count}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+
+                            <p className={`text-[10px] mt-1 flex items-center gap-1 ${isOwn ? 'justify-end text-gray-400' : 'text-gray-400'}`}>
+                              {formatTime(msg.created_at)}
+                              {msg.is_edited && <span>(edited)</span>}
+                              {isOwn && msg.is_read && <CheckCheck className="w-3 h-3 text-blue-500" />}
                             </p>
                           </div>
                         </div>
@@ -772,34 +661,62 @@ export default function MessagesPage() {
                     <div ref={messagesEndRef} />
                   </>
                 )}
+
+                {typingUsers.length > 0 && (
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <div className="flex gap-1">
+                      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
+                    {typingUsers.join(', ')} {typingUsers.length === 1 ? 'is' : 'are'} typing...
+                  </div>
+                )}
               </div>
 
-              {/* Input */}
+              {replyTo && (
+                <div className="px-4 py-2 bg-gray-100 border-t flex items-center gap-2">
+                  <Reply className="w-4 h-4 text-gray-500" />
+                  <div className="flex-1 text-sm truncate">
+                    <span className="font-medium">{replyTo.sender_name}:</span> {replyTo.message}
+                  </div>
+                  <button onClick={() => setReplyTo(null)} className="p-1 hover:bg-gray-200 rounded">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              {editingMessage && (
+                <div className="px-4 py-2 bg-amber-50 border-t flex items-center gap-2">
+                  <Edit2 className="w-4 h-4 text-amber-600" />
+                  <span className="flex-1 text-sm text-amber-700">Editing message</span>
+                  <button onClick={() => { setEditingMessage(null); setNewMessage(''); }} className="p-1 hover:bg-amber-100 rounded">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
               <div className="p-4 border-t border-gray-200 bg-white">
                 <div className="flex items-center gap-2">
+                  <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv" />
+                  <button onClick={() => fileInputRef.current?.click()} disabled={uploading} className="p-2 hover:bg-gray-100 rounded-full">
+                    {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Paperclip className="w-5 h-5 text-gray-500" />}
+                  </button>
                   <input
                     type="text"
                     value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
+                    onChange={(e) => { setNewMessage(e.target.value); handleTyping(); }}
                     onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-                    placeholder={selectedParticipant?.name ? `Message ${selectedParticipant.name}...` : `Message ${selectedChannel === 'company_supplier' ? 'suppliers' : 'clients'}...`}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder={editingMessage ? 'Edit message...' : 'Type a message...'}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500"
                     disabled={sending}
                   />
                   <button
                     onClick={handleSendMessage}
                     disabled={!newMessage.trim() || sending}
-                    className={`p-2.5 rounded-full transition-colors ${
-                      selectedChannel === 'company_supplier'
-                        ? 'bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300'
-                        : 'bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300'
-                    } text-white`}
+                    className={`p-2.5 rounded-full text-white ${selectedChannel === 'company_supplier' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'} disabled:bg-gray-300`}
                   >
-                    {sending ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <Send className="w-5 h-5" />
-                    )}
+                    {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                   </button>
                 </div>
               </div>
@@ -809,9 +726,7 @@ export default function MessagesPage() {
               <div className="text-center">
                 <MessageCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-1">Your Messages</h3>
-                <p className="text-gray-500">
-                  Select a project to view conversations
-                </p>
+                <p className="text-gray-500">Select a project to view conversations</p>
               </div>
             </div>
           )}
