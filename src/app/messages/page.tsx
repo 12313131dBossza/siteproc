@@ -32,14 +32,24 @@ interface Project {
   client_count?: number;
 }
 
+interface Participant {
+  id: string;
+  name: string;
+  type: 'supplier' | 'client';
+  project_id: string;
+  project_name: string;
+  project_code?: string;
+}
+
 interface Conversation {
   id: string;
   project_id: string;
   project_name: string;
   project_code?: string;
   channel: 'company_supplier' | 'company_client';
+  participant_id: string;
   participant_name: string;
-  participant_type: 'supplier' | 'client';
+  participant_type: 'supplier' | 'client' | 'company';
   last_message: string;
   last_message_time: string;
   unread_count: number;
@@ -61,9 +71,11 @@ interface Message {
 export default function MessagesPage() {
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [participants, setParticipants] = useState<Participant[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [selectedChannel, setSelectedChannel] = useState<'company_supplier' | 'company_client' | null>(null);
+  const [selectedParticipant, setSelectedParticipant] = useState<Participant | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [newMessage, setNewMessage] = useState('');
@@ -79,9 +91,9 @@ export default function MessagesPage() {
 
   useEffect(() => {
     if (selectedProject && selectedChannel) {
-      loadMessages(selectedProject.id, selectedChannel);
+      loadMessages(selectedProject.id, selectedChannel, selectedParticipant?.id);
     }
-  }, [selectedProject, selectedChannel]);
+  }, [selectedProject, selectedChannel, selectedParticipant]);
 
   useEffect(() => {
     scrollToBottom();
@@ -99,6 +111,7 @@ export default function MessagesPage() {
         const data = await response.json();
         setConversations(data.conversations || []);
         setProjects(data.projects || []);
+        setParticipants(data.participants || []);
         setCurrentUserId(data.currentUserId || '');
         setUserRole(data.userRole || '');
       }
@@ -109,12 +122,14 @@ export default function MessagesPage() {
     }
   };
 
-  const loadMessages = async (projectId: string, channel: string) => {
+  const loadMessages = async (projectId: string, channel: string, participantId?: string) => {
     try {
       setLoadingMessages(true);
-      const response = await fetch(
-        `/api/messages?project_id=${projectId}&channel=${channel}`
-      );
+      let url = `/api/messages?project_id=${projectId}&channel=${channel}`;
+      if (participantId) {
+        url += `&participant_id=${participantId}`;
+      }
+      const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
         setMessages(data.messages || []);
@@ -141,14 +156,21 @@ export default function MessagesPage() {
 
     try {
       setSending(true);
+      const payload: any = {
+        project_id: selectedProject.id,
+        channel: selectedChannel,
+        message: newMessage.trim(),
+      };
+      
+      // If company is messaging a specific participant, include recipient_id
+      if (isCompanyMember && selectedParticipant) {
+        payload.recipient_id = selectedParticipant.id;
+      }
+
       const response = await fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          project_id: selectedProject.id,
-          channel: selectedChannel,
-          message: newMessage.trim(),
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (response.ok) {
@@ -188,6 +210,16 @@ export default function MessagesPage() {
   // Get conversations for a project and channel
   const getProjectChannelConversation = (projectId: string, channel: string) => {
     return conversations.find(c => c.project_id === projectId && c.channel === channel);
+  };
+
+  // Get participants for a specific project and type
+  const getProjectParticipants = (projectId: string, type: 'supplier' | 'client') => {
+    return participants.filter(p => p.project_id === projectId && p.type === type);
+  };
+
+  // Get conversation for a specific participant
+  const getParticipantConversation = (participantId: string, projectId: string) => {
+    return conversations.find(c => c.participant_id === participantId && c.project_id === projectId);
   };
 
   // Count unread for a project
@@ -301,72 +333,192 @@ export default function MessagesPage() {
                     <div className="p-2 space-y-2">
                       {/* Supplier Channel - Show for Company and Suppliers */}
                       {(isCompanyMember || isSupplier) && (
-                        <button
-                          onClick={() => {
-                            setSelectedProject(project);
-                            setSelectedChannel('company_supplier');
-                          }}
-                          className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all ${
-                            isSelected && selectedChannel === 'company_supplier'
-                              ? 'bg-purple-100 border-2 border-purple-300'
-                              : 'bg-purple-50 hover:bg-purple-100 border-2 border-transparent'
-                          }`}
-                        >
-                          <div className="w-9 h-9 rounded-full bg-purple-200 flex items-center justify-center flex-shrink-0">
-                            <Truck className="w-4 h-4 text-purple-700" />
-                          </div>
-                          <div className="flex-1 min-w-0 text-left">
-                            <div className="flex items-center justify-between">
-                              <span className="font-medium text-purple-900 text-sm">
-                                {isSupplier ? 'Project Team' : 'Suppliers'}
-                              </span>
-                              {supplierConv?.unread_count ? (
-                                <span className="px-1.5 py-0.5 text-xs bg-purple-600 text-white rounded-full">
-                                  {supplierConv.unread_count}
-                                </span>
-                              ) : null}
-                            </div>
-                            <p className="text-xs text-purple-700 truncate">
-                              {supplierConv?.last_message || 'Start a conversation'}
-                            </p>
-                          </div>
-                          <ChevronRight className="w-4 h-4 text-purple-400 flex-shrink-0" />
-                        </button>
+                        <>
+                          {isCompanyMember ? (
+                            // Company sees individual suppliers
+                            <>
+                              {getProjectParticipants(project.id, 'supplier').length > 0 ? (
+                                getProjectParticipants(project.id, 'supplier').map(participant => {
+                                  const conv = getParticipantConversation(participant.id, project.id);
+                                  return (
+                                    <button
+                                      key={participant.id}
+                                      onClick={() => {
+                                        setSelectedProject(project);
+                                        setSelectedChannel('company_supplier');
+                                        setSelectedParticipant(participant);
+                                      }}
+                                      className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all ${
+                                        isSelected && selectedChannel === 'company_supplier' && selectedParticipant?.id === participant.id
+                                          ? 'bg-purple-100 border-2 border-purple-300'
+                                          : 'bg-purple-50 hover:bg-purple-100 border-2 border-transparent'
+                                      }`}
+                                    >
+                                      <div className="w-9 h-9 rounded-full bg-purple-200 flex items-center justify-center flex-shrink-0">
+                                        <Truck className="w-4 h-4 text-purple-700" />
+                                      </div>
+                                      <div className="flex-1 min-w-0 text-left">
+                                        <div className="flex items-center justify-between">
+                                          <span className="font-medium text-purple-900 text-sm">
+                                            {participant.name}
+                                          </span>
+                                          {conv?.unread_count ? (
+                                            <span className="px-1.5 py-0.5 text-xs bg-purple-600 text-white rounded-full">
+                                              {conv.unread_count}
+                                            </span>
+                                          ) : null}
+                                        </div>
+                                        <p className="text-xs text-purple-700 truncate">
+                                          {conv?.last_message || 'Start a conversation'}
+                                        </p>
+                                      </div>
+                                      <span className="text-[10px] bg-purple-200 text-purple-700 px-1.5 py-0.5 rounded">
+                                        Supplier
+                                      </span>
+                                      <ChevronRight className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                                    </button>
+                                  );
+                                })
+                              ) : (
+                                <div className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-50 text-gray-400">
+                                  <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+                                    <Truck className="w-4 h-4" />
+                                  </div>
+                                  <span className="text-sm">No suppliers assigned</span>
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            // Supplier sees project team
+                            <button
+                              onClick={() => {
+                                setSelectedProject(project);
+                                setSelectedChannel('company_supplier');
+                                setSelectedParticipant(null);
+                              }}
+                              className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all ${
+                                isSelected && selectedChannel === 'company_supplier'
+                                  ? 'bg-purple-100 border-2 border-purple-300'
+                                  : 'bg-purple-50 hover:bg-purple-100 border-2 border-transparent'
+                              }`}
+                            >
+                              <div className="w-9 h-9 rounded-full bg-purple-200 flex items-center justify-center flex-shrink-0">
+                                <Truck className="w-4 h-4 text-purple-700" />
+                              </div>
+                              <div className="flex-1 min-w-0 text-left">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-medium text-purple-900 text-sm">
+                                    Project Team
+                                  </span>
+                                  {supplierConv?.unread_count ? (
+                                    <span className="px-1.5 py-0.5 text-xs bg-purple-600 text-white rounded-full">
+                                      {supplierConv.unread_count}
+                                    </span>
+                                  ) : null}
+                                </div>
+                                <p className="text-xs text-purple-700 truncate">
+                                  {supplierConv?.last_message || 'Start a conversation'}
+                                </p>
+                              </div>
+                              <ChevronRight className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                            </button>
+                          )}
+                        </>
                       )}
 
                       {/* Client Channel - Show for Company and Clients */}
                       {(isCompanyMember || isClient) && (
-                        <button
-                          onClick={() => {
-                            setSelectedProject(project);
-                            setSelectedChannel('company_client');
-                          }}
-                          className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all ${
-                            isSelected && selectedChannel === 'company_client'
-                              ? 'bg-blue-100 border-2 border-blue-300'
-                              : 'bg-blue-50 hover:bg-blue-100 border-2 border-transparent'
-                          }`}
-                        >
-                          <div className="w-9 h-9 rounded-full bg-blue-200 flex items-center justify-center flex-shrink-0">
-                            <Building2 className="w-4 h-4 text-blue-700" />
-                          </div>
-                          <div className="flex-1 min-w-0 text-left">
-                            <div className="flex items-center justify-between">
-                              <span className="font-medium text-blue-900 text-sm">
-                                {isClient ? 'Project Team' : 'Clients'}
-                              </span>
-                              {clientConv?.unread_count ? (
-                                <span className="px-1.5 py-0.5 text-xs bg-blue-600 text-white rounded-full">
-                                  {clientConv.unread_count}
-                                </span>
-                              ) : null}
-                            </div>
-                            <p className="text-xs text-blue-700 truncate">
-                              {clientConv?.last_message || 'Start a conversation'}
-                            </p>
-                          </div>
-                          <ChevronRight className="w-4 h-4 text-blue-400 flex-shrink-0" />
-                        </button>
+                        <>
+                          {isCompanyMember ? (
+                            // Company sees individual clients
+                            <>
+                              {getProjectParticipants(project.id, 'client').length > 0 ? (
+                                getProjectParticipants(project.id, 'client').map(participant => {
+                                  const conv = getParticipantConversation(participant.id, project.id);
+                                  return (
+                                    <button
+                                      key={participant.id}
+                                      onClick={() => {
+                                        setSelectedProject(project);
+                                        setSelectedChannel('company_client');
+                                        setSelectedParticipant(participant);
+                                      }}
+                                      className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all ${
+                                        isSelected && selectedChannel === 'company_client' && selectedParticipant?.id === participant.id
+                                          ? 'bg-blue-100 border-2 border-blue-300'
+                                          : 'bg-blue-50 hover:bg-blue-100 border-2 border-transparent'
+                                      }`}
+                                    >
+                                      <div className="w-9 h-9 rounded-full bg-blue-200 flex items-center justify-center flex-shrink-0">
+                                        <Building2 className="w-4 h-4 text-blue-700" />
+                                      </div>
+                                      <div className="flex-1 min-w-0 text-left">
+                                        <div className="flex items-center justify-between">
+                                          <span className="font-medium text-blue-900 text-sm">
+                                            {participant.name}
+                                          </span>
+                                          {conv?.unread_count ? (
+                                            <span className="px-1.5 py-0.5 text-xs bg-blue-600 text-white rounded-full">
+                                              {conv.unread_count}
+                                            </span>
+                                          ) : null}
+                                        </div>
+                                        <p className="text-xs text-blue-700 truncate">
+                                          {conv?.last_message || 'Start a conversation'}
+                                        </p>
+                                      </div>
+                                      <span className="text-[10px] bg-blue-200 text-blue-700 px-1.5 py-0.5 rounded">
+                                        Client
+                                      </span>
+                                      <ChevronRight className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                                    </button>
+                                  );
+                                })
+                              ) : (
+                                <div className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-50 text-gray-400">
+                                  <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+                                    <Building2 className="w-4 h-4" />
+                                  </div>
+                                  <span className="text-sm">No clients assigned</span>
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            // Client sees project team
+                            <button
+                              onClick={() => {
+                                setSelectedProject(project);
+                                setSelectedChannel('company_client');
+                                setSelectedParticipant(null);
+                              }}
+                              className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all ${
+                                isSelected && selectedChannel === 'company_client'
+                                  ? 'bg-blue-100 border-2 border-blue-300'
+                                  : 'bg-blue-50 hover:bg-blue-100 border-2 border-transparent'
+                              }`}
+                            >
+                              <div className="w-9 h-9 rounded-full bg-blue-200 flex items-center justify-center flex-shrink-0">
+                                <Building2 className="w-4 h-4 text-blue-700" />
+                              </div>
+                              <div className="flex-1 min-w-0 text-left">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-medium text-blue-900 text-sm">
+                                    Project Team
+                                  </span>
+                                  {clientConv?.unread_count ? (
+                                    <span className="px-1.5 py-0.5 text-xs bg-blue-600 text-white rounded-full">
+                                      {clientConv.unread_count}
+                                    </span>
+                                  ) : null}
+                                </div>
+                                <p className="text-xs text-blue-700 truncate">
+                                  {clientConv?.last_message || 'Start a conversation'}
+                                </p>
+                              </div>
+                              <ChevronRight className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                            </button>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
@@ -393,6 +545,7 @@ export default function MessagesPage() {
                     onClick={() => {
                       setSelectedProject(null);
                       setSelectedChannel(null);
+                      setSelectedParticipant(null);
                       setMessages([]);
                     }}
                     className="p-1.5 hover:bg-gray-100 rounded-lg md:hidden"
@@ -412,7 +565,7 @@ export default function MessagesPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <h2 className="font-bold text-gray-900">
-                      {selectedChannel === 'company_supplier' ? 'Supplier Chat' : 'Client Chat'}
+                      {selectedParticipant?.name || (selectedChannel === 'company_supplier' ? 'Supplier Chat' : 'Client Chat')}
                     </h2>
                     <div className="flex items-center gap-2 text-sm text-gray-500">
                       <FolderOpen className="w-3.5 h-3.5" />
@@ -424,7 +577,7 @@ export default function MessagesPage() {
                       ? 'bg-purple-100 text-purple-700'
                       : 'bg-blue-100 text-blue-700'
                   }`}>
-                    {selectedChannel === 'company_supplier' ? 'Suppliers' : 'Clients'}
+                    {selectedParticipant?.type || (selectedChannel === 'company_supplier' ? 'Supplier' : 'Client')}
                   </div>
                 </div>
               </div>
@@ -522,7 +675,7 @@ export default function MessagesPage() {
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-                    placeholder={`Message ${selectedChannel === 'company_supplier' ? 'suppliers' : 'clients'}...`}
+                    placeholder={selectedParticipant?.name ? `Message ${selectedParticipant.name}...` : `Message ${selectedChannel === 'company_supplier' ? 'suppliers' : 'clients'}...`}
                     className="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     disabled={sending}
                   />

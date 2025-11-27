@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
     const projectId = searchParams.get('project_id');
     const channel = searchParams.get('channel');
     const deliveryId = searchParams.get('delivery_id');
+    const participantId = searchParams.get('participant_id');
 
     if (!projectId || !channel) {
       return NextResponse.json({ error: 'Missing project_id or channel' }, { status: 400 });
@@ -52,16 +53,7 @@ export async function GET(request: NextRequest) {
       // Company member with matching company
       hasAccess = true;
     } else if (isSupplier && channel === 'company_supplier') {
-      // Check if supplier is assigned to this project
-      const { data: assignment } = await adminClient
-        .from('supplier_assignments')
-        .select('id')
-        .eq('supplier_id', user.id)
-        .eq('project_id', projectId)
-        .eq('status', 'active')
-        .maybeSingle();
-      
-      // Also check project_members
+      // Check if supplier is assigned to this project via project_members
       const { data: membership } = await adminClient
         .from('project_members')
         .select('id')
@@ -71,7 +63,7 @@ export async function GET(request: NextRequest) {
         .eq('external_type', 'supplier')
         .maybeSingle();
       
-      if (assignment || membership) {
+      if (membership) {
         hasAccess = true;
       }
     } else if (isClient && channel === 'company_client') {
@@ -82,7 +74,7 @@ export async function GET(request: NextRequest) {
         .eq('user_id', user.id)
         .eq('project_id', projectId)
         .eq('status', 'active')
-        .single();
+        .maybeSingle();
       
       if (membership) {
         hasAccess = true;
@@ -104,6 +96,12 @@ export async function GET(request: NextRequest) {
     if (deliveryId) {
       query = query.eq('delivery_id', deliveryId);
     }
+
+    // For company members viewing specific participant, filter messages
+    // For now, show all messages in the channel (can filter by recipient_id once added)
+    // if (isCompanyMember && participantId) {
+    //   query = query.or(`sender_id.eq.${participantId},recipient_id.eq.${participantId}`);
+    // }
 
     const { data: messages, error: messagesError } = await query;
 
@@ -148,7 +146,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { project_id, channel, delivery_id, message } = body;
+    const { project_id, channel, delivery_id, message, recipient_id } = body;
 
     if (!project_id || !channel || !message) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -165,6 +163,8 @@ export async function POST(request: NextRequest) {
     const isCompanyMember = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(userRole);
     const isClient = userRole === 'viewer' || userRole === 'client';
     const isSupplier = userRole === 'supplier';
+
+    console.log('Message POST - User:', user.id, 'Role:', userRole, 'Project:', project_id, 'Channel:', channel);
 
     // Get project info
     const { data: project } = await adminClient
@@ -185,16 +185,7 @@ export async function POST(request: NextRequest) {
       senderType = 'company';
       hasAccess = true;
     } else if (isSupplier && channel === 'company_supplier') {
-      // Verify supplier is assigned to this project
-      const { data: assignment } = await adminClient
-        .from('supplier_assignments')
-        .select('id')
-        .eq('supplier_id', user.id)
-        .eq('project_id', project_id)
-        .eq('status', 'active')
-        .maybeSingle();
-      
-      // Also check project_members for supplier
+      // Verify supplier is member of this project
       const { data: membership } = await adminClient
         .from('project_members')
         .select('id')
@@ -204,7 +195,9 @@ export async function POST(request: NextRequest) {
         .eq('external_type', 'supplier')
         .maybeSingle();
       
-      if (assignment || membership) {
+      console.log('Supplier membership check:', membership);
+      
+      if (membership) {
         senderType = 'supplier';
         hasAccess = true;
       }
@@ -216,7 +209,7 @@ export async function POST(request: NextRequest) {
         .eq('user_id', user.id)
         .eq('project_id', project_id)
         .eq('status', 'active')
-        .single();
+        .maybeSingle();
       
       if (membership) {
         senderType = 'client';
@@ -224,23 +217,32 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    console.log('Access check result:', hasAccess, 'Sender type:', senderType);
+
     if (!hasAccess) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
     // Create the message
+    const messageData: any = {
+      project_id,
+      company_id: project.company_id,
+      channel,
+      delivery_id: delivery_id || null,
+      sender_id: user.id,
+      sender_type: senderType,
+      message: message.trim(),
+      is_read: false,
+    };
+
+    // Add recipient_id if provided (for 1:1 messaging from company)
+    if (recipient_id) {
+      messageData.recipient_id = recipient_id;
+    }
+
     const { data: newMessage, error: insertError } = await adminClient
       .from('project_messages')
-      .insert({
-        project_id,
-        company_id: project.company_id,
-        channel,
-        delivery_id: delivery_id || null,
-        sender_id: user.id,
-        sender_type: senderType,
-        message: message.trim(),
-        is_read: false,
-      })
+      .insert(messageData)
       .select()
       .single();
 

@@ -2,6 +2,15 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { NextResponse } from 'next/server';
 
+interface Participant {
+  id: string;
+  name: string;
+  type: 'supplier' | 'client';
+  project_id: string;
+  project_name: string;
+  project_code?: string;
+}
+
 // GET all conversations for the user (company member, client, or supplier)
 export async function GET() {
   try {
@@ -25,6 +34,8 @@ export async function GET() {
     const isClient = userRole === 'viewer' || userRole === 'client';
     const isSupplier = userRole === 'supplier';
 
+    console.log('Conversations API - User:', user.id, 'Role:', userRole, 'Is Supplier:', isSupplier);
+
     let projectIds: string[] = [];
     let projectMap = new Map<string, { name: string; code?: string }>();
 
@@ -40,17 +51,21 @@ export async function GET() {
         projectIds = projects.map(p => p.id);
         projectMap = new Map(projects.map(p => [p.id, { name: p.name, code: p.code }]));
       }
-    } else if (isSupplier) {
-      // Suppliers see projects they're assigned to
-      const { data: assignments } = await adminClient
-        .from('supplier_assignments')
-        .select('project_id, projects(id, name, code)')
-        .eq('supplier_id', user.id)
+    } else if (isSupplier || isClient) {
+      // Suppliers and clients see projects they're members of via project_members
+      console.log('Fetching projects for supplier/client via project_members...');
+      
+      const { data: memberProjects, error: memberError } = await adminClient
+        .from('project_members')
+        .select('project_id, external_type, projects(id, name, code)')
+        .eq('user_id', user.id)
         .eq('status', 'active');
 
-      if (assignments && assignments.length > 0) {
-        for (const sa of assignments) {
-          const proj = sa.projects as any;
+      console.log('Member projects query result:', memberProjects, 'Error:', memberError);
+
+      if (memberProjects && memberProjects.length > 0) {
+        for (const mp of memberProjects) {
+          const proj = mp.projects as any;
           if (proj && !projectIds.includes(proj.id)) {
             projectIds.push(proj.id);
             projectMap.set(proj.id, { name: proj.name, code: proj.code });
@@ -58,40 +73,7 @@ export async function GET() {
         }
       }
       
-      // Also check project_members for suppliers
-      const { data: memberProjects } = await adminClient
-        .from('project_members')
-        .select('project_id, projects(id, name, code)')
-        .eq('user_id', user.id)
-        .eq('status', 'active')
-        .eq('external_type', 'supplier');
-
-      if (memberProjects && memberProjects.length > 0) {
-        for (const mp of memberProjects) {
-          const proj = mp.projects as any;
-          if (proj && !projectIds.includes(proj.id)) {
-            projectIds.push(proj.id);
-            projectMap.set(proj.id, { name: proj.name, code: proj.code });
-          }
-        }
-      }
-    } else if (isClient) {
-      // Clients see projects they're members of
-      const { data: memberProjects } = await adminClient
-        .from('project_members')
-        .select('project_id, projects(id, name, code)')
-        .eq('user_id', user.id)
-        .eq('status', 'active');
-
-      if (memberProjects && memberProjects.length > 0) {
-        for (const mp of memberProjects) {
-          const proj = mp.projects as any;
-          if (proj) {
-            projectIds.push(proj.id);
-            projectMap.set(proj.id, { name: proj.name, code: proj.code });
-          }
-        }
-      }
+      console.log('Found project IDs for supplier/client:', projectIds);
     }
 
     // Build projects list for UI - ALWAYS return all projects
@@ -102,10 +84,43 @@ export async function GET() {
       status: 'active'
     }));
 
+    // For company members, get all participants (suppliers and clients) for each project
+    let participants: Participant[] = [];
+    
+    if (isCompanyMember && projectIds.length > 0) {
+      // Get all external members (suppliers and clients) for company's projects
+      const { data: externalMembers } = await adminClient
+        .from('project_members')
+        .select('user_id, project_id, external_type, profiles(id, full_name, username)')
+        .in('project_id', projectIds)
+        .in('external_type', ['supplier', 'client'])
+        .eq('status', 'active');
+
+      console.log('External members for company:', externalMembers);
+
+      if (externalMembers && externalMembers.length > 0) {
+        for (const em of externalMembers) {
+          const profile = em.profiles as any;
+          const projInfo = projectMap.get(em.project_id);
+          if (profile && projInfo) {
+            participants.push({
+              id: em.user_id,
+              name: profile.full_name || profile.username || 'Unknown',
+              type: em.external_type as 'supplier' | 'client',
+              project_id: em.project_id,
+              project_name: projInfo.name,
+              project_code: projInfo.code
+            });
+          }
+        }
+      }
+    }
+
     if (projectIds.length === 0) {
       return NextResponse.json({ 
         conversations: [], 
         projects: [],
+        participants: [],
         currentUserId: user.id,
         userRole 
       });
@@ -133,17 +148,20 @@ export async function GET() {
 
     const { data: messages } = await messagesQuery;
 
-    // Even if no messages, still return projects
+    // Even if no messages, still return projects and participants
     if (!messages || messages.length === 0) {
       return NextResponse.json({ 
         conversations: [], 
-        projects,  // Return ALL projects so users can start conversations
+        projects,
+        participants,  // Return participants so company can start conversations
         currentUserId: user.id,
         userRole 
       });
     }
 
     // Group messages into conversations
+    // For company: group by project + participant (each supplier/client is a separate conversation)
+    // For supplier/client: group by project (they talk to "Project Team")
     const conversationMap = new Map<string, {
       id: string;
       project_id: string;
@@ -165,84 +183,54 @@ export async function GET() {
     // Get names from profiles
     const { data: profilesData } = await adminClient
       .from('profiles')
-      .select('id, full_name, username')
+      .select('id, full_name, username, role')
       .in('id', senderIds);
 
     const nameMap = new Map(
-      (profilesData || []).map(p => [p.id, p.full_name || p.username || 'Unknown'])
+      (profilesData || []).map(p => [p.id, { name: p.full_name || p.username || 'Unknown', role: p.role }])
     );
-
-    // Get supplier assignments to identify participants
-    const { data: supplierAssignments } = await adminClient
-      .from('supplier_assignments')
-      .select('supplier_id, project_id, delivery_id')
-      .in('project_id', projectIds);
-
-    // Get client members
-    const { data: clientMembers } = await adminClient
-      .from('project_members')
-      .select('user_id, project_id')
-      .in('project_id', projectIds)
-      .in('external_type', ['client']);
-
-    // Build supplier and client maps
-    const supplierMapByProject = new Map<string, Set<string>>();
-    (supplierAssignments || []).forEach(sa => {
-      if (!supplierMapByProject.has(sa.project_id)) {
-        supplierMapByProject.set(sa.project_id, new Set());
-      }
-      supplierMapByProject.get(sa.project_id)!.add(sa.supplier_id);
-    });
-
-    const clientMapByProject = new Map<string, Set<string>>();
-    (clientMembers || []).forEach(cm => {
-      if (!clientMapByProject.has(cm.project_id)) {
-        clientMapByProject.set(cm.project_id, new Set());
-      }
-      clientMapByProject.get(cm.project_id)!.add(cm.user_id);
-    });
 
     // Process messages into conversations
     for (const msg of messages) {
-      // Create conversation key
-      const convKey = `${msg.project_id}-${msg.channel}-${msg.delivery_id || 'none'}`;
+      let convKey: string;
+      let participantId = '';
+      let participantType = '';
+      let participantName = 'Unknown';
+
+      if (isCompanyMember) {
+        // For company: create conversation per participant (sender who is not company)
+        // Find the non-company participant in this conversation
+        if (msg.sender_type === 'company') {
+          // Message from company - need to find who it's to
+          // Look at other messages in this project/channel to find the external user
+          const otherParticipant = participants.find(p => 
+            p.project_id === msg.project_id && 
+            ((msg.channel === 'company_supplier' && p.type === 'supplier') ||
+             (msg.channel === 'company_client' && p.type === 'client'))
+          );
+          if (otherParticipant) {
+            participantId = otherParticipant.id;
+            participantType = otherParticipant.type;
+            participantName = otherParticipant.name;
+          }
+        } else {
+          // Message from external user
+          participantId = msg.sender_id;
+          participantType = msg.sender_type || 'unknown';
+          const senderInfo = nameMap.get(msg.sender_id);
+          participantName = senderInfo?.name || msg.sender_type || 'Unknown';
+        }
+        
+        // Create key based on project + participant
+        convKey = `${msg.project_id}-${participantId || msg.channel}`;
+      } else {
+        // For supplier/client: they talk to the company team as a whole
+        participantType = 'company';
+        participantName = 'Project Team';
+        convKey = `${msg.project_id}-company`;
+      }
 
       if (!conversationMap.has(convKey)) {
-        // Determine participant based on channel and user role
-        let participantId = '';
-        let participantType = '';
-        let participantName = 'Unknown';
-
-        if (isCompanyMember) {
-          // Company sees suppliers or clients as participants
-          if (msg.channel === 'company_supplier') {
-            const suppliers = supplierMapByProject.get(msg.project_id);
-            if (suppliers && suppliers.size > 0) {
-              participantId = [...suppliers][0];
-              participantType = 'supplier';
-              participantName = nameMap.get(participantId) || 'Supplier';
-            }
-          } else if (msg.channel === 'company_client') {
-            const clients = clientMapByProject.get(msg.project_id);
-            if (clients && clients.size > 0) {
-              participantId = [...clients][0];
-              participantType = 'client';
-              participantName = nameMap.get(participantId) || 'Client';
-            }
-          }
-        } else if (isClient || isSupplier) {
-          // Client/Supplier sees company as participant
-          participantType = 'company';
-          participantName = 'Project Team';
-        }
-
-        // Fallback: use message sender if participant not found
-        if (!participantId && !isClient && !isSupplier && msg.sender_type !== 'company') {
-          participantId = msg.sender_id;
-          participantType = msg.sender_type;
-          participantName = nameMap.get(msg.sender_id) || msg.sender_type;
-        }
-
         const projInfo = projectMap.get(msg.project_id);
 
         conversationMap.set(convKey, {
@@ -274,7 +262,8 @@ export async function GET() {
 
     return NextResponse.json({ 
       conversations,
-      projects,  // Return ALL projects so users can start conversations
+      projects,
+      participants,  // Return participants for company to start new conversations
       currentUserId: user.id,
       userRole
     });
