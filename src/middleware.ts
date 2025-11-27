@@ -21,7 +21,8 @@ const MAX_HITS = Number(process.env.RATE_LIMIT_MAX || 20)
 const protectedRoutes = ['/dashboard', '/jobs', '/suppliers', '/settings', '/admin', '/deliveries', '/orders', '/projects', '/messages', '/supplier-portal']
 
 // Routes that suppliers should be redirected from to supplier-portal
-const supplierBlockedRoutes = ['/dashboard', '/analytics', '/orders', '/expenses', '/deliveries', '/documents', '/change-orders', '/products', '/users', '/activity', '/bids', '/contractors', '/clients', '/payments', '/reports', '/settings', '/messages']
+// Note: /messages and /projects are allowed for suppliers to communicate
+const supplierBlockedRoutes = ['/dashboard', '/analytics', '/orders', '/expenses', '/deliveries', '/documents', '/change-orders', '/products', '/users', '/activity', '/bids', '/contractors', '/clients', '/payments', '/reports', '/settings']
 
 export async function middleware(req: NextRequest) {
   const url = new URL(req.url)
