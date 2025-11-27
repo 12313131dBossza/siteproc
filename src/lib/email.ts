@@ -553,6 +553,87 @@ This is an automated email from SiteProc.`
   })
 }
 
+// Send notification for new chat message
+export async function sendMessageNotification(data: {
+  to: string;
+  senderName: string;
+  projectName: string;
+  message: string;
+  messageType?: string;
+  chatUrl: string;
+}) {
+  if (!isEmailEnabled()) {
+    console.log('[Email] Skipped message notification (email not configured)')
+    return { skipped: true }
+  }
+
+  const subject = `💬 New message from ${data.senderName} - ${data.projectName}`
+  
+  const messagePreview = data.message.length > 100 
+    ? data.message.substring(0, 100) + '...' 
+    : data.message
+
+  const messageIcon = {
+    'voice': '🎤 Voice message',
+    'location': '📍 Shared location',
+    'order_reference': '📦 Order reference',
+    'status_update': '🚚 Status update',
+  }[data.messageType || ''] || messagePreview
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; padding: 20px; max-width: 600px; margin: 0 auto;">
+        <div style="background: #ffffff; border-radius: 8px; padding: 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <h1 style="color: #2563eb; margin: 0;">New Message</h1>
+          </div>
+
+          <p style="color: #374151;">
+            You have a new message in <strong>${data.projectName}</strong>
+          </p>
+          
+          <div style="background: #f3f4f6; border-radius: 6px; padding: 16px; margin: 24px 0; border-left: 4px solid #2563eb;">
+            <p style="margin: 0 0 8px 0; font-weight: 600; color: #374151;">${data.senderName}</p>
+            <p style="margin: 0; color: #6b7280;">${messageIcon}</p>
+          </div>
+
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="${data.chatUrl}" style="display: inline-block; background: #2563eb; color: #ffffff; padding: 14px 32px; border-radius: 6px; text-decoration: none; font-weight: 600;">
+              View Message
+            </a>
+          </div>
+
+          <p style="font-size: 14px; color: #6b7280; text-align: center;">
+            You're receiving this because you have email notifications enabled for this conversation.
+          </p>
+        </div>
+      </body>
+    </html>
+  `
+
+  const text = `New message in ${data.projectName}
+
+From: ${data.senderName}
+Message: ${messageIcon}
+
+Click here to view:
+${data.chatUrl}
+
+---
+This is an automated email from SiteProc.`
+
+  return sendEmail({
+    to: data.to,
+    subject,
+    html,
+    text
+  })
+}
 // Project Access Invitation Email
 interface ProjectInvitationEmailData {
   to: string

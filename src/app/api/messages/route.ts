@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
+import { sendMessageNotification } from '@/lib/email';
 
 // GET messages for a specific conversation
 export async function GET(request: NextRequest) {
@@ -295,6 +296,47 @@ export async function POST(request: NextRequest) {
     if (insertError) {
       console.error('Error inserting message:', insertError);
       return NextResponse.json({ error: 'Failed to send message' }, { status: 500 });
+    }
+
+    // Send email notification to other participants (in background, don't block)
+    try {
+      // Get project info
+      const { data: projectInfo } = await adminClient
+        .from('projects')
+        .select('name')
+        .eq('id', project_id)
+        .single();
+
+      // Get other members in this channel who should receive notifications
+      const { data: members } = await adminClient
+        .from('project_members')
+        .select('user_id, profiles(email, full_name)')
+        .eq('project_id', project_id)
+        .eq('status', 'active')
+        .neq('user_id', user.id);
+
+      if (members && members.length > 0) {
+        const senderName = profile?.full_name || profile?.username || 'Someone';
+        const chatUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://siteproc.vercel.app'}/messages`;
+        
+        // Send email to each member (non-blocking)
+        for (const member of members) {
+          const memberProfile = member.profiles as any;
+          if (memberProfile?.email) {
+            sendMessageNotification({
+              to: memberProfile.email,
+              senderName,
+              projectName: projectInfo?.name || 'Project',
+              message: message.trim(),
+              messageType: message_type,
+              chatUrl,
+            }).catch(err => console.error('Email notification error:', err));
+          }
+        }
+      }
+    } catch (emailError) {
+      console.error('Error sending email notifications:', emailError);
+      // Don't fail the request if email fails
     }
 
     return NextResponse.json({

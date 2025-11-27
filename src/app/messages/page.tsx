@@ -8,7 +8,7 @@ import {
   X, Loader2, CheckCheck, Paperclip, ArrowLeft, Smile, Reply, 
   Edit2, Trash2, Pin, FileText, Image as ImageIcon, Bookmark, Forward,
   Calendar, AtSign, Zap, Filter, ChevronDown, Mic, Square, Package,
-  ExternalLink, DollarSign
+  ExternalLink, DollarSign, MapPin, Navigation
 } from 'lucide-react';
 
 interface Project {
@@ -60,7 +60,7 @@ interface Message {
   attachment_type?: string;
   reactions?: Reaction[];
   is_bookmarked?: boolean;
-  message_type?: 'text' | 'voice' | 'order_reference';
+  message_type?: 'text' | 'voice' | 'order_reference' | 'location' | 'status_update';
   metadata?: any;
 }
 
@@ -134,6 +134,9 @@ export default function MessagesPage() {
   const [showOrderPicker, setShowOrderPicker] = useState(false);
   const [projectOrders, setProjectOrders] = useState<Order[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
+  
+  // Location sharing states
+  const [sharingLocation, setSharingLocation] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
@@ -725,6 +728,58 @@ export default function MessagesPage() {
     }
   };
 
+  // Share current location
+  const shareLocation = async () => {
+    if (!selectedProject || !selectedChannel) return;
+    
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser');
+      return;
+    }
+    
+    setSharingLocation(true);
+    
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        
+        try {
+          const payload = {
+            project_id: selectedProject.id,
+            channel: selectedChannel,
+            message: `📍 Shared location`,
+            message_type: 'location',
+            metadata: JSON.stringify({
+              latitude,
+              longitude,
+              timestamp: new Date().toISOString(),
+            }),
+          };
+          
+          const res = await fetch('/api/messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          
+          if (res.ok) {
+            const data = await res.json();
+            setMessages(prev => [...prev, data.message]);
+          }
+        } catch (error) {
+          console.error('Error sharing location:', error);
+        } finally {
+          setSharingLocation(false);
+        }
+      },
+      (error) => {
+        console.error('Geolocation error:', error);
+        alert('Could not get your location. Please enable location services.');
+        setSharingLocation(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
   const formatTime = (dateString: string) => {
     if (!dateString) return '';
     const date = new Date(dateString);
@@ -1139,8 +1194,58 @@ export default function MessagesPage() {
                                 </div>
                               )}
 
-                              {/* Regular text message - hide if it's voice or order reference */}
-                              {msg.message_type !== 'voice' && msg.message_type !== 'order_reference' && (!msg.attachment_url || msg.message !== msg.attachment_name) && (
+                              {/* Location Card */}
+                              {msg.message_type === 'location' && msg.metadata && !isDeleted && (() => {
+                                const locData = typeof msg.metadata === 'string' ? JSON.parse(msg.metadata) : msg.metadata;
+                                const mapsUrl = `https://www.google.com/maps?q=${locData.latitude},${locData.longitude}`;
+                                return (
+                                  <div className={`rounded-lg p-3 ${isOwn ? 'bg-blue-500/30' : 'bg-gray-50 border'}`}>
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <MapPin className="w-5 h-5 text-red-500" />
+                                      <span className="font-semibold">Shared Location</span>
+                                    </div>
+                                    <div className="relative rounded-lg overflow-hidden bg-gray-200 h-32 mb-2">
+                                      <img 
+                                        src={`https://maps.googleapis.com/maps/api/staticmap?center=${locData.latitude},${locData.longitude}&zoom=15&size=300x150&markers=color:red%7C${locData.latitude},${locData.longitude}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || ''}`}
+                                        alt="Location map"
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                          // Fallback if no API key
+                                          (e.target as HTMLImageElement).style.display = 'none';
+                                        }}
+                                      />
+                                      <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                                        <MapPin className="w-8 h-8 text-red-500" />
+                                      </div>
+                                    </div>
+                                    <div className={`text-xs ${isOwn ? 'text-blue-200' : 'text-gray-500'}`}>
+                                      {locData.latitude.toFixed(6)}, {locData.longitude.toFixed(6)}
+                                    </div>
+                                    <a 
+                                      href={mapsUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className={`flex items-center gap-1 mt-2 text-xs ${isOwn ? 'text-blue-200 hover:text-white' : 'text-blue-600 hover:text-blue-800'}`}
+                                    >
+                                      <Navigation className="w-3 h-3" />
+                                      Open in Google Maps
+                                    </a>
+                                  </div>
+                                );
+                              })()}
+
+                              {/* Status Update Card */}
+                              {msg.message_type === 'status_update' && !isDeleted && (
+                                <div className={`rounded-lg p-3 ${isOwn ? 'bg-blue-500/30' : 'bg-green-50 border border-green-200'}`}>
+                                  <div className="flex items-center gap-2">
+                                    <Truck className="w-5 h-5 text-green-600" />
+                                    <span className="text-sm">{msg.message}</span>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Regular text message - hide if it's special type */}
+                              {msg.message_type !== 'voice' && msg.message_type !== 'order_reference' && msg.message_type !== 'location' && msg.message_type !== 'status_update' && (!msg.attachment_url || msg.message !== msg.attachment_name) && (
                                 <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
                               )}
 
@@ -1369,6 +1474,14 @@ export default function MessagesPage() {
                     </button>
                     <button onClick={startRecording} className="p-2 hover:bg-gray-100 rounded-full" title="Voice message">
                       <Mic className="w-5 h-5 text-gray-500" />
+                    </button>
+                    <button 
+                      onClick={shareLocation}
+                      disabled={sharingLocation}
+                      className="p-2 hover:bg-gray-100 rounded-full"
+                      title="Share location"
+                    >
+                      {sharingLocation ? <Loader2 className="w-5 h-5 animate-spin text-gray-500" /> : <MapPin className="w-5 h-5 text-gray-500" />}
                     </button>
                     <button 
                       onClick={() => { setShowOrderPicker(!showOrderPicker); if (!showOrderPicker) loadProjectOrders(); }} 

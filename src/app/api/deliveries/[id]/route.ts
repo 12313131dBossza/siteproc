@@ -247,6 +247,51 @@ export async function PATCH(
         console.error('⚠️ Failed to log delivery activity:', activityError)
         // Don't fail the request if activity logging fails
       }
+
+      // Auto-send message to supplier channel about delivery status change
+      try {
+        if (updatedDelivery.project_id) {
+          const statusMessages: Record<string, string> = {
+            'pending': '📦 Delivery has been created and is pending pickup.',
+            'partial': `🚚 Delivery is now in transit${driver_name ? ` with driver ${driver_name}` : ''}${vehicle_number ? ` (Vehicle: ${vehicle_number})` : ''}.`,
+            'delivered': `✅ Delivery has been completed${signer_name ? ` and signed by ${signer_name}` : ''}.`
+          }
+          
+          const autoMessage = statusMessages[status]
+          if (autoMessage) {
+            // Get user's profile name
+            const { data: userProfile } = await (sb as any)
+              .from('profiles')
+              .select('full_name, username')
+              .eq('id', session.user.id)
+              .single()
+
+            await (sb as any)
+              .from('project_messages')
+              .insert({
+                project_id: updatedDelivery.project_id,
+                company_id: session.companyId,
+                channel: 'company_supplier',
+                sender_id: session.user.id,
+                sender_type: 'company',
+                message: autoMessage,
+                message_type: 'status_update',
+                metadata: JSON.stringify({
+                  type: 'delivery_status',
+                  delivery_id: deliveryId,
+                  delivery_number: updatedDelivery.delivery_number,
+                  status_from: currentDelivery.status,
+                  status_to: status,
+                }),
+                is_read: false,
+              })
+            console.log('✅ Auto-message sent for delivery status change')
+          }
+        }
+      } catch (msgError: any) {
+        console.error('⚠️ Failed to send auto-message:', msgError)
+        // Don't fail the request if auto-message fails
+      }
     }
 
     // Step 7: Broadcast updates
