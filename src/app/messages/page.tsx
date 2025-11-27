@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { createBrowserClient } from '@supabase/ssr';
 import { AppLayout } from '@/components/app-layout';
 import {
   MessageCircle,
@@ -85,9 +86,79 @@ export default function MessagesPage() {
   const [userRole, setUserRole] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Supabase client for realtime
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
   useEffect(() => {
     loadData();
   }, []);
+
+  // Realtime subscription for new messages
+  useEffect(() => {
+    if (!selectedProject || !selectedChannel) return;
+
+    console.log('Setting up realtime subscription for project:', selectedProject.id, 'channel:', selectedChannel);
+
+    const channel = supabase
+      .channel(`messages-${selectedProject.id}-${selectedChannel}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'project_messages',
+          filter: `project_id=eq.${selectedProject.id}`,
+        },
+        async (payload) => {
+          console.log('New message received:', payload);
+          const newMsg = payload.new as any;
+          
+          // Only add if it's for our channel and not already in the list
+          if (newMsg.channel === selectedChannel) {
+            // Fetch sender name
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('full_name, username')
+              .eq('id', newMsg.sender_id)
+              .single();
+
+            const messageWithName: Message = {
+              ...newMsg,
+              sender_name: profile?.full_name || profile?.username || 'Unknown',
+            };
+
+            setMessages((prev) => {
+              // Avoid duplicates
+              if (prev.some(m => m.id === newMsg.id)) return prev;
+              return [...prev, messageWithName];
+            });
+
+            // Mark as read if not from current user
+            if (newMsg.sender_id !== currentUserId) {
+              fetch('/api/messages/mark-read', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  project_id: selectedProject.id,
+                  channel: selectedChannel,
+                }),
+              });
+            }
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('Realtime subscription status:', status);
+      });
+
+    return () => {
+      console.log('Cleaning up realtime subscription');
+      supabase.removeChannel(channel);
+    };
+  }, [selectedProject?.id, selectedChannel, currentUserId]);
 
   useEffect(() => {
     if (selectedProject && selectedChannel) {
