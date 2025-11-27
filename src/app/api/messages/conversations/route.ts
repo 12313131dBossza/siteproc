@@ -89,23 +89,39 @@ export async function GET() {
     
     if (isCompanyMember && projectIds.length > 0) {
       // Get all external members (suppliers and clients) for company's projects
-      const { data: externalMembers } = await adminClient
+      // Include both accepted (user_id) and pending (external_email/external_name) members
+      const { data: externalMembers, error: membersError } = await adminClient
         .from('project_members')
-        .select('user_id, project_id, external_type, profiles(id, full_name, username)')
+        .select('id, user_id, project_id, external_type, external_email, external_name, profiles(id, full_name, username)')
         .in('project_id', projectIds)
         .in('external_type', ['supplier', 'client'])
         .eq('status', 'active');
 
-      console.log('External members for company:', externalMembers);
+      console.log('External members query result:', externalMembers, 'Error:', membersError);
 
       if (externalMembers && externalMembers.length > 0) {
         for (const em of externalMembers) {
           const profile = em.profiles as any;
           const projInfo = projectMap.get(em.project_id);
-          if (profile && projInfo) {
+          
+          if (projInfo) {
+            // Get name from profile (if accepted) or from external_name/email (if pending)
+            let participantName = 'Unknown';
+            let participantId = em.user_id || em.id; // Use member id if no user_id
+            
+            if (profile && profile.full_name) {
+              participantName = profile.full_name;
+            } else if (profile && profile.username) {
+              participantName = profile.username;
+            } else if (em.external_name) {
+              participantName = em.external_name;
+            } else if (em.external_email) {
+              participantName = em.external_email.split('@')[0];
+            }
+            
             participants.push({
-              id: em.user_id,
-              name: profile.full_name || profile.username || 'Unknown',
+              id: participantId,
+              name: participantName,
               type: em.external_type as 'supplier' | 'client',
               project_id: em.project_id,
               project_name: projInfo.name,
@@ -115,6 +131,8 @@ export async function GET() {
         }
       }
     }
+
+    console.log('Final participants list:', participants);
 
     if (projectIds.length === 0) {
       return NextResponse.json({ 
