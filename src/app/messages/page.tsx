@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, DragEvent } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { AppLayout } from '@/components/app-layout';
 import {
   MessageCircle, Send, Search, Truck, Building2, FolderOpen, ChevronRight,
   X, Loader2, CheckCheck, Paperclip, ArrowLeft, Smile, Reply, 
-  Edit2, Trash2, Pin, FileText, Image as ImageIcon
+  Edit2, Trash2, Pin, FileText, Image as ImageIcon, Bookmark, Forward,
+  Calendar, AtSign, Zap, Filter, ChevronDown
 } from 'lucide-react';
 
 interface Project {
@@ -57,9 +58,20 @@ interface Message {
   attachment_name?: string;
   attachment_type?: string;
   reactions?: Reaction[];
+  is_bookmarked?: boolean;
 }
 
 const EMOJI_OPTIONS = ['👍', '❤️', '😂', '😮', '🎉', '✅'];
+
+// Quick reply templates for construction/delivery
+const QUICK_TEMPLATES = [
+  { label: '✅ Delivery Confirmed', text: 'Delivery has been confirmed and received in good condition.' },
+  { label: '📦 Request Update', text: 'Could you please provide an update on the delivery status?' },
+  { label: '📸 Photo Requested', text: 'Please send photos of the delivered items for our records.' },
+  { label: '⚠️ Issue Reported', text: 'There is an issue with the delivery. Please contact us ASAP.' },
+  { label: '📅 Schedule Delivery', text: 'Please confirm the delivery schedule for this order.' },
+  { label: '👋 Thank You', text: 'Thank you for your prompt service!' },
+];
 
 export default function MessagesPage() {
   const [loading, setLoading] = useState(true);
@@ -86,10 +98,25 @@ export default function MessagesPage() {
   const [uploading, setUploading] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   
+  // Additional feature states
+  const [isDragging, setIsDragging] = useState(false);
+  const [messageSearch, setMessageSearch] = useState('');
+  const [showMessageSearch, setShowMessageSearch] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionFilter, setMentionFilter] = useState('');
+  const [bookmarkedMessages, setBookmarkedMessages] = useState<Set<string>>(new Set());
+  const [showBookmarks, setShowBookmarks] = useState(false);
+  const [forwardingMessage, setForwardingMessage] = useState<Message | null>(null);
+  const [dateFilter, setDateFilter] = useState<string>('');
+  const [showDateFilter, setShowDateFilter] = useState(false);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -350,7 +377,14 @@ export default function MessagesPage() {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !selectedProject || !selectedChannel) return;
+    await uploadFile(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
+  // Upload file helper (shared between input and drag-drop)
+  const uploadFile = async (file: File) => {
+    if (!selectedProject || !selectedChannel) return;
+    
     try {
       setUploading(true);
       const formData = new FormData();
@@ -382,8 +416,129 @@ export default function MessagesPage() {
       console.error('Error uploading file:', error);
     } finally {
       setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
     }
+  };
+
+  // Drag & Drop handlers
+  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      await uploadFile(files[0]);
+    }
+  };
+
+  // Bookmark handler
+  const handleBookmark = async (messageId: string) => {
+    const isBookmarked = bookmarkedMessages.has(messageId);
+    
+    // Optimistic update
+    setBookmarkedMessages(prev => {
+      const newSet = new Set(prev);
+      if (isBookmarked) {
+        newSet.delete(messageId);
+      } else {
+        newSet.add(messageId);
+      }
+      return newSet;
+    });
+
+    try {
+      await fetch('/api/messages/bookmark', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message_id: messageId }),
+      });
+    } catch (error) {
+      console.error('Error bookmarking:', error);
+    }
+  };
+
+  // Forward message
+  const handleForward = async (targetProjectId: string, targetChannel: string) => {
+    if (!forwardingMessage) return;
+
+    try {
+      await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          project_id: targetProjectId,
+          channel: targetChannel,
+          message: `[Forwarded] ${forwardingMessage.message}`,
+          attachment_url: forwardingMessage.attachment_url,
+          attachment_name: forwardingMessage.attachment_name,
+          attachment_type: forwardingMessage.attachment_type,
+        }),
+      });
+      setForwardingMessage(null);
+    } catch (error) {
+      console.error('Error forwarding:', error);
+    }
+  };
+
+  // Insert template
+  const insertTemplate = (text: string) => {
+    setNewMessage(text);
+    setShowTemplates(false);
+    inputRef.current?.focus();
+  };
+
+  // Handle @ mentions
+  const handleMention = (userName: string) => {
+    const beforeAt = newMessage.substring(0, newMessage.lastIndexOf('@'));
+    setNewMessage(`${beforeAt}@${userName} `);
+    setShowMentions(false);
+    inputRef.current?.focus();
+  };
+
+  // Handle input change with mention detection
+  const handleInputChange = (value: string) => {
+    setNewMessage(value);
+    handleTyping();
+    
+    // Check for @ mention
+    const lastAt = value.lastIndexOf('@');
+    if (lastAt !== -1 && (lastAt === 0 || value[lastAt - 1] === ' ')) {
+      const afterAt = value.substring(lastAt + 1);
+      if (!afterAt.includes(' ')) {
+        setMentionFilter(afterAt.toLowerCase());
+        setShowMentions(true);
+        return;
+      }
+    }
+    setShowMentions(false);
+  };
+
+  // Get mentionable users
+  const getMentionableUsers = () => {
+    if (!selectedProject) return [];
+    const users: { id: string; name: string; type: string }[] = [];
+    
+    participants
+      .filter(p => p.project_id === selectedProject.id)
+      .forEach(p => {
+        if (p.name.toLowerCase().includes(mentionFilter)) {
+          users.push({ id: p.id, name: p.name, type: p.type });
+        }
+      });
+    
+    return users.slice(0, 5);
   };
 
   const formatTime = (dateString: string) => {
@@ -419,6 +574,24 @@ export default function MessagesPage() {
   const filteredProjects = projects.filter(p => 
     !searchTerm || p.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Filter messages based on search and date
+  const filteredMessages = messages.filter(msg => {
+    // Message search filter
+    if (messageSearch && !msg.message.toLowerCase().includes(messageSearch.toLowerCase())) {
+      return false;
+    }
+    // Date filter
+    if (dateFilter) {
+      const msgDate = new Date(msg.created_at).toISOString().split('T')[0];
+      if (msgDate !== dateFilter) return false;
+    }
+    // Show bookmarks only
+    if (showBookmarks && !bookmarkedMessages.has(msg.id)) {
+      return false;
+    }
+    return true;
+  });
 
   const getReplyMessage = (parentId: string) => messages.find(m => m.id === parentId);
 
@@ -584,24 +757,118 @@ export default function MessagesPage() {
                       <span className="truncate">{selectedProject.name}</span>
                     </div>
                   </div>
+                  {/* Chat action buttons */}
+                  <div className="flex items-center gap-1">
+                    <button 
+                      onClick={() => setShowMessageSearch(!showMessageSearch)} 
+                      className={`p-2 rounded-lg transition-colors ${showMessageSearch ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-500'}`}
+                      title="Search messages"
+                    >
+                      <Search className="w-5 h-5" />
+                    </button>
+                    <button 
+                      onClick={() => setShowBookmarks(!showBookmarks)} 
+                      className={`p-2 rounded-lg transition-colors ${showBookmarks ? 'bg-amber-100 text-amber-600' : 'hover:bg-gray-100 text-gray-500'}`}
+                      title="Show bookmarks"
+                    >
+                      <Bookmark className="w-5 h-5" />
+                    </button>
+                    <button 
+                      onClick={() => setShowDateFilter(!showDateFilter)} 
+                      className={`p-2 rounded-lg transition-colors ${dateFilter ? 'bg-green-100 text-green-600' : 'hover:bg-gray-100 text-gray-500'}`}
+                      title="Filter by date"
+                    >
+                      <Calendar className="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
+
+                {/* Search bar */}
+                {showMessageSearch && (
+                  <div className="mt-3 relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search in messages..."
+                      value={messageSearch}
+                      onChange={(e) => setMessageSearch(e.target.value)}
+                      className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                      autoFocus
+                    />
+                    {messageSearch && (
+                      <button onClick={() => setMessageSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <X className="w-4 h-4 text-gray-400" />
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Date filter */}
+                {showDateFilter && (
+                  <div className="mt-3 flex items-center gap-2">
+                    <input
+                      type="date"
+                      value={dateFilter}
+                      onChange={(e) => setDateFilter(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                    />
+                    {dateFilter && (
+                      <button onClick={() => setDateFilter('')} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500">
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Active filters indicator */}
+                {(messageSearch || dateFilter || showBookmarks) && (
+                  <div className="mt-2 flex items-center gap-2 text-xs">
+                    <Filter className="w-3 h-3 text-gray-400" />
+                    <span className="text-gray-500">
+                      Showing {filteredMessages.length} of {messages.length} messages
+                    </span>
+                    <button 
+                      onClick={() => { setMessageSearch(''); setDateFilter(''); setShowBookmarks(false); }}
+                      className="text-blue-600 hover:underline"
+                    >
+                      Clear filters
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
+              <div 
+                ref={chatContainerRef}
+                className={`flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 relative ${isDragging ? 'ring-4 ring-blue-400 ring-inset bg-blue-50' : ''}`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
+                {/* Drag & Drop overlay */}
+                {isDragging && (
+                  <div className="absolute inset-0 bg-blue-100/80 flex items-center justify-center z-10 pointer-events-none">
+                    <div className="text-center">
+                      <Paperclip className="w-16 h-16 text-blue-500 mx-auto mb-2" />
+                      <p className="text-lg font-medium text-blue-700">Drop file here to upload</p>
+                    </div>
+                  </div>
+                )}
+
                 {loadingMessages ? (
                   <div className="flex items-center justify-center h-full"><Loader2 className="w-8 h-8 animate-spin text-gray-400" /></div>
-                ) : messages.length === 0 ? (
+                ) : filteredMessages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-gray-500">
                     <MessageCircle className="w-16 h-16 text-gray-300 mb-4" />
-                    <p className="font-medium">No messages yet</p>
+                    <p className="font-medium">{messages.length === 0 ? 'No messages yet' : 'No messages match your filters'}</p>
                   </div>
                 ) : (
                   <>
-                    {messages.map(msg => {
+                    {filteredMessages.map(msg => {
                       const isOwn = msg.sender_id === currentUserId;
                       const isDeleted = !!msg.deleted_at;
                       const parentMsg = msg.parent_message_id ? getReplyMessage(msg.parent_message_id) : null;
+                      const isBookmarked = bookmarkedMessages.has(msg.id);
 
                       return (
                         <div key={msg.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'} group`}>
@@ -657,12 +924,18 @@ export default function MessagesPage() {
                               )}
 
                               {!isDeleted && (
-                                <div className={`absolute ${isOwn ? '-left-24' : '-right-24'} top-0 hidden group-hover:flex items-center gap-1 bg-white rounded-lg shadow-lg border p-1`}>
+                                <div className={`absolute ${isOwn ? '-left-28' : '-right-28'} top-0 hidden group-hover:flex items-center gap-1 bg-white rounded-lg shadow-lg border p-1`}>
                                   <button onClick={() => setShowEmojiPicker(showEmojiPicker === msg.id ? null : msg.id)} className="p-1 hover:bg-gray-100 rounded" title="React">
                                     <Smile className="w-4 h-4 text-gray-500" />
                                   </button>
                                   <button onClick={() => setReplyTo(msg)} className="p-1 hover:bg-gray-100 rounded" title="Reply">
                                     <Reply className="w-4 h-4 text-gray-500" />
+                                  </button>
+                                  <button onClick={() => handleBookmark(msg.id)} className="p-1 hover:bg-gray-100 rounded" title={isBookmarked ? 'Remove bookmark' : 'Bookmark'}>
+                                    <Bookmark className={`w-4 h-4 ${isBookmarked ? 'text-amber-500 fill-amber-500' : 'text-gray-500'}`} />
+                                  </button>
+                                  <button onClick={() => setForwardingMessage(msg)} className="p-1 hover:bg-gray-100 rounded" title="Forward">
+                                    <Forward className="w-4 h-4 text-gray-500" />
                                   </button>
                                   {isOwn && (
                                     <>
@@ -750,21 +1023,73 @@ export default function MessagesPage() {
                 </div>
               )}
 
-              <div className="p-4 border-t border-gray-200 bg-white">
+              <div className="p-4 border-t border-gray-200 bg-white relative">
+                {/* @ Mentions dropdown */}
+                {showMentions && getMentionableUsers().length > 0 && (
+                  <div className="absolute bottom-full left-4 mb-2 bg-white rounded-lg shadow-lg border max-h-40 overflow-y-auto w-64 z-20">
+                    {getMentionableUsers().map(user => (
+                      <button
+                        key={user.id}
+                        onClick={() => handleMention(user.name)}
+                        className="w-full px-3 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
+                      >
+                        <AtSign className="w-4 h-4 text-blue-500" />
+                        <span className="font-medium">{user.name}</span>
+                        <span className={`text-xs px-1.5 py-0.5 rounded ${user.type === 'supplier' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                          {user.type}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Quick Templates dropdown */}
+                {showTemplates && (
+                  <div className="absolute bottom-full left-4 mb-2 bg-white rounded-lg shadow-lg border max-h-60 overflow-y-auto w-80 z-20">
+                    <div className="p-2 border-b bg-gray-50 text-xs font-medium text-gray-500 flex items-center gap-1">
+                      <Zap className="w-3 h-3" /> Quick Templates
+                    </div>
+                    {QUICK_TEMPLATES.map((template, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => insertTemplate(template.text)}
+                        className="w-full px-3 py-2 text-left hover:bg-gray-100 border-b last:border-0"
+                      >
+                        <div className="font-medium text-sm">{template.label}</div>
+                        <div className="text-xs text-gray-500 truncate">{template.text}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 <div className="flex items-center gap-2">
                   <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv" />
-                  <button onClick={() => fileInputRef.current?.click()} disabled={uploading} className="p-2 hover:bg-gray-100 rounded-full">
+                  <button onClick={() => fileInputRef.current?.click()} disabled={uploading} className="p-2 hover:bg-gray-100 rounded-full" title="Attach file">
                     {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Paperclip className="w-5 h-5 text-gray-500" />}
                   </button>
-                  <input
-                    type="text"
-                    value={newMessage}
-                    onChange={(e) => { setNewMessage(e.target.value); handleTyping(); }}
-                    onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-                    placeholder={editingMessage ? 'Edit message...' : 'Type a message...'}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500"
-                    disabled={sending}
-                  />
+                  <button onClick={() => setShowTemplates(!showTemplates)} className={`p-2 rounded-full ${showTemplates ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-500'}`} title="Quick templates">
+                    <Zap className="w-5 h-5" />
+                  </button>
+                  <div className="flex-1 relative">
+                    <input
+                      ref={inputRef}
+                      type="text"
+                      value={newMessage}
+                      onChange={(e) => handleInputChange(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey && !showMentions) {
+                          handleSendMessage();
+                        }
+                        if (e.key === 'Escape') {
+                          setShowMentions(false);
+                          setShowTemplates(false);
+                        }
+                      }}
+                      placeholder={editingMessage ? 'Edit message...' : 'Type a message... (use @ to mention)'}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500"
+                      disabled={sending}
+                    />
+                  </div>
                   <button
                     onClick={handleSendMessage}
                     disabled={!newMessage.trim() || sending}
@@ -805,6 +1130,69 @@ export default function MessagesPage() {
             className="max-w-full max-h-full object-contain rounded-lg"
             onClick={(e) => e.stopPropagation()}
           />
+        </div>
+      )}
+
+      {/* Forward Message Modal */}
+      {forwardingMessage && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onClick={() => setForwardingMessage(null)}
+        >
+          <div 
+            className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[80vh] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4 border-b flex items-center justify-between">
+              <h3 className="font-bold text-lg flex items-center gap-2">
+                <Forward className="w-5 h-5 text-blue-600" />
+                Forward Message
+              </h3>
+              <button onClick={() => setForwardingMessage(null)} className="p-1 hover:bg-gray-100 rounded">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-4 bg-gray-50 border-b">
+              <p className="text-sm text-gray-500 mb-1">Message to forward:</p>
+              <div className="bg-white p-3 rounded-lg border text-sm">
+                {forwardingMessage.message}
+              </div>
+            </div>
+
+            <div className="p-4 max-h-60 overflow-y-auto">
+              <p className="text-sm font-medium text-gray-700 mb-3">Select destination:</p>
+              {projects.map(project => (
+                <div key={project.id} className="mb-3">
+                  <p className="text-xs font-medium text-gray-500 mb-1">{project.name}</p>
+                  <div className="space-y-1">
+                    {getProjectParticipants(project.id, 'supplier').map(p => (
+                      <button
+                        key={p.id}
+                        onClick={() => handleForward(project.id, 'company_supplier')}
+                        className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-purple-50 text-left"
+                      >
+                        <Truck className="w-4 h-4 text-purple-600" />
+                        <span className="text-sm">{p.name}</span>
+                        <span className="text-xs text-purple-600 bg-purple-100 px-1.5 py-0.5 rounded">Supplier</span>
+                      </button>
+                    ))}
+                    {getProjectParticipants(project.id, 'client').map(p => (
+                      <button
+                        key={p.id}
+                        onClick={() => handleForward(project.id, 'company_client')}
+                        className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-blue-50 text-left"
+                      >
+                        <Building2 className="w-4 h-4 text-blue-600" />
+                        <span className="text-sm">{p.name}</span>
+                        <span className="text-xs text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded">Client</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </AppLayout>
