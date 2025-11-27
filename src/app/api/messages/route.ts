@@ -134,7 +134,40 @@ export async function GET(request: NextRequest) {
       sender_name: nameMap.get(m.sender_id) || 'Unknown',
     }));
 
-    return NextResponse.json({ messages: enrichedMessages });
+    // Fetch reactions for all messages
+    const messageIds = (messages || []).map(m => m.id);
+    let reactionsMap = new Map();
+    
+    if (messageIds.length > 0) {
+      const { data: reactions } = await adminClient
+        .from('message_reactions')
+        .select('message_id, emoji, user_id')
+        .in('message_id', messageIds);
+
+      // Group reactions by message
+      (reactions || []).forEach(r => {
+        if (!reactionsMap.has(r.message_id)) {
+          reactionsMap.set(r.message_id, {});
+        }
+        const msgReactions = reactionsMap.get(r.message_id);
+        if (!msgReactions[r.emoji]) {
+          msgReactions[r.emoji] = { emoji: r.emoji, count: 0, users: [], hasReacted: false };
+        }
+        msgReactions[r.emoji].count++;
+        msgReactions[r.emoji].users.push(r.user_id);
+        if (r.user_id === user.id) {
+          msgReactions[r.emoji].hasReacted = true;
+        }
+      });
+    }
+
+    // Add reactions to messages
+    const messagesWithReactions = enrichedMessages.map(m => ({
+      ...m,
+      reactions: reactionsMap.has(m.id) ? Object.values(reactionsMap.get(m.id)) : [],
+    }));
+
+    return NextResponse.json({ messages: messagesWithReactions });
   } catch (error) {
     console.error('Error in messages GET:', error);
     return NextResponse.json({ error: 'Failed to load messages' }, { status: 500 });
@@ -153,7 +186,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { project_id, channel, delivery_id, message, recipient_id } = body;
+    const { project_id, channel, delivery_id, message, recipient_id, parent_message_id, attachment_url, attachment_name, attachment_type } = body;
 
     if (!project_id || !channel || !message) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -240,6 +273,10 @@ export async function POST(request: NextRequest) {
       sender_type: senderType,
       message: message.trim(),
       is_read: false,
+      parent_message_id: parent_message_id || null,
+      attachment_url: attachment_url || null,
+      attachment_name: attachment_name || null,
+      attachment_type: attachment_type || null,
     };
 
     // TODO: Add recipient_id support once ADD-RECIPIENT-TO-MESSAGES.sql is run

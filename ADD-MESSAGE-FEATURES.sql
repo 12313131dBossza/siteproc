@@ -226,9 +226,30 @@ CREATE POLICY "read_receipts_insert" ON public.message_read_receipts
 -- ============================================
 -- 6. Enable Realtime on new tables
 -- ============================================
-ALTER PUBLICATION supabase_realtime ADD TABLE project_messages;
-ALTER PUBLICATION supabase_realtime ADD TABLE message_reactions;
-ALTER PUBLICATION supabase_realtime ADD TABLE typing_indicators;
+-- Note: Only add tables that aren't already in the publication
+DO $$
+BEGIN
+  -- Try to add project_messages (may already exist)
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE project_messages;
+  EXCEPTION WHEN duplicate_object THEN
+    RAISE NOTICE 'project_messages already in publication';
+  END;
+  
+  -- Try to add message_reactions
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE message_reactions;
+  EXCEPTION WHEN duplicate_object THEN
+    RAISE NOTICE 'message_reactions already in publication';
+  END;
+  
+  -- Try to add typing_indicators
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE typing_indicators;
+  EXCEPTION WHEN duplicate_object THEN
+    RAISE NOTICE 'typing_indicators already in publication';
+  END;
+END $$;
 
 -- ============================================
 -- 7. Indexes for search
