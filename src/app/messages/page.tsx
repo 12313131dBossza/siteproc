@@ -114,10 +114,21 @@ export default function MessagesPage() {
         if (response.ok) {
           const data = await response.json();
           setMessages(prev => {
-            const newMsgs = data.messages || [];
-            if (newMsgs.length !== prev.length || 
-                (newMsgs.length > 0 && prev.length > 0 && newMsgs[newMsgs.length-1].id !== prev[prev.length-1].id)) {
-              return newMsgs;
+            const newMsgs: Message[] = data.messages || [];
+            // Only update if there are new messages (check count and last ID)
+            const hasNewMessages = newMsgs.length !== prev.length || 
+                (newMsgs.length > 0 && prev.length > 0 && newMsgs[newMsgs.length-1].id !== prev[prev.length-1].id);
+            
+            if (hasNewMessages) {
+              // Merge: preserve local reaction state for existing messages
+              return newMsgs.map(newMsg => {
+                const existingMsg = prev.find(p => p.id === newMsg.id);
+                if (existingMsg && existingMsg.reactions) {
+                  // Keep local reactions if we have them (optimistic updates)
+                  return { ...newMsg, reactions: existingMsg.reactions };
+                }
+                return newMsg;
+              });
             }
             return prev;
           });
@@ -605,8 +616,9 @@ export default function MessagesPage() {
                             )}
 
                             {parentMsg && (
-                              <div className={`text-xs px-3 py-1 mb-1 rounded-t-lg border-l-2 ${isOwn ? 'bg-blue-500/20 border-blue-300 text-blue-100' : 'bg-gray-200 border-gray-400 text-gray-600'}`}>
-                                <span className="font-medium">{parentMsg.sender_name}:</span> {parentMsg.message.substring(0, 50)}...
+                              <div className={`text-xs px-3 py-2 mb-1 rounded-lg border-l-4 ${isOwn ? 'bg-blue-700/50 border-blue-300' : 'bg-gray-100 border-gray-400'}`}>
+                                <span className={`font-semibold ${isOwn ? 'text-blue-200' : 'text-gray-700'}`}>{parentMsg.sender_name}</span>
+                                <p className={`truncate ${isOwn ? 'text-white' : 'text-gray-600'}`}>{parentMsg.message.substring(0, 60)}{parentMsg.message.length > 60 ? '...' : ''}</p>
                               </div>
                             )}
 
