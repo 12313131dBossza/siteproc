@@ -85,6 +85,7 @@ export default function MessagesPage() {
   const [currentUserId, setCurrentUserId] = useState('');
   const [userRole, setUserRole] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
   // Supabase client for realtime
   const supabase = createBrowserClient(
@@ -96,14 +97,22 @@ export default function MessagesPage() {
     loadData();
   }, []);
 
-  // Realtime subscription for new messages
+  // Realtime subscription for new messages + polling fallback
   useEffect(() => {
-    if (!selectedProject || !selectedChannel) return;
+    if (!selectedProject || !selectedChannel) {
+      // Clear polling when no conversation selected
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+      return;
+    }
 
     console.log('Setting up realtime subscription for project:', selectedProject.id, 'channel:', selectedChannel);
 
-    const channel = supabase
-      .channel(`messages-${selectedProject.id}-${selectedChannel}`)
+    // Set up Supabase Realtime subscription
+    const realtimeChannel = supabase
+      .channel(`messages-${selectedProject.id}-${selectedChannel}-${Date.now()}`)
       .on(
         'postgres_changes',
         {
@@ -113,10 +122,10 @@ export default function MessagesPage() {
           filter: `project_id=eq.${selectedProject.id}`,
         },
         async (payload) => {
-          console.log('New message received:', payload);
+          console.log('Realtime: New message received:', payload);
           const newMsg = payload.new as any;
           
-          // Only add if it's for our channel and not already in the list
+          // Only add if it's for our channel
           if (newMsg.channel === selectedChannel) {
             // Fetch sender name
             const { data: profile } = await supabase
@@ -135,18 +144,6 @@ export default function MessagesPage() {
               if (prev.some(m => m.id === newMsg.id)) return prev;
               return [...prev, messageWithName];
             });
-
-            // Mark as read if not from current user
-            if (newMsg.sender_id !== currentUserId) {
-              fetch('/api/messages/mark-read', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  project_id: selectedProject.id,
-                  channel: selectedChannel,
-                }),
-              });
-            }
           }
         }
       )
@@ -154,11 +151,50 @@ export default function MessagesPage() {
         console.log('Realtime subscription status:', status);
       });
 
-    return () => {
-      console.log('Cleaning up realtime subscription');
-      supabase.removeChannel(channel);
+    // Polling fallback - check for new messages every 3 seconds
+    const pollMessages = async () => {
+      if (!selectedProject || !selectedChannel) return;
+      
+      try {
+        let url = `/api/messages?project_id=${selectedProject.id}&channel=${selectedChannel}`;
+        const response = await fetch(url);
+        if (response.ok) {
+          const data = await response.json();
+          const newMessages = data.messages || [];
+          
+          setMessages((prev) => {
+            // Only update if there are new messages
+            if (newMessages.length !== prev.length) {
+              return newMessages;
+            }
+            // Check if last message is different
+            if (newMessages.length > 0 && prev.length > 0) {
+              const lastNew = newMessages[newMessages.length - 1];
+              const lastPrev = prev[prev.length - 1];
+              if (lastNew.id !== lastPrev.id) {
+                return newMessages;
+              }
+            }
+            return prev;
+          });
+        }
+      } catch (error) {
+        console.error('Polling error:', error);
+      }
     };
-  }, [selectedProject?.id, selectedChannel, currentUserId]);
+
+    // Start polling every 3 seconds
+    pollingRef.current = setInterval(pollMessages, 3000);
+
+    return () => {
+      console.log('Cleaning up realtime subscription and polling');
+      supabase.removeChannel(realtimeChannel);
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    };
+  }, [selectedProject?.id, selectedChannel]);
 
   useEffect(() => {
     if (selectedProject && selectedChannel) {
