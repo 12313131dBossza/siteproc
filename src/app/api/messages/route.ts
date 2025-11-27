@@ -186,7 +186,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { project_id, channel, delivery_id, message, recipient_id, parent_message_id, attachment_url, attachment_name, attachment_type } = body;
+    const { project_id, channel, delivery_id, message, recipient_id, parent_message_id, attachment_url, attachment_name, attachment_type, message_type, metadata } = body;
 
     if (!project_id || !channel || !message) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -277,6 +277,8 @@ export async function POST(request: NextRequest) {
       attachment_url: attachment_url || null,
       attachment_name: attachment_name || null,
       attachment_type: attachment_type || null,
+      message_type: message_type || 'text',
+      metadata: metadata || null,
     };
 
     // TODO: Add recipient_id support once ADD-RECIPIENT-TO-MESSAGES.sql is run

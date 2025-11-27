@@ -7,7 +7,8 @@ import {
   MessageCircle, Send, Search, Truck, Building2, FolderOpen, ChevronRight,
   X, Loader2, CheckCheck, Paperclip, ArrowLeft, Smile, Reply, 
   Edit2, Trash2, Pin, FileText, Image as ImageIcon, Bookmark, Forward,
-  Calendar, AtSign, Zap, Filter, ChevronDown
+  Calendar, AtSign, Zap, Filter, ChevronDown, Mic, Square, Package,
+  ExternalLink, DollarSign
 } from 'lucide-react';
 
 interface Project {
@@ -59,6 +60,18 @@ interface Message {
   attachment_type?: string;
   reactions?: Reaction[];
   is_bookmarked?: boolean;
+  message_type?: 'text' | 'voice' | 'order_reference';
+  metadata?: any;
+}
+
+interface Order {
+  id: string;
+  product_name: string;
+  vendor: string;
+  amount: number;
+  quantity: number;
+  status: string;
+  delivery_progress: string;
 }
 
 const EMOJI_OPTIONS = ['👍', '❤️', '😂', '😮', '🎉', '✅'];
@@ -111,12 +124,24 @@ export default function MessagesPage() {
   const [dateFilter, setDateFilter] = useState<string>('');
   const [showDateFilter, setShowDateFilter] = useState(false);
   
+  // Voice message states
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
+  
+  // Order reference states
+  const [showOrderPicker, setShowOrderPicker] = useState(false);
+  const [projectOrders, setProjectOrders] = useState<Order[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -541,6 +566,163 @@ export default function MessagesPage() {
     return users.slice(0, 5);
   };
 
+  // Voice recording functions
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      const chunks: Blob[] = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+
+      recorder.onstop = async () => {
+        const audioBlob = new Blob(chunks, { type: 'audio/webm' });
+        stream.getTracks().forEach(track => track.stop());
+        await sendVoiceMessage(audioBlob);
+      };
+
+      recorder.start();
+      setMediaRecorder(recorder);
+      setIsRecording(true);
+      setRecordingTime(0);
+      
+      // Start timer
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+    } catch (error) {
+      console.error('Error starting recording:', error);
+      alert('Could not access microphone. Please allow microphone access.');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stop();
+    }
+    setIsRecording(false);
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+    }
+  };
+
+  const cancelRecording = () => {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stream.getTracks().forEach(track => track.stop());
+      mediaRecorder.stop();
+    }
+    setIsRecording(false);
+    setRecordingTime(0);
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+    }
+  };
+
+  const sendVoiceMessage = async (audioBlob: Blob) => {
+    if (!selectedProject || !selectedChannel) return;
+    
+    try {
+      setUploading(true);
+      const formData = new FormData();
+      formData.append('file', audioBlob, `voice-${Date.now()}.webm`);
+      formData.append('project_id', selectedProject.id);
+
+      const res = await fetch('/api/messages/upload', { method: 'POST', body: formData });
+      if (res.ok) {
+        const data = await res.json();
+        const payload = {
+          project_id: selectedProject.id,
+          channel: selectedChannel,
+          message: '🎤 Voice message',
+          message_type: 'voice',
+          attachment_url: data.attachment.url,
+          attachment_name: data.attachment.name,
+          attachment_type: 'audio/webm',
+        };
+        const msgRes = await fetch('/api/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (msgRes.ok) {
+          const msgData = await msgRes.json();
+          setMessages(prev => [...prev, msgData.message]);
+        }
+      }
+    } catch (error) {
+      console.error('Error sending voice message:', error);
+    } finally {
+      setUploading(false);
+      setRecordingTime(0);
+    }
+  };
+
+  const formatRecordingTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Load orders for project
+  const loadProjectOrders = async () => {
+    if (!selectedProject) return;
+    
+    setLoadingOrders(true);
+    try {
+      const res = await fetch(`/api/orders?project_id=${selectedProject.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setProjectOrders(data.orders || []);
+      }
+    } catch (error) {
+      console.error('Error loading orders:', error);
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
+
+  // Send order reference message
+  const sendOrderReference = async (order: Order) => {
+    if (!selectedProject || !selectedChannel) return;
+    
+    try {
+      setSending(true);
+      const payload = {
+        project_id: selectedProject.id,
+        channel: selectedChannel,
+        message: `📦 Order Reference: ${order.product_name}`,
+        message_type: 'order_reference',
+        metadata: JSON.stringify({
+          order_id: order.id,
+          product_name: order.product_name,
+          vendor: order.vendor,
+          amount: order.amount,
+          quantity: order.quantity,
+          status: order.status,
+          delivery_progress: order.delivery_progress,
+        }),
+      };
+      
+      const res = await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        setMessages(prev => [...prev, data.message]);
+      }
+      setShowOrderPicker(false);
+    } catch (error) {
+      console.error('Error sending order reference:', error);
+    } finally {
+      setSending(false);
+    }
+  };
+
   const formatTime = (dateString: string) => {
     if (!dateString) return '';
     const date = new Date(dateString);
@@ -896,8 +1078,67 @@ export default function MessagesPage() {
                             )}
 
                             <div className={`relative rounded-2xl px-4 py-2 ${isOwn ? 'bg-blue-600 text-white rounded-br-md' : 'bg-white text-gray-900 rounded-bl-md border border-gray-200'} ${isDeleted ? 'opacity-60 italic' : ''}`}>
-                              {/* Hide message text if it's just a filename for attachment */}
-                              {(!msg.attachment_url || msg.message !== msg.attachment_name) && (
+                              {/* Order Reference Card */}
+                              {msg.message_type === 'order_reference' && msg.metadata && !isDeleted && (() => {
+                                const orderData = typeof msg.metadata === 'string' ? JSON.parse(msg.metadata) : msg.metadata;
+                                return (
+                                  <div className={`rounded-lg p-3 ${isOwn ? 'bg-blue-500/30' : 'bg-gray-50 border'}`}>
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <Package className="w-5 h-5" />
+                                      <span className="font-semibold">Order Reference</span>
+                                    </div>
+                                    <div className="space-y-1 text-sm">
+                                      <p className="font-medium">{orderData.product_name}</p>
+                                      <p className={`${isOwn ? 'text-blue-200' : 'text-gray-500'}`}>Vendor: {orderData.vendor}</p>
+                                      <div className="flex items-center gap-3">
+                                        <span className="flex items-center gap-1">
+                                          <DollarSign className="w-3 h-3" />
+                                          {orderData.amount?.toLocaleString()}
+                                        </span>
+                                        <span>Qty: {orderData.quantity}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2 mt-2">
+                                        <span className={`px-2 py-0.5 rounded text-xs ${
+                                          orderData.status === 'approved' ? 'bg-green-100 text-green-700' :
+                                          orderData.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                          'bg-gray-100 text-gray-700'
+                                        }`}>
+                                          {orderData.status}
+                                        </span>
+                                        <span className={`px-2 py-0.5 rounded text-xs ${
+                                          orderData.delivery_progress === 'delivered' ? 'bg-green-100 text-green-700' :
+                                          orderData.delivery_progress === 'partial' ? 'bg-blue-100 text-blue-700' :
+                                          'bg-gray-100 text-gray-700'
+                                        }`}>
+                                          {orderData.delivery_progress || 'pending'}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <a 
+                                      href={`/orders?highlight=${orderData.order_id}`} 
+                                      target="_blank"
+                                      className={`flex items-center gap-1 mt-2 text-xs ${isOwn ? 'text-blue-200 hover:text-white' : 'text-blue-600 hover:text-blue-800'}`}
+                                    >
+                                      <ExternalLink className="w-3 h-3" />
+                                      View Order
+                                    </a>
+                                  </div>
+                                );
+                              })()}
+
+                              {/* Voice Message Player */}
+                              {msg.message_type === 'voice' && msg.attachment_url && !isDeleted && (
+                                <div className={`flex items-center gap-3 p-2 rounded-lg ${isOwn ? 'bg-blue-500/30' : 'bg-gray-100'}`}>
+                                  <Mic className="w-5 h-5" />
+                                  <audio controls className="h-8 max-w-[200px]" preload="metadata">
+                                    <source src={msg.attachment_url} type="audio/webm" />
+                                    Your browser does not support audio.
+                                  </audio>
+                                </div>
+                              )}
+
+                              {/* Regular text message - hide if it's voice or order reference */}
+                              {msg.message_type !== 'voice' && msg.message_type !== 'order_reference' && (!msg.attachment_url || msg.message !== msg.attachment_name) && (
                                 <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
                               )}
 
@@ -915,8 +1156,8 @@ export default function MessagesPage() {
                                 </div>
                               )}
 
-                              {/* File attachment (non-image) */}
-                              {msg.attachment_url && !isDeleted && !msg.attachment_type?.startsWith('image/') && (
+                              {/* File attachment (non-image, non-voice) */}
+                              {msg.attachment_url && !isDeleted && !msg.attachment_type?.startsWith('image/') && !msg.attachment_type?.startsWith('audio/') && (
                                 <a href={msg.attachment_url} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-2 mt-2 p-2 rounded-lg ${isOwn ? 'bg-blue-500/30 hover:bg-blue-500/40' : 'bg-gray-100 hover:bg-gray-200'} transition-colors`}>
                                   <FileText className="w-5 h-5 flex-shrink-0" />
                                   <span className="text-sm truncate">{msg.attachment_name}</span>
@@ -1062,42 +1303,111 @@ export default function MessagesPage() {
                   </div>
                 )}
 
-                <div className="flex items-center gap-2">
-                  <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv" />
-                  <button onClick={() => fileInputRef.current?.click()} disabled={uploading} className="p-2 hover:bg-gray-100 rounded-full" title="Attach file">
-                    {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Paperclip className="w-5 h-5 text-gray-500" />}
-                  </button>
-                  <button onClick={() => setShowTemplates(!showTemplates)} className={`p-2 rounded-full ${showTemplates ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-500'}`} title="Quick templates">
-                    <Zap className="w-5 h-5" />
-                  </button>
-                  <div className="flex-1 relative">
-                    <input
-                      ref={inputRef}
-                      type="text"
-                      value={newMessage}
-                      onChange={(e) => handleInputChange(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey && !showMentions) {
-                          handleSendMessage();
-                        }
-                        if (e.key === 'Escape') {
-                          setShowMentions(false);
-                          setShowTemplates(false);
-                        }
-                      }}
-                      placeholder={editingMessage ? 'Edit message...' : 'Type a message... (use @ to mention)'}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500"
-                      disabled={sending}
-                    />
+                {/* Order Picker dropdown */}
+                {showOrderPicker && (
+                  <div className="absolute bottom-full left-4 mb-2 bg-white rounded-lg shadow-lg border max-h-72 overflow-y-auto w-96 z-20">
+                    <div className="p-2 border-b bg-gray-50 text-xs font-medium text-gray-500 flex items-center gap-1">
+                      <Package className="w-3 h-3" /> Reference an Order
+                    </div>
+                    {loadingOrders ? (
+                      <div className="p-4 flex justify-center">
+                        <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                      </div>
+                    ) : projectOrders.length === 0 ? (
+                      <div className="p-4 text-center text-gray-500 text-sm">
+                        No orders found for this project
+                      </div>
+                    ) : (
+                      projectOrders.map(order => (
+                        <button
+                          key={order.id}
+                          onClick={() => sendOrderReference(order)}
+                          className="w-full px-3 py-2 text-left hover:bg-gray-100 border-b last:border-0"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium text-sm truncate flex-1">{order.product_name}</span>
+                            <span className={`px-1.5 py-0.5 rounded text-xs ml-2 ${
+                              order.status === 'approved' ? 'bg-green-100 text-green-700' :
+                              order.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {order.status}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                            <span>{order.vendor}</span>
+                            <span>RM {order.amount?.toLocaleString()}</span>
+                            <span>Qty: {order.quantity}</span>
+                          </div>
+                        </button>
+                      ))
+                    )}
                   </div>
-                  <button
-                    onClick={handleSendMessage}
-                    disabled={!newMessage.trim() || sending}
-                    className={`p-2.5 rounded-full text-white ${selectedChannel === 'company_supplier' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'} disabled:bg-gray-300`}
-                  >
-                    {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-                  </button>
-                </div>
+                )}
+
+                {/* Voice Recording UI */}
+                {isRecording ? (
+                  <div className="flex items-center gap-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <div className="flex items-center gap-2 flex-1">
+                      <span className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+                      <span className="text-red-600 font-medium">Recording... {formatRecordingTime(recordingTime)}</span>
+                    </div>
+                    <button onClick={cancelRecording} className="p-2 hover:bg-red-100 rounded-full" title="Cancel">
+                      <X className="w-5 h-5 text-red-500" />
+                    </button>
+                    <button onClick={stopRecording} className="p-2 bg-red-500 hover:bg-red-600 rounded-full" title="Stop & Send">
+                      <Square className="w-5 h-5 text-white fill-white" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,audio/*" />
+                    <button onClick={() => fileInputRef.current?.click()} disabled={uploading} className="p-2 hover:bg-gray-100 rounded-full" title="Attach file">
+                      {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Paperclip className="w-5 h-5 text-gray-500" />}
+                    </button>
+                    <button onClick={startRecording} className="p-2 hover:bg-gray-100 rounded-full" title="Voice message">
+                      <Mic className="w-5 h-5 text-gray-500" />
+                    </button>
+                    <button 
+                      onClick={() => { setShowOrderPicker(!showOrderPicker); if (!showOrderPicker) loadProjectOrders(); }} 
+                      className={`p-2 rounded-full ${showOrderPicker ? 'bg-orange-100 text-orange-600' : 'hover:bg-gray-100 text-gray-500'}`} 
+                      title="Reference an order"
+                    >
+                      <Package className="w-5 h-5" />
+                    </button>
+                    <button onClick={() => setShowTemplates(!showTemplates)} className={`p-2 rounded-full ${showTemplates ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-500'}`} title="Quick templates">
+                      <Zap className="w-5 h-5" />
+                    </button>
+                    <div className="flex-1 relative">
+                      <input
+                        ref={inputRef}
+                        type="text"
+                        value={newMessage}
+                        onChange={(e) => handleInputChange(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey && !showMentions) {
+                            handleSendMessage();
+                          }
+                          if (e.key === 'Escape') {
+                            setShowMentions(false);
+                            setShowTemplates(false);
+                            setShowOrderPicker(false);
+                          }
+                        }}
+                        placeholder={editingMessage ? 'Edit message...' : 'Type a message... (use @ to mention)'}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500"
+                        disabled={sending}
+                      />
+                    </div>
+                    <button
+                      onClick={handleSendMessage}
+                      disabled={!newMessage.trim() || sending}
+                      className={`p-2.5 rounded-full text-white ${selectedChannel === 'company_supplier' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'} disabled:bg-gray-300`}
+                    >
+                      {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                    </button>
+                  </div>
+                )}
               </div>
             </>
           ) : (
