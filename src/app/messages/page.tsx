@@ -674,7 +674,9 @@ export default function MessagesPage() {
       const res = await fetch(`/api/orders?project_id=${selectedProject.id}`);
       if (res.ok) {
         const data = await res.json();
-        setProjectOrders(data.orders || []);
+        // API returns { success: true, data: orders }
+        setProjectOrders(data.data || data.orders || []);
+        console.log('Loaded orders:', data);
       }
     } catch (error) {
       console.error('Error loading orders:', error);
