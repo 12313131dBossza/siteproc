@@ -677,9 +677,13 @@ export default function MessagesPage() {
       const res = await fetch(`/api/orders?project_id=${selectedProject.id}`);
       if (res.ok) {
         const data = await res.json();
+        console.log('Orders API response:', data);
         // API returns { success: true, data: orders }
-        setProjectOrders(data.data || data.orders || []);
-        console.log('Loaded orders:', data);
+        const orders = data.data || data.orders || [];
+        console.log('Parsed orders:', orders);
+        setProjectOrders(orders);
+      } else {
+        console.error('Orders API error:', res.status);
       }
     } catch (error) {
       console.error('Error loading orders:', error);
@@ -692,23 +696,29 @@ export default function MessagesPage() {
   const sendOrderReference = async (order: Order) => {
     if (!selectedProject || !selectedChannel) return;
     
+    console.log('Sending order reference:', order);
+    
     try {
       setSending(true);
+      setShowOrderPicker(false); // Close picker immediately
+      
       const payload = {
         project_id: selectedProject.id,
         channel: selectedChannel,
-        message: `📦 Order Reference: ${order.product_name}`,
+        message: `📦 Order Reference: ${order.product_name || 'Order'}`,
         message_type: 'order_reference',
         metadata: JSON.stringify({
           order_id: order.id,
-          product_name: order.product_name,
-          vendor: order.vendor,
-          amount: order.amount,
-          quantity: order.quantity,
-          status: order.status,
-          delivery_progress: order.delivery_progress,
+          product_name: order.product_name || 'Unknown Product',
+          vendor: order.vendor || 'Unknown Vendor',
+          amount: order.amount || 0,
+          quantity: order.quantity || 0,
+          status: order.status || 'unknown',
+          delivery_progress: order.delivery_progress || 'pending',
         }),
       };
+      
+      console.log('Order reference payload:', payload);
       
       const res = await fetch('/api/messages', {
         method: 'POST',
@@ -718,9 +728,11 @@ export default function MessagesPage() {
       
       if (res.ok) {
         const data = await res.json();
+        console.log('Order reference sent:', data);
         setMessages(prev => [...prev, data.message]);
+      } else {
+        console.error('Failed to send order reference:', await res.text());
       }
-      setShowOrderPicker(false);
     } catch (error) {
       console.error('Error sending order reference:', error);
     } finally {
@@ -1137,49 +1149,57 @@ export default function MessagesPage() {
                             <div className={`relative rounded-2xl px-4 py-2 ${isOwn ? 'bg-blue-600 text-white rounded-br-md' : 'bg-white text-gray-900 rounded-bl-md border border-gray-200'} ${isDeleted ? 'opacity-60 italic' : ''}`}>
                               {/* Order Reference Card */}
                               {msg.message_type === 'order_reference' && msg.metadata && !isDeleted && (() => {
-                                const orderData = typeof msg.metadata === 'string' ? JSON.parse(msg.metadata) : msg.metadata;
+                                let orderData;
+                                try {
+                                  orderData = typeof msg.metadata === 'string' ? JSON.parse(msg.metadata) : msg.metadata;
+                                } catch (e) {
+                                  console.error('Failed to parse order metadata:', msg.metadata);
+                                  return null;
+                                }
+                                
+                                if (!orderData) return null;
+                                
                                 return (
-                                  <div className={`rounded-lg p-3 ${isOwn ? 'bg-blue-500/30' : 'bg-gray-50 border'}`}>
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <Package className="w-5 h-5" />
-                                      <span className="font-semibold">Order Reference</span>
-                                    </div>
-                                    <div className="space-y-1 text-sm">
-                                      <p className="font-medium">{orderData.product_name}</p>
-                                      <p className={`${isOwn ? 'text-blue-200' : 'text-gray-500'}`}>Vendor: {orderData.vendor}</p>
-                                      <div className="flex items-center gap-3">
-                                        <span className="flex items-center gap-1">
-                                          <DollarSign className="w-3 h-3" />
-                                          {orderData.amount?.toLocaleString()}
-                                        </span>
-                                        <span>Qty: {orderData.quantity}</span>
+                                  <a 
+                                    href={`/orders?highlight=${orderData.order_id}`} 
+                                    target="_blank"
+                                    className="block"
+                                  >
+                                    <div className={`rounded-lg p-3 cursor-pointer transition-all hover:shadow-md ${isOwn ? 'bg-blue-500/30 hover:bg-blue-500/40' : 'bg-gray-50 border hover:border-blue-300 hover:bg-blue-50'}`}>
+                                      <div className="flex items-center gap-2 mb-2">
+                                        <Package className="w-5 h-5" />
+                                        <span className="font-semibold">Order Reference</span>
+                                        <ExternalLink className="w-3 h-3 ml-auto" />
                                       </div>
-                                      <div className="flex items-center gap-2 mt-2">
-                                        <span className={`px-2 py-0.5 rounded text-xs ${
-                                          orderData.status === 'approved' ? 'bg-green-100 text-green-700' :
-                                          orderData.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                                          'bg-gray-100 text-gray-700'
-                                        }`}>
-                                          {orderData.status}
-                                        </span>
-                                        <span className={`px-2 py-0.5 rounded text-xs ${
-                                          orderData.delivery_progress === 'delivered' ? 'bg-green-100 text-green-700' :
-                                          orderData.delivery_progress === 'partial' ? 'bg-blue-100 text-blue-700' :
-                                          'bg-gray-100 text-gray-700'
-                                        }`}>
-                                          {orderData.delivery_progress || 'pending'}
-                                        </span>
+                                      <div className="space-y-1 text-sm">
+                                        <p className="font-medium">{orderData.product_name || 'Unknown Product'}</p>
+                                        <p className={`${isOwn ? 'text-blue-200' : 'text-gray-500'}`}>Vendor: {orderData.vendor || 'Unknown Vendor'}</p>
+                                        <div className="flex items-center gap-3">
+                                          <span className="flex items-center gap-1">
+                                            <DollarSign className="w-3 h-3" />
+                                            {typeof orderData.amount === 'number' ? orderData.amount.toLocaleString() : orderData.amount || '0'}
+                                          </span>
+                                          <span>Qty: {orderData.quantity || 0}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 mt-2">
+                                          <span className={`px-2 py-0.5 rounded text-xs ${
+                                            orderData.status === 'approved' ? 'bg-green-100 text-green-700' :
+                                            orderData.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                            'bg-gray-100 text-gray-700'
+                                          }`}>
+                                            {orderData.status || 'unknown'}
+                                          </span>
+                                          <span className={`px-2 py-0.5 rounded text-xs ${
+                                            orderData.delivery_progress === 'delivered' ? 'bg-green-100 text-green-700' :
+                                            orderData.delivery_progress === 'partial' ? 'bg-blue-100 text-blue-700' :
+                                            'bg-gray-100 text-gray-700'
+                                          }`}>
+                                            {orderData.delivery_progress || 'pending'}
+                                          </span>
+                                        </div>
                                       </div>
                                     </div>
-                                    <a 
-                                      href={`/orders?highlight=${orderData.order_id}`} 
-                                      target="_blank"
-                                      className={`flex items-center gap-1 mt-2 text-xs ${isOwn ? 'text-blue-200 hover:text-white' : 'text-blue-600 hover:text-blue-800'}`}
-                                    >
-                                      <ExternalLink className="w-3 h-3" />
-                                      View Order
-                                    </a>
-                                  </div>
+                                  </a>
                                 );
                               })()}
 
@@ -1412,7 +1432,7 @@ export default function MessagesPage() {
 
                 {/* Order Picker dropdown */}
                 {showOrderPicker && (
-                  <div className="absolute bottom-full left-4 mb-2 bg-white rounded-lg shadow-lg border max-h-72 overflow-y-auto w-96 z-20">
+                  <div className="absolute bottom-full left-4 mb-2 bg-white rounded-lg shadow-lg border max-h-72 overflow-y-auto w-96 z-30">
                     <div className="p-2 border-b bg-gray-50 text-xs font-medium text-gray-500 flex items-center gap-1">
                       <Package className="w-3 h-3" /> Reference an Order
                     </div>
@@ -1426,27 +1446,33 @@ export default function MessagesPage() {
                       </div>
                     ) : (
                       projectOrders.map(order => (
-                        <button
+                        <div
                           key={order.id}
-                          onClick={() => sendOrderReference(order)}
-                          className="w-full px-3 py-2 text-left hover:bg-gray-100 border-b last:border-0"
+                          onClick={() => {
+                            console.log('Order clicked:', order);
+                            sendOrderReference(order);
+                          }}
+                          className="w-full px-3 py-3 text-left hover:bg-blue-50 border-b last:border-0 cursor-pointer transition-colors"
                         >
                           <div className="flex items-center justify-between">
-                            <span className="font-medium text-sm truncate flex-1">{order.product_name}</span>
-                            <span className={`px-1.5 py-0.5 rounded text-xs ml-2 ${
+                            <span className="font-semibold text-sm truncate flex-1 text-gray-900">
+                              {order.product_name || 'Unnamed Order'}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded text-xs ml-2 font-medium ${
                               order.status === 'approved' ? 'bg-green-100 text-green-700' :
                               order.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                              order.status === 'rejected' ? 'bg-red-100 text-red-700' :
                               'bg-gray-100 text-gray-700'
                             }`}>
                               {order.status}
                             </span>
                           </div>
                           <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
-                            <span>{order.vendor}</span>
-                            <span>RM {order.amount?.toLocaleString()}</span>
-                            <span>Qty: {order.quantity}</span>
+                            {order.vendor && <span>🏪 {order.vendor}</span>}
+                            <span>💰 RM {(order.amount || 0).toLocaleString()}</span>
+                            <span>📦 Qty: {order.quantity || 0}</span>
                           </div>
-                        </button>
+                        </div>
                       ))
                     )}
                   </div>
