@@ -18,7 +18,10 @@ const WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS || 60_000)
 const MAX_HITS = Number(process.env.RATE_LIMIT_MAX || 20)
 
 // Protected routes that require authentication
-const protectedRoutes = ['/dashboard', '/jobs', '/suppliers', '/settings', '/admin', '/deliveries', '/orders', '/projects']
+const protectedRoutes = ['/dashboard', '/jobs', '/suppliers', '/settings', '/admin', '/deliveries', '/orders', '/projects', '/messages', '/supplier-portal']
+
+// Routes that suppliers should be redirected from to supplier-portal
+const supplierBlockedRoutes = ['/dashboard', '/analytics', '/orders', '/expenses', '/deliveries', '/documents', '/change-orders', '/products', '/users', '/activity', '/bids', '/contractors', '/clients', '/payments', '/reports', '/settings', '/messages']
 
 export async function middleware(req: NextRequest) {
   const url = new URL(req.url)
@@ -94,7 +97,7 @@ export async function middleware(req: NextRequest) {
     // Check if user has a company - if not, redirect to onboarding
     const { data: profile } = await supabase
       .from('profiles')
-      .select('company_id')
+      .select('company_id, role')
       .eq('id', user.id)
       .maybeSingle()
     
@@ -103,6 +106,16 @@ export async function middleware(req: NextRequest) {
       const onboardingUrl = new URL('/onboarding', url.origin)
       log({ level: 'info', event: 'onboarding_redirect', userId: user.id, originalPath: url.pathname })
       return NextResponse.redirect(onboardingUrl)
+    }
+
+    // If user is a supplier, redirect them to supplier portal unless they're already there
+    if (profile?.role === 'supplier') {
+      const isBlocked = supplierBlockedRoutes.some(route => url.pathname.startsWith(route))
+      if (isBlocked) {
+        console.log('[middleware] Supplier redirected to supplier portal')
+        const supplierPortalUrl = new URL('/supplier-portal', url.origin)
+        return NextResponse.redirect(supplierPortalUrl)
+      }
     }
 
     console.log('[middleware] User authenticated with company, allowing through:', user.email)
