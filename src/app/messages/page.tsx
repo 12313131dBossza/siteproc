@@ -335,37 +335,41 @@ export default function MessagesPage() {
   };
 
   const handleReaction = async (messageId: string, emoji: string) => {
-    // Optimistic update - update UI immediately
-    setMessages(prev => prev.map(msg => {
-      if (msg.id !== messageId) return msg;
-      
-      const reactions = [...(msg.reactions || [])];
-      const existingIdx = reactions.findIndex(r => r.emoji === emoji);
-      
-      if (existingIdx >= 0) {
-        const existing = reactions[existingIdx];
-        if (existing.hasReacted) {
-          // Remove reaction
-          if (existing.count <= 1) {
-            reactions.splice(existingIdx, 1);
+    // Close emoji picker immediately
+    setShowEmojiPicker(null);
+    
+    // Optimistic update - update UI immediately before server call
+    setMessages(prev => {
+      const newMessages = prev.map(msg => {
+        if (msg.id !== messageId) return msg;
+        
+        const reactions = [...(msg.reactions || [])];
+        const existingIdx = reactions.findIndex(r => r.emoji === emoji);
+        
+        if (existingIdx >= 0) {
+          const existing = reactions[existingIdx];
+          if (existing.hasReacted) {
+            // Remove reaction
+            if (existing.count <= 1) {
+              reactions.splice(existingIdx, 1);
+            } else {
+              reactions[existingIdx] = { ...existing, count: existing.count - 1, hasReacted: false };
+            }
           } else {
-            reactions[existingIdx] = { ...existing, count: existing.count - 1, hasReacted: false };
+            // Add reaction
+            reactions[existingIdx] = { ...existing, count: existing.count + 1, hasReacted: true };
           }
         } else {
-          // Add reaction
-          reactions[existingIdx] = { ...existing, count: existing.count + 1, hasReacted: true };
+          // New reaction
+          reactions.push({ emoji, count: 1, hasReacted: true });
         }
-      } else {
-        // New reaction
-        reactions.push({ emoji, count: 1, hasReacted: true });
-      }
-      
-      return { ...msg, reactions };
-    }));
-    
-    setShowEmojiPicker(null);
+        
+        return { ...msg, reactions };
+      });
+      return newMessages;
+    });
 
-    // Send to server in background (no await, no page refresh)
+    // Send to server in background (fire and forget)
     fetch('/api/messages/reactions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -693,10 +697,20 @@ export default function MessagesPage() {
   };
 
   // Send order reference message
-  const sendOrderReference = async (order: Order) => {
+  const sendOrderReference = async (order: any) => {
     if (!selectedProject || !selectedChannel) return;
     
-    console.log('Sending order reference:', order);
+    console.log('Sending order reference - raw order:', order);
+    
+    // Extract order info - handle different field names from API
+    const productName = order.product_name || order.description || order.name || 'Order';
+    const vendorName = order.vendor || order.category || order.supplier || 'Unknown Vendor';
+    const orderAmount = order.amount || order.total || order.unit_price || 0;
+    const orderQty = order.quantity || order.qty || order.ordered_qty || 0;
+    const orderStatus = order.status || 'pending';
+    const deliveryProgress = order.delivery_progress || 'not_started';
+    
+    console.log('Extracted order data:', { productName, vendorName, orderAmount, orderQty, orderStatus, deliveryProgress });
     
     try {
       setSending(true);
@@ -705,16 +719,16 @@ export default function MessagesPage() {
       const payload = {
         project_id: selectedProject.id,
         channel: selectedChannel,
-        message: `📦 Order Reference: ${order.product_name || 'Order'}`,
+        message: `📦 Order Reference: ${productName}`,
         message_type: 'order_reference',
         metadata: JSON.stringify({
           order_id: order.id,
-          product_name: order.product_name || 'Unknown Product',
-          vendor: order.vendor || 'Unknown Vendor',
-          amount: order.amount || 0,
-          quantity: order.quantity || 0,
-          status: order.status || 'unknown',
-          delivery_progress: order.delivery_progress || 'pending',
+          product_name: productName,
+          vendor: vendorName,
+          amount: orderAmount,
+          quantity: orderQty,
+          status: orderStatus,
+          delivery_progress: deliveryProgress,
         }),
       };
       
@@ -1445,35 +1459,43 @@ export default function MessagesPage() {
                         No orders found for this project
                       </div>
                     ) : (
-                      projectOrders.map(order => (
-                        <div
-                          key={order.id}
-                          onClick={() => {
-                            console.log('Order clicked:', order);
-                            sendOrderReference(order);
-                          }}
-                          className="w-full px-3 py-3 text-left hover:bg-blue-50 border-b last:border-0 cursor-pointer transition-colors"
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="font-semibold text-sm truncate flex-1 text-gray-900">
-                              {order.product_name || 'Unnamed Order'}
-                            </span>
-                            <span className={`px-2 py-0.5 rounded text-xs ml-2 font-medium ${
-                              order.status === 'approved' ? 'bg-green-100 text-green-700' :
-                              order.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                              order.status === 'rejected' ? 'bg-red-100 text-red-700' :
-                              'bg-gray-100 text-gray-700'
-                            }`}>
-                              {order.status}
-                            </span>
+                      projectOrders.map((order: any) => {
+                        // Handle different field names from API
+                        const displayName = order.product_name || order.description || order.name || 'Unnamed Order';
+                        const displayVendor = order.vendor || order.category || order.supplier || '';
+                        const displayAmount = order.amount || order.total || 0;
+                        const displayQty = order.quantity || order.qty || 0;
+                        
+                        return (
+                          <div
+                            key={order.id}
+                            onClick={() => {
+                              console.log('Order clicked:', order);
+                              sendOrderReference(order);
+                            }}
+                            className="w-full px-3 py-3 text-left hover:bg-blue-50 border-b last:border-0 cursor-pointer transition-colors"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-semibold text-sm truncate flex-1 text-gray-900">
+                                {displayName}
+                              </span>
+                              <span className={`px-2 py-0.5 rounded text-xs ml-2 font-medium ${
+                                order.status === 'approved' ? 'bg-green-100 text-green-700' :
+                                order.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                order.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                                'bg-gray-100 text-gray-700'
+                              }`}>
+                                {order.status || 'pending'}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                              {displayVendor && <span>🏪 {displayVendor}</span>}
+                              <span>💰 RM {displayAmount.toLocaleString()}</span>
+                              <span>📦 Qty: {displayQty}</span>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
-                            {order.vendor && <span>🏪 {order.vendor}</span>}
-                            <span>💰 RM {(order.amount || 0).toLocaleString()}</span>
-                            <span>📦 Qty: {order.quantity || 0}</span>
-                          </div>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                 )}
