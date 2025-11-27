@@ -84,6 +84,7 @@ export default function MessagesPage() {
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
@@ -268,19 +269,42 @@ export default function MessagesPage() {
   };
 
   const handleReaction = async (messageId: string, emoji: string) => {
-    try {
-      const res = await fetch('/api/messages/reactions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message_id: messageId, emoji }),
-      });
-      if (res.ok && selectedProject && selectedChannel) {
-        loadMessages(selectedProject.id, selectedChannel);
+    // Optimistic update - update UI immediately
+    setMessages(prev => prev.map(msg => {
+      if (msg.id !== messageId) return msg;
+      
+      const reactions = [...(msg.reactions || [])];
+      const existingIdx = reactions.findIndex(r => r.emoji === emoji);
+      
+      if (existingIdx >= 0) {
+        const existing = reactions[existingIdx];
+        if (existing.hasReacted) {
+          // Remove reaction
+          if (existing.count <= 1) {
+            reactions.splice(existingIdx, 1);
+          } else {
+            reactions[existingIdx] = { ...existing, count: existing.count - 1, hasReacted: false };
+          }
+        } else {
+          // Add reaction
+          reactions[existingIdx] = { ...existing, count: existing.count + 1, hasReacted: true };
+        }
+      } else {
+        // New reaction
+        reactions.push({ emoji, count: 1, hasReacted: true });
       }
-    } catch (error) {
-      console.error('Error adding reaction:', error);
-    }
+      
+      return { ...msg, reactions };
+    }));
+    
     setShowEmojiPicker(null);
+
+    // Send to server in background (no await, no page refresh)
+    fetch('/api/messages/reactions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message_id: messageId, emoji }),
+    }).catch(err => console.error('Error adding reaction:', err));
   };
 
   const handleDeleteMessage = async (messageId: string) => {
@@ -593,12 +617,30 @@ export default function MessagesPage() {
                             )}
 
                             <div className={`relative rounded-2xl px-4 py-2 ${isOwn ? 'bg-blue-600 text-white rounded-br-md' : 'bg-white text-gray-900 rounded-bl-md border border-gray-200'} ${isDeleted ? 'opacity-60 italic' : ''}`}>
-                              <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+                              {/* Hide message text if it's just a filename for attachment */}
+                              {(!msg.attachment_url || msg.message !== msg.attachment_name) && (
+                                <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+                              )}
 
-                              {msg.attachment_url && !isDeleted && (
-                                <a href={msg.attachment_url} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-2 mt-2 p-2 rounded-lg ${isOwn ? 'bg-blue-500/30' : 'bg-gray-100'}`}>
-                                  {msg.attachment_type?.startsWith('image/') ? <ImageIcon className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
-                                  <span className="text-xs truncate">{msg.attachment_name}</span>
+                              {/* Inline Image Preview */}
+                              {msg.attachment_url && !isDeleted && msg.attachment_type?.startsWith('image/') && (
+                                <div 
+                                  className="mt-2 cursor-pointer"
+                                  onClick={() => setImagePreview(msg.attachment_url!)}
+                                >
+                                  <img 
+                                    src={msg.attachment_url} 
+                                    alt={msg.attachment_name || 'Image'} 
+                                    className="max-w-[280px] max-h-[200px] rounded-lg object-cover hover:opacity-90 transition-opacity"
+                                  />
+                                </div>
+                              )}
+
+                              {/* File attachment (non-image) */}
+                              {msg.attachment_url && !isDeleted && !msg.attachment_type?.startsWith('image/') && (
+                                <a href={msg.attachment_url} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-2 mt-2 p-2 rounded-lg ${isOwn ? 'bg-blue-500/30 hover:bg-blue-500/40' : 'bg-gray-100 hover:bg-gray-200'} transition-colors`}>
+                                  <FileText className="w-5 h-5 flex-shrink-0" />
+                                  <span className="text-sm truncate">{msg.attachment_name}</span>
                                 </a>
                               )}
 
@@ -732,6 +774,27 @@ export default function MessagesPage() {
           )}
         </div>
       </div>
+
+      {/* Image Preview Modal */}
+      {imagePreview && (
+        <div 
+          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+          onClick={() => setImagePreview(null)}
+        >
+          <button 
+            onClick={() => setImagePreview(null)}
+            className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
+          >
+            <X className="w-6 h-6 text-white" />
+          </button>
+          <img 
+            src={imagePreview} 
+            alt="Preview" 
+            className="max-w-full max-h-full object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </AppLayout>
   );
 }
