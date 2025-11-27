@@ -162,16 +162,30 @@ export async function POST(req: NextRequest) {
       .eq('id', member.project_id)
       .single()
 
+    // Determine the profile role based on external_type from the invitation
+    // Map external_type to profile role: supplier, client, contractor all become their respective roles
+    // Other types (consultant, other) become 'viewer'
+    const externalType = member.external_type as string | null
+    let profileRole = 'viewer'
+    if (externalType === 'supplier') {
+      profileRole = 'supplier'
+    } else if (externalType === 'client') {
+      profileRole = 'client'
+    } else if (externalType === 'contractor') {
+      profileRole = 'contractor'
+    }
+    // consultant, other, or null default to 'viewer'
+
     // Check if user has a profile, create one if not
     const { data: userProfile, error: profileError } = await adminSupabase
       .from('profiles')
-      .select('id, company_id')
+      .select('id, company_id, role')
       .eq('id', user.id)
       .single()
 
     if (profileError || !userProfile) {
-      // User doesn't have a profile yet - create one
-      console.log(`Creating profile for user ${user.id}`)
+      // User doesn't have a profile yet - create one with the correct role
+      console.log(`Creating profile for user ${user.id} with role ${profileRole}`)
       const { error: createError } = await adminSupabase
         .from('profiles')
         .insert({
@@ -179,7 +193,7 @@ export async function POST(req: NextRequest) {
           email: user.email,
           full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
           company_id: project?.company_id,
-          role: 'viewer'
+          role: profileRole
         })
       
       if (createError) {
@@ -192,24 +206,36 @@ export async function POST(req: NextRequest) {
             email: user.email,
             full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
             company_id: project?.company_id,
-            role: 'viewer'
+            role: profileRole
           })
       }
-      console.log(`Created profile for user ${user.id} in company ${project?.company_id}`)
+      console.log(`Created profile for user ${user.id} in company ${project?.company_id} with role ${profileRole}`)
     } else if (project?.company_id && (!userProfile?.company_id)) {
       // User has profile but no company - add them to the project's company
       const { error: updateProfileError } = await adminSupabase
         .from('profiles')
         .update({ 
           company_id: project.company_id,
-          role: 'viewer' // External collaborators get viewer role
+          role: profileRole // Set role based on external_type
         })
         .eq('id', user.id)
       
       if (updateProfileError) {
         console.error('Failed to update profile with company:', updateProfileError)
       } else {
-        console.log(`Added user ${user.id} to company ${project.company_id} as viewer`)
+        console.log(`Added user ${user.id} to company ${project.company_id} as ${profileRole}`)
+      }
+    } else if (userProfile && profileRole !== 'viewer') {
+      // User already has profile with company, but update their role if they're being invited as supplier/client/contractor
+      const { error: updateRoleError } = await adminSupabase
+        .from('profiles')
+        .update({ role: profileRole })
+        .eq('id', user.id)
+      
+      if (updateRoleError) {
+        console.error('Failed to update profile role:', updateRoleError)
+      } else {
+        console.log(`Updated user ${user.id} role to ${profileRole}`)
       }
     }
 

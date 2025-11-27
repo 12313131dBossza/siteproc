@@ -102,28 +102,68 @@ const VISIBILITY_OPTIONS = [
 
 const DEFAULT_PERMISSIONS = {
   view_project: true,
+  edit_project: false,
   view_orders: true,
+  create_orders: false,
   view_expenses: false,
   view_payments: false,
   view_documents: true,
-  edit_project: false,
-  create_orders: false,
   upload_documents: false,
+  view_timeline: true,
+  view_photos: true,
+  use_chat: true,
+  view_deliveries: false,
+  manage_deliveries: false,
   invite_others: false,
 };
 
 // Permission display names for better readability
 const PERMISSION_LABELS: Record<string, string> = {
   view_project: 'View Project',
+  edit_project: 'Edit Project',
   view_orders: 'View Orders',
+  create_orders: 'Create Orders',
   view_expenses: 'View Expenses',
   view_payments: 'View Payments',
   view_documents: 'View Documents',
-  edit_project: 'Edit Project',
-  create_orders: 'Create Orders',
   upload_documents: 'Upload Documents',
+  view_timeline: 'View Timeline',
+  view_photos: 'View Photos',
+  use_chat: 'Use Chat',
+  view_deliveries: 'View Deliveries',
+  manage_deliveries: 'Manage Deliveries',
   invite_others: 'Invite Others',
 };
+
+// Get external type badge styling
+function getExternalTypeBadge(type: string | undefined) {
+  switch (type) {
+    case 'supplier': 
+      return { label: 'Supplier', className: 'bg-purple-100 text-purple-700 border-purple-200' };
+    case 'client': 
+      return { label: 'Client', className: 'bg-blue-100 text-blue-700 border-blue-200' };
+    case 'contractor': 
+      return { label: 'Contractor', className: 'bg-orange-100 text-orange-700 border-orange-200' };
+    case 'consultant': 
+      return { label: 'Consultant', className: 'bg-teal-100 text-teal-700 border-teal-200' };
+    default: 
+      return null;
+  }
+}
+
+// Check if member is from the company (internal) vs external
+function getMemberTypeLabel(member: ProjectMember) {
+  // If they have external_type set, show that
+  if (member.external_type && member.external_type !== 'other') {
+    return getExternalTypeBadge(member.external_type);
+  }
+  // If they have external_email but accepted (now have user_id), still show as external type
+  if (member.external_email || member.external_company) {
+    return { label: 'External', className: 'bg-gray-100 text-gray-700 border-gray-200' };
+  }
+  // Internal company member
+  return { label: 'Company', className: 'bg-green-100 text-green-700 border-green-200' };
+}
 
 export function ProjectAccessModal({ projectId, projectName, isOpen, onClose }: Props) {
   const [tab, setTab] = useState<'members' | 'settings'>('members');
@@ -542,19 +582,59 @@ export function ProjectAccessModal({ projectId, projectName, isOpen, onClose }: 
                       {inviteType === 'external' && (
                         <div className="mb-4">
                           <label className="block text-sm font-medium text-gray-700 mb-2">Permissions</label>
-                          <div className="bg-white border border-gray-200 rounded-lg p-3">
-                            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                              {Object.entries(invitePermissions).map(([key, value]) => (
-                                <label key={key} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded">
-                                  <input
-                                    type="checkbox"
-                                    checked={value}
-                                    onChange={(e) => setInvitePermissions(prev => ({ ...prev, [key]: e.target.checked }))}
-                                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                  />
-                                  <span className="text-sm text-gray-700">{PERMISSION_LABELS[key] || key}</span>
-                                </label>
-                              ))}
+                          <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-3">
+                            {/* View Permissions */}
+                            <div>
+                              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">View Access</p>
+                              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                {['view_project', 'view_orders', 'view_expenses', 'view_payments', 'view_documents', 'view_timeline', 'view_photos', 'view_deliveries'].map(key => (
+                                  <label key={key} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded">
+                                    <input
+                                      type="checkbox"
+                                      checked={invitePermissions[key] || false}
+                                      onChange={(e) => setInvitePermissions(prev => ({ ...prev, [key]: e.target.checked }))}
+                                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                    />
+                                    <span className="text-sm text-gray-700">{PERMISSION_LABELS[key] || key}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                            
+                            {/* Edit/Create Permissions */}
+                            <div>
+                              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Edit & Create</p>
+                              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                {['edit_project', 'create_orders', 'upload_documents', 'manage_deliveries'].map(key => (
+                                  <label key={key} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded">
+                                    <input
+                                      type="checkbox"
+                                      checked={invitePermissions[key] || false}
+                                      onChange={(e) => setInvitePermissions(prev => ({ ...prev, [key]: e.target.checked }))}
+                                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                    />
+                                    <span className="text-sm text-gray-700">{PERMISSION_LABELS[key] || key}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                            
+                            {/* Communication & Other */}
+                            <div>
+                              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Communication & Other</p>
+                              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                {['use_chat', 'invite_others'].map(key => (
+                                  <label key={key} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded">
+                                    <input
+                                      type="checkbox"
+                                      checked={invitePermissions[key] || false}
+                                      onChange={(e) => setInvitePermissions(prev => ({ ...prev, [key]: e.target.checked }))}
+                                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                    />
+                                    <span className="text-sm text-gray-700">{PERMISSION_LABELS[key] || key}</span>
+                                  </label>
+                                ))}
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -598,24 +678,38 @@ export function ProjectAccessModal({ projectId, projectName, isOpen, onClose }: 
                           {/* Member Header */}
                           <div className="flex items-center justify-between p-3">
                             <div className="flex items-center gap-3">
-                              {/* Avatar */}
-                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-medium text-sm">
-                                {member.external_email ? (
-                                  <Building2 className="h-5 w-5" />
-                                ) : (
-                                  (member.profiles?.full_name?.[0] || member.external_name?.[0] || '?').toUpperCase()
-                                )}
+                              {/* Avatar - Color coded by type */}
+                              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-medium text-sm ${
+                                member.external_type === 'supplier' ? 'bg-gradient-to-br from-purple-500 to-purple-600' :
+                                member.external_type === 'client' ? 'bg-gradient-to-br from-blue-500 to-blue-600' :
+                                member.external_type === 'contractor' ? 'bg-gradient-to-br from-orange-500 to-orange-600' :
+                                member.external_email || member.external_company ? 'bg-gradient-to-br from-gray-500 to-gray-600' :
+                                'bg-gradient-to-br from-green-500 to-green-600'
+                              }`}>
+                                {(member.profiles?.full_name?.[0] || member.external_name?.[0] || '?').toUpperCase()}
                               </div>
                               
                               {/* Info */}
                               <div className="min-w-0">
-                                <div className="font-medium text-gray-900 truncate">
-                                  {member.profiles?.full_name || member.external_name || 'Unknown'}
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-gray-900 truncate">
+                                    {member.profiles?.full_name || member.external_name || 'Unknown'}
+                                  </span>
                                   {member.external_company && (
-                                    <span className="text-gray-400 font-normal text-sm ml-1">
+                                    <span className="text-gray-400 font-normal text-sm">
                                       @ {member.external_company}
                                     </span>
                                   )}
+                                  {/* Member Type Label */}
+                                  {(() => {
+                                    const typeInfo = getMemberTypeLabel(member);
+                                    if (!typeInfo) return null;
+                                    return (
+                                      <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${typeInfo.className}`}>
+                                        {typeInfo.label}
+                                      </span>
+                                    );
+                                  })()}
                                 </div>
                                 <div className="text-sm text-gray-500 truncate">
                                   {member.profiles?.email || member.external_email}
@@ -675,19 +769,61 @@ export function ProjectAccessModal({ projectId, projectName, isOpen, onClose }: 
                           {editingMemberId === member.id && (
                             <div className="border-t border-gray-100 p-4 bg-gray-50/50">
                               <h4 className="text-sm font-medium text-gray-700 mb-3">Edit Permissions</h4>
-                              <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-4">
-                                {Object.entries(editingPermissions).map(([key, value]) => (
-                                  <label key={key} className="flex items-center gap-2 cursor-pointer hover:bg-white p-1.5 rounded">
-                                    <input
-                                      type="checkbox"
-                                      checked={value}
-                                      onChange={(e) => setEditingPermissions(prev => ({ ...prev, [key]: e.target.checked }))}
-                                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                    />
-                                    <span className="text-sm text-gray-700">{PERMISSION_LABELS[key] || key}</span>
-                                  </label>
-                                ))}
+                              
+                              {/* View Permissions */}
+                              <div className="mb-3">
+                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">View Access</p>
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                  {['view_project', 'view_orders', 'view_expenses', 'view_payments', 'view_documents', 'view_timeline', 'view_photos', 'view_deliveries'].map(key => (
+                                    <label key={key} className="flex items-center gap-2 cursor-pointer hover:bg-white p-1.5 rounded">
+                                      <input
+                                        type="checkbox"
+                                        checked={editingPermissions[key] || false}
+                                        onChange={(e) => setEditingPermissions(prev => ({ ...prev, [key]: e.target.checked }))}
+                                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                      />
+                                      <span className="text-sm text-gray-700">{PERMISSION_LABELS[key] || key}</span>
+                                    </label>
+                                  ))}
+                                </div>
                               </div>
+                              
+                              {/* Edit/Create Permissions */}
+                              <div className="mb-3">
+                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Edit & Create</p>
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                  {['edit_project', 'create_orders', 'upload_documents', 'manage_deliveries'].map(key => (
+                                    <label key={key} className="flex items-center gap-2 cursor-pointer hover:bg-white p-1.5 rounded">
+                                      <input
+                                        type="checkbox"
+                                        checked={editingPermissions[key] || false}
+                                        onChange={(e) => setEditingPermissions(prev => ({ ...prev, [key]: e.target.checked }))}
+                                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                      />
+                                      <span className="text-sm text-gray-700">{PERMISSION_LABELS[key] || key}</span>
+                                    </label>
+                                  ))}
+                                </div>
+                              </div>
+                              
+                              {/* Communication & Other */}
+                              <div className="mb-4">
+                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Communication & Other</p>
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                  {['use_chat', 'invite_others'].map(key => (
+                                    <label key={key} className="flex items-center gap-2 cursor-pointer hover:bg-white p-1.5 rounded">
+                                      <input
+                                        type="checkbox"
+                                        checked={editingPermissions[key] || false}
+                                        onChange={(e) => setEditingPermissions(prev => ({ ...prev, [key]: e.target.checked }))}
+                                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                      />
+                                      <span className="text-sm text-gray-700">{PERMISSION_LABELS[key] || key}</span>
+                                    </label>
+                                  ))}
+                                </div>
+                              </div>
+                              
                               <div className="flex gap-2 justify-end">
                                 <button
                                   onClick={cancelEditingPermissions}

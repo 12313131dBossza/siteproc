@@ -96,13 +96,18 @@ export async function POST(
       memberData.external_type = external_type || 'other';
       memberData.permissions = permissions || {
         view_project: true,
+        edit_project: false,
         view_orders: true,
+        create_orders: false,
         view_expenses: false,
         view_payments: false,
         view_documents: true,
-        edit_project: false,
-        create_orders: false,
         upload_documents: false,
+        view_timeline: true,
+        view_photos: true,
+        use_chat: true,
+        view_deliveries: false,
+        manage_deliveries: false,
         invite_others: false,
       };
       memberData.invitation_token = crypto.randomUUID();

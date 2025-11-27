@@ -32,7 +32,8 @@ export async function GET() {
       const { data: projects } = await adminClient
         .from('projects')
         .select('id, name, code')
-        .eq('company_id', profile.company_id);
+        .eq('company_id', profile.company_id)
+        .order('name');
 
       if (projects && projects.length > 0) {
         projectIds = projects.map(p => p.id);
@@ -57,6 +58,14 @@ export async function GET() {
       }
     }
 
+    // Build projects list for UI - ALWAYS return all projects
+    const projects = projectIds.map(id => ({
+      id,
+      name: projectMap.get(id)?.name || 'Unknown',
+      code: projectMap.get(id)?.code,
+      status: 'active'
+    }));
+
     if (projectIds.length === 0) {
       return NextResponse.json({ 
         conversations: [], 
@@ -65,14 +74,6 @@ export async function GET() {
         userRole 
       });
     }
-
-    // Build projects list for UI
-    const projects = projectIds.map(id => ({
-      id,
-      name: projectMap.get(id)?.name || 'Unknown',
-      code: projectMap.get(id)?.code,
-      status: 'active'
-    }));
 
     // Determine which channel to filter by based on role
     let channelFilter = isCompanyMember ? null : 'company_client'; // Clients only see company_client channel
@@ -90,10 +91,11 @@ export async function GET() {
 
     const { data: messages } = await messagesQuery;
 
+    // Even if no messages, still return projects
     if (!messages || messages.length === 0) {
       return NextResponse.json({ 
         conversations: [], 
-        projects,
+        projects,  // Return ALL projects so users can start conversations
         currentUserId: user.id,
         userRole 
       });
@@ -230,7 +232,7 @@ export async function GET() {
 
     return NextResponse.json({ 
       conversations,
-      projects,
+      projects,  // Return ALL projects so users can start conversations
       currentUserId: user.id,
       userRole
     });
