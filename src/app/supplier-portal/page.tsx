@@ -298,6 +298,23 @@ export default function SupplierPortalPage() {
             </button>
           </div>
         </div>
+        
+        {/* Navigation Tabs */}
+        <div className="flex border-t border-gray-100">
+          <button
+            className="flex-1 py-3 px-4 text-sm font-medium text-blue-600 border-b-2 border-blue-600 bg-blue-50/50 flex items-center justify-center gap-2"
+          >
+            <Package className="w-4 h-4" />
+            Deliveries
+          </button>
+          <button
+            onClick={() => router.push('/messages')}
+            className="flex-1 py-3 px-4 text-sm font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-2"
+          >
+            <MessageCircle className="w-4 h-4" />
+            Messages
+          </button>
+        </div>
       </header>
 
       {/* Main Content */}
