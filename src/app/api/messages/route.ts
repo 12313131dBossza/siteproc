@@ -35,6 +35,8 @@ export async function GET(request: NextRequest) {
     const isClient = userRole === 'viewer' || userRole === 'client';
     const isSupplier = userRole === 'supplier';
 
+    console.log('Messages GET - User:', user.id, 'Role:', userRole, 'Project:', projectId, 'Channel:', channel);
+
     // Get project info
     const { data: project } = await adminClient
       .from('projects')
@@ -82,8 +84,11 @@ export async function GET(request: NextRequest) {
     }
 
     if (!hasAccess) {
+      console.log('Access denied for user:', user.id, 'Role:', userRole);
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
+
+    console.log('Access granted, fetching messages...');
 
     // Build query
     let query = adminClient
@@ -104,6 +109,8 @@ export async function GET(request: NextRequest) {
     // }
 
     const { data: messages, error: messagesError } = await query;
+
+    console.log('Messages query result - count:', messages?.length || 0, 'error:', messagesError);
 
     if (messagesError) {
       console.error('Error fetching messages:', messagesError);
