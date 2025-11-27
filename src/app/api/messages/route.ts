@@ -235,10 +235,10 @@ export async function POST(request: NextRequest) {
       is_read: false,
     };
 
-    // Add recipient_id if provided (for 1:1 messaging from company)
-    if (recipient_id) {
-      messageData.recipient_id = recipient_id;
-    }
+    // TODO: Add recipient_id support once ADD-RECIPIENT-TO-MESSAGES.sql is run
+    // if (recipient_id) {
+    //   messageData.recipient_id = recipient_id;
+    // }
 
     const { data: newMessage, error: insertError } = await adminClient
       .from('project_messages')
