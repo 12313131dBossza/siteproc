@@ -89,25 +89,43 @@ export async function GET() {
     
     if (isCompanyMember && projectIds.length > 0) {
       // Get all external members (suppliers and clients) for company's projects
-      // Include both accepted (user_id) and pending (external_email/external_name) members
+      // Don't join with profiles - fetch separately to avoid FK issues
       const { data: externalMembers, error: membersError } = await adminClient
         .from('project_members')
-        .select('id, user_id, project_id, external_type, external_email, external_name, profiles(id, full_name, username)')
+        .select('id, user_id, project_id, external_type, external_email, external_name')
         .in('project_id', projectIds)
         .in('external_type', ['supplier', 'client'])
         .eq('status', 'active');
 
-      console.log('External members query result:', externalMembers, 'Error:', membersError);
+      console.log('External members query - projectIds:', projectIds);
+      console.log('External members query result:', JSON.stringify(externalMembers, null, 2));
+      console.log('External members error:', membersError);
 
       if (externalMembers && externalMembers.length > 0) {
+        // Get profile info for members who have user_id
+        const userIds = externalMembers.filter(m => m.user_id).map(m => m.user_id);
+        let profileMap = new Map<string, { full_name: string | null; username: string | null }>();
+        
+        if (userIds.length > 0) {
+          const { data: profilesData } = await adminClient
+            .from('profiles')
+            .select('id, full_name, username')
+            .in('id', userIds);
+          
+          if (profilesData) {
+            profileMap = new Map(profilesData.map(p => [p.id, { full_name: p.full_name, username: p.username }]));
+          }
+        }
+
         for (const em of externalMembers) {
-          const profile = em.profiles as any;
           const projInfo = projectMap.get(em.project_id);
           
           if (projInfo) {
             // Get name from profile (if accepted) or from external_name/email (if pending)
             let participantName = 'Unknown';
             let participantId = em.user_id || em.id; // Use member id if no user_id
+            
+            const profile = em.user_id ? profileMap.get(em.user_id) : null;
             
             if (profile && profile.full_name) {
               participantName = profile.full_name;
@@ -118,6 +136,8 @@ export async function GET() {
             } else if (em.external_email) {
               participantName = em.external_email.split('@')[0];
             }
+            
+            console.log('Adding participant:', participantName, 'type:', em.external_type, 'project:', projInfo.name);
             
             participants.push({
               id: participantId,
@@ -132,7 +152,7 @@ export async function GET() {
       }
     }
 
-    console.log('Final participants list:', participants);
+    console.log('Final participants count:', participants.length);
 
     if (projectIds.length === 0) {
       return NextResponse.json({ 
