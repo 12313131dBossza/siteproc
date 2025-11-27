@@ -10,6 +10,7 @@ import {
   Users,
   Truck,
   Building2,
+  FolderOpen,
   ChevronRight,
   X,
   Loader2,
@@ -17,13 +18,22 @@ import {
   CheckCheck,
   Clock,
   Paperclip,
-  Image as ImageIcon
+  Image as ImageIcon,
+  ArrowLeft
 } from 'lucide-react';
+
+interface Project {
+  id: string;
+  name: string;
+  code?: string;
+  status: string;
+}
 
 interface Conversation {
   id: string;
   project_id: string;
   project_name: string;
+  project_code?: string;
   channel: 'company_supplier' | 'company_client';
   participant_name: string;
   participant_type: 'supplier' | 'client';
@@ -47,7 +57,9 @@ interface Message {
 
 export default function MessagesPage() {
   const [loading, setLoading] = useState(true);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
@@ -56,10 +68,11 @@ export default function MessagesPage() {
   const [filter, setFilter] = useState<'all' | 'suppliers' | 'clients'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentUserId, setCurrentUserId] = useState('');
+  const [userRole, setUserRole] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    loadConversations();
+    loadData();
   }, []);
 
   useEffect(() => {
@@ -76,17 +89,19 @@ export default function MessagesPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const loadConversations = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
       const response = await fetch('/api/messages/conversations');
       if (response.ok) {
         const data = await response.json();
         setConversations(data.conversations || []);
+        setProjects(data.projects || []);
         setCurrentUserId(data.currentUserId || '');
+        setUserRole(data.userRole || '');
       }
     } catch (error) {
-      console.error('Error loading conversations:', error);
+      console.error('Error loading data:', error);
     } finally {
       setLoading(false);
     }
@@ -177,140 +192,124 @@ export default function MessagesPage() {
     }
   };
 
-  const filteredConversations = conversations.filter(c => {
-    const matchesFilter = 
-      filter === 'all' ||
-      (filter === 'suppliers' && c.participant_type === 'supplier') ||
-      (filter === 'clients' && c.participant_type === 'client');
-    
-    const matchesSearch = 
-      !searchTerm ||
-      c.participant_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.project_name.toLowerCase().includes(searchTerm.toLowerCase());
+  // Group conversations by project
+  const groupedByProject = conversations.reduce((acc, conv) => {
+    const key = conv.project_id;
+    if (!acc[key]) {
+      acc[key] = {
+        project_id: conv.project_id,
+        project_name: conv.project_name,
+        project_code: conv.project_code,
+        conversations: [],
+        total_unread: 0,
+      };
+    }
+    acc[key].conversations.push(conv);
+    acc[key].total_unread += conv.unread_count;
+    return acc;
+  }, {} as Record<string, { project_id: string; project_name: string; project_code?: string; conversations: Conversation[]; total_unread: number }>);
 
-    return matchesFilter && matchesSearch;
-  });
+  const projectGroups = Object.values(groupedByProject);
+
+  // Filter conversations for selected project
+  const projectConversations = selectedProject
+    ? conversations.filter(c => {
+        const matchesProject = c.project_id === selectedProject.id;
+        const matchesFilter = 
+          filter === 'all' ||
+          (filter === 'suppliers' && c.participant_type === 'supplier') ||
+          (filter === 'clients' && c.participant_type === 'client');
+        const matchesSearch = 
+          !searchTerm ||
+          c.participant_name.toLowerCase().includes(searchTerm.toLowerCase());
+        return matchesProject && matchesFilter && matchesSearch;
+      })
+    : [];
 
   const totalUnread = conversations.reduce((sum, c) => sum + c.unread_count, 0);
+
+  // Determine what the user can see based on role
+  const isCompanyMember = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(userRole);
+  const isClient = userRole === 'viewer' || userRole === 'client';
 
   return (
     <AppLayout>
       <div className="h-[calc(100vh-4rem)] flex bg-white">
-        {/* Conversations List */}
-        <div className={`w-full md:w-96 border-r border-gray-200 flex flex-col ${
-          selectedConversation ? 'hidden md:flex' : 'flex'
+        {/* Projects List (Left Panel) */}
+        <div className={`w-full md:w-80 border-r border-gray-200 flex flex-col ${
+          selectedProject || selectedConversation ? 'hidden md:flex' : 'flex'
         }`}>
           {/* Header */}
           <div className="p-4 border-b border-gray-200">
-            <div className="flex items-center justify-between mb-4">
-              <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                <MessageCircle className="w-6 h-6 text-blue-600" />
-                Messages
-                {totalUnread > 0 && (
-                  <span className="px-2 py-0.5 text-xs bg-red-500 text-white rounded-full">
-                    {totalUnread}
-                  </span>
-                )}
-              </h1>
-            </div>
-
-            {/* Search */}
-            <div className="relative mb-3">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search conversations..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-
-            {/* Filter tabs */}
-            <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
-              <button
-                onClick={() => setFilter('all')}
-                className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                  filter === 'all' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                All
-              </button>
-              <button
-                onClick={() => setFilter('suppliers')}
-                className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-1 ${
-                  filter === 'suppliers' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                <Truck className="w-3.5 h-3.5" />
-                Suppliers
-              </button>
-              <button
-                onClick={() => setFilter('clients')}
-                className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-1 ${
-                  filter === 'clients' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                <Building2 className="w-3.5 h-3.5" />
-                Clients
-              </button>
-            </div>
+            <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <MessageCircle className="w-6 h-6 text-blue-600" />
+              Messages
+              {totalUnread > 0 && (
+                <span className="px-2 py-0.5 text-xs bg-red-500 text-white rounded-full">
+                  {totalUnread}
+                </span>
+              )}
+            </h1>
+            <p className="text-sm text-gray-500 mt-1">
+              {isClient ? 'Chat with your project team' : 'Chat with clients & suppliers'}
+            </p>
           </div>
 
-          {/* Conversations */}
+          {/* Project List */}
           <div className="flex-1 overflow-y-auto">
             {loading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
               </div>
-            ) : filteredConversations.length === 0 ? (
-              <div className="text-center py-12">
-                <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500">No conversations yet</p>
+            ) : projectGroups.length === 0 ? (
+              <div className="text-center py-12 px-4">
+                <FolderOpen className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500 font-medium">No conversations yet</p>
+                <p className="text-sm text-gray-400 mt-1">
+                  Messages will appear here when you start chatting
+                </p>
               </div>
             ) : (
               <div className="divide-y divide-gray-100">
-                {filteredConversations.map(conv => (
+                {projectGroups.map(group => (
                   <button
-                    key={conv.id}
-                    onClick={() => setSelectedConversation(conv)}
+                    key={group.project_id}
+                    onClick={() => {
+                      setSelectedProject({
+                        id: group.project_id,
+                        name: group.project_name,
+                        code: group.project_code,
+                        status: 'active',
+                      });
+                      setSelectedConversation(null);
+                    }}
                     className={`w-full p-4 text-left hover:bg-gray-50 transition-colors ${
-                      selectedConversation?.id === conv.id ? 'bg-blue-50' : ''
+                      selectedProject?.id === group.project_id ? 'bg-blue-50' : ''
                     }`}
                   >
-                    <div className="flex items-start gap-3">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        conv.participant_type === 'supplier'
-                          ? 'bg-orange-100 text-orange-600'
-                          : 'bg-purple-100 text-purple-600'
-                      }`}>
-                        {conv.participant_type === 'supplier' ? (
-                          <Truck className="w-5 h-5" />
-                        ) : (
-                          <Building2 className="w-5 h-5" />
-                        )}
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                        <FolderOpen className="w-5 h-5 text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="font-medium text-gray-900 truncate">
-                            {conv.participant_name}
+                        <div className="flex items-center justify-between mb-0.5">
+                          <span className="font-semibold text-gray-900 truncate">
+                            {group.project_name}
                           </span>
-                          <span className="text-xs text-gray-500 flex-shrink-0">
-                            {formatTime(conv.last_message_time)}
-                          </span>
+                          {group.total_unread > 0 && (
+                            <span className="px-2 py-0.5 text-xs bg-blue-600 text-white rounded-full flex-shrink-0 ml-2">
+                              {group.total_unread}
+                            </span>
+                          )}
                         </div>
-                        <p className="text-xs text-gray-500 mb-1">
-                          {conv.project_name}
-                        </p>
-                        <p className="text-sm text-gray-600 truncate">
-                          {conv.last_message}
+                        {group.project_code && (
+                          <span className="text-xs text-gray-500">{group.project_code}</span>
+                        )}
+                        <p className="text-sm text-gray-500 mt-0.5">
+                          {group.conversations.length} conversation{group.conversations.length !== 1 ? 's' : ''}
                         </p>
                       </div>
-                      {conv.unread_count > 0 && (
-                        <span className="px-2 py-0.5 text-xs bg-blue-600 text-white rounded-full flex-shrink-0">
-                          {conv.unread_count}
-                        </span>
-                      )}
+                      <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
                     </div>
                   </button>
                 ))}
@@ -319,7 +318,131 @@ export default function MessagesPage() {
           </div>
         </div>
 
-        {/* Chat Area */}
+        {/* Conversations List (Middle Panel) - Only shows when project is selected */}
+        {selectedProject && !selectedConversation && (
+          <div className="w-full md:w-80 border-r border-gray-200 flex flex-col">
+            {/* Header */}
+            <div className="p-4 border-b border-gray-200">
+              <div className="flex items-center gap-2 mb-3">
+                <button
+                  onClick={() => setSelectedProject(null)}
+                  className="md:hidden p-1 hover:bg-gray-100 rounded"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+                <div className="flex-1 min-w-0">
+                  <h2 className="font-bold text-gray-900 truncate">{selectedProject.name}</h2>
+                  {selectedProject.code && (
+                    <span className="text-xs text-gray-500">{selectedProject.code}</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Search */}
+              <div className="relative mb-3">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search conversations..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              {/* Filter tabs - Only for company members who can see both */}
+              {isCompanyMember && (
+                <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
+                  <button
+                    onClick={() => setFilter('all')}
+                    className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                      filter === 'all' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    All
+                  </button>
+                  <button
+                    onClick={() => setFilter('suppliers')}
+                    className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-1 ${
+                      filter === 'suppliers' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    <Truck className="w-3.5 h-3.5" />
+                    Suppliers
+                  </button>
+                  <button
+                    onClick={() => setFilter('clients')}
+                    className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-1 ${
+                      filter === 'clients' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    <Building2 className="w-3.5 h-3.5" />
+                    Clients
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Conversations */}
+            <div className="flex-1 overflow-y-auto">
+              {projectConversations.length === 0 ? (
+                <div className="text-center py-12">
+                  <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500">No conversations in this project</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {projectConversations.map(conv => (
+                    <button
+                      key={conv.id}
+                      onClick={() => setSelectedConversation(conv)}
+                      className={`w-full p-4 text-left hover:bg-gray-50 transition-colors ${
+                        selectedConversation?.id === conv.id ? 'bg-blue-50' : ''
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          conv.participant_type === 'supplier'
+                            ? 'bg-orange-100 text-orange-600'
+                            : 'bg-purple-100 text-purple-600'
+                        }`}>
+                          {conv.participant_type === 'supplier' ? (
+                            <Truck className="w-5 h-5" />
+                          ) : (
+                            <Building2 className="w-5 h-5" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-medium text-gray-900 truncate">
+                              {conv.participant_name}
+                            </span>
+                            <span className="text-xs text-gray-500 flex-shrink-0">
+                              {formatTime(conv.last_message_time)}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-500 mb-1 capitalize">
+                            {conv.participant_type}
+                          </p>
+                          <p className="text-sm text-gray-600 truncate">
+                            {conv.last_message}
+                          </p>
+                        </div>
+                        {conv.unread_count > 0 && (
+                          <span className="px-2 py-0.5 text-xs bg-blue-600 text-white rounded-full flex-shrink-0">
+                            {conv.unread_count}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Chat Area (Right Panel) */}
         <div className={`flex-1 flex flex-col ${
           selectedConversation ? 'flex' : 'hidden md:flex'
         }`}>
@@ -329,9 +452,9 @@ export default function MessagesPage() {
               <div className="p-4 border-b border-gray-200 flex items-center gap-3">
                 <button
                   onClick={() => setSelectedConversation(null)}
-                  className="md:hidden p-1 hover:bg-gray-100 rounded"
+                  className="p-1 hover:bg-gray-100 rounded"
                 >
-                  <ChevronRight className="w-5 h-5 rotate-180" />
+                  <ArrowLeft className="w-5 h-5" />
                 </button>
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
                   selectedConversation.participant_type === 'supplier'
@@ -344,23 +467,20 @@ export default function MessagesPage() {
                     <Building2 className="w-5 h-5" />
                   )}
                 </div>
-                <div>
-                  <h2 className="font-semibold text-gray-900">
+                <div className="flex-1 min-w-0">
+                  <h2 className="font-semibold text-gray-900 truncate">
                     {selectedConversation.participant_name}
                   </h2>
-                  <p className="text-xs text-gray-500">
-                    {selectedConversation.project_name}
-                    {selectedConversation.participant_type === 'supplier' && (
-                      <span className="ml-2 px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded text-[10px]">
-                        Supplier
-                      </span>
-                    )}
-                    {selectedConversation.participant_type === 'client' && (
-                      <span className="ml-2 px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-[10px]">
-                        Client
-                      </span>
-                    )}
-                  </p>
+                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                    <span className="truncate">{selectedConversation.project_name}</span>
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] ${
+                      selectedConversation.participant_type === 'supplier'
+                        ? 'bg-orange-100 text-orange-700'
+                        : 'bg-purple-100 text-purple-700'
+                    }`}>
+                      {selectedConversation.participant_type}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -379,7 +499,7 @@ export default function MessagesPage() {
                 ) : (
                   <>
                     {messages.map(msg => {
-                      const isOwn = msg.sender_type === 'company';
+                      const isOwn = msg.sender_id === currentUserId;
                       return (
                         <div
                           key={msg.id}
@@ -459,7 +579,12 @@ export default function MessagesPage() {
               <div className="text-center">
                 <MessageCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-1">Your Messages</h3>
-                <p className="text-gray-500">Select a conversation to start chatting</p>
+                <p className="text-gray-500">
+                  {selectedProject 
+                    ? 'Select a conversation to start chatting'
+                    : 'Select a project to view conversations'
+                  }
+                </p>
               </div>
             </div>
           )}

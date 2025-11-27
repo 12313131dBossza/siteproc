@@ -22,20 +22,50 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Missing project_id or channel' }, { status: 400 });
     }
 
-    // Verify user belongs to company that owns this project
+    // Get user's profile and role
     const { data: profile } = await adminClient
       .from('profiles')
-      .select('company_id')
+      .select('company_id, role')
       .eq('id', user.id)
       .single();
 
+    const userRole = profile?.role || 'viewer';
+    const isCompanyMember = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(userRole);
+    const isClient = userRole === 'viewer' || userRole === 'client';
+
+    // Get project info
     const { data: project } = await adminClient
       .from('projects')
       .select('company_id')
       .eq('id', projectId)
       .single();
 
-    if (!profile?.company_id || !project || project.company_id !== profile.company_id) {
+    if (!project) {
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    }
+
+    // Verify access
+    let hasAccess = false;
+    
+    if (isCompanyMember && profile?.company_id === project.company_id) {
+      // Company member with matching company
+      hasAccess = true;
+    } else if (isClient) {
+      // Check if client is member of this project
+      const { data: membership } = await adminClient
+        .from('project_members')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('project_id', projectId)
+        .eq('status', 'active')
+        .single();
+      
+      if (membership && channel === 'company_client') {
+        hasAccess = true;
+      }
+    }
+
+    if (!hasAccess) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
@@ -100,20 +130,52 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Verify user belongs to company that owns this project
+    // Get user's profile and role
     const { data: profile } = await adminClient
       .from('profiles')
-      .select('company_id, full_name, username')
+      .select('company_id, full_name, username, role')
       .eq('id', user.id)
       .single();
 
+    const userRole = profile?.role || 'viewer';
+    const isCompanyMember = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(userRole);
+    const isClient = userRole === 'viewer' || userRole === 'client';
+
+    // Get project info
     const { data: project } = await adminClient
       .from('projects')
       .select('company_id')
       .eq('id', project_id)
       .single();
 
-    if (!profile?.company_id || !project || project.company_id !== profile.company_id) {
+    if (!project) {
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    }
+
+    // Determine sender_type and validate access
+    let senderType = '';
+    let hasAccess = false;
+
+    if (isCompanyMember && profile?.company_id === project.company_id) {
+      senderType = 'company';
+      hasAccess = true;
+    } else if (isClient && channel === 'company_client') {
+      // Verify client is member of project
+      const { data: membership } = await adminClient
+        .from('project_members')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('project_id', project_id)
+        .eq('status', 'active')
+        .single();
+      
+      if (membership) {
+        senderType = 'client';
+        hasAccess = true;
+      }
+    }
+
+    if (!hasAccess) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
@@ -122,10 +184,11 @@ export async function POST(request: NextRequest) {
       .from('project_messages')
       .insert({
         project_id,
+        company_id: project.company_id,
         channel,
         delivery_id: delivery_id || null,
         sender_id: user.id,
-        sender_type: 'company',
+        sender_type: senderType,
         message: message.trim(),
         is_read: false,
       })
@@ -140,7 +203,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       message: {
         ...newMessage,
-        sender_name: profile.full_name || profile.username || 'You',
+        sender_name: profile?.full_name || profile?.username || 'You',
       }
     });
   } catch (error) {

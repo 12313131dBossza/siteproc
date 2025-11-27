@@ -33,13 +33,15 @@ import {
 // 'all' = all authenticated users can see
 // 'internal' = only internal company members (admin, owner, manager, bookkeeper, member)
 // 'admin' = only admin/owner
-// 'viewer' = external viewers can see (project-scoped data)
+// 'viewer' = external viewers/clients can see (project-scoped data)
 // 'supplier' = supplier portal only
+// 'all_except_supplier' = company + clients (not suppliers)
 const navigation = [
+  // === Company Internal Navigation ===
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, access: 'internal' },
   { name: "Analytics", href: "/analytics", icon: BarChart3, access: 'internal' },
   { name: "Projects", href: "/projects", icon: FolderOpen, access: 'all' }, // All users can see their projects
-  { name: "Messages", href: "/messages", icon: MessageCircle, access: 'internal' }, // Company DMs with suppliers/clients
+  { name: "Messages", href: "/messages", icon: MessageCircle, access: 'all_except_supplier' }, // Company + Clients can message
   { name: "Orders", href: "/orders", icon: ShoppingCart, access: 'viewer' }, // Viewers see project-filtered orders
   { name: "Expenses", href: "/expenses", icon: Receipt, access: 'viewer' }, // Viewers see project-filtered expenses
   { name: "Deliveries", href: "/deliveries", icon: Package, access: 'viewer' }, // Viewers see project-filtered deliveries
@@ -54,6 +56,7 @@ const navigation = [
   { name: "Payments", href: "/payments", icon: CreditCard, access: 'internal' },
   { name: "Reports", href: "/reports", icon: BarChart3, access: 'internal' },
   { name: "Settings", href: "/settings", icon: Settings, access: 'internal' },
+  // === Supplier Portal ===
   { name: "Supplier Portal", href: "/supplier-portal", icon: Truck, access: 'supplier' },
 ];
 
@@ -126,16 +129,18 @@ export function SidebarNav() {
     const isInternalMember = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(userRole);
     // Admin only items
     const isAdmin = ['admin', 'owner'].includes(userRole);
-    // External viewer
-    const isViewer = userRole === 'viewer';
+    // External viewer/client
+    const isViewer = userRole === 'viewer' || userRole === 'client';
     // Supplier
     const isSupplier = userRole === 'supplier';
     
     if (item.access === 'all') return true;
     if (item.access === 'internal' && isInternalMember) return true;
     if (item.access === 'admin' && isAdmin) return true;
-    // Viewers can see 'viewer' access items (project-scoped data)
+    // Viewers/Clients can see 'viewer' access items (project-scoped data)
     if (item.access === 'viewer' && (isViewer || isInternalMember)) return true;
+    // All except suppliers (company + clients)
+    if (item.access === 'all_except_supplier' && !isSupplier) return true;
     // Suppliers only see supplier portal
     if (item.access === 'supplier' && isSupplier) return true;
     
