@@ -4,6 +4,9 @@ import { useParams, useRouter } from 'next/navigation'
 import { AppLayout } from '@/components/app-layout'
 import { AddItemModal } from '@/components/AddItemModal'
 import { ProjectAccessModal } from '@/components/ProjectAccessModal'
+import ProjectTimeline from '@/components/ProjectTimeline'
+import ProjectPhotoGallery from '@/components/ProjectPhotoGallery'
+import ProjectChat from '@/components/ProjectChat'
 import { 
   Plus, 
   Users, 
@@ -22,7 +25,9 @@ import {
   BarChart3,
   Calendar,
   ExternalLink,
-  Eye
+  Eye,
+  Image as ImageIcon,
+  MessageCircle
 } from 'lucide-react'
 import { format } from '@/lib/date-format'
 
@@ -39,11 +44,14 @@ export default function ProjectDetailPage() {
   const router = useRouter()
   const [project, setProject] = useState<any>(null)
   const [rollup, setRollup] = useState<any>(null)
-  const [tab, setTab] = useState<'overview'|'orders'|'expenses'|'deliveries'>('overview')
+  const [tab, setTab] = useState<'overview'|'orders'|'expenses'|'deliveries'|'gallery'>('overview')
   // Modal state for adding items
   const [showAddModal, setShowAddModal] = useState<'order' | 'expense' | 'delivery' | null>(null)
   // Modal state for project access
   const [showAccessModal, setShowAccessModal] = useState(false)
+  // Chat state
+  const [showChat, setShowChat] = useState(false)
+  const [currentUserId, setCurrentUserId] = useState<string>('')
   // Assignment textarea state (kept for fallback bulk paste modal later)
   const [assign, setAssign] = useState({ orders: '', expenses: '', deliveries: '' })
   // Loaded items for each tab
@@ -105,6 +113,11 @@ export default function ProjectDetailPage() {
       
       setProject(projectData)
       setRollup(rollupData)
+      
+      // Get current user ID from the project response
+      if (projectData.currentUserId) {
+        setCurrentUserId(projectData.currentUserId)
+      }
     } catch (e:any) {
       console.error('Project detail: load error:', e);
       setError(e?.message || 'Failed to load project')
@@ -114,7 +127,7 @@ export default function ProjectDetailPage() {
 
   // Fetch tab-specific data when tab changes
   useEffect(() => {
-    if (!id || tab==='overview') return
+    if (!id || tab==='overview' || tab==='gallery') return
     let aborted = false
     async function fetchTab() {
       setLoadingTab(true)
@@ -321,6 +334,7 @@ export default function ProjectDetailPage() {
           { key: 'orders', label: 'Orders', icon: Package, count: rollup?.counts?.orders || 0, permission: 'view_orders' },
           { key: 'expenses', label: 'Expenses', icon: Receipt, count: rollup?.counts?.expenses || 0, permission: 'view_expenses' },
           { key: 'deliveries', label: 'Deliveries', icon: Truck, count: rollup?.counts?.deliveries || 0, permission: 'view_orders' },
+          { key: 'gallery', label: 'Photos', icon: ImageIcon, count: null, permission: 'view_documents' },
         ] as const).filter(t => permissions[t.permission as keyof typeof permissions]).map(t => {
           const active = tab === t.key
           const Icon = t.icon
@@ -480,10 +494,23 @@ export default function ProjectDetailPage() {
               />
             </div>
           </div>
+
+          {/* Timeline */}
+          <ProjectTimeline 
+            projectId={id}
+            projectStatus={project.status}
+            projectStartDate={project.created_at}
+            projectEndDate={project.end_date}
+          />
         </div>
       )}
 
-      {tab!=='overview' && (
+      {/* Gallery Tab */}
+      {tab === 'gallery' && (
+        <ProjectPhotoGallery projectId={id} />
+      )}
+
+      {tab!=='overview' && tab!=='gallery' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold capitalize flex items-center gap-2">
@@ -695,6 +722,16 @@ export default function ProjectDetailPage() {
         isOpen={showAccessModal}
         onClose={() => setShowAccessModal(false)}
       />
+
+      {/* Project Chat */}
+      {currentUserId && (
+        <ProjectChat
+          projectId={id}
+          currentUserId={currentUserId}
+          isExpanded={showChat}
+          onToggle={() => setShowChat(!showChat)}
+        />
+      )}
     </AppLayout>
   )
 }

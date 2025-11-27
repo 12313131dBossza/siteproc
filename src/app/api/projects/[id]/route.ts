@@ -97,6 +97,8 @@ export async function GET(
       // Include user's permissions and role for this project
       userPermissions,
       userRole: projectRole,
+      // Include current user ID for chat and other features
+      currentUserId: user.id,
     }
 
     console.log('✅ Project fetched:', projectWithCode.id, projectWithCode.name, 'Role:', projectRole)
