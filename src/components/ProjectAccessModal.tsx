@@ -1,5 +1,6 @@
 "use client";
 
+// Project Access Modal - Manages team members and permissions
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/Button';
