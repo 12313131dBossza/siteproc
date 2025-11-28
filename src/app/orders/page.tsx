@@ -798,7 +798,7 @@ export default function OrdersPage() {
       {/* Order Detail Modal */}
       {showDetailModal && selectedOrder && (
         <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 animate-in fade-in duration-200 md:flex md:items-center md:justify-center md:p-4"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setShowDetailModal(false);
@@ -806,25 +806,29 @@ export default function OrdersPage() {
             }
           }}
         >
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
-            <div className="flex-shrink-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-900">Order Details</h2>
+          {/* Full screen on mobile, centered modal on desktop */}
+          <div className="bg-white h-full w-full md:h-auto md:max-h-[85vh] md:rounded-xl md:max-w-2xl md:w-full flex flex-col shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
+            {/* Fixed Header */}
+            <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
+              <h2 className="text-lg md:text-xl font-semibold text-gray-900">Order Details</h2>
               <button
                 onClick={() => {
                   setShowDetailModal(false);
                   setSelectedOrder(null);
                 }}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-gray-400 hover:text-gray-600 transition-colors p-1"
               >
                 <X className="h-6 w-6" />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-6">
+            
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-4 md:p-6 min-h-0">
               {/* Order Information */}
               <div className="space-y-4">
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="font-semibold text-lg text-gray-900 mb-2">{selectedOrder.description}</h3>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="bg-gray-50 rounded-lg p-3 md:p-4">
+                  <h3 className="font-semibold text-base md:text-lg text-gray-900 mb-2">{selectedOrder.description}</h3>
+                  <div className="grid grid-cols-2 gap-3 md:gap-4 text-sm">
                     <div>
                       <span className="text-gray-500">Category:</span>
                       <span className="ml-2 font-medium text-gray-900">{selectedOrder.category}</span>
@@ -879,47 +883,47 @@ export default function OrdersPage() {
 
                 {/* Delivery Progress Section */}
                 {selectedOrder.delivery_progress && (
-                  <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-gray-900 flex items-center gap-2">
-                        <Truck className="h-5 w-5 text-blue-600" />
+                  <div className="bg-blue-50 rounded-lg p-3 md:p-4 border border-blue-100">
+                    <div className="flex items-center justify-between mb-2 md:mb-3">
+                      <h4 className="font-semibold text-sm md:text-base text-gray-900 flex items-center gap-2">
+                        <Truck className="h-4 w-4 md:h-5 md:w-5 text-blue-600" />
                         Delivery Progress
                       </h4>
                       <span className={cn(
-                        "px-3 py-1 rounded-full text-xs font-medium inline-flex items-center",
+                        "px-2 py-0.5 rounded-full text-xs font-medium inline-flex items-center",
                         getDeliveryProgressColor(selectedOrder.delivery_progress)
                       )}>
                         {getDeliveryProgressIcon(selectedOrder.delivery_progress)}
                         <span className="ml-1">{getDeliveryProgressLabel(selectedOrder.delivery_progress)}</span>
                       </span>
                     </div>
-                    <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="grid grid-cols-2 gap-2 md:gap-3 text-sm">
                       <div className="bg-white rounded p-2">
-                        <span className="text-gray-500 block">Ordered Qty</span>
-                        <span className="font-semibold text-gray-900 text-lg">
+                        <span className="text-gray-500 block text-xs">Ordered Qty</span>
+                        <span className="font-semibold text-gray-900 text-base md:text-lg">
                           {selectedOrder.ordered_qty?.toFixed(2) || '0.00'}
                         </span>
                       </div>
                       <div className="bg-white rounded p-2">
-                        <span className="text-gray-500 block">Delivered Qty</span>
-                        <span className="font-semibold text-blue-600 text-lg">
+                        <span className="text-gray-500 block text-xs">Delivered Qty</span>
+                        <span className="font-semibold text-blue-600 text-base md:text-lg">
                           {selectedOrder.delivered_qty?.toFixed(2) || '0.00'}
                         </span>
                       </div>
                       <div className="bg-white rounded p-2">
-                        <span className="text-gray-500 block">Remaining Qty</span>
-                        <span className="font-semibold text-orange-600 text-lg">
+                        <span className="text-gray-500 block text-xs">Remaining Qty</span>
+                        <span className="font-semibold text-orange-600 text-base md:text-lg">
                           {selectedOrder.remaining_qty?.toFixed(2) || '0.00'}
                         </span>
                       </div>
                       <div className="bg-white rounded p-2">
-                        <span className="text-gray-500 block">Delivered Value</span>
-                        <span className="font-semibold text-green-600 text-lg">
+                        <span className="text-gray-500 block text-xs">Delivered Value</span>
+                        <span className="font-semibold text-green-600 text-base md:text-lg">
                           {formatCurrency(selectedOrder.delivered_value || 0)}
                         </span>
                       </div>
                     </div>
-                    <div className="mt-3">
+                    <div className="mt-2 md:mt-3">
                       <Button
                         variant="accent"
                         leftIcon={<Truck className="h-4 w-4" />}
@@ -935,9 +939,11 @@ export default function OrdersPage() {
                   </div>
                 )}
               </div>
+            </div>
 
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-200">
+            {/* Fixed Footer with Action Buttons */}
+            <div className="flex-shrink-0 border-t border-gray-200 p-3 md:p-4 bg-gray-50">
+              <div className="flex flex-col sm:flex-row gap-2 md:gap-3">
                 {/* Cancel button - always visible */}
                 <Button
                   variant="ghost"
@@ -988,7 +994,7 @@ export default function OrdersPage() {
       {/* Deliveries Modal */}
       {showDeliveriesModal && selectedOrder && (
         <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 animate-in fade-in duration-200 md:flex md:items-center md:justify-center md:p-4"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setShowDeliveriesModal(false);
@@ -996,13 +1002,13 @@ export default function OrdersPage() {
             }
           }}
         >
-          <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
-            <div className="flex-shrink-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+          <div className="bg-white h-full w-full md:h-auto md:max-h-[85vh] md:rounded-xl md:max-w-4xl md:w-full flex flex-col shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
+            <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold text-gray-900">Deliveries for Order</h2>
-                <p className="text-sm text-gray-600 mt-1">{selectedOrder.description}</p>
+                <h2 className="text-lg md:text-xl font-semibold text-gray-900">Deliveries for Order</h2>
+                <p className="text-xs md:text-sm text-gray-600 mt-0.5 md:mt-1">{selectedOrder.description}</p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 md:gap-3">
                 <Link href="/deliveries">
                   <Button
                     variant="ghost"
@@ -1010,7 +1016,7 @@ export default function OrdersPage() {
                     className="gap-2"
                   >
                     <Plus className="h-4 w-4" />
-                    Create Delivery
+                    <span className="hidden sm:inline">Create Delivery</span>
                   </Button>
                 </Link>
                 <button
