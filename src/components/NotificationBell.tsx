@@ -42,6 +42,8 @@ export function NotificationBell() {
         return '💰';
       case 'project_update':
         return '📊';
+      case 'new_message':
+        return '💬';
       default:
         return '🔔';
     }

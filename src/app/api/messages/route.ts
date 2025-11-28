@@ -303,33 +303,54 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to send message' }, { status: 500 });
     }
 
-    // Send email notification to other participants (in background, don't block)
+    // Send notifications (email + in-app) to recipients
     try {
       // Get project info
       const { data: projectInfo } = await adminClient
         .from('projects')
-        .select('name')
+        .select('name, company_id')
         .eq('id', project_id)
         .single();
 
-      // Get other members in this channel who should receive notifications
-      const { data: members } = await adminClient
-        .from('project_members')
-        .select('user_id, profiles(email, full_name)')
-        .eq('project_id', project_id)
-        .eq('status', 'active')
-        .neq('user_id', user.id);
+      const senderName = profile?.full_name || profile?.username || 'Someone';
+      const chatUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://siteproc.vercel.app'}/messages`;
+      const messagePreview = message.trim().length > 100 
+        ? message.trim().substring(0, 100) + '...' 
+        : message.trim();
 
-      if (members && members.length > 0) {
-        const senderName = profile?.full_name || profile?.username || 'Someone';
-        const chatUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://siteproc.vercel.app'}/messages`;
-        
-        // Send email to each member (non-blocking)
-        for (const member of members) {
-          const memberProfile = member.profiles as any;
-          if (memberProfile?.email) {
+      // For 1:1 DM, only notify the specific recipient
+      if (recipient_id) {
+        // Get recipient info
+        const { data: recipientProfile } = await adminClient
+          .from('profiles')
+          .select('email, full_name')
+          .eq('id', recipient_id)
+          .single();
+
+        if (recipientProfile) {
+          // Create in-app notification for recipient
+          const { error: notifError } = await adminClient.from('notifications').insert({
+            user_id: recipient_id,
+            company_id: projectInfo?.company_id || project.company_id,
+            type: 'new_message',
+            title: `New message from ${senderName}`,
+            message: messagePreview,
+            link: `/messages`,
+            metadata: {
+              project_id,
+              project_name: projectInfo?.name,
+              sender_id: user.id,
+              sender_name: senderName,
+              channel,
+            },
+            read: false,
+          });
+          if (notifError) console.error('Notification insert error:', notifError);
+
+          // Send email notification
+          if (recipientProfile.email) {
             sendMessageNotification({
-              to: memberProfile.email,
+              to: recipientProfile.email,
               senderName,
               projectName: projectInfo?.name || 'Project',
               message: message.trim(),
@@ -338,10 +359,56 @@ export async function POST(request: NextRequest) {
             }).catch(err => console.error('Email notification error:', err));
           }
         }
+      } else {
+        // Get other members in this channel who should receive notifications
+        const { data: members } = await adminClient
+          .from('project_members')
+          .select('user_id, profiles(email, full_name)')
+          .eq('project_id', project_id)
+          .eq('status', 'active')
+          .neq('user_id', user.id);
+
+        if (members && members.length > 0) {
+          // Create notifications for each member
+          for (const member of members) {
+            if (member.user_id) {
+              // Create in-app notification
+              const { error: notifError } = await adminClient.from('notifications').insert({
+                user_id: member.user_id,
+                company_id: projectInfo?.company_id || project.company_id,
+                type: 'new_message',
+                title: `New message from ${senderName}`,
+                message: messagePreview,
+                link: `/messages`,
+                metadata: {
+                  project_id,
+                  project_name: projectInfo?.name,
+                  sender_id: user.id,
+                  sender_name: senderName,
+                  channel,
+                },
+                read: false,
+              });
+              if (notifError) console.error('Notification insert error:', notifError);
+            }
+
+            const memberProfile = member.profiles as any;
+            if (memberProfile?.email) {
+              sendMessageNotification({
+                to: memberProfile.email,
+                senderName,
+                projectName: projectInfo?.name || 'Project',
+                message: message.trim(),
+                messageType: message_type,
+                chatUrl,
+              }).catch(err => console.error('Email notification error:', err));
+            }
+          }
+        }
       }
-    } catch (emailError) {
-      console.error('Error sending email notifications:', emailError);
-      // Don't fail the request if email fails
+    } catch (notificationError) {
+      console.error('Error sending notifications:', notificationError);
+      // Don't fail the request if notifications fail
     }
 
     return NextResponse.json({

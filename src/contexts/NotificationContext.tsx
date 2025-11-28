@@ -7,7 +7,7 @@ export interface Notification {
   user_id: string;
   company_id: string;
   type: 'order_approved' | 'order_rejected' | 'expense_approved' | 'expense_rejected' | 
-        'delivery_status' | 'payment_created' | 'payment_updated' | 'project_update' | 'system';
+        'delivery_status' | 'payment_created' | 'payment_updated' | 'project_update' | 'system' | 'new_message';
   title: string;
   message: string;
   link?: string | null;
