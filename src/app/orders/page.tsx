@@ -457,9 +457,9 @@ export default function OrdersPage() {
         </div>
       }
     >
-      <div className="p-4 md:p-6">
+      <div className="space-y-3 md:space-y-4">
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
           <StatCard
             title="Total Orders"
             value={stats.total}
@@ -500,8 +500,8 @@ export default function OrdersPage() {
         </div>
 
         {/* Tabs and Filters */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-          <div className="p-6 border-b border-gray-200">
+        <div className="bg-white rounded-lg border border-gray-200">
+          <div className="p-3 md:p-4 border-b border-gray-200">
             {/* Filter Panel */}
             <OrdersFilterPanel 
               onFiltersChange={setAppliedFilters}
@@ -509,11 +509,11 @@ export default function OrdersPage() {
             />
 
             {/* Search Bar */}
-            <div className="mt-4">
+            <div className="mt-3">
               <SearchBar
                 value={searchQuery}
                 onChange={setSearchQuery}
-                placeholder="Search by description, category, or vendor..."
+                placeholder="Search orders..."
               />
             </div>
 

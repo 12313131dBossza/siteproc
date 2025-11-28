@@ -11,8 +11,8 @@ interface AppLayoutProps {
   title?: string;
   description?: string;
   actions?: React.ReactNode;
-  hideMobileNav?: boolean; // New prop to hide mobile nav (e.g., when in chat)
-  hideMobileHeader?: boolean; // New prop to hide mobile header
+  hideMobileNav?: boolean;
+  hideMobileHeader?: boolean;
 }
 
 export function AppLayout({ children, title, description, actions, hideMobileNav, hideMobileHeader }: AppLayoutProps) {
@@ -23,17 +23,16 @@ export function AppLayout({ children, title, description, actions, hideMobileNav
         <SidebarNav />
       </div>
 
-      {/* Main content wrapper - flex column to stack header, content, and nav */}
+      {/* Main content wrapper */}
       <div className="flex-1 flex flex-col min-h-0 w-full">
-        {/* Top header - flex-shrink-0 keeps it fixed size */}
-        {/* Hide on mobile when hideMobileHeader is true */}
+        {/* Top header - more compact on mobile */}
         <header className={cn(
-          "flex-shrink-0 bg-white border-b border-gray-200 shadow-sm",
+          "flex-shrink-0 bg-white border-b border-gray-200",
           hideMobileHeader && "hidden md:block"
         )}>
-          <div className="flex h-14 md:h-16 items-center gap-2 md:gap-4 px-4 md:px-6">
-            {/* Logo/Brand for mobile */}
-            <div className="md:hidden font-bold text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          <div className="flex h-11 md:h-14 items-center gap-2 md:gap-4 px-3 md:px-6">
+            {/* Logo/Brand for mobile - smaller */}
+            <div className="md:hidden font-bold text-base bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
               SiteProc
             </div>
 
@@ -50,33 +49,33 @@ export function AppLayout({ children, title, description, actions, hideMobileNav
             </div>
 
             {/* Right side actions */}
-            <div className="flex items-center gap-2 md:gap-3 ml-auto">
+            <div className="flex items-center gap-2 ml-auto">
               <NotificationBell />
             </div>
           </div>
 
-          {/* Page header */}
+          {/* Page header - more compact on mobile */}
           {title && (
-            <div className="px-4 md:px-6 py-3 md:py-4 border-t border-gray-100 bg-gradient-to-r from-gray-50 to-white">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div className="w-full sm:w-auto">
-                  <h1 className="text-lg md:text-2xl font-bold text-gray-900">{title}</h1>
+            <div className="px-3 md:px-6 py-2 md:py-3 border-t border-gray-100 bg-white">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <h1 className="text-base md:text-xl font-semibold text-gray-900 truncate">{title}</h1>
                   {description && (
-                    <p className="mt-1 text-xs md:text-sm text-gray-600">{description}</p>
+                    <p className="text-xs text-gray-500 truncate">{description}</p>
                   )}
                 </div>
-                {actions && <div className="flex gap-2 w-full sm:w-auto">{actions}</div>}
+                {actions && <div className="flex gap-2 flex-shrink-0">{actions}</div>}
               </div>
             </div>
           )}
         </header>
 
-        {/* Page content - flex-1 with min-h-0 allows it to shrink and scroll */}
-        <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden bg-gray-50 max-w-full">
+        {/* Page content */}
+        <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden bg-gray-50 max-w-full p-3 md:p-6">
           {children}
         </main>
 
-        {/* Mobile Bottom Navigation - hide when hideMobileNav is true */}
+        {/* Mobile Bottom Navigation */}
         {!hideMobileNav && <MobileBottomNav />}
       </div>
     </div>

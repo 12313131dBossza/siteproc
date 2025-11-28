@@ -75,8 +75,8 @@ export function MobileBottomNav() {
 
   return (
     <>
-      <nav className="md:hidden flex-shrink-0 bg-white border-t border-gray-200 shadow-[0_-2px_10px_rgba(0,0,0,0.1)]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        <div className="flex items-center justify-around h-16">
+      <nav className="md:hidden flex-shrink-0 bg-white border-t border-gray-200" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <div className="flex items-center justify-around h-14">
           {filteredNavItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
             const Icon = item.icon;
@@ -86,7 +86,7 @@ export function MobileBottomNav() {
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  'relative flex flex-col items-center justify-center flex-1 h-full gap-1 transition-all duration-200',
+                  'relative flex flex-col items-center justify-center flex-1 h-full gap-0.5 transition-all duration-200',
                   'active:scale-95',
                   isActive
                     ? 'text-blue-600'
@@ -95,20 +95,15 @@ export function MobileBottomNav() {
               >
                 {/* Active indicator bar */}
                 {isActive && (
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-blue-600 rounded-b-full" />
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-10 h-0.5 bg-blue-600 rounded-b-full" />
                 )}
                 
                 {/* Icon */}
-                <div className={cn(
-                  'transition-all duration-200',
-                  isActive && 'scale-110'
-                )}>
-                  <Icon className="h-6 w-6" strokeWidth={isActive ? 2.5 : 2} />
-                </div>
+                <Icon className="h-5 w-5" strokeWidth={isActive ? 2.5 : 2} />
                 
                 {/* Label */}
                 <span className={cn(
-                  'text-[10px] leading-tight',
+                  'text-[9px] leading-tight',
                   isActive ? 'font-semibold' : 'font-medium'
                 )}>
                   {item.name}
@@ -122,18 +117,13 @@ export function MobileBottomNav() {
             <button
               onClick={() => setIsMoreMenuOpen(true)}
               className={cn(
-                'relative flex flex-col items-center justify-center flex-1 h-full gap-1 transition-all duration-200',
+                'relative flex flex-col items-center justify-center flex-1 h-full gap-0.5 transition-all duration-200',
                 'active:scale-95',
                 'text-gray-500'
               )}
             >
-              {/* Icon */}
-              <div className="transition-all duration-200">
-                <MoreHorizontal className="h-6 w-6" strokeWidth={2} />
-              </div>
-              
-              {/* Label */}
-              <span className="text-[10px] leading-tight font-medium">
+              <MoreHorizontal className="h-5 w-5" strokeWidth={2} />
+              <span className="text-[9px] leading-tight font-medium">
                 More
               </span>
             </button>

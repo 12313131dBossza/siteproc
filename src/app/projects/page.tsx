@@ -225,17 +225,17 @@ export default function ProjectsPage() {
 
   return (
     <AppLayout>
-      <div className="p-4 md:p-6 space-y-4 md:space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <div className="space-y-3 md:space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Projects</h1>
-            <p className="text-sm md:text-base text-gray-500 mt-1">Manage project budgets and track expenses</p>
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900">Projects</h1>
+            <p className="text-xs md:text-sm text-gray-500">Manage project budgets and track expenses</p>
           </div>
           <div className="flex gap-2">
             <Button 
               onClick={handleExportCSV} 
               variant="ghost" 
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 text-sm"
               disabled={filteredProjects.length === 0}
             >
               <Download className="h-4 w-4" />
