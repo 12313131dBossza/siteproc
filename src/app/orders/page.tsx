@@ -132,8 +132,16 @@ function OrderDetailModal({
 
   const modalContent = (
     <div 
-      className="fixed inset-0 z-[9999] flex flex-col"
-      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
+      className="fixed inset-0 z-[9999]"
+      style={{ 
+        position: 'fixed', 
+        top: 0, 
+        left: 0, 
+        right: 0, 
+        bottom: 0,
+        height: '100dvh',
+        minHeight: '-webkit-fill-available'
+      }}
     >
       {/* Backdrop */}
       <div
@@ -142,14 +150,18 @@ function OrderDetailModal({
       />
 
       {/* Modal Container */}
-      <div className="relative flex-1 flex flex-col md:items-center md:justify-center md:p-4">
+      <div 
+        className="relative h-full flex flex-col md:items-center md:justify-center md:p-4"
+        style={{ height: '100dvh', minHeight: '-webkit-fill-available' }}
+      >
         {/* Modal - Full screen on mobile */}
         <div
-          className="relative bg-white w-full flex flex-col shadow-2xl min-h-full md:min-h-0 md:h-auto md:max-h-[85vh] md:rounded-xl md:max-w-2xl"
+          className="relative bg-white w-full flex flex-col shadow-2xl h-full md:h-auto md:max-h-[85vh] md:rounded-xl md:max-w-2xl"
+          style={{ maxHeight: '100dvh' }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex-shrink-0 flex items-center justify-between px-4 md:px-6 py-4 border-b border-gray-200 bg-white md:rounded-t-xl">
+          <div className="flex-shrink-0 flex items-center justify-between px-4 md:px-6 py-3 border-b border-gray-200 bg-white md:rounded-t-xl">
             <h2 className="text-lg md:text-xl font-semibold text-gray-900">Order Details</h2>
             <button
               onClick={onClose}
@@ -161,7 +173,7 @@ function OrderDetailModal({
           
           {/* Scrollable Content */}
           <div 
-            className="flex-1 overflow-y-auto p-4 md:p-6"
+            className="flex-1 overflow-y-auto p-4 md:p-6 overscroll-contain"
             style={{ WebkitOverflowScrolling: 'touch' }}
           >
             <div className="space-y-4">
@@ -278,7 +290,10 @@ function OrderDetailModal({
           </div>
 
           {/* Footer */}
-          <div className="flex-shrink-0 border-t border-gray-200 p-4 bg-gray-50 md:rounded-b-xl">
+          <div 
+            className="flex-shrink-0 border-t border-gray-200 p-4 bg-gray-50 md:rounded-b-xl"
+            style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+          >
             <div className="flex flex-col sm:flex-row gap-3">
               <Button
                 variant="ghost"
