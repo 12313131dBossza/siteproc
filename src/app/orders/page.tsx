@@ -655,7 +655,8 @@ export default function OrdersPage() {
       case 'completed': return 'bg-green-100 text-green-700';
       case 'partially_delivered': return 'bg-blue-100 text-blue-700';
       case 'pending_delivery': return 'bg-yellow-100 text-yellow-700';
-      default: return 'bg-gray-100 text-gray-700';
+      case 'not_started': return 'bg-gray-100 text-gray-700';
+      default: return 'bg-gray-100 text-gray-500';
     }
   };
 
@@ -664,6 +665,7 @@ export default function OrdersPage() {
       case 'completed': return 'Completed';
       case 'partially_delivered': return 'Partial';
       case 'pending_delivery': return 'Pending Delivery';
+      case 'not_started': return 'Not Started';
       default: return 'N/A';
     }
   };
