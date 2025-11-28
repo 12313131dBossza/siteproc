@@ -863,13 +863,21 @@ export default function MessagesPage() {
 
   const getReplyMessage = (parentId: string) => messages.find(m => m.id === parentId);
 
+  // Calculate if we're on mobile
+  const isMobileView = typeof window !== 'undefined' && window.innerWidth < 768;
+
   return (
-    <AppLayout>
-      <div className="flex flex-col bg-white h-[100dvh] md:h-[calc(100vh-4rem)] fixed inset-0 top-14 md:relative md:top-0 z-10">
-        {/* Mobile: Account for bottom nav */}
-        <div className="flex flex-1 overflow-hidden pb-16 md:pb-0">
-          {/* Left Panel - Projects */}
-          <div className={`w-full md:w-96 border-r border-gray-200 flex flex-col overflow-hidden ${selectedProject ? 'hidden md:flex' : 'flex'}`}>
+    <div className="flex flex-col h-screen bg-white">
+      {/* Mobile Header */}
+      <div className="md:hidden flex items-center justify-between p-3 border-b bg-white sticky top-0 z-20">
+        <span className="font-bold text-lg text-blue-600">SiteProc</span>
+        <div className="w-8 h-8 rounded-full bg-red-500 text-white flex items-center justify-center text-xs">4</div>
+      </div>
+      
+      {/* Main Content - fills available space */}
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+        {/* Left Panel - Projects */}
+        <div className={`w-full md:w-96 border-r border-gray-200 flex flex-col ${selectedProject ? 'hidden md:flex' : 'flex'}`}>
           <div className="p-4 border-b border-gray-200">
             <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
               <MessageCircle className="w-6 h-6 text-blue-600" />
@@ -1005,14 +1013,14 @@ export default function MessagesPage() {
               })
             )}
           </div>
-          </div>
+        </div>
 
-          {/* Right Panel - Chat */}
-          <div className={`flex-1 flex flex-col overflow-hidden ${selectedProject && selectedChannel ? 'flex' : 'hidden md:flex'}`}>
+        {/* Right Panel - Chat */}
+        <div className={`flex-1 flex flex-col min-h-0 ${selectedProject && selectedChannel ? 'flex' : 'hidden md:flex'}`}>
           {selectedProject && selectedChannel ? (
             <>
               {/* Header */}
-              <div className={`p-4 border-b border-gray-200 ${selectedChannel === 'company_supplier' ? 'bg-gradient-to-r from-purple-50 to-white' : 'bg-gradient-to-r from-blue-50 to-white'}`}>
+              <div className={`flex-shrink-0 p-4 border-b border-gray-200 ${selectedChannel === 'company_supplier' ? 'bg-gradient-to-r from-purple-50 to-white' : 'bg-gradient-to-r from-blue-50 to-white'}`}>
                 <div className="flex items-center gap-3">
                   <button onClick={() => { setSelectedProject(null); setSelectedChannel(null); setSelectedParticipant(null); setMessages([]); }} className="p-1.5 hover:bg-gray-100 rounded-lg md:hidden">
                     <ArrowLeft className="w-5 h-5" />
@@ -1410,7 +1418,8 @@ export default function MessagesPage() {
                 </div>
               )}
 
-              <div className="p-3 md:p-4 border-t border-gray-200 bg-white relative" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
+              {/* Input Area - flex-shrink-0 ensures it stays visible */}
+              <div className="flex-shrink-0 p-3 border-t border-gray-200 bg-white relative">
                 {/* @ Mentions dropdown */}
                 {showMentions && getMentionableUsers().length > 0 && (
                   <div className="absolute bottom-full left-4 mb-2 bg-white rounded-lg shadow-lg border max-h-40 overflow-y-auto w-64 z-20">
@@ -1644,7 +1653,30 @@ export default function MessagesPage() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Mobile Bottom Navigation */}
+      <div className="md:hidden flex-shrink-0 flex items-center justify-around h-16 bg-white border-t border-gray-200 safe-area-bottom">
+        <a href="/dashboard" className="flex flex-col items-center gap-1 text-gray-500">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+          <span className="text-[10px]">Dashboard</span>
+        </a>
+        <a href="/projects" className="flex flex-col items-center gap-1 text-gray-500">
+          <FolderOpen className="w-6 h-6" />
+          <span className="text-[10px]">Projects</span>
+        </a>
+        <div className="flex flex-col items-center gap-1 text-blue-600">
+          <MessageCircle className="w-6 h-6" />
+          <span className="text-[10px] font-semibold">Messages</span>
         </div>
+        <a href="/orders" className="flex flex-col items-center gap-1 text-gray-500">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+          <span className="text-[10px]">Orders</span>
+        </a>
+        <a href="/settings" className="flex flex-col items-center gap-1 text-gray-500">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" /></svg>
+          <span className="text-[10px]">More</span>
+        </a>
       </div>
 
       {/* Image Preview Modal */}
@@ -1730,6 +1762,6 @@ export default function MessagesPage() {
           </div>
         </div>
       )}
-    </AppLayout>
+    </div>
   );
 }
