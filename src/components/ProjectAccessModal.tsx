@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -382,8 +383,29 @@ export function ProjectAccessModal({ projectId, projectName, isOpen, onClose }: 
   // Don't render if not open
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center md:p-4">
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
+  const modalContent = (
+    <div 
+      className="fixed inset-0 z-[9999]"
+      style={{ 
+        position: 'fixed', 
+        top: 0, 
+        left: 0, 
+        right: 0, 
+        bottom: 0,
+        height: '100dvh',
+        minHeight: '-webkit-fill-available'
+      }}
+    >
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/50 backdrop-blur-sm" 
@@ -391,25 +413,34 @@ export function ProjectAccessModal({ projectId, projectName, isOpen, onClose }: 
       />
       
       {/* Modal Container */}
-      <div className="relative w-full h-full md:h-auto md:max-h-[85vh] max-w-xl bg-white md:rounded-xl shadow-2xl animate-in fade-in zoom-in-95 duration-200 flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 md:p-5 border-b flex-shrink-0">
-          <div className="min-w-0 flex-1">
-            <h2 className="text-base md:text-lg font-semibold text-gray-900">Project Access</h2>
-            <p className="text-xs md:text-sm text-gray-500 mt-0.5 truncate" title={projectName}>
-              {projectName}
-            </p>
+      <div 
+        className="relative h-full flex flex-col md:items-center md:justify-center md:p-4"
+        style={{ height: '100dvh', minHeight: '-webkit-fill-available' }}
+      >
+        {/* Modal - Full screen on mobile */}
+        <div 
+          className="relative w-full h-full md:h-auto md:max-h-[85vh] md:max-w-xl bg-white md:rounded-xl shadow-2xl flex flex-col"
+          style={{ maxHeight: '100dvh' }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b flex-shrink-0 bg-white md:rounded-t-xl">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-base md:text-lg font-semibold text-gray-900">Project Access</h2>
+              <p className="text-xs md:text-sm text-gray-500 mt-0.5 truncate" title={projectName}>
+                {projectName}
+              </p>
+            </div>
+            <button 
+              onClick={onClose} 
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0 ml-2"
+            >
+              <X className="h-6 w-6 text-gray-500" />
+            </button>
           </div>
-          <button 
-            onClick={onClose} 
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0 ml-2"
-          >
-            <X className="h-5 w-5 text-gray-500" />
-          </button>
-        </div>
 
         {/* Tabs */}
-        <div className="flex border-b px-4 md:px-5 flex-shrink-0">
+        <div className="flex border-b px-4 flex-shrink-0 bg-white">
           <button
             onClick={() => setTab('members')}
             className={`px-3 md:px-4 py-2.5 md:py-3 text-xs md:text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-1.5 md:gap-2 ${
@@ -434,8 +465,14 @@ export function ProjectAccessModal({ projectId, projectName, isOpen, onClose }: 
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-4 md:p-5 flex-1 overflow-y-auto min-h-0">
+        {/* Content - Scrollable */}
+        <div 
+          className="flex-1 overflow-y-auto p-4 overscroll-contain"
+          style={{ 
+            WebkitOverflowScrolling: 'touch',
+            paddingBottom: 'max(1rem, env(safe-area-inset-bottom))'
+          }}
+        >
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin h-8 w-8 border-2 border-blue-600 border-t-transparent rounded-full" />
@@ -946,9 +983,16 @@ export function ProjectAccessModal({ projectId, projectName, isOpen, onClose }: 
             </>
           )}
         </div>
+        </div>
       </div>
     </div>
   );
+
+  // Use portal to render at document body level
+  if (typeof document !== 'undefined') {
+    return createPortal(modalContent, document.body);
+  }
+  return null;
 }
 
 export default ProjectAccessModal;
