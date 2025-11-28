@@ -45,6 +45,26 @@ html, body {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
+/* Mobile top safe area for notched phones */
+.safe-area-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+/* Touch scrolling for iOS */
+.overscroll-contain {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Hide scrollbar but allow scrolling */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 /* Prevent content from going under bottom nav on mobile */
 @media (max-width: 768px) {
   html, body {

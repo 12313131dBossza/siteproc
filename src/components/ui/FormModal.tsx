@@ -35,10 +35,10 @@ export function FormModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 md:flex md:items-center md:justify-center md:p-4">
-      {/* Backdrop - only visible on desktop */}
+    <div className="fixed inset-0 z-[100] flex flex-col md:items-center md:justify-center md:p-4">
+      {/* Backdrop */}
       <div
-        className="hidden md:block absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -46,8 +46,8 @@ export function FormModal({
       {/* Modal - Full screen on mobile, centered on desktop */}
       <div
         className={cn(
-          'relative bg-white w-full h-full md:h-auto md:rounded-xl shadow-2xl overflow-hidden',
-          'flex flex-col md:max-h-[85vh]',
+          'relative bg-white w-full flex flex-col',
+          'h-[100dvh] md:h-auto md:max-h-[85vh] md:rounded-xl shadow-2xl',
           sizeMap[size],
           className
         )}
@@ -56,7 +56,7 @@ export function FormModal({
         aria-labelledby="modal-title"
       >
         {/* Header */}
-        <div className="flex-shrink-0 flex items-center justify-between px-4 md:px-6 py-3 md:py-4 border-b border-gray-200 bg-white">
+        <div className="flex-shrink-0 flex items-center justify-between px-4 md:px-6 py-3 md:py-4 border-b border-gray-200 bg-white safe-area-top">
           <div className="flex items-center gap-2 md:gap-3 min-w-0">
             {icon && (
               <div className="hidden md:flex items-center justify-center w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex-shrink-0">
@@ -86,13 +86,13 @@ export function FormModal({
         </div>
 
         {/* Content - scrollable */}
-        <div className="flex-1 overflow-y-auto px-4 md:px-6 py-3 md:py-4 min-h-0">
+        <div className="flex-1 overflow-y-auto px-4 md:px-6 py-3 md:py-4 min-h-0 overscroll-contain">
           {children}
         </div>
 
         {/* Footer - fixed at bottom */}
         {footer && (
-          <div className="flex-shrink-0 px-4 md:px-6 py-3 md:py-4 border-t border-gray-200 bg-gray-50">
+          <div className="flex-shrink-0 px-4 md:px-6 py-3 md:py-4 border-t border-gray-200 bg-gray-50 safe-area-bottom">
             {footer}
           </div>
         )}

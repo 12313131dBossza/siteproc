@@ -798,7 +798,7 @@ export default function OrdersPage() {
       {/* Order Detail Modal */}
       {showDetailModal && selectedOrder && (
         <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 animate-in fade-in duration-200 md:flex md:items-center md:justify-center md:p-4"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] animate-in fade-in duration-200 flex flex-col md:items-center md:justify-center md:p-4"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setShowDetailModal(false);
@@ -807,7 +807,7 @@ export default function OrdersPage() {
           }}
         >
           {/* Full screen on mobile, centered modal on desktop */}
-          <div className="bg-white h-full w-full md:h-auto md:max-h-[85vh] md:rounded-xl md:max-w-2xl md:w-full flex flex-col shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
+          <div className="relative bg-white h-[100dvh] w-full md:h-auto md:max-h-[85vh] md:rounded-xl md:max-w-2xl md:w-full flex flex-col shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
             {/* Fixed Header */}
             <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
               <h2 className="text-lg md:text-xl font-semibold text-gray-900">Order Details</h2>
@@ -823,7 +823,7 @@ export default function OrdersPage() {
             </div>
             
             {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto p-4 md:p-6 min-h-0">
+            <div className="flex-1 overflow-y-auto p-4 md:p-6 min-h-0 overscroll-contain">
               {/* Order Information */}
               <div className="space-y-4">
                 <div className="bg-gray-50 rounded-lg p-3 md:p-4">
