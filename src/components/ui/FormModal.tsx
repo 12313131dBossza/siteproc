@@ -1,5 +1,9 @@
-import React from 'react';
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
+import { X } from 'lucide-react';
 
 export interface FormModalProps {
   isOpen: boolean;
@@ -32,73 +36,103 @@ export function FormModal({
   size = 'md',
   className
 }: FormModalProps) {
-  if (!isOpen) return null;
+  const [mounted, setMounted] = useState(false);
 
-  return (
-    <div className="fixed inset-0 z-[100] flex flex-col md:items-center md:justify-center md:p-4">
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
+  if (!isOpen || !mounted) return null;
+
+  const modalContent = (
+    <div 
+      className="fixed inset-0 z-[9999] flex flex-col"
+      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
+    >
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* Modal - Full screen on mobile, centered on desktop */}
-      <div
-        className={cn(
-          'relative bg-white w-full flex flex-col',
-          'h-[100dvh] md:h-auto md:max-h-[85vh] md:rounded-xl shadow-2xl',
-          sizeMap[size],
-          className
-        )}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="modal-title"
-      >
-        {/* Header */}
-        <div className="flex-shrink-0 flex items-center justify-between px-4 md:px-6 py-3 md:py-4 border-b border-gray-200 bg-white safe-area-top">
-          <div className="flex items-center gap-2 md:gap-3 min-w-0">
-            {icon && (
-              <div className="hidden md:flex items-center justify-center w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex-shrink-0">
-                {icon}
-              </div>
-            )}
-            <div className="min-w-0">
-              <h2 id="modal-title" className="text-base md:text-xl font-semibold text-gray-900 truncate">
-                {title}
-              </h2>
-              {description && (
-                <p className="text-xs md:text-sm text-gray-500 truncate">{description}</p>
+      {/* Modal Container - Centers on desktop */}
+      <div className="relative flex-1 flex flex-col md:items-center md:justify-center md:p-4">
+        {/* Modal - Full screen on mobile, centered card on desktop */}
+        <div
+          className={cn(
+            'relative bg-white w-full flex flex-col shadow-2xl',
+            'min-h-full md:min-h-0 md:h-auto md:max-h-[85vh] md:rounded-xl',
+            sizeMap[size],
+            className
+          )}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-title"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header - Fixed at top */}
+          <div className="flex-shrink-0 flex items-center justify-between px-4 md:px-6 py-4 border-b border-gray-200 bg-white md:rounded-t-xl">
+            <div className="flex items-center gap-3 min-w-0">
+              {icon && (
+                <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex-shrink-0">
+                  {icon}
+                </div>
               )}
+              <div className="min-w-0">
+                <h2 id="modal-title" className="text-lg md:text-xl font-semibold text-gray-900">
+                  {title}
+                </h2>
+                {description && (
+                  <p className="text-sm text-gray-500 truncate">{description}</p>
+                )}
+              </div>
             </div>
+
+            {/* Close button */}
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 transition-colors p-2 rounded-lg hover:bg-gray-100 flex-shrink-0 -mr-2"
+              aria-label="Close modal"
+            >
+              <X className="w-6 h-6" />
+            </button>
           </div>
 
-          {/* Close button */}
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors p-2 rounded-lg hover:bg-gray-100 flex-shrink-0"
-            aria-label="Close modal"
+          {/* Content - Scrollable middle section */}
+          <div 
+            className="flex-1 overflow-y-auto px-4 md:px-6 py-4"
+            style={{ WebkitOverflowScrolling: 'touch' }}
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Content - scrollable */}
-        <div className="flex-1 overflow-y-auto px-4 md:px-6 py-3 md:py-4 min-h-0 overscroll-contain">
-          {children}
-        </div>
-
-        {/* Footer - fixed at bottom */}
-        {footer && (
-          <div className="flex-shrink-0 px-4 md:px-6 py-3 md:py-4 border-t border-gray-200 bg-gray-50 safe-area-bottom">
-            {footer}
+            {children}
           </div>
-        )}
+
+          {/* Footer - Fixed at bottom */}
+          {footer && (
+            <div className="flex-shrink-0 px-4 md:px-6 py-4 border-t border-gray-200 bg-gray-50 md:rounded-b-xl">
+              {footer}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
+
+  // Use portal to render at document body level
+  return createPortal(modalContent, document.body);
 }
 
 // Form Modal Actions Component (for footer buttons)
@@ -127,12 +161,12 @@ export function FormModalActions({
   };
 
   return (
-    <div className="flex items-center justify-end gap-2 md:gap-3">
+    <div className="flex items-center gap-3">
       <button
         type="button"
         onClick={onCancel}
         disabled={isSubmitting}
-        className="px-3 md:px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         {cancelLabel}
       </button>
@@ -142,7 +176,7 @@ export function FormModalActions({
         onClick={onSubmit}
         disabled={isSubmitting || submitDisabled}
         className={cn(
-          'px-3 md:px-4 py-2 text-sm font-medium text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2',
+          'flex-1 px-4 py-2.5 text-sm font-medium text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2',
           submitColors[submitVariant]
         )}
       >

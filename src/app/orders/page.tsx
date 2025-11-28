@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { AppLayout } from "@/components/app-layout";
 import { Button } from "@/components/ui/Button";
 import { SearchBar } from "@/components/ui";
@@ -81,6 +82,240 @@ interface TabConfig {
   label: string;
   count?: number;
   filter?: (order: Order) => boolean;
+}
+
+// Order Detail Modal Component - Uses Portal to render at body level
+function OrderDetailModal({
+  isOpen,
+  order,
+  onClose,
+  onApprove,
+  onReject,
+  onViewDeliveries,
+  formatCurrency,
+  getStatusColor,
+  getDeliveryProgressColor,
+  getDeliveryProgressIcon,
+  getDeliveryProgressLabel
+}: {
+  isOpen: boolean;
+  order: Order | null;
+  onClose: () => void;
+  onApprove: () => void;
+  onReject: () => void;
+  onViewDeliveries: () => void;
+  formatCurrency: (n: number) => string;
+  getStatusColor: (s: string) => string;
+  getDeliveryProgressColor: (s: string) => string;
+  getDeliveryProgressIcon: (s: string) => React.ReactNode;
+  getDeliveryProgressLabel: (s: string) => string;
+}) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
+  if (!isOpen || !order || !mounted) return null;
+
+  const modalContent = (
+    <div 
+      className="fixed inset-0 z-[9999] flex flex-col"
+      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
+    >
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
+
+      {/* Modal Container */}
+      <div className="relative flex-1 flex flex-col md:items-center md:justify-center md:p-4">
+        {/* Modal - Full screen on mobile */}
+        <div
+          className="relative bg-white w-full flex flex-col shadow-2xl min-h-full md:min-h-0 md:h-auto md:max-h-[85vh] md:rounded-xl md:max-w-2xl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="flex-shrink-0 flex items-center justify-between px-4 md:px-6 py-4 border-b border-gray-200 bg-white md:rounded-t-xl">
+            <h2 className="text-lg md:text-xl font-semibold text-gray-900">Order Details</h2>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 transition-colors p-2 rounded-lg hover:bg-gray-100"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+          
+          {/* Scrollable Content */}
+          <div 
+            className="flex-1 overflow-y-auto p-4 md:p-6"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
+            <div className="space-y-4">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="font-semibold text-lg text-gray-900 mb-3">{order.description}</h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-500">Category:</span>
+                    <span className="ml-2 font-medium text-gray-900">{order.category}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Amount:</span>
+                    <span className="ml-2 font-medium text-gray-900">{formatCurrency(order.amount)}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Project:</span>
+                    <span className="ml-2 font-medium text-gray-900">{order.projects?.name || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Status:</span>
+                    <span className={cn(
+                      "ml-2 px-2 py-1 rounded-full text-xs font-medium",
+                      getStatusColor(order.status)
+                    )}>
+                      {order.status}
+                    </span>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-gray-500">Created:</span>
+                    <span className="ml-2 font-medium text-gray-900">
+                      {format(new Date(order.created_at), "MMM dd, yyyy 'at' hh:mm a")}
+                    </span>
+                  </div>
+                  {order.approved_at && (
+                    <div className="col-span-2">
+                      <span className="text-gray-500">Approved:</span>
+                      <span className="ml-2 font-medium text-green-600">
+                        {format(new Date(order.approved_at), "MMM dd, yyyy 'at' hh:mm a")}
+                      </span>
+                    </div>
+                  )}
+                  {order.rejected_at && (
+                    <div className="col-span-2">
+                      <span className="text-gray-500">Rejected:</span>
+                      <span className="ml-2 font-medium text-red-600">
+                        {format(new Date(order.rejected_at), "MMM dd, yyyy 'at' hh:mm a")}
+                      </span>
+                    </div>
+                  )}
+                  {order.rejection_reason && (
+                    <div className="col-span-2">
+                      <span className="text-gray-500">Rejection Reason:</span>
+                      <p className="mt-1 text-gray-900">{order.rejection_reason}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Delivery Progress */}
+              {order.delivery_progress && (
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                      <Truck className="h-5 w-5 text-blue-600" />
+                      Delivery Progress
+                    </h4>
+                    <span className={cn(
+                      "px-2 py-0.5 rounded-full text-xs font-medium inline-flex items-center",
+                      getDeliveryProgressColor(order.delivery_progress)
+                    )}>
+                      {getDeliveryProgressIcon(order.delivery_progress)}
+                      <span className="ml-1">{getDeliveryProgressLabel(order.delivery_progress)}</span>
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="bg-white rounded p-3">
+                      <span className="text-gray-500 block text-xs">Ordered Qty</span>
+                      <span className="font-semibold text-gray-900 text-lg">
+                        {order.ordered_qty?.toFixed(2) || '0.00'}
+                      </span>
+                    </div>
+                    <div className="bg-white rounded p-3">
+                      <span className="text-gray-500 block text-xs">Delivered Qty</span>
+                      <span className="font-semibold text-blue-600 text-lg">
+                        {order.delivered_qty?.toFixed(2) || '0.00'}
+                      </span>
+                    </div>
+                    <div className="bg-white rounded p-3">
+                      <span className="text-gray-500 block text-xs">Remaining Qty</span>
+                      <span className="font-semibold text-orange-600 text-lg">
+                        {order.remaining_qty?.toFixed(2) || '0.00'}
+                      </span>
+                    </div>
+                    <div className="bg-white rounded p-3">
+                      <span className="text-gray-500 block text-xs">Delivered Value</span>
+                      <span className="font-semibold text-green-600 text-lg">
+                        {formatCurrency(order.delivered_value || 0)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <Button
+                      variant="accent"
+                      leftIcon={<Truck className="h-4 w-4" />}
+                      onClick={onViewDeliveries}
+                      className="w-full"
+                    >
+                      View Deliveries
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="flex-shrink-0 border-t border-gray-200 p-4 bg-gray-50 md:rounded-b-xl">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button
+                variant="ghost"
+                onClick={onClose}
+                className="flex-1 order-last sm:order-first"
+              >
+                Close
+              </Button>
+              
+              {order.status === 'pending' && (
+                <>
+                  <Button
+                    variant="danger"
+                    leftIcon={<XCircle className="h-4 w-4" />}
+                    onClick={onReject}
+                    className="flex-1"
+                  >
+                    Reject
+                  </Button>
+                  <Button
+                    variant="primary"
+                    leftIcon={<CheckCircle className="h-4 w-4" />}
+                    onClick={onApprove}
+                    className="flex-1"
+                  >
+                    Approve
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  return createPortal(modalContent, document.body);
 }
 
 export default function OrdersPage() {
@@ -795,201 +1030,36 @@ export default function OrdersPage() {
         </div>
       )}
 
-      {/* Order Detail Modal */}
-      {showDetailModal && selectedOrder && (
-        <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] animate-in fade-in duration-200 flex flex-col md:items-center md:justify-center md:p-4"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setShowDetailModal(false);
-              setSelectedOrder(null);
-            }
-          }}
-        >
-          {/* Full screen on mobile, centered modal on desktop */}
-          <div className="relative bg-white h-[100dvh] w-full md:h-auto md:max-h-[85vh] md:rounded-xl md:max-w-2xl md:w-full flex flex-col shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
-            {/* Fixed Header */}
-            <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
-              <h2 className="text-lg md:text-xl font-semibold text-gray-900">Order Details</h2>
-              <button
-                onClick={() => {
-                  setShowDetailModal(false);
-                  setSelectedOrder(null);
-                }}
-                className="text-gray-400 hover:text-gray-600 transition-colors p-1"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-            
-            {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto p-4 md:p-6 min-h-0 overscroll-contain">
-              {/* Order Information */}
-              <div className="space-y-4">
-                <div className="bg-gray-50 rounded-lg p-3 md:p-4">
-                  <h3 className="font-semibold text-base md:text-lg text-gray-900 mb-2">{selectedOrder.description}</h3>
-                  <div className="grid grid-cols-2 gap-3 md:gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-500">Category:</span>
-                      <span className="ml-2 font-medium text-gray-900">{selectedOrder.category}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Amount:</span>
-                      <span className="ml-2 font-medium text-gray-900">{formatCurrency(selectedOrder.amount)}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Project:</span>
-                      <span className="ml-2 font-medium text-gray-900">{selectedOrder.projects?.name || 'N/A'}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Status:</span>
-                      <span className={cn(
-                        "ml-2 px-2 py-1 rounded-full text-xs font-medium",
-                        getStatusColor(selectedOrder.status)
-                      )}>
-                        {selectedOrder.status}
-                      </span>
-                    </div>
-                    <div className="col-span-2">
-                      <span className="text-gray-500">Created:</span>
-                      <span className="ml-2 font-medium text-gray-900">
-                        {format(new Date(selectedOrder.created_at), "MMM dd, yyyy 'at' hh:mm a")}
-                      </span>
-                    </div>
-                    {selectedOrder.approved_at && (
-                      <div className="col-span-2">
-                        <span className="text-gray-500">Approved:</span>
-                        <span className="ml-2 font-medium text-green-600">
-                          {format(new Date(selectedOrder.approved_at), "MMM dd, yyyy 'at' hh:mm a")}
-                        </span>
-                      </div>
-                    )}
-                    {selectedOrder.rejected_at && (
-                      <div className="col-span-2">
-                        <span className="text-gray-500">Rejected:</span>
-                        <span className="ml-2 font-medium text-red-600">
-                          {format(new Date(selectedOrder.rejected_at), "MMM dd, yyyy 'at' hh:mm a")}
-                        </span>
-                      </div>
-                    )}
-                    {selectedOrder.rejection_reason && (
-                      <div className="col-span-2">
-                        <span className="text-gray-500">Rejection Reason:</span>
-                        <p className="mt-1 text-gray-900">{selectedOrder.rejection_reason}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Delivery Progress Section */}
-                {selectedOrder.delivery_progress && (
-                  <div className="bg-blue-50 rounded-lg p-3 md:p-4 border border-blue-100">
-                    <div className="flex items-center justify-between mb-2 md:mb-3">
-                      <h4 className="font-semibold text-sm md:text-base text-gray-900 flex items-center gap-2">
-                        <Truck className="h-4 w-4 md:h-5 md:w-5 text-blue-600" />
-                        Delivery Progress
-                      </h4>
-                      <span className={cn(
-                        "px-2 py-0.5 rounded-full text-xs font-medium inline-flex items-center",
-                        getDeliveryProgressColor(selectedOrder.delivery_progress)
-                      )}>
-                        {getDeliveryProgressIcon(selectedOrder.delivery_progress)}
-                        <span className="ml-1">{getDeliveryProgressLabel(selectedOrder.delivery_progress)}</span>
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 md:gap-3 text-sm">
-                      <div className="bg-white rounded p-2">
-                        <span className="text-gray-500 block text-xs">Ordered Qty</span>
-                        <span className="font-semibold text-gray-900 text-base md:text-lg">
-                          {selectedOrder.ordered_qty?.toFixed(2) || '0.00'}
-                        </span>
-                      </div>
-                      <div className="bg-white rounded p-2">
-                        <span className="text-gray-500 block text-xs">Delivered Qty</span>
-                        <span className="font-semibold text-blue-600 text-base md:text-lg">
-                          {selectedOrder.delivered_qty?.toFixed(2) || '0.00'}
-                        </span>
-                      </div>
-                      <div className="bg-white rounded p-2">
-                        <span className="text-gray-500 block text-xs">Remaining Qty</span>
-                        <span className="font-semibold text-orange-600 text-base md:text-lg">
-                          {selectedOrder.remaining_qty?.toFixed(2) || '0.00'}
-                        </span>
-                      </div>
-                      <div className="bg-white rounded p-2">
-                        <span className="text-gray-500 block text-xs">Delivered Value</span>
-                        <span className="font-semibold text-green-600 text-base md:text-lg">
-                          {formatCurrency(selectedOrder.delivered_value || 0)}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="mt-2 md:mt-3">
-                      <Button
-                        variant="accent"
-                        leftIcon={<Truck className="h-4 w-4" />}
-                        onClick={() => {
-                          fetchDeliveries(selectedOrder.id);
-                          setShowDeliveriesModal(true);
-                        }}
-                        className="w-full"
-                      >
-                        View Deliveries
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Fixed Footer with Action Buttons */}
-            <div className="flex-shrink-0 border-t border-gray-200 p-3 md:p-4 bg-gray-50">
-              <div className="flex flex-col sm:flex-row gap-2 md:gap-3">
-                {/* Cancel button - always visible */}
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    setShowDetailModal(false);
-                    setSelectedOrder(null);
-                  }}
-                  className="flex-1 order-last sm:order-first"
-                >
-                  Close
-                </Button>
-                
-                {/* Approve/Reject buttons - show for pending orders */}
-                {selectedOrder.status === 'pending' && (
-                  <>
-                    <Button
-                      variant="danger"
-                      leftIcon={<XCircle className="h-4 w-4" />}
-                      onClick={() => {
-                        setDecisionAction('reject');
-                        setShowDetailModal(false);
-                        setDecisionModalOpen(true);
-                      }}
-                      className="flex-1"
-                    >
-                      Reject Order
-                    </Button>
-                    <Button
-                      variant="primary"
-                      leftIcon={<CheckCircle className="h-4 w-4" />}
-                      onClick={() => {
-                        setDecisionAction('approve');
-                        setShowDetailModal(false);
-                        setDecisionModalOpen(true);
-                      }}
-                      className="flex-1"
-                    >
-                      Approve Order
-                    </Button>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Order Detail Modal - Using Portal */}
+      <OrderDetailModal
+        isOpen={showDetailModal}
+        order={selectedOrder}
+        onClose={() => {
+          setShowDetailModal(false);
+          setSelectedOrder(null);
+        }}
+        onApprove={() => {
+          setDecisionAction('approve');
+          setShowDetailModal(false);
+          setDecisionModalOpen(true);
+        }}
+        onReject={() => {
+          setDecisionAction('reject');
+          setShowDetailModal(false);
+          setDecisionModalOpen(true);
+        }}
+        onViewDeliveries={() => {
+          if (selectedOrder) {
+            fetchDeliveries(selectedOrder.id);
+            setShowDeliveriesModal(true);
+          }
+        }}
+        formatCurrency={formatCurrency}
+        getStatusColor={getStatusColor}
+        getDeliveryProgressColor={getDeliveryProgressColor}
+        getDeliveryProgressIcon={getDeliveryProgressIcon}
+        getDeliveryProgressLabel={getDeliveryProgressLabel}
+      />
 
       {/* Deliveries Modal */}
       {showDeliveriesModal && selectedOrder && (
