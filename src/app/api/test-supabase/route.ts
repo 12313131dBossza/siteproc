@@ -19,14 +19,14 @@ export async function GET() {
     
     const supabase = createClient(supabaseUrl, supabaseKey);
     
-    // Test basic connection using secure getUser()
-    const { data, error } = await supabase.auth.getUser();
+    // Test basic connection
+    const { data, error } = await supabase.auth.getSession();
     
     return NextResponse.json({
       success: true,
       supabaseConnected: true,
-      authError: error?.message || null,
-      hasUser: !!data.user
+      sessionError: error?.message || null,
+      hasSession: !!data.session
     });
     
   } catch (error: any) {

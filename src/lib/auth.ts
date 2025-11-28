@@ -32,13 +32,12 @@ export function getSupabaseServer() {
 
 export async function getSessionProfile(): Promise<SessionProfile> {
   const supabase = getSupabaseServer()
-  // Use getUser() instead of getSession() for secure server-side authentication
-  // getSession() reads from cookies which could be tampered with
-  const { data: { user }, error } = await supabase.auth.getUser()
-  if (error || !user) return { user: null, companyId: null, role: null, profile: null }
-  const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) return { user: null, companyId: null, role: null, profile: null }
+  const u = session.user
+  const { data: profile } = await supabase.from('profiles').select('*').eq('id', u.id).single()
   return {
-    user: { id: user.id, email: user.email },
+    user: { id: u.id, email: u.email },
     companyId: profile?.company_id ?? null,
     role: profile?.role ?? null,
     profile: profile || null,

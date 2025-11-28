@@ -1066,6 +1066,7 @@ export default function OrdersPage() {
         onViewDeliveries={() => {
           if (selectedOrder) {
             fetchDeliveries(selectedOrder.id);
+            setShowDetailModal(false); // Close order details first
             setShowDeliveriesModal(true);
           }
         }}
