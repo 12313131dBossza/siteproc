@@ -8,7 +8,7 @@ import {
   X, Loader2, CheckCheck, Paperclip, ArrowLeft, Smile, Reply, 
   Edit2, Trash2, Pin, FileText, Image as ImageIcon, Bookmark, Forward,
   Calendar, AtSign, Zap, Filter, ChevronDown, Mic, Square, Package,
-  ExternalLink, DollarSign, MapPin, Navigation
+  ExternalLink, DollarSign, MapPin, Navigation, MoreVertical
 } from 'lucide-react';
 
 interface Project {
@@ -137,6 +137,9 @@ export default function MessagesPage() {
   
   // Location sharing states
   const [sharingLocation, setSharingLocation] = useState(false);
+  
+  // Mobile chat menu state
+  const [showMobileChatMenu, setShowMobileChatMenu] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
@@ -1517,9 +1520,58 @@ export default function MessagesPage() {
                 ) : (
                   <div className="flex items-center gap-1 md:gap-2">
                     <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,audio/*" />
+                    
+                    {/* Attach file - always visible */}
                     <button onClick={() => fileInputRef.current?.click()} disabled={uploading} className="p-2 hover:bg-gray-100 rounded-full flex-shrink-0" title="Attach file">
                       {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Paperclip className="w-5 h-5 text-gray-500" />}
                     </button>
+                    
+                    {/* Mobile: 3-dot menu for more options */}
+                    <div className="relative md:hidden">
+                      <button 
+                        onClick={() => setShowMobileChatMenu(!showMobileChatMenu)} 
+                        className={`p-2 rounded-full flex-shrink-0 ${showMobileChatMenu ? 'bg-gray-200' : 'hover:bg-gray-100'}`}
+                      >
+                        <MoreVertical className="w-5 h-5 text-gray-500" />
+                      </button>
+                      
+                      {/* Mobile Chat Menu Dropdown */}
+                      {showMobileChatMenu && (
+                        <div className="absolute bottom-full left-0 mb-2 bg-white rounded-xl shadow-lg border py-2 w-48 z-30">
+                          <button 
+                            onClick={() => { startRecording(); setShowMobileChatMenu(false); }} 
+                            className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left"
+                          >
+                            <Mic className="w-5 h-5 text-purple-500" />
+                            <span className="text-sm text-gray-700">Voice Message</span>
+                          </button>
+                          <button 
+                            onClick={() => { shareLocation(); setShowMobileChatMenu(false); }} 
+                            disabled={sharingLocation}
+                            className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left disabled:opacity-50"
+                          >
+                            <MapPin className="w-5 h-5 text-green-500" />
+                            <span className="text-sm text-gray-700">Share Location</span>
+                          </button>
+                          <button 
+                            onClick={() => { setShowOrderPicker(true); loadProjectOrders(); setShowMobileChatMenu(false); }} 
+                            className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left"
+                          >
+                            <Package className="w-5 h-5 text-orange-500" />
+                            <span className="text-sm text-gray-700">Order Reference</span>
+                          </button>
+                          <button 
+                            onClick={() => { setShowTemplates(true); setShowMobileChatMenu(false); }} 
+                            className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-left"
+                          >
+                            <Zap className="w-5 h-5 text-blue-500" />
+                            <span className="text-sm text-gray-700">Quick Templates</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Desktop: Show all buttons inline */}
                     <button onClick={startRecording} className="p-2 hover:bg-gray-100 rounded-full flex-shrink-0 hidden md:flex" title="Voice message">
                       <Mic className="w-5 h-5 text-gray-500" />
                     </button>
@@ -1541,6 +1593,8 @@ export default function MessagesPage() {
                     <button onClick={() => setShowTemplates(!showTemplates)} className={`p-2 rounded-full flex-shrink-0 hidden md:flex ${showTemplates ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-500'}`} title="Quick templates">
                       <Zap className="w-5 h-5" />
                     </button>
+                    
+                    {/* Input field */}
                     <div className="flex-1 relative min-w-0">
                       <input
                         ref={inputRef}
@@ -1555,14 +1609,18 @@ export default function MessagesPage() {
                             setShowMentions(false);
                             setShowTemplates(false);
                             setShowOrderPicker(false);
+                            setShowMobileChatMenu(false);
                           }
                         }}
+                        onFocus={() => setShowMobileChatMenu(false)}
                         placeholder={editingMessage ? 'Edit message...' : 'Type a message...'}
                         className="w-full px-4 py-3 md:py-2.5 border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder:text-gray-400 text-base bg-white"
                         disabled={sending}
                         style={{ fontSize: '16px' }}
                       />
                     </div>
+                    
+                    {/* Send button */}
                     <button
                       onClick={handleSendMessage}
                       disabled={!newMessage.trim() || sending}
