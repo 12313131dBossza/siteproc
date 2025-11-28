@@ -33,8 +33,6 @@ export async function GET(request: NextRequest) {
 
     const userRole = profile?.role || 'viewer';
     const isCompanyMember = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(userRole);
-    const isClient = userRole === 'viewer' || userRole === 'client';
-    const isSupplier = userRole === 'supplier';
 
     console.log('Messages GET - User:', user.id, 'Role:', userRole, 'Project:', projectId, 'Channel:', channel);
 
@@ -49,43 +47,32 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
+    // Check if user is a member of this project (for external users)
+    const { data: projectMembership } = await adminClient
+      .from('project_members')
+      .select('id, external_type')
+      .eq('user_id', user.id)
+      .eq('project_id', projectId)
+      .eq('status', 'active')
+      .maybeSingle();
+
+    const isSupplierForProject = projectMembership?.external_type === 'supplier';
+    const isClientForProject = projectMembership?.external_type === 'client';
+
     // Verify access
     let hasAccess = false;
     
     if (isCompanyMember && profile?.company_id === project.company_id) {
       // Company member with matching company
       hasAccess = true;
-    } else if (isSupplier && channel === 'company_supplier') {
-      // Check if supplier is assigned to this project via project_members
-      const { data: membership } = await adminClient
-        .from('project_members')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('project_id', projectId)
-        .eq('status', 'active')
-        .eq('external_type', 'supplier')
-        .maybeSingle();
-      
-      if (membership) {
-        hasAccess = true;
-      }
-    } else if (isClient && channel === 'company_client') {
-      // Check if client is member of this project
-      const { data: membership } = await adminClient
-        .from('project_members')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('project_id', projectId)
-        .eq('status', 'active')
-        .maybeSingle();
-      
-      if (membership) {
-        hasAccess = true;
-      }
+    } else if (isSupplierForProject && channel === 'company_supplier') {
+      hasAccess = true;
+    } else if (isClientForProject && channel === 'company_client') {
+      hasAccess = true;
     }
 
     if (!hasAccess) {
-      console.log('Access denied for user:', user.id, 'Role:', userRole);
+      console.log('Access denied for user:', user.id, 'Role:', userRole, 'Membership:', projectMembership);
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
@@ -207,8 +194,6 @@ export async function POST(request: NextRequest) {
 
     const userRole = profile?.role || 'viewer';
     const isCompanyMember = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(userRole);
-    const isClient = userRole === 'viewer' || userRole === 'client';
-    const isSupplier = userRole === 'supplier';
 
     console.log('Message POST - User:', user.id, 'Role:', userRole, 'Project:', project_id, 'Channel:', channel);
 
@@ -223,6 +208,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
+    // Check if user is a member of this project (for external users)
+    const { data: projectMembership } = await adminClient
+      .from('project_members')
+      .select('id, external_type')
+      .eq('user_id', user.id)
+      .eq('project_id', project_id)
+      .eq('status', 'active')
+      .maybeSingle();
+
+    const isSupplierForProject = projectMembership?.external_type === 'supplier';
+    const isClientForProject = projectMembership?.external_type === 'client';
+
+    console.log('Project membership:', projectMembership, 'isSupplier:', isSupplierForProject, 'isClient:', isClientForProject);
+
     // Determine sender_type and validate access
     let senderType = '';
     let hasAccess = false;
@@ -230,37 +229,12 @@ export async function POST(request: NextRequest) {
     if (isCompanyMember && profile?.company_id === project.company_id) {
       senderType = 'company';
       hasAccess = true;
-    } else if (isSupplier && channel === 'company_supplier') {
-      // Verify supplier is member of this project
-      const { data: membership } = await adminClient
-        .from('project_members')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('project_id', project_id)
-        .eq('status', 'active')
-        .eq('external_type', 'supplier')
-        .maybeSingle();
-      
-      console.log('Supplier membership check:', membership);
-      
-      if (membership) {
-        senderType = 'supplier';
-        hasAccess = true;
-      }
-    } else if (isClient && channel === 'company_client') {
-      // Verify client is member of project
-      const { data: membership } = await adminClient
-        .from('project_members')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('project_id', project_id)
-        .eq('status', 'active')
-        .maybeSingle();
-      
-      if (membership) {
-        senderType = 'client';
-        hasAccess = true;
-      }
+    } else if (isSupplierForProject && channel === 'company_supplier') {
+      senderType = 'supplier';
+      hasAccess = true;
+    } else if (isClientForProject && channel === 'company_client') {
+      senderType = 'client';
+      hasAccess = true;
     }
 
     console.log('Access check result:', hasAccess, 'Sender type:', senderType);
