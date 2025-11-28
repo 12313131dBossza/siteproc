@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { Suspense } from 'react'
 import PWAInitializer from '@/components/PWAInitializer'
 import { NotificationBell } from '@/components/NotificationBell'
-import { MobileBottomNav } from '@/components/MobileBottomNav'
 import GlobalSearch from '@/components/GlobalSearch'
 
 export const metadata: Metadata = {
@@ -32,37 +31,15 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function AppLayout({
+export default function AppLayoutWrapper({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
     <>
-      {/* Simple top bar - Desktop only */}
-      <nav className="hidden md:flex w-full p-3 justify-between items-center border-b border-black/10 dark:border-white/10 bg-white">
-        <Link href="/" className="font-semibold">SiteProc</Link>
-        <Suspense>
-          <div className="flex items-center gap-4">
-            <GlobalSearch />
-            <NotificationBell />
-            <div id="offline-indicator" className="flex items-center gap-2">
-              <span id="offline-badge" className="text-sm bg-yellow-200 text-yellow-900 px-2 py-1 rounded hidden">
-                Sync pending
-              </span>
-              <span id="install-badge" className="text-sm bg-blue-200 text-blue-900 px-2 py-1 rounded cursor-pointer hidden">
-                Install App
-              </span>
-            </div>
-          </div>
-        </Suspense>
-      </nav>
-      
-      {/* Main content */}
+      {/* Main content - MobileBottomNav is now included in AppLayout component */}
       {children}
-      
-      {/* Mobile Bottom Navigation */}
-      <MobileBottomNav />
       
       {/* PWA Initializer */}
       <PWAInitializer />

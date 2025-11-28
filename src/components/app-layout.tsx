@@ -4,6 +4,7 @@ import { SidebarNav } from "./sidebar-nav";
 import { Bell, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NotificationBell } from "./NotificationBell";
+import { MobileBottomNav } from "./MobileBottomNav";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -65,10 +66,13 @@ export function AppLayout({ children, title, description, actions }: AppLayoutPr
         </header>
 
         {/* Page content - Add padding bottom for mobile nav */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-gray-50 pb-16 md:pb-0 max-w-full">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-gray-50 pb-20 md:pb-0 max-w-full">
           {children}
         </main>
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav />
     </div>
   );
 }
