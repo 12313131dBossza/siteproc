@@ -865,9 +865,11 @@ export default function MessagesPage() {
 
   return (
     <AppLayout>
-      <div className="h-[calc(100vh-3.5rem-4rem)] md:h-[calc(100vh-4rem)] flex bg-white fixed inset-x-0 top-14 md:top-16 bottom-16 md:bottom-0 md:relative md:inset-auto overflow-hidden">
-        {/* Left Panel - Projects */}
-        <div className={`w-full md:w-96 border-r border-gray-200 flex flex-col overflow-hidden ${selectedProject ? 'hidden md:flex' : 'flex'}`}>
+      <div className="flex flex-col bg-white h-[100dvh] md:h-[calc(100vh-4rem)] fixed inset-0 top-14 md:relative md:top-0 z-10">
+        {/* Mobile: Account for bottom nav */}
+        <div className="flex flex-1 overflow-hidden pb-16 md:pb-0">
+          {/* Left Panel - Projects */}
+          <div className={`w-full md:w-96 border-r border-gray-200 flex flex-col overflow-hidden ${selectedProject ? 'hidden md:flex' : 'flex'}`}>
           <div className="p-4 border-b border-gray-200">
             <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
               <MessageCircle className="w-6 h-6 text-blue-600" />
@@ -1003,10 +1005,10 @@ export default function MessagesPage() {
               })
             )}
           </div>
-        </div>
+          </div>
 
-        {/* Right Panel - Chat */}
-        <div className={`flex-1 flex flex-col overflow-hidden ${selectedProject && selectedChannel ? 'flex' : 'hidden md:flex'}`}>
+          {/* Right Panel - Chat */}
+          <div className={`flex-1 flex flex-col overflow-hidden ${selectedProject && selectedChannel ? 'flex' : 'hidden md:flex'}`}>
           {selectedProject && selectedChannel ? (
             <>
               {/* Header */}
@@ -1641,6 +1643,7 @@ export default function MessagesPage() {
               </div>
             </div>
           )}
+        </div>
         </div>
       </div>
 
