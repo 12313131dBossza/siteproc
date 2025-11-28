@@ -312,7 +312,7 @@ export default function ProjectsPage() {
           </div>
         </div>
 
-        {loading ? (<div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">{Array.from({ length: 6 }).map((_, i) => (<div key={i} className="animate-pulse bg-white border border-gray-200 rounded-lg p-4 md:p-6"><div className="h-5 w-40 bg-gray-200 rounded mb-2" /><div className="h-3 w-24 bg-gray-100 rounded mb-4" /><div className="grid grid-cols-3 gap-3"><div className="h-4 bg-gray-100 rounded" /><div className="h-4 bg-gray-100 rounded" /><div className="h-4 bg-gray-100 rounded" /></div></div>))}</div>) : filteredProjects.length === 0 ? (<div className="text-center py-12 bg-white rounded-lg border border-gray-200"><FolderOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" /><h3 className="text-lg font-medium text-gray-900 mb-2">{searchTerm ? "No projects found" : "No projects yet"}</h3><p className="text-gray-500 mb-4">{searchTerm ? "Try adjusting your search criteria" : "Create your first project to track budget, actuals, and deliveries"}</p>{!searchTerm && (<Button onClick={() => setShowCreateModal(true)} className="mx-auto"><Plus className="h-4 w-4 mr-2" />Create Project</Button>)}</div>) : (<div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">{filteredProjects.map(p => (<ProjectCard key={p.id} project={p} formatCurrency={formatCurrency} />))}</div>)}
+        {loading ? (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">{Array.from({ length: 6 }).map((_, i) => (<div key={i} className="animate-pulse bg-white border border-gray-200 rounded-lg p-4 md:p-6"><div className="h-5 w-40 bg-gray-200 rounded mb-2" /><div className="h-3 w-24 bg-gray-100 rounded mb-4" /><div className="grid grid-cols-3 gap-3"><div className="h-4 bg-gray-100 rounded" /><div className="h-4 bg-gray-100 rounded" /><div className="h-4 bg-gray-100 rounded" /></div></div>))}</div>) : filteredProjects.length === 0 ? (<div className="text-center py-12 bg-white rounded-lg border border-gray-200"><FolderOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" /><h3 className="text-lg font-medium text-gray-900 mb-2">{searchTerm ? "No projects found" : "No projects yet"}</h3><p className="text-gray-500 mb-4">{searchTerm ? "Try adjusting your search criteria" : "Create your first project to track budget, actuals, and deliveries"}</p>{!searchTerm && (<Button onClick={() => setShowCreateModal(true)} className="mx-auto"><Plus className="h-4 w-4 mr-2" />Create Project</Button>)}</div>) : (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">{filteredProjects.map(p => (<ProjectCard key={p.id} project={p} formatCurrency={formatCurrency} />))}</div>)}
 
         <FormModal
           isOpen={showCreateModal}
@@ -383,16 +383,43 @@ function ProjectCard({ project, formatCurrency }: { project: Project; formatCurr
   const variancePercentage = Number(project.budget) > 0 ? (variance / Number(project.budget)) * 100 : 0;
 
   return (
-    <div onClick={() => router.push(`/projects/${project.id}`)} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg hover:border-blue-300 transition-all cursor-pointer group">
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
-          <h3 className="font-semibold text-lg text-gray-900 group-hover:text-blue-600 transition-colors">{project.name}</h3>
-          {project.code && (<p className="text-sm text-gray-500 mt-1">Code: {project.code}</p>)}
+    <div onClick={() => router.push(`/projects/${project.id}`)} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-lg hover:border-blue-300 transition-all cursor-pointer group">
+      {/* Header */}
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-base text-gray-900 group-hover:text-blue-600 transition-colors truncate">{project.name}</h3>
+          {project.code && (<p className="text-xs text-gray-500 mt-0.5">Code: {project.code}</p>)}
         </div>
-        <span className={cn("px-3 py-1 text-xs font-medium rounded-full", project.status === "active" && "bg-green-100 text-green-800", project.status === "on_hold" && "bg-yellow-100 text-yellow-800", project.status === "closed" && "bg-gray-100 text-gray-800")}>{project.status === "on_hold" ? "On Hold" : project.status.charAt(0).toUpperCase() + project.status.slice(1)}</span>
+        <span className={cn("px-2 py-0.5 text-xs font-medium rounded-full ml-2 flex-shrink-0", project.status === "active" && "bg-green-100 text-green-800", project.status === "on_hold" && "bg-yellow-100 text-yellow-800", project.status === "closed" && "bg-gray-100 text-gray-800")}>{project.status === "on_hold" ? "On Hold" : project.status.charAt(0).toUpperCase() + project.status.slice(1)}</span>
       </div>
-      <div className="space-y-3"><div className="grid grid-cols-3 gap-4"><div><p className="text-xs text-gray-500 mb-1">Budget</p><p className="text-sm font-semibold text-gray-900">{formatCurrency(Number(project.budget))}</p></div><div><p className="text-xs text-gray-500 mb-1">Actual</p><p className="text-sm font-semibold text-gray-900">{formatCurrency(Number(project.rollup?.actual_expenses || 0))}</p></div><div><p className="text-xs text-gray-500 mb-1">Variance</p><p className={cn("text-sm font-semibold", variance >= 0 ? "text-green-600" : "text-red-600")}>{formatCurrency(variance)}</p></div></div><div className="pt-3 border-t border-gray-100"><div className="flex items-center justify-between"><div className="flex items-center gap-2"><div className={cn("h-2 w-2 rounded-full", variance >= 0 ? "bg-green-500" : "bg-red-500")} /><span className="text-xs text-gray-500">{variance >= 0 ? "On Budget" : "Over Budget"}</span></div><span className={cn("text-xs font-medium", variancePercentage >= 0 ? "text-green-600" : "text-red-600")}>{variancePercentage >= 0 ? "+" : ""}{variancePercentage.toFixed(1)}%</span></div></div></div>
-      <div className="mt-4 flex items-center justify-between text-xs text-gray-500"><span>Click to view details</span><Eye className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" /></div>
+      
+      {/* Budget Info - Horizontal on mobile */}
+      <div className="flex items-center justify-between text-sm mb-2">
+        <div>
+          <span className="text-gray-500">Budget: </span>
+          <span className="font-medium text-gray-900">{formatCurrency(Number(project.budget))}</span>
+        </div>
+        <div>
+          <span className="text-gray-500">Actual: </span>
+          <span className="font-medium text-gray-900">{formatCurrency(Number(project.rollup?.actual_expenses || 0))}</span>
+        </div>
+      </div>
+      
+      {/* Variance Row */}
+      <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+        <div className="flex items-center gap-1.5">
+          <div className={cn("h-2 w-2 rounded-full", variance >= 0 ? "bg-green-500" : "bg-red-500")} />
+          <span className="text-xs text-gray-600">{variance >= 0 ? "On Budget" : "Over Budget"}</span>
+        </div>
+        <div className="text-right">
+          <span className={cn("text-sm font-semibold", variance >= 0 ? "text-green-600" : "text-red-600")}>
+            {formatCurrency(Math.abs(variance))}
+          </span>
+          <span className={cn("text-xs ml-1", variancePercentage >= 0 ? "text-green-600" : "text-red-600")}>
+            ({variancePercentage >= 0 ? "+" : ""}{variancePercentage.toFixed(1)}%)
+          </span>
+        </div>
+      </div>
     </div>
   );
 }
