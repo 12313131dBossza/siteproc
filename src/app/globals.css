@@ -32,6 +32,12 @@ html {
   max-width: 100vw;
 }
 
+/* Prevent iOS bounce/overscroll on body */
+html, body {
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Note: Avoid global max-width on * selector to not break SVG (charts) */
 
 /* Mobile bottom navigation safe area */
@@ -43,6 +49,10 @@ html {
 @media (max-width: 768px) {
   body {
     padding-bottom: calc(64px + env(safe-area-inset-bottom));
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
   }
 }
 

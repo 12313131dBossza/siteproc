@@ -862,9 +862,9 @@ export default function MessagesPage() {
 
   return (
     <AppLayout>
-      <div className="h-[calc(100vh-4rem)] md:h-[calc(100vh-4rem)] flex bg-white" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      <div className="h-[calc(100vh-3.5rem)] md:h-[calc(100vh-4rem)] flex bg-white fixed inset-x-0 top-14 md:top-16 bottom-0 md:relative md:inset-auto overflow-hidden">
         {/* Left Panel - Projects */}
-        <div className={`w-full md:w-96 border-r border-gray-200 flex flex-col ${selectedProject ? 'hidden md:flex' : 'flex'} pb-20 md:pb-0`}>
+        <div className={`w-full md:w-96 border-r border-gray-200 flex flex-col overflow-hidden ${selectedProject ? 'hidden md:flex' : 'flex'}`}>
           <div className="p-4 border-b border-gray-200">
             <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
               <MessageCircle className="w-6 h-6 text-blue-600" />
@@ -1003,7 +1003,7 @@ export default function MessagesPage() {
         </div>
 
         {/* Right Panel - Chat */}
-        <div className={`flex-1 flex flex-col ${selectedProject && selectedChannel ? 'flex' : 'hidden md:flex'} pb-16 md:pb-0`}>
+        <div className={`flex-1 flex flex-col overflow-hidden ${selectedProject && selectedChannel ? 'flex' : 'hidden md:flex'}`}>
           {selectedProject && selectedChannel ? (
             <>
               {/* Header */}
@@ -1405,7 +1405,7 @@ export default function MessagesPage() {
                 </div>
               )}
 
-              <div className="p-4 border-t border-gray-200 bg-white relative">
+              <div className="p-3 md:p-4 border-t border-gray-200 bg-white relative" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
                 {/* @ Mentions dropdown */}
                 {showMentions && getMentionableUsers().length > 0 && (
                   <div className="absolute bottom-full left-4 mb-2 bg-white rounded-lg shadow-lg border max-h-40 overflow-y-auto w-64 z-20">
@@ -1515,33 +1515,33 @@ export default function MessagesPage() {
                     </button>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 md:gap-2">
                     <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,audio/*" />
-                    <button onClick={() => fileInputRef.current?.click()} disabled={uploading} className="p-2 hover:bg-gray-100 rounded-full" title="Attach file">
+                    <button onClick={() => fileInputRef.current?.click()} disabled={uploading} className="p-2 hover:bg-gray-100 rounded-full flex-shrink-0" title="Attach file">
                       {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Paperclip className="w-5 h-5 text-gray-500" />}
                     </button>
-                    <button onClick={startRecording} className="p-2 hover:bg-gray-100 rounded-full" title="Voice message">
+                    <button onClick={startRecording} className="p-2 hover:bg-gray-100 rounded-full flex-shrink-0 hidden md:flex" title="Voice message">
                       <Mic className="w-5 h-5 text-gray-500" />
                     </button>
                     <button 
                       onClick={shareLocation}
                       disabled={sharingLocation}
-                      className="p-2 hover:bg-gray-100 rounded-full"
+                      className="p-2 hover:bg-gray-100 rounded-full flex-shrink-0 hidden md:flex"
                       title="Share location"
                     >
                       {sharingLocation ? <Loader2 className="w-5 h-5 animate-spin text-gray-500" /> : <MapPin className="w-5 h-5 text-gray-500" />}
                     </button>
                     <button 
                       onClick={() => { setShowOrderPicker(!showOrderPicker); if (!showOrderPicker) loadProjectOrders(); }} 
-                      className={`p-2 rounded-full ${showOrderPicker ? 'bg-orange-100 text-orange-600' : 'hover:bg-gray-100 text-gray-500'}`} 
+                      className={`p-2 rounded-full flex-shrink-0 hidden md:flex ${showOrderPicker ? 'bg-orange-100 text-orange-600' : 'hover:bg-gray-100 text-gray-500'}`} 
                       title="Reference an order"
                     >
                       <Package className="w-5 h-5" />
                     </button>
-                    <button onClick={() => setShowTemplates(!showTemplates)} className={`p-2 rounded-full ${showTemplates ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-500'}`} title="Quick templates">
+                    <button onClick={() => setShowTemplates(!showTemplates)} className={`p-2 rounded-full flex-shrink-0 hidden md:flex ${showTemplates ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-500'}`} title="Quick templates">
                       <Zap className="w-5 h-5" />
                     </button>
-                    <div className="flex-1 relative">
+                    <div className="flex-1 relative min-w-0">
                       <input
                         ref={inputRef}
                         type="text"
@@ -1558,7 +1558,7 @@ export default function MessagesPage() {
                           }
                         }}
                         placeholder={editingMessage ? 'Edit message...' : 'Type a message...'}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder:text-gray-400 text-base bg-white"
+                        className="w-full px-4 py-3 md:py-2.5 border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder:text-gray-400 text-base bg-white"
                         disabled={sending}
                         style={{ fontSize: '16px' }}
                       />
@@ -1566,7 +1566,7 @@ export default function MessagesPage() {
                     <button
                       onClick={handleSendMessage}
                       disabled={!newMessage.trim() || sending}
-                      className={`p-2.5 rounded-full text-white ${selectedChannel === 'company_supplier' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'} disabled:bg-gray-300`}
+                      className={`p-3 md:p-2.5 rounded-full text-white flex-shrink-0 ${selectedChannel === 'company_supplier' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'} disabled:bg-gray-300`}
                     >
                       {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                     </button>
