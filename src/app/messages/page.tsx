@@ -862,7 +862,7 @@ export default function MessagesPage() {
 
   return (
     <AppLayout>
-      <div className="h-[calc(100vh-3.5rem)] md:h-[calc(100vh-4rem)] flex bg-white fixed inset-x-0 top-14 md:top-16 bottom-0 md:relative md:inset-auto overflow-hidden">
+      <div className="h-[calc(100vh-3.5rem-4rem)] md:h-[calc(100vh-4rem)] flex bg-white fixed inset-x-0 top-14 md:top-16 bottom-16 md:bottom-0 md:relative md:inset-auto overflow-hidden">
         {/* Left Panel - Projects */}
         <div className={`w-full md:w-96 border-r border-gray-200 flex flex-col overflow-hidden ${selectedProject ? 'hidden md:flex' : 'flex'}`}>
           <div className="p-4 border-b border-gray-200">
