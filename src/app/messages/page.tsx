@@ -868,11 +868,13 @@ export default function MessagesPage() {
 
   return (
     <div className="flex flex-col bg-white fixed inset-0 overflow-hidden" style={{ height: '100dvh' }}>
-      {/* Mobile Header */}
-      <div className="md:hidden flex items-center justify-between p-3 border-b bg-white flex-shrink-0 z-20">
-        <span className="font-bold text-lg text-blue-600">SiteProc</span>
-        <div className="w-8 h-8 rounded-full bg-red-500 text-white flex items-center justify-center text-xs">4</div>
-      </div>
+      {/* Mobile Header - only show when NOT in a chat */}
+      {!(selectedProject && selectedChannel) && (
+        <div className="md:hidden flex items-center justify-between p-3 border-b bg-white flex-shrink-0 z-20">
+          <span className="font-bold text-lg text-blue-600">SiteProc</span>
+          <div className="w-8 h-8 rounded-full bg-red-500 text-white flex items-center justify-center text-xs">4</div>
+        </div>
+      )}
       
       {/* Main Content - fills available space */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
@@ -1655,29 +1657,31 @@ export default function MessagesPage() {
         </div>
       </div>
 
-      {/* Mobile Bottom Navigation */}
-      <nav className="md:hidden flex-shrink-0 flex items-center justify-around bg-white border-t border-gray-200" style={{ height: '60px', paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        <a href="/dashboard" className="flex flex-col items-center gap-1 text-gray-500">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
-          <span className="text-[10px]">Dashboard</span>
-        </a>
-        <a href="/projects" className="flex flex-col items-center gap-1 text-gray-500">
-          <FolderOpen className="w-6 h-6" />
-          <span className="text-[10px]">Projects</span>
-        </a>
-        <div className="flex flex-col items-center gap-1 text-blue-600">
-          <MessageCircle className="w-6 h-6" />
-          <span className="text-[10px] font-semibold">Messages</span>
-        </div>
-        <a href="/orders" className="flex flex-col items-center gap-1 text-gray-500">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-          <span className="text-[10px]">Orders</span>
-        </a>
-        <a href="/settings" className="flex flex-col items-center gap-1 text-gray-500">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" /></svg>
-          <span className="text-[10px]">More</span>
-        </a>
-      </nav>
+      {/* Mobile Bottom Navigation - only show when NOT in a chat */}
+      {!(selectedProject && selectedChannel) && (
+        <nav className="md:hidden flex-shrink-0 flex items-center justify-around bg-white border-t border-gray-200" style={{ height: '60px', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+          <a href="/dashboard" className="flex flex-col items-center gap-1 text-gray-500">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+            <span className="text-[10px]">Dashboard</span>
+          </a>
+          <a href="/projects" className="flex flex-col items-center gap-1 text-gray-500">
+            <FolderOpen className="w-6 h-6" />
+            <span className="text-[10px]">Projects</span>
+          </a>
+          <div className="flex flex-col items-center gap-1 text-blue-600">
+            <MessageCircle className="w-6 h-6" />
+            <span className="text-[10px] font-semibold">Messages</span>
+          </div>
+          <a href="/orders" className="flex flex-col items-center gap-1 text-gray-500">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+            <span className="text-[10px]">Orders</span>
+          </a>
+          <a href="/settings" className="flex flex-col items-center gap-1 text-gray-500">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" /></svg>
+            <span className="text-[10px]">More</span>
+          </a>
+        </nav>
+      )}
 
       {/* Image Preview Modal */}
       {imagePreview && (
