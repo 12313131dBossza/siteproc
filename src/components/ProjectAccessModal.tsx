@@ -380,10 +380,7 @@ export function ProjectAccessModal({ projectId, projectName, isOpen, onClose }: 
     }
   }
 
-  // Don't render if not open
-  if (!isOpen) return null;
-
-  // Prevent body scroll when modal is open
+  // Prevent body scroll when modal is open - MUST be before any conditional returns
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -392,6 +389,9 @@ export function ProjectAccessModal({ projectId, projectName, isOpen, onClose }: 
       document.body.style.overflow = '';
     };
   }, [isOpen]);
+
+  // Don't render if not open
+  if (!isOpen) return null;
 
   const modalContent = (
     <div 
