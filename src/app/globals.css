@@ -167,3 +167,31 @@ table.sp-table tbody tr:hover { background:rgba(30,58,138,0.04); }
   background: #a8a8a8;
 }
 
+/* Mobile input text color fix - prevent gray text on iOS */
+input, textarea, select {
+  color: #111827 !important; /* text-gray-900 */
+  -webkit-text-fill-color: #111827 !important;
+  opacity: 1 !important;
+  font-size: 16px; /* Prevent iOS zoom on focus */
+}
+
+input::placeholder, textarea::placeholder {
+  color: #9CA3AF !important; /* text-gray-400 - visible but not too dark */
+  -webkit-text-fill-color: #9CA3AF !important;
+  opacity: 1 !important;
+}
+
+/* Ensure input backgrounds are white/visible */
+input:not([type="checkbox"]):not([type="radio"]),
+textarea,
+select {
+  background-color: white !important;
+}
+
+/* iOS safe area for bottom nav */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .pb-safe {
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  }
+}
+

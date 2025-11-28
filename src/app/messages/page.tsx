@@ -862,9 +862,9 @@ export default function MessagesPage() {
 
   return (
     <AppLayout>
-      <div className="h-[calc(100vh-4rem)] flex bg-white">
+      <div className="h-[calc(100vh-4rem)] md:h-[calc(100vh-4rem)] flex bg-white" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         {/* Left Panel - Projects */}
-        <div className={`w-full md:w-96 border-r border-gray-200 flex flex-col ${selectedProject ? 'hidden md:flex' : 'flex'}`}>
+        <div className={`w-full md:w-96 border-r border-gray-200 flex flex-col ${selectedProject ? 'hidden md:flex' : 'flex'} pb-20 md:pb-0`}>
           <div className="p-4 border-b border-gray-200">
             <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
               <MessageCircle className="w-6 h-6 text-blue-600" />
@@ -1003,7 +1003,7 @@ export default function MessagesPage() {
         </div>
 
         {/* Right Panel - Chat */}
-        <div className={`flex-1 flex flex-col ${selectedProject && selectedChannel ? 'flex' : 'hidden md:flex'}`}>
+        <div className={`flex-1 flex flex-col ${selectedProject && selectedChannel ? 'flex' : 'hidden md:flex'} pb-16 md:pb-0`}>
           {selectedProject && selectedChannel ? (
             <>
               {/* Header */}
@@ -1557,9 +1557,10 @@ export default function MessagesPage() {
                             setShowOrderPicker(false);
                           }
                         }}
-                        placeholder={editingMessage ? 'Edit message...' : 'Type a message... (use @ to mention)'}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500"
+                        placeholder={editingMessage ? 'Edit message...' : 'Type a message...'}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder:text-gray-400 text-base bg-white"
                         disabled={sending}
+                        style={{ fontSize: '16px' }}
                       />
                     </div>
                     <button

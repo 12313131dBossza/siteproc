@@ -10,6 +10,7 @@ import {
   FolderOpen,
   ShoppingCart,
   Receipt,
+  MessageCircle,
   MoreHorizontal,
 } from 'lucide-react';
 import { MobileMoreMenu } from './MobileMoreMenu';
@@ -21,8 +22,8 @@ import { MobileMoreMenu } from './MobileMoreMenu';
 const mobileNavItems = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, access: 'internal' },
   { name: 'Projects', href: '/projects', icon: FolderOpen, access: 'all' },
+  { name: 'Messages', href: '/messages', icon: MessageCircle, access: 'all' },
   { name: 'Orders', href: '/orders', icon: ShoppingCart, access: 'viewer' },
-  { name: 'Expenses', href: '/expenses', icon: Receipt, access: 'viewer' },
 ];
 
 export function MobileBottomNav() {
