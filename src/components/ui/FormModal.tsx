@@ -14,11 +14,11 @@ export interface FormModalProps {
 }
 
 const sizeMap = {
-  sm: 'max-w-md',
-  md: 'max-w-lg',
-  lg: 'max-w-2xl',
-  xl: 'max-w-4xl',
-  '2xl': 'max-w-6xl'
+  sm: 'md:max-w-md',
+  md: 'md:max-w-lg',
+  lg: 'md:max-w-2xl',
+  xl: 'md:max-w-4xl',
+  '2xl': 'md:max-w-6xl'
 };
 
 export function FormModal({
@@ -35,19 +35,19 @@ export function FormModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
+    <div className="fixed inset-0 z-50 md:flex md:items-center md:justify-center md:p-4">
+      {/* Backdrop - only visible on desktop */}
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="hidden md:block absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* Modal */}
+      {/* Modal - Full screen on mobile, centered on desktop */}
       <div
         className={cn(
-          'relative bg-white rounded-xl shadow-2xl w-full overflow-hidden',
-          'flex flex-col max-h-[90vh]',
+          'relative bg-white w-full h-full md:h-auto md:rounded-xl shadow-2xl overflow-hidden',
+          'flex flex-col md:max-h-[85vh]',
           sizeMap[size],
           className
         )}
@@ -56,19 +56,19 @@ export function FormModal({
         aria-labelledby="modal-title"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <div className="flex items-center gap-3">
+        <div className="flex-shrink-0 flex items-center justify-between px-4 md:px-6 py-3 md:py-4 border-b border-gray-200 bg-white">
+          <div className="flex items-center gap-2 md:gap-3 min-w-0">
             {icon && (
-              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-50 text-blue-600">
+              <div className="hidden md:flex items-center justify-center w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex-shrink-0">
                 {icon}
               </div>
             )}
-            <div>
-              <h2 id="modal-title" className="text-xl font-semibold text-gray-900">
+            <div className="min-w-0">
+              <h2 id="modal-title" className="text-base md:text-xl font-semibold text-gray-900 truncate">
                 {title}
               </h2>
               {description && (
-                <p className="text-sm text-gray-500 mt-0.5">{description}</p>
+                <p className="text-xs md:text-sm text-gray-500 truncate">{description}</p>
               )}
             </div>
           </div>
@@ -76,7 +76,7 @@ export function FormModal({
           {/* Close button */}
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100"
+            className="text-gray-400 hover:text-gray-600 transition-colors p-2 rounded-lg hover:bg-gray-100 flex-shrink-0"
             aria-label="Close modal"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -85,14 +85,14 @@ export function FormModal({
           </button>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        {/* Content - scrollable */}
+        <div className="flex-1 overflow-y-auto px-4 md:px-6 py-3 md:py-4 min-h-0">
           {children}
         </div>
 
-        {/* Footer */}
+        {/* Footer - fixed at bottom */}
         {footer && (
-          <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+          <div className="flex-shrink-0 px-4 md:px-6 py-3 md:py-4 border-t border-gray-200 bg-gray-50">
             {footer}
           </div>
         )}
@@ -127,12 +127,12 @@ export function FormModalActions({
   };
 
   return (
-    <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+    <div className="flex items-center justify-end gap-2 md:gap-3">
       <button
         type="button"
         onClick={onCancel}
         disabled={isSubmitting}
-        className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="px-3 md:px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         {cancelLabel}
       </button>
@@ -142,7 +142,7 @@ export function FormModalActions({
         onClick={onSubmit}
         disabled={isSubmitting || submitDisabled}
         className={cn(
-          'px-4 py-2 text-sm font-medium text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2',
+          'px-3 md:px-4 py-2 text-sm font-medium text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2',
           submitColors[submitVariant]
         )}
       >

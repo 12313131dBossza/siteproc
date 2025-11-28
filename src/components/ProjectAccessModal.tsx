@@ -383,7 +383,7 @@ export function ProjectAccessModal({ projectId, projectName, isOpen, onClose }: 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center md:p-4">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/50 backdrop-blur-sm" 
@@ -391,28 +391,28 @@ export function ProjectAccessModal({ projectId, projectName, isOpen, onClose }: 
       />
       
       {/* Modal Container */}
-      <div className="relative w-full max-w-xl bg-white rounded-xl shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative w-full h-full md:h-auto md:max-h-[85vh] max-w-xl bg-white md:rounded-xl shadow-2xl animate-in fade-in zoom-in-95 duration-200 flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">Project Access</h2>
-            <p className="text-sm text-gray-500 mt-0.5 truncate max-w-[300px]" title={projectName}>
+        <div className="flex items-center justify-between p-4 md:p-5 border-b flex-shrink-0">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-base md:text-lg font-semibold text-gray-900">Project Access</h2>
+            <p className="text-xs md:text-sm text-gray-500 mt-0.5 truncate" title={projectName}>
               {projectName}
             </p>
           </div>
           <button 
             onClick={onClose} 
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0 ml-2"
           >
             <X className="h-5 w-5 text-gray-500" />
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b px-5">
+        <div className="flex border-b px-4 md:px-5 flex-shrink-0">
           <button
             onClick={() => setTab('members')}
-            className={`px-4 py-3 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-2 ${
+            className={`px-3 md:px-4 py-2.5 md:py-3 text-xs md:text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-1.5 md:gap-2 ${
               tab === 'members' 
                 ? 'border-blue-600 text-blue-600' 
                 : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -423,7 +423,7 @@ export function ProjectAccessModal({ projectId, projectName, isOpen, onClose }: 
           </button>
           <button
             onClick={() => setTab('settings')}
-            className={`px-4 py-3 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-2 ${
+            className={`px-3 md:px-4 py-2.5 md:py-3 text-xs md:text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-1.5 md:gap-2 ${
               tab === 'settings' 
                 ? 'border-blue-600 text-blue-600' 
                 : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -435,7 +435,7 @@ export function ProjectAccessModal({ projectId, projectName, isOpen, onClose }: 
         </div>
 
         {/* Content */}
-        <div className="p-5 max-h-[60vh] overflow-y-auto">
+        <div className="p-4 md:p-5 flex-1 overflow-y-auto min-h-0">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin h-8 w-8 border-2 border-blue-600 border-t-transparent rounded-full" />

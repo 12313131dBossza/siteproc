@@ -403,8 +403,38 @@ export default function PaymentsPageClient() {
         description="Track vendor payments and manage payment records"
         icon={<DollarSign className="h-5 w-5" />}
         size="lg"
+        footer={
+          <div className="flex gap-2 md:gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setShowModal(false);
+                setEditingPayment(null);
+              }}
+              className="flex-1 px-3 py-2 border rounded-lg hover:bg-gray-50 transition-colors text-sm"
+              disabled={loading}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="payment-form"
+              disabled={loading}
+              className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
+            >
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Saving...
+                </>
+              ) : (
+                <>{editingPayment ? 'Update Payment' : 'Create Payment'}</>
+              )}
+            </button>
+          </div>
+        }
       >
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form id="payment-form" onSubmit={handleSubmit} className="space-y-3">
           <Input
             label="Vendor Name"
             required
@@ -414,7 +444,7 @@ export default function PaymentsPageClient() {
             fullWidth
           />
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <Input
               label="Amount"
               type="number"
@@ -436,7 +466,7 @@ export default function PaymentsPageClient() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <Select
               label="Payment Method"
               value={form.payment_method}
@@ -476,18 +506,8 @@ export default function PaymentsPageClient() {
             value={form.notes}
             onChange={(e) => setForm({ ...form, notes: e.target.value })}
             placeholder="Optional notes about this payment"
-            rows={3}
+            rows={2}
             fullWidth
-          />
-
-          <FormModalActions
-            onCancel={() => {
-              setShowModal(false);
-              setEditingPayment(null);
-            }}
-            submitLabel={editingPayment ? 'Update Payment' : 'Create Payment'}
-            isSubmitting={loading}
-            submitDisabled={loading}
           />
         </form>
       </FormModal>
