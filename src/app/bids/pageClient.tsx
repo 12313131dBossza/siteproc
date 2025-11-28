@@ -313,25 +313,27 @@ export default function BidsPageClient() {
         </Button>
       }
     >
-      <div className="space-y-6 p-6">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white border rounded-lg p-4">
-            <div className="text-sm text-gray-500 mb-1">Total Bids</div>
-            <div className="text-2xl font-bold text-gray-900">{formatCurrency(totals.total)}</div>
-            <div className="text-xs text-gray-500 mt-1">{filteredBids.length} bids</div>
+      <div className="space-y-6 p-4 md:p-6">
+        {/* Stats Cards - Single column on mobile, 4 cols on desktop */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="bg-white border rounded-lg p-3 md:p-4 flex justify-between items-center sm:block">
+            <div className="text-sm text-gray-500">Total Bids</div>
+            <div className="flex items-baseline gap-2 sm:block">
+              <div className="text-xl md:text-2xl font-bold text-gray-900">{formatCurrency(totals.total)}</div>
+              <div className="text-xs text-gray-500">{filteredBids.length} bids</div>
+            </div>
           </div>
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <div className="text-sm text-yellow-700 mb-1">Pending</div>
-            <div className="text-2xl font-bold text-yellow-900">{formatCurrency(totals.pending)}</div>
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 md:p-4 flex justify-between items-center sm:block">
+            <div className="text-sm text-yellow-700">Pending</div>
+            <div className="text-xl md:text-2xl font-bold text-yellow-900">{formatCurrency(totals.pending)}</div>
           </div>
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <div className="text-sm text-green-700 mb-1">Approved</div>
-            <div className="text-2xl font-bold text-green-900">{formatCurrency(totals.approved)}</div>
+          <div className="bg-green-50 border border-green-200 rounded-lg p-3 md:p-4 flex justify-between items-center sm:block">
+            <div className="text-sm text-green-700">Approved</div>
+            <div className="text-xl md:text-2xl font-bold text-green-900">{formatCurrency(totals.approved)}</div>
           </div>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="text-sm text-blue-700 mb-1">Converted</div>
-            <div className="text-2xl font-bold text-blue-900">{formatCurrency(totals.converted)}</div>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 md:p-4 flex justify-between items-center sm:block">
+            <div className="text-sm text-blue-700">Converted</div>
+            <div className="text-xl md:text-2xl font-bold text-blue-900">{formatCurrency(totals.converted)}</div>
           </div>
         </div>
 

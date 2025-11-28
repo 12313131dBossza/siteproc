@@ -675,11 +675,12 @@ export function ProjectAccessModal({ projectId, projectName, isOpen, onClose }: 
                           key={member.id}
                           className="bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
                         >
-                          {/* Member Header */}
-                          <div className="flex items-center justify-between p-3">
-                            <div className="flex items-center gap-3">
+                          {/* Member Header - Stack on mobile */}
+                          <div className="p-3">
+                            {/* Top row: Avatar + Name + Badges */}
+                            <div className="flex items-start gap-3 mb-2">
                               {/* Avatar - Color coded by type */}
-                              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-medium text-sm ${
+                              <div className={`w-9 h-9 flex-shrink-0 rounded-full flex items-center justify-center text-white font-medium text-sm ${
                                 member.external_type === 'supplier' ? 'bg-gradient-to-br from-purple-500 to-purple-600' :
                                 member.external_type === 'client' ? 'bg-gradient-to-br from-blue-500 to-blue-600' :
                                 member.external_type === 'contractor' ? 'bg-gradient-to-br from-orange-500 to-orange-600' :
@@ -690,78 +691,80 @@ export function ProjectAccessModal({ projectId, projectName, isOpen, onClose }: 
                               </div>
                               
                               {/* Info */}
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium text-gray-900 truncate">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  <span className="font-medium text-gray-900 text-sm">
                                     {member.profiles?.full_name || member.external_name || 'Unknown'}
                                   </span>
-                                  {member.external_company && (
-                                    <span className="text-gray-400 font-normal text-sm">
-                                      @ {member.external_company}
-                                    </span>
-                                  )}
                                   {/* Member Type Label */}
                                   {(() => {
                                     const typeInfo = getMemberTypeLabel(member);
                                     if (!typeInfo) return null;
                                     return (
-                                      <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${typeInfo.className}`}>
+                                      <span className={`text-xs px-1.5 py-0.5 rounded-full border font-medium ${typeInfo.className}`}>
                                         {typeInfo.label}
                                       </span>
                                     );
                                   })()}
+                                  {/* Status */}
+                                  {getStatusBadge(member.status)}
                                 </div>
-                                <div className="text-sm text-gray-500 truncate">
+                                <div className="text-xs text-gray-500 truncate mt-0.5">
                                   {member.profiles?.email || member.external_email}
                                 </div>
+                                {member.external_company && (
+                                  <div className="text-xs text-gray-400 truncate">
+                                    @ {member.external_company}
+                                  </div>
+                                )}
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                              {/* Status */}
-                              {getStatusBadge(member.status)}
-                              
+                            {/* Bottom row: Role + Actions */}
+                            <div className="flex items-center justify-between pl-12">
                               {/* Role */}
                               {member.role !== 'owner' ? (
                                 <select
                                   value={member.role}
                                   onChange={(e) => handleUpdateMemberRole(member.id, e.target.value)}
-                                  className={`text-xs px-2.5 py-1 rounded-full border font-medium cursor-pointer ${getRoleColor(member.role)}`}
+                                  className={`text-xs px-2 py-1 rounded-full border font-medium cursor-pointer ${getRoleColor(member.role)}`}
                                 >
                                   {ROLE_OPTIONS.map(r => (
                                     <option key={r.value} value={r.value}>{r.label}</option>
                                   ))}
                                 </select>
                               ) : (
-                                <span className={`text-xs px-2.5 py-1 rounded-full border font-medium ${getRoleColor('owner')}`}>
+                                <span className={`text-xs px-2 py-1 rounded-full border font-medium ${getRoleColor('owner')}`}>
                                   Owner
                                 </span>
                               )}
 
-                              {/* Edit Permissions Button */}
-                              {member.role !== 'owner' && (
-                                <button
-                                  onClick={() => editingMemberId === member.id ? cancelEditingPermissions() : startEditingPermissions(member)}
-                                  className={`p-1.5 rounded transition-colors ${
-                                    editingMemberId === member.id 
-                                      ? 'text-blue-600 bg-blue-50' 
-                                      : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
-                                  }`}
-                                  title="Edit permissions"
-                                >
-                                  <Shield className="h-4 w-4" />
-                                </button>
-                              )}
+                              <div className="flex items-center gap-1">
+                                {/* Edit Permissions Button */}
+                                {member.role !== 'owner' && (
+                                  <button
+                                    onClick={() => editingMemberId === member.id ? cancelEditingPermissions() : startEditingPermissions(member)}
+                                    className={`p-1.5 rounded transition-colors ${
+                                      editingMemberId === member.id 
+                                        ? 'text-blue-600 bg-blue-50' 
+                                        : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
+                                    }`}
+                                    title="Edit permissions"
+                                  >
+                                    <Shield className="h-4 w-4" />
+                                  </button>
+                                )}
 
-                              {/* Remove */}
-                              {member.role !== 'owner' && (
-                                <button
-                                  onClick={() => handleRemoveMember(member.id)}
-                                  className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
-                              )}
+                                {/* Remove */}
+                                {member.role !== 'owner' && (
+                                  <button
+                                    onClick={() => handleRemoveMember(member.id)}
+                                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           </div>
 
