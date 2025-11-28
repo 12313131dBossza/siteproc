@@ -863,61 +863,55 @@ export default function MessagesPage() {
 
   const getReplyMessage = (parentId: string) => messages.find(m => m.id === parentId);
 
-  // Calculate if we're on mobile
-  const isMobileView = typeof window !== 'undefined' && window.innerWidth < 768;
+  // Check if we're in a chat (for hiding mobile nav)
+  const isInChat = !!(selectedProject && selectedChannel);
 
   return (
-    <div className="flex flex-col bg-white fixed inset-0 overflow-hidden" style={{ height: '100dvh' }}>
-      {/* Mobile Header - only show when NOT in a chat */}
-      {!(selectedProject && selectedChannel) && (
-        <div className="md:hidden flex items-center justify-between p-3 border-b bg-white flex-shrink-0 z-20">
-          <span className="font-bold text-lg text-blue-600">SiteProc</span>
-          <div className="w-8 h-8 rounded-full bg-red-500 text-white flex items-center justify-center text-xs">4</div>
-        </div>
-      )}
-      
-      {/* Main Content - fills available space */}
-      <div className="flex flex-1 min-h-0 overflow-hidden">
-        {/* Left Panel - Projects */}
-        <div className={`w-full md:w-96 border-r border-gray-200 flex flex-col ${selectedProject ? 'hidden md:flex' : 'flex'}`}>
-          <div className="p-4 border-b border-gray-200">
-            <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <MessageCircle className="w-6 h-6 text-blue-600" />
-              Messages
-              {totalUnread > 0 && <span className="px-2 py-0.5 text-xs bg-red-500 text-white rounded-full">{totalUnread}</span>}
-            </h1>
-          </div>
-
-          <div className="p-3 border-b border-gray-100">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search projects..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-              />
+    <AppLayout hideMobileNav={isInChat} hideMobileHeader={isInChat}>
+      {/* Messages Container - takes full height of AppLayout content area */}
+      <div className="flex flex-col h-full bg-white">
+        {/* Main Content */}
+        <div className="flex flex-1 min-h-0 overflow-hidden">
+          {/* Left Panel - Projects */}
+          <div className={`w-full md:w-96 border-r border-gray-200 flex flex-col ${selectedProject ? 'hidden md:flex' : 'flex'}`}>
+            <div className="p-4 border-b border-gray-200">
+              <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <MessageCircle className="w-6 h-6 text-blue-600" />
+                Messages
+                {totalUnread > 0 && <span className="px-2 py-0.5 text-xs bg-red-500 text-white rounded-full">{totalUnread}</span>}
+              </h1>
             </div>
-          </div>
 
-          <div className="flex-1 overflow-y-auto p-3 space-y-3">
-            {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+            <div className="p-3 border-b border-gray-100">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search projects..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                />
               </div>
-            ) : filteredProjects.length === 0 ? (
-              <div className="text-center py-12">
-                <FolderOpen className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500">No projects found</p>
-              </div>
-            ) : (
-              filteredProjects.map(project => {
-                const unreadCount = getProjectUnread(project.id);
-                const isSelected = selectedProject?.id === project.id;
+            </div>
 
-                return (
-                  <div key={project.id} className={`bg-white border-2 rounded-xl overflow-hidden ${isSelected ? 'border-blue-500 shadow-md' : 'border-gray-200 hover:border-gray-300'}`}>
+            <div className="flex-1 overflow-y-auto p-3 space-y-3">
+              {loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+                </div>
+              ) : filteredProjects.length === 0 ? (
+                <div className="text-center py-12">
+                  <FolderOpen className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500">No projects found</p>
+                </div>
+              ) : (
+                filteredProjects.map(project => {
+                  const unreadCount = getProjectUnread(project.id);
+                  const isSelected = selectedProject?.id === project.id;
+
+                  return (
+                    <div key={project.id} className={`bg-white border-2 rounded-xl overflow-hidden ${isSelected ? 'border-blue-500 shadow-md' : 'border-gray-200 hover:border-gray-300'}`}>
                     <div className="p-3 bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
@@ -1657,32 +1651,6 @@ export default function MessagesPage() {
         </div>
       </div>
 
-      {/* Mobile Bottom Navigation - only show when NOT in a chat */}
-      {!(selectedProject && selectedChannel) && (
-        <nav className="md:hidden flex-shrink-0 flex items-center justify-around bg-white border-t border-gray-200" style={{ height: '60px', paddingBottom: 'env(safe-area-inset-bottom)' }}>
-          <a href="/dashboard" className="flex flex-col items-center gap-1 text-gray-500">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
-            <span className="text-[10px]">Dashboard</span>
-          </a>
-          <a href="/projects" className="flex flex-col items-center gap-1 text-gray-500">
-            <FolderOpen className="w-6 h-6" />
-            <span className="text-[10px]">Projects</span>
-          </a>
-          <div className="flex flex-col items-center gap-1 text-blue-600">
-            <MessageCircle className="w-6 h-6" />
-            <span className="text-[10px] font-semibold">Messages</span>
-          </div>
-          <a href="/orders" className="flex flex-col items-center gap-1 text-gray-500">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-            <span className="text-[10px]">Orders</span>
-          </a>
-          <a href="/settings" className="flex flex-col items-center gap-1 text-gray-500">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" /></svg>
-            <span className="text-[10px]">More</span>
-          </a>
-        </nav>
-      )}
-
       {/* Image Preview Modal */}
       {imagePreview && (
         <div 
@@ -1766,6 +1734,7 @@ export default function MessagesPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </AppLayout>
   );
 }

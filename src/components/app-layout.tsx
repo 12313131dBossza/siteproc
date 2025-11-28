@@ -11,9 +11,11 @@ interface AppLayoutProps {
   title?: string;
   description?: string;
   actions?: React.ReactNode;
+  hideMobileNav?: boolean; // New prop to hide mobile nav (e.g., when in chat)
+  hideMobileHeader?: boolean; // New prop to hide mobile header
 }
 
-export function AppLayout({ children, title, description, actions }: AppLayoutProps) {
+export function AppLayout({ children, title, description, actions, hideMobileNav, hideMobileHeader }: AppLayoutProps) {
   return (
     <div className="flex bg-gray-50 fixed inset-0 overflow-hidden" style={{ height: '100dvh' }}>
       {/* Desktop Sidebar - Hidden on mobile */}
@@ -24,7 +26,11 @@ export function AppLayout({ children, title, description, actions }: AppLayoutPr
       {/* Main content wrapper - flex column to stack header, content, and nav */}
       <div className="flex-1 flex flex-col min-h-0 w-full">
         {/* Top header - flex-shrink-0 keeps it fixed size */}
-        <header className="flex-shrink-0 bg-white border-b border-gray-200 shadow-sm">
+        {/* Hide on mobile when hideMobileHeader is true */}
+        <header className={cn(
+          "flex-shrink-0 bg-white border-b border-gray-200 shadow-sm",
+          hideMobileHeader && "hidden md:block"
+        )}>
           <div className="flex h-14 md:h-16 items-center gap-2 md:gap-4 px-4 md:px-6">
             {/* Logo/Brand for mobile */}
             <div className="md:hidden font-bold text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
@@ -70,8 +76,8 @@ export function AppLayout({ children, title, description, actions }: AppLayoutPr
           {children}
         </main>
 
-        {/* Mobile Bottom Navigation - flex-shrink-0 keeps it fixed size at bottom */}
-        <MobileBottomNav />
+        {/* Mobile Bottom Navigation - hide when hideMobileNav is true */}
+        {!hideMobileNav && <MobileBottomNav />}
       </div>
     </div>
   );
