@@ -84,6 +84,17 @@ export async function POST(
       decided_at: new Date().toISOString()
     };
 
+    // If approving, initialize delivery tracking fields
+    if (action === 'approve') {
+      updateData.approved_by = user.id;
+      updateData.approved_at = new Date().toISOString();
+      updateData.delivery_progress = 'not_started';
+      updateData.ordered_qty = existingOrder.qty || 0;
+      updateData.delivered_qty = 0;
+      updateData.remaining_qty = existingOrder.qty || 0;
+      updateData.delivered_value = 0;
+    }
+
     if (action === 'approve' && po_number) {
       updateData.po_number = po_number;
     }

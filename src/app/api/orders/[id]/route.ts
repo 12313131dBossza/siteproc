@@ -54,6 +54,12 @@ export async function PATCH(
     if (status === 'approved') {
       updateData.approved_by = profile.id
       updateData.approved_at = new Date().toISOString()
+      // Initialize delivery tracking fields
+      updateData.delivery_progress = 'not_started'
+      updateData.ordered_qty = order.quantity || order.qty || 0
+      updateData.delivered_qty = 0
+      updateData.remaining_qty = order.quantity || order.qty || 0
+      updateData.delivered_value = 0
     } else if (status === 'rejected') {
       updateData.rejected_by = profile.id
       updateData.rejected_at = new Date().toISOString()
