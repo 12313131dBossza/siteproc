@@ -15,16 +15,16 @@ interface AppLayoutProps {
 
 export function AppLayout({ children, title, description, actions }: AppLayoutProps) {
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex bg-gray-50 fixed inset-0 overflow-hidden" style={{ height: '100dvh' }}>
       {/* Desktop Sidebar - Hidden on mobile */}
-      <div className="hidden md:block">
+      <div className="hidden md:block flex-shrink-0">
         <SidebarNav />
       </div>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-hidden w-full">
-        {/* Top header */}
-        <header className="bg-white border-b border-gray-200 shadow-sm">
+      {/* Main content wrapper - flex column to stack header, content, and nav */}
+      <div className="flex-1 flex flex-col min-h-0 w-full">
+        {/* Top header - flex-shrink-0 keeps it fixed size */}
+        <header className="flex-shrink-0 bg-white border-b border-gray-200 shadow-sm">
           <div className="flex h-14 md:h-16 items-center gap-2 md:gap-4 px-4 md:px-6">
             {/* Logo/Brand for mobile */}
             <div className="md:hidden font-bold text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
@@ -65,14 +65,14 @@ export function AppLayout({ children, title, description, actions }: AppLayoutPr
           )}
         </header>
 
-        {/* Page content - Add padding bottom for mobile nav */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-gray-50 pb-24 md:pb-0 max-w-full">
+        {/* Page content - flex-1 with min-h-0 allows it to shrink and scroll */}
+        <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden bg-gray-50 max-w-full">
           {children}
         </main>
-      </div>
 
-      {/* Mobile Bottom Navigation */}
-      <MobileBottomNav />
+        {/* Mobile Bottom Navigation - flex-shrink-0 keeps it fixed size at bottom */}
+        <MobileBottomNav />
+      </div>
     </div>
   );
 }
