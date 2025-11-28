@@ -331,7 +331,8 @@ export default function MessagesPage() {
           message: newMessage.trim(),
         };
         if (replyTo) payload.parent_message_id = replyTo.id;
-        if (isCompanyMember && selectedParticipant) payload.recipient_id = selectedParticipant.id;
+        // Always include recipient_id for 1:1 DM (both company members and external users)
+        if (selectedParticipant) payload.recipient_id = selectedParticipant.id;
 
         const response = await fetch('/api/messages', {
           method: 'POST',
