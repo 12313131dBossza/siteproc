@@ -2,15 +2,16 @@
 -- Run this in Supabase SQL Editor
 
 -- Update delivery progress based on existing deliveries
+-- NOTE: deliveries.order_uuid contains the actual UUID that matches purchase_orders.id
 WITH delivery_totals AS (
   SELECT 
-    d.order_id,
+    d.order_uuid,
     COALESCE(SUM(COALESCE(di.qty, di.quantity, 0)), 0) as total_delivered_qty,
     COALESCE(SUM(COALESCE(di.total_price, 0)), 0) as total_delivered_value
   FROM deliveries d
   LEFT JOIN delivery_items di ON di.delivery_id = d.id
-  WHERE d.order_id IS NOT NULL
-  GROUP BY d.order_id
+  WHERE d.order_uuid IS NOT NULL
+  GROUP BY d.order_uuid
 )
 UPDATE purchase_orders po
 SET 
@@ -24,7 +25,7 @@ SET
   END,
   updated_at = NOW()
 FROM delivery_totals dt
-WHERE po.id = dt.order_id
+WHERE po.id = dt.order_uuid
   AND po.status = 'approved';
 
 -- Show updated orders

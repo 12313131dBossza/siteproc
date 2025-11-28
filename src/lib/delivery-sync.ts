@@ -56,6 +56,7 @@ export async function updateOrderAndProjectActuals(
       .select(`
         id,
         order_id,
+        order_uuid,
         project_id,
         status,
         delivered_at,
@@ -82,10 +83,10 @@ export async function updateOrderAndProjectActuals(
       0
     )
 
-    // Step 3: Update order if order_id exists
-    if (delivery.order_id) {
+    // Step 3: Update order if order_uuid exists (the actual UUID linking to purchase_orders)
+    if (delivery.order_uuid) {
       await updateOrderStatus(
-        delivery.order_id,
+        delivery.order_uuid,
         companyId,
         delivery.status,
         totalDeliveredValue,
@@ -104,7 +105,7 @@ export async function updateOrderAndProjectActuals(
 
     console.log('✅ Synced delivery updates:', {
       delivery_id: deliveryId,
-      order_id: delivery.order_id,
+      order_uuid: delivery.order_uuid,
       project_id: delivery.project_id,
       status: delivery.status,
       delivered_value: totalDeliveredValue
@@ -146,9 +147,9 @@ async function updateOrderStatus(
       qty,
       quantity,
       total_price,
-      deliveries!inner(order_id, status)
+      deliveries!inner(order_uuid, status)
     `)
-    .filter('deliveries.order_id', 'eq', orderId)
+    .filter('deliveries.order_uuid', 'eq', orderId)
 
   // Calculate totals - use qty or quantity (different schemas)
   const totalDeliveredQty = (allDeliveryItems || []).reduce(
