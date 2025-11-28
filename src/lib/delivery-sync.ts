@@ -127,16 +127,15 @@ async function updateOrderStatus(
 ) {
   const sb = supabaseService()
 
-  // Get order details
+  // Get order details from purchase_orders table
   const { data: order, error: orderError } = await (sb as any)
-    .from('orders')
-    .select('id, status, delivered_value, total_ordered_qty')
-    .eq('company_id', companyId)
+    .from('purchase_orders')
+    .select('id, status, delivered_value, ordered_qty, delivered_qty, quantity')
     .eq('id', orderId)
     .single()
 
   if (orderError || !order) {
-    console.error('Error fetching order:', orderError)
+    console.error('Error fetching order from purchase_orders:', orderError)
     return
   }
 
@@ -148,7 +147,6 @@ async function updateOrderStatus(
       total_price,
       deliveries!inner(order_id, status)
     `)
-    .eq('company_id', companyId)
     .filter('deliveries.order_id', 'eq', orderId)
 
   // Calculate totals
@@ -161,65 +159,71 @@ async function updateOrderStatus(
     0
   )
 
-  // Determine new order status
-  let newOrderStatus = 'pending'
+  // Use ordered_qty or quantity for comparison
+  const orderedQty = order.ordered_qty || order.quantity || 0
+  const remainingQty = Math.max(0, orderedQty - totalDeliveredQty)
+
+  // Determine delivery_progress status
+  let deliveryProgress = 'not_started'
   if (totalDeliveredQty > 0) {
-    if (totalDeliveredQty >= (order.total_ordered_qty || 0)) {
-      newOrderStatus = 'delivered'
+    if (totalDeliveredQty >= orderedQty && orderedQty > 0) {
+      deliveryProgress = 'completed'
     } else {
-      newOrderStatus = 'partial'
+      deliveryProgress = 'partially_delivered'
     }
   }
 
-  // Update order only if status changed
-  const oldOrderStatus = order.status
-  if (newOrderStatus !== oldOrderStatus || totalDeliveredValue !== order.delivered_value) {
-    const { error: updateError } = await (sb as any)
-      .from('orders')
-      .update({
-        status: newOrderStatus,
+  // Update purchase_orders with delivery tracking fields
+  const { error: updateError } = await (sb as any)
+    .from('purchase_orders')
+    .update({
+      delivery_progress: deliveryProgress,
+      delivered_qty: totalDeliveredQty,
+      remaining_qty: remainingQty,
+      delivered_value: totalDeliveredValue,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', orderId)
+
+  if (updateError) {
+    console.error('Error updating purchase_order:', updateError)
+    return
+  }
+
+  // Log activity
+  if (userId) {
+    await audit(
+      companyId,
+      userId,
+      'order',
+      orderId,
+      'delivery_progress_updated',
+      {
+        previous_progress: order.delivery_progress,
+        new_progress: deliveryProgress,
         delivered_value: totalDeliveredValue,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', orderId)
-      .eq('company_id', companyId)
-
-    if (updateError) {
-      console.error('Error updating order:', updateError)
-      return
-    }
-
-    // Log activity
-    if (userId) {
-      await audit(
-        companyId,
-        userId,
-        'order',
-        orderId,
-        'status_auto_updated',
-        {
-          previous_status: oldOrderStatus,
-          new_status: newOrderStatus,
-          delivered_value: totalDeliveredValue,
-          delivered_qty: totalDeliveredQty,
-          reason: 'delivery_status_changed'
-        }
-      )
-    }
-
-    // Broadcast order update
-    await broadcast(`order:${orderId}`, 'updated', {
-      status: newOrderStatus,
-      delivered_value: totalDeliveredValue
-    })
-    await broadcastDashboardUpdated(companyId)
-
-    console.log('✅ Updated order:', {
-      order_id: orderId,
-      old_status: oldOrderStatus,
-      new_status: newOrderStatus
-    })
+        delivered_qty: totalDeliveredQty,
+        remaining_qty: remainingQty,
+        reason: 'delivery_status_changed'
+      }
+    )
   }
+
+  // Broadcast order update
+  await broadcast(`order:${orderId}`, 'updated', {
+    delivery_progress: deliveryProgress,
+    delivered_value: totalDeliveredValue,
+    delivered_qty: totalDeliveredQty,
+    remaining_qty: remainingQty
+  })
+  await broadcastDashboardUpdated(companyId)
+
+  console.log('✅ Updated purchase_order delivery progress:', {
+    order_id: orderId,
+    delivery_progress: deliveryProgress,
+    delivered_qty: totalDeliveredQty,
+    remaining_qty: remainingQty
+  })
 }
 
 /**
