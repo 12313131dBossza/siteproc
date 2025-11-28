@@ -47,12 +47,14 @@ html, body {
 
 /* Prevent content from going under bottom nav on mobile */
 @media (max-width: 768px) {
-  body {
-    padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  html, body {
+    height: 100%;
+    height: 100dvh;
+    overflow: hidden;
     position: fixed;
     width: 100%;
-    height: 100%;
-    overflow: hidden;
+    top: 0;
+    left: 0;
   }
 }
 

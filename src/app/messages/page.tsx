@@ -867,9 +867,9 @@ export default function MessagesPage() {
   const isMobileView = typeof window !== 'undefined' && window.innerWidth < 768;
 
   return (
-    <div className="flex flex-col h-screen bg-white">
+    <div className="flex flex-col bg-white fixed inset-0 overflow-hidden" style={{ height: '100dvh' }}>
       {/* Mobile Header */}
-      <div className="md:hidden flex items-center justify-between p-3 border-b bg-white sticky top-0 z-20">
+      <div className="md:hidden flex items-center justify-between p-3 border-b bg-white flex-shrink-0 z-20">
         <span className="font-bold text-lg text-blue-600">SiteProc</span>
         <div className="w-8 h-8 rounded-full bg-red-500 text-white flex items-center justify-center text-xs">4</div>
       </div>
@@ -1419,7 +1419,7 @@ export default function MessagesPage() {
               )}
 
               {/* Input Area - flex-shrink-0 ensures it stays visible */}
-              <div className="flex-shrink-0 p-3 border-t border-gray-200 bg-white relative">
+              <div className="flex-shrink-0 p-2 border-t border-gray-200 bg-white relative">
                 {/* @ Mentions dropdown */}
                 {showMentions && getMentionableUsers().length > 0 && (
                   <div className="absolute bottom-full left-4 mb-2 bg-white rounded-lg shadow-lg border max-h-40 overflow-y-auto w-64 z-20">
@@ -1656,7 +1656,7 @@ export default function MessagesPage() {
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <div className="md:hidden flex-shrink-0 flex items-center justify-around h-16 bg-white border-t border-gray-200 safe-area-bottom">
+      <nav className="md:hidden flex-shrink-0 flex items-center justify-around bg-white border-t border-gray-200" style={{ height: '60px', paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <a href="/dashboard" className="flex flex-col items-center gap-1 text-gray-500">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
           <span className="text-[10px]">Dashboard</span>
@@ -1677,7 +1677,7 @@ export default function MessagesPage() {
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" /></svg>
           <span className="text-[10px]">More</span>
         </a>
-      </div>
+      </nav>
 
       {/* Image Preview Modal */}
       {imagePreview && (
