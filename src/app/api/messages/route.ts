@@ -103,11 +103,16 @@ export async function GET(request: NextRequest) {
       query = query.eq('delivery_id', deliveryId);
     }
 
-    // For company members viewing specific participant, filter messages
-    // For now, show all messages in the channel (can filter by recipient_id once added)
-    // if (isCompanyMember && participantId) {
-    //   query = query.or(`sender_id.eq.${participantId},recipient_id.eq.${participantId}`);
-    // }
+    // Filter for 1:1 DM - only show messages between current user and the participant
+    if (participantId) {
+      // Show messages where:
+      // - Current user sent to participant, OR
+      // - Participant sent to current user
+      query = query.or(`and(sender_id.eq.${user.id},recipient_id.eq.${participantId}),and(sender_id.eq.${participantId},recipient_id.eq.${user.id})`);
+    } else if (!isCompanyMember) {
+      // For suppliers/clients without a specific participant selected, show only their messages
+      query = query.or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`);
+    }
 
     const { data: messages, error: messagesError } = await query;
 
@@ -282,10 +287,10 @@ export async function POST(request: NextRequest) {
       metadata: metadata || null,
     };
 
-    // TODO: Add recipient_id support once ADD-RECIPIENT-TO-MESSAGES.sql is run
-    // if (recipient_id) {
-    //   messageData.recipient_id = recipient_id;
-    // }
+    // Add recipient_id for 1:1 DM
+    if (recipient_id) {
+      messageData.recipient_id = recipient_id;
+    }
 
     const { data: newMessage, error: insertError } = await adminClient
       .from('project_messages')

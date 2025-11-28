@@ -26,6 +26,13 @@ interface Participant {
   project_name: string;
 }
 
+interface CompanyTeamMember {
+  id: string;
+  name: string;
+  project_id: string;
+  project_name: string;
+}
+
 interface Conversation {
   id: string;
   project_id: string;
@@ -90,6 +97,7 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
+  const [companyTeamMembers, setCompanyTeamMembers] = useState<CompanyTeamMember[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [selectedChannel, setSelectedChannel] = useState<'company_supplier' | 'company_client' | null>(null);
@@ -167,7 +175,10 @@ export default function MessagesPage() {
 
     const pollMessages = async () => {
       try {
-        const url = `/api/messages?project_id=${selectedProject.id}&channel=${selectedChannel}`;
+        let url = `/api/messages?project_id=${selectedProject.id}&channel=${selectedChannel}`;
+        if (selectedParticipant?.id) {
+          url += `&participant_id=${selectedParticipant.id}`;
+        }
         const response = await fetch(url);
         if (response.ok) {
           const data = await response.json();
@@ -198,7 +209,7 @@ export default function MessagesPage() {
 
     pollingRef.current = setInterval(pollMessages, 3000);
     return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
-  }, [selectedProject?.id, selectedChannel]);
+  }, [selectedProject?.id, selectedChannel, selectedParticipant?.id]);
 
   // Polling for typing indicators
   useEffect(() => {
@@ -220,9 +231,9 @@ export default function MessagesPage() {
 
   useEffect(() => {
     if (selectedProject && selectedChannel) {
-      loadMessages(selectedProject.id, selectedChannel);
+      loadMessages(selectedProject.id, selectedChannel, selectedParticipant?.id);
     }
-  }, [selectedProject, selectedChannel]);
+  }, [selectedProject, selectedChannel, selectedParticipant]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -237,6 +248,7 @@ export default function MessagesPage() {
         setConversations(data.conversations || []);
         setProjects(data.projects || []);
         setParticipants(data.participants || []);
+        setCompanyTeamMembers(data.companyTeamMembers || []);
         setCurrentUserId(data.currentUserId || '');
         setUserRole(data.userRole || '');
       }
@@ -247,10 +259,14 @@ export default function MessagesPage() {
     }
   };
 
-  const loadMessages = async (projectId: string, channel: string) => {
+  const loadMessages = async (projectId: string, channel: string, participantId?: string) => {
     try {
       setLoadingMessages(true);
-      const response = await fetch(`/api/messages?project_id=${projectId}&channel=${channel}`);
+      let url = `/api/messages?project_id=${projectId}&channel=${channel}`;
+      if (participantId) {
+        url += `&participant_id=${participantId}`;
+      }
+      const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
         setMessages(data.messages || []);
@@ -830,6 +846,17 @@ export default function MessagesPage() {
     return participants.filter(p => p.project_id === projectId && p.type === type);
   };
 
+  // Get company team members for a project (for suppliers/clients to DM)
+  const getProjectCompanyTeam = (projectId: string) => {
+    // Dedupe by user ID
+    const seen = new Set<string>();
+    return companyTeamMembers.filter(m => {
+      if (m.project_id !== projectId || seen.has(m.id)) return false;
+      seen.add(m.id);
+      return true;
+    });
+  };
+
   const getProjectUnread = (projectId: string) => {
     return conversations.filter(c => c.project_id === projectId).reduce((sum, c) => sum + c.unread_count, 0);
   };
@@ -952,16 +979,29 @@ export default function MessagesPage() {
                             </div>
                           )
                         ) : (
-                          <button
-                            onClick={() => { setSelectedProject(project); setSelectedChannel('company_supplier'); setSelectedParticipant(null); }}
-                            className={`w-full flex items-center gap-3 p-3 rounded-lg ${isSelected && selectedChannel === 'company_supplier' ? 'bg-purple-100 border-2 border-purple-300' : 'bg-purple-50 hover:bg-purple-100 border-2 border-transparent'}`}
-                          >
-                            <div className="w-9 h-9 rounded-full bg-purple-200 flex items-center justify-center">
-                              <Truck className="w-4 h-4 text-purple-700" />
+                          // Supplier view - show individual company team members
+                          getProjectCompanyTeam(project.id).length > 0 ? (
+                            getProjectCompanyTeam(project.id).map(teamMember => (
+                              <button
+                                key={teamMember.id}
+                                onClick={() => { setSelectedProject(project); setSelectedChannel('company_supplier'); setSelectedParticipant({ id: teamMember.id, name: teamMember.name, type: 'supplier', project_id: teamMember.project_id, project_name: teamMember.project_name }); }}
+                                className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all ${isSelected && selectedChannel === 'company_supplier' && selectedParticipant?.id === teamMember.id ? 'bg-purple-100 border-2 border-purple-300' : 'bg-purple-50 hover:bg-purple-100 border-2 border-transparent'}`}
+                              >
+                                <div className="w-9 h-9 rounded-full bg-purple-200 flex items-center justify-center text-purple-700 font-semibold text-sm">
+                                  {teamMember.name.charAt(0).toUpperCase()}
+                                </div>
+                                <div className="flex-1 min-w-0 text-left">
+                                  <span className="font-medium text-purple-900 text-sm">{teamMember.name}</span>
+                                </div>
+                                <ChevronRight className="w-4 h-4 text-purple-400" />
+                              </button>
+                            ))
+                          ) : (
+                            <div className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-50 text-gray-400">
+                              <Truck className="w-4 h-4" />
+                              <span className="text-sm">No team members available</span>
                             </div>
-                            <span className="font-medium text-purple-900 text-sm">Project Team</span>
-                            <ChevronRight className="w-4 h-4 text-purple-400" />
-                          </button>
+                          )
                         )
                       )}
 
@@ -991,16 +1031,29 @@ export default function MessagesPage() {
                             </div>
                           )
                         ) : (
-                          <button
-                            onClick={() => { setSelectedProject(project); setSelectedChannel('company_client'); setSelectedParticipant(null); }}
-                            className={`w-full flex items-center gap-3 p-3 rounded-lg ${isSelected && selectedChannel === 'company_client' ? 'bg-blue-100 border-2 border-blue-300' : 'bg-blue-50 hover:bg-blue-100 border-2 border-transparent'}`}
-                          >
-                            <div className="w-9 h-9 rounded-full bg-blue-200 flex items-center justify-center">
-                              <Building2 className="w-4 h-4 text-blue-700" />
+                          // Client view - show individual company team members
+                          getProjectCompanyTeam(project.id).length > 0 ? (
+                            getProjectCompanyTeam(project.id).map(teamMember => (
+                              <button
+                                key={teamMember.id}
+                                onClick={() => { setSelectedProject(project); setSelectedChannel('company_client'); setSelectedParticipant({ id: teamMember.id, name: teamMember.name, type: 'client', project_id: teamMember.project_id, project_name: teamMember.project_name }); }}
+                                className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all ${isSelected && selectedChannel === 'company_client' && selectedParticipant?.id === teamMember.id ? 'bg-blue-100 border-2 border-blue-300' : 'bg-blue-50 hover:bg-blue-100 border-2 border-transparent'}`}
+                              >
+                                <div className="w-9 h-9 rounded-full bg-blue-200 flex items-center justify-center text-blue-700 font-semibold text-sm">
+                                  {teamMember.name.charAt(0).toUpperCase()}
+                                </div>
+                                <div className="flex-1 min-w-0 text-left">
+                                  <span className="font-medium text-blue-900 text-sm">{teamMember.name}</span>
+                                </div>
+                                <ChevronRight className="w-4 h-4 text-blue-400" />
+                              </button>
+                            ))
+                          ) : (
+                            <div className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-50 text-gray-400">
+                              <Building2 className="w-4 h-4" />
+                              <span className="text-sm">No team members available</span>
                             </div>
-                            <span className="font-medium text-blue-900 text-sm">Project Team</span>
-                            <ChevronRight className="w-4 h-4 text-blue-400" />
-                          </button>
+                          )
                         )
                       )}
                     </div>

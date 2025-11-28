@@ -154,11 +154,53 @@ export async function GET() {
 
     console.log('Final participants count:', participants.length);
 
+    // For suppliers/clients: Get company team members they can DM
+    let companyTeamMembers: Participant[] = [];
+    
+    if ((isSupplier || isClient) && projectIds.length > 0) {
+      // Get all projects' company IDs
+      const { data: projectsData } = await adminClient
+        .from('projects')
+        .select('id, company_id')
+        .in('id', projectIds);
+      
+      if (projectsData && projectsData.length > 0) {
+        const companyIds = [...new Set(projectsData.map(p => p.company_id))];
+        
+        // Get company members for each project
+        const { data: companyMembers } = await adminClient
+          .from('profiles')
+          .select('id, full_name, username, email, role')
+          .in('company_id', companyIds)
+          .in('role', ['admin', 'owner', 'manager', 'bookkeeper', 'member']);
+        
+        if (companyMembers && companyMembers.length > 0) {
+          for (const cm of companyMembers) {
+            // Add this company member as a DM target for each project they manage
+            for (const proj of projectsData) {
+              const projInfo = projectMap.get(proj.id);
+              if (projInfo) {
+                companyTeamMembers.push({
+                  id: cm.id,
+                  name: cm.full_name || cm.username || cm.email?.split('@')[0] || 'Team Member',
+                  type: 'supplier', // Use 'supplier' type for channel matching (company_supplier)
+                  project_id: proj.id,
+                  project_name: projInfo.name,
+                  project_code: projInfo.code
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+
     if (projectIds.length === 0) {
       return NextResponse.json({ 
         conversations: [], 
         projects: [],
         participants: [],
+        companyTeamMembers: [],
         currentUserId: user.id,
         userRole 
       });
@@ -192,6 +234,7 @@ export async function GET() {
         conversations: [], 
         projects,
         participants,  // Return participants so company can start conversations
+        companyTeamMembers: companyTeamMembers || [],  // Return company team for suppliers/clients to DM
         currentUserId: user.id,
         userRole 
       });
@@ -237,22 +280,29 @@ export async function GET() {
 
       if (isCompanyMember) {
         // For company: create conversation per participant (sender who is not company)
-        // Find the non-company participant in this conversation
+        // Use recipient_id if available for proper 1:1 DM
         if (msg.sender_type === 'company') {
-          // Message from company - need to find who it's to
-          // Look at other messages in this project/channel to find the external user
-          const otherParticipant = participants.find(p => 
-            p.project_id === msg.project_id && 
-            ((msg.channel === 'company_supplier' && p.type === 'supplier') ||
-             (msg.channel === 'company_client' && p.type === 'client'))
-          );
-          if (otherParticipant) {
-            participantId = otherParticipant.id;
-            participantType = otherParticipant.type;
-            participantName = otherParticipant.name;
+          // Message from company - use recipient_id to find participant
+          if (msg.recipient_id) {
+            participantId = msg.recipient_id;
+            const recipientInfo = nameMap.get(msg.recipient_id);
+            participantName = recipientInfo?.name || 'Unknown';
+            participantType = msg.channel === 'company_supplier' ? 'supplier' : 'client';
+          } else {
+            // Legacy: Look at other messages in this project/channel to find the external user
+            const otherParticipant = participants.find(p => 
+              p.project_id === msg.project_id && 
+              ((msg.channel === 'company_supplier' && p.type === 'supplier') ||
+               (msg.channel === 'company_client' && p.type === 'client'))
+            );
+            if (otherParticipant) {
+              participantId = otherParticipant.id;
+              participantType = otherParticipant.type;
+              participantName = otherParticipant.name;
+            }
           }
         } else {
-          // Message from external user
+          // Message from external user - they are the participant
           participantId = msg.sender_id;
           participantType = msg.sender_type || 'unknown';
           const senderInfo = nameMap.get(msg.sender_id);
@@ -262,10 +312,23 @@ export async function GET() {
         // Create key based on project + participant
         convKey = `${msg.project_id}-${participantId || msg.channel}`;
       } else {
-        // For supplier/client: they talk to the company team as a whole
+        // For supplier/client: Group by who they're chatting with
+        // Use recipient_id (for messages they sent) or sender_id (for messages from company)
+        if (msg.sender_id === user.id) {
+          // Message sent by this supplier/client - recipient is the company person
+          participantId = msg.recipient_id || '';
+          const recipientInfo = nameMap.get(msg.recipient_id || '');
+          participantName = recipientInfo?.name || 'Project Team';
+        } else {
+          // Message received from company - sender is the company person
+          participantId = msg.sender_id;
+          const senderInfo = nameMap.get(msg.sender_id);
+          participantName = senderInfo?.name || 'Project Team';
+        }
         participantType = 'company';
-        participantName = 'Project Team';
-        convKey = `${msg.project_id}-company`;
+        
+        // Create conversation key - group by project + company team member
+        convKey = participantId ? `${msg.project_id}-${participantId}` : `${msg.project_id}-company`;
       }
 
       if (!conversationMap.has(convKey)) {
@@ -302,6 +365,7 @@ export async function GET() {
       conversations,
       projects,
       participants,  // Return participants for company to start new conversations
+      companyTeamMembers: companyTeamMembers || [],  // Return company team for suppliers/clients to DM
       currentUserId: user.id,
       userRole
     });

@@ -225,19 +225,10 @@ export async function POST(req: NextRequest) {
       } else {
         console.log(`Added user ${user.id} to company ${project.company_id} as ${profileRole}`)
       }
-    } else if (userProfile && profileRole !== 'viewer') {
-      // User already has profile with company, but update their role if they're being invited as supplier/client/contractor
-      const { error: updateRoleError } = await adminSupabase
-        .from('profiles')
-        .update({ role: profileRole })
-        .eq('id', user.id)
-      
-      if (updateRoleError) {
-        console.error('Failed to update profile role:', updateRoleError)
-      } else {
-        console.log(`Updated user ${user.id} role to ${profileRole}`)
-      }
     }
+    // Note: We do NOT update the profile role for existing users who already have a company.
+    // The external_type in project_members already tracks their role for this specific project.
+    // Changing their profile.role would incorrectly restrict their access across the entire app.
 
     const projectName = (member.projects as any)?.name || 'the project'
 
