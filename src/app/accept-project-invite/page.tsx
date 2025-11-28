@@ -18,7 +18,7 @@ function AcceptProjectInviteContent() {
   const router = useRouter()
   const token = searchParams.get('token')
   
-  const [status, setStatus] = useState<'loading' | 'register' | 'success' | 'error'>('loading')
+  const [status, setStatus] = useState<'loading' | 'register' | 'success' | 'error' | 'wrong-account'>('loading')
   const [message, setMessage] = useState('')
   const [invitation, setInvitation] = useState<InvitationInfo | null>(null)
   
@@ -60,8 +60,18 @@ function AcceptProjectInviteContent() {
       const { data: { user } } = await supabase.auth.getUser()
       
       if (user) {
-        // User is logged in - try to accept immediately
-        await acceptInvitation()
+        // User is logged in - check if email matches the invitation
+        const loggedInEmail = user.email?.toLowerCase()
+        const invitedEmail = infoData.email?.toLowerCase()
+        
+        if (loggedInEmail === invitedEmail) {
+          // Same email - accept immediately
+          await acceptInvitation()
+        } else {
+          // Different email - user needs to log out first
+          setStatus('wrong-account' as any)
+          setMessage(`You're logged in as ${user.email}, but this invitation was sent to ${infoData.email}. Please log out and try again, or open this link in a private/incognito window.`)
+        }
       } else {
         // User not logged in - show registration form
         setStatus('register')
@@ -368,6 +378,46 @@ function AcceptProjectInviteContent() {
             >
               Go to Project
             </button>
+          </div>
+        )}
+
+        {status === 'wrong-account' && (
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-yellow-100 rounded-full mb-6">
+              <User className="h-8 w-8 text-yellow-600" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Wrong Account</h1>
+            <p className="text-gray-500 mb-6">{message}</p>
+            {invitation && (
+              <div className="bg-yellow-50 rounded-lg p-4 mb-6 text-left space-y-2">
+                <div className="text-sm">
+                  <span className="text-gray-600">This invitation is for:</span>
+                  <div className="font-medium text-gray-900">{invitation.email}</div>
+                </div>
+                <div className="text-sm">
+                  <span className="text-gray-600">Project:</span>
+                  <div className="font-medium text-gray-900">{invitation.projectName}</div>
+                </div>
+              </div>
+            )}
+            <div className="space-y-3">
+              <button
+                onClick={async () => {
+                  const supabase = createClient()
+                  await supabase.auth.signOut()
+                  window.location.reload()
+                }}
+                className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+              >
+                Log Out & Continue
+              </button>
+              <button
+                onClick={() => router.push('/projects')}
+                className="w-full text-gray-500 py-2 px-4 font-medium hover:text-gray-700 transition-colors"
+              >
+                Go to My Projects
+              </button>
+            </div>
           </div>
         )}
 
