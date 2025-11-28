@@ -47,8 +47,8 @@ export async function POST(
 
     // Check if order exists and is pending
     const { data: existingOrder, error: fetchError } = await supabase
-      .from('orders')
-      .select('id, status, product_id, qty')
+      .from('purchase_orders')
+      .select('id, status, product_id, quantity')
       .eq('id', orderId)
       .single();
 
@@ -68,7 +68,7 @@ export async function POST(
       // Reduce product stock by order quantity
       const { error: stockError } = await supabase.rpc('reduce_product_stock', {
         product_id: existingOrder.product_id,
-        quantity: existingOrder.qty
+        quantity: existingOrder.quantity
       });
 
       if (stockError) {
@@ -89,9 +89,9 @@ export async function POST(
       updateData.approved_by = user.id;
       updateData.approved_at = new Date().toISOString();
       updateData.delivery_progress = 'not_started';
-      updateData.ordered_qty = existingOrder.qty || 0;
+      updateData.ordered_qty = existingOrder.quantity || 0;
       updateData.delivered_qty = 0;
-      updateData.remaining_qty = existingOrder.qty || 0;
+      updateData.remaining_qty = existingOrder.quantity || 0;
       updateData.delivered_value = 0;
     }
 
@@ -100,13 +100,10 @@ export async function POST(
     }
 
     const { data: updatedOrder, error: updateError } = await supabase
-      .from('orders')
+      .from('purchase_orders')
       .update(updateData)
       .eq('id', orderId)
-      .select(`
-        *,
-        product:products(id, name, sku, price, unit)
-      `)
+      .select('*')
       .single();
 
     if (updateError) {
