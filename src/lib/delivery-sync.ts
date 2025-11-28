@@ -143,15 +143,16 @@ async function updateOrderStatus(
   const { data: allDeliveryItems } = await (sb as any)
     .from('delivery_items')
     .select(`
+      qty,
       quantity,
       total_price,
       deliveries!inner(order_id, status)
     `)
     .filter('deliveries.order_id', 'eq', orderId)
 
-  // Calculate totals
+  // Calculate totals - use qty or quantity (different schemas)
   const totalDeliveredQty = (allDeliveryItems || []).reduce(
-    (sum: number, item: any) => sum + (item.quantity || 0),
+    (sum: number, item: any) => sum + (item.qty || item.quantity || 0),
     0
   )
   const totalDeliveredValue = (allDeliveryItems || []).reduce(

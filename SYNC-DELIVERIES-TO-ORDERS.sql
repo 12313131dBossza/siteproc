@@ -5,8 +5,8 @@
 WITH delivery_totals AS (
   SELECT 
     d.order_id,
-    COALESCE(SUM(di.quantity), 0) as total_delivered_qty,
-    COALESCE(SUM(di.total_price), 0) as total_delivered_value
+    COALESCE(SUM(COALESCE(di.qty, di.quantity, 0)), 0) as total_delivered_qty,
+    COALESCE(SUM(COALESCE(di.total_price, 0)), 0) as total_delivered_value
   FROM deliveries d
   LEFT JOIN delivery_items di ON di.delivery_id = d.id
   WHERE d.order_id IS NOT NULL
