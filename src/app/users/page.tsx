@@ -54,18 +54,25 @@ interface UserData {
 }
 
 function useCurrentUser() {
-  const [currentUser, setCurrentUser] = useState<{ role: string } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ role: string; loading: boolean }>({ role: 'viewer', loading: true });
 
   useEffect(() => {
     async function fetchCurrentUser() {
       try {
-        const response = await fetch('/api/auth/me');
+        const response = await fetch('/api/auth/session');
         if (response.ok) {
           const data = await response.json();
-          setCurrentUser({ role: data.profile?.role || 'viewer' });
+          if (data.authenticated && data.user?.profile?.role) {
+            setCurrentUser({ role: data.user.profile.role, loading: false });
+          } else {
+            setCurrentUser({ role: 'viewer', loading: false });
+          }
+        } else {
+          setCurrentUser({ role: 'viewer', loading: false });
         }
       } catch (error) {
         console.error('Error fetching current user:', error);
+        setCurrentUser({ role: 'viewer', loading: false });
       }
     }
     fetchCurrentUser();
@@ -119,13 +126,13 @@ export default function UsersPage() {
     phone: ''
   });
 
-  // Calculate current user's role level
-  const currentRoleLevel = currentUser ? ROLE_HIERARCHY[currentUser.role] || 0 : 0;
+  // Calculate current user's role level (use role directly, not from null check)
+  const currentRoleLevel = ROLE_HIERARCHY[currentUser.role] || 0;
   const canManageUsers = currentRoleLevel >= ROLE_HIERARCHY['admin'];
 
   // Get available roles that the current user can assign
   const getAvailableRoles = () => {
-    if (!currentUser) return [];
+    if (currentUser.loading) return [];
     
     const allRoles = [
       { value: 'viewer', label: 'Viewer - Read-only access' },
@@ -140,13 +147,18 @@ export default function UsersPage() {
       return allRoles;
     }
 
+    // Admins can assign roles below admin
+    if (currentUser.role === 'admin') {
+      return allRoles.filter(role => ROLE_HIERARCHY[role.value] < ROLE_HIERARCHY['admin']);
+    }
+
     // Others can only assign roles below their level
     return allRoles.filter(role => ROLE_HIERARCHY[role.value] < currentRoleLevel);
   };
 
   // Check if current user can edit a specific user
   const canEditUser = (targetUser: UserData) => {
-    if (!currentUser) return false;
+    if (currentUser.loading) return false;
     if (currentUser.role === 'owner') return true;
     if (!canManageUsers) return false;
     
@@ -642,17 +654,21 @@ export default function UsersPage() {
                     onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
+                    disabled={currentUser.loading}
                   >
                     <option value="">Select role</option>
                     {getAvailableRoles().map(role => (
                       <option key={role.value} value={role.value}>{role.label}</option>
                     ))}
                   </select>
-                  {getAvailableRoles().length === 0 && (
+                  {!currentUser.loading && getAvailableRoles().length === 0 && (
                     <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
                       <AlertCircle className="h-3 w-3" />
                       You don&apos;t have permission to invite users
                     </p>
+                  )}
+                  {currentUser.loading && (
+                    <p className="text-xs text-gray-400 mt-1">Loading permissions...</p>
                   )}
                 </div>
                 <div>
