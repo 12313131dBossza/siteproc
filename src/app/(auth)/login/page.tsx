@@ -1,4 +1,4 @@
-'use client';
+                                                      'use client';
 
 import { useState, useEffect, Suspense } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
@@ -94,6 +94,14 @@ function LoginForm() {
       }
 
       console.log('Login successful!');
+      
+      // Update last_login timestamp in profiles
+      if (data.user) {
+        await supabase
+          .from('profiles')
+          .update({ last_login: new Date().toISOString() })
+          .eq('id', data.user.id);
+      }
       
       // Get redirect URL
       const redirectTo = searchParams.get('redirectTo') || '/dashboard';
