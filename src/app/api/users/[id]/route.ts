@@ -1,20 +1,23 @@
 import { sbServer } from '@/lib/supabase-server';
 import { NextRequest, NextResponse } from 'next/server';
 
+interface RouteContext {
+  params: Promise<{ id: string }>;
+}
+
 // GET /api/users/[id] - Get single user details
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: RouteContext
 ) {
   try {
+    const { id: userId } = await context.params;
     const supabase = await sbServer();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    const userId = params.id;
 
     // Get user profile
     const { data: profile, error: profileError } = await supabase
@@ -48,9 +51,10 @@ export async function GET(
 // PUT /api/users/[id] - Update user (role, status, etc.)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: RouteContext
 ) {
   try {
+    const { id: userId } = await context.params;
     const supabase = await sbServer();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
@@ -69,12 +73,11 @@ export async function PUT(
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
-    // Check permissions (only admins and owners can update users)
+    // Check permissions (admins and owners can update users)
     if (!['owner', 'admin'].includes((currentProfile as any).role)) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
-    const userId = params.id;
     const body = await request.json();
     const { role, status, full_name, department, phone } = body;
 
@@ -94,9 +97,9 @@ export async function PUT(
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
-    // Only owners can change roles or update other owners
-    if (role && (currentProfile as any).role !== 'owner') {
-      return NextResponse.json({ error: 'Only owners can change user roles' }, { status: 403 });
+    // Only owners can change roles to owner, or update other owners
+    if (role === 'owner' && (currentProfile as any).role !== 'owner') {
+      return NextResponse.json({ error: 'Only owners can assign owner role' }, { status: 403 });
     }
 
     if ((targetProfile as any).role === 'owner' && (currentProfile as any).role !== 'owner') {
@@ -104,7 +107,7 @@ export async function PUT(
     }
 
     // Build update object
-    const updates: any = {};
+    const updates: Record<string, unknown> = {};
     if (role) updates.role = role;
     if (status) updates.status = status;
     if (full_name) updates.full_name = full_name;
@@ -146,9 +149,10 @@ export async function PUT(
 // DELETE /api/users/[id] - Remove user from company
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: RouteContext
 ) {
   try {
+    const { id: userId } = await context.params;
     const supabase = await sbServer();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
@@ -171,8 +175,6 @@ export async function DELETE(
     if ((currentProfile as any).role !== 'owner') {
       return NextResponse.json({ error: 'Only owners can remove users' }, { status: 403 });
     }
-
-    const userId = params.id;
 
     // Prevent self-deletion
     if (userId === user.id) {

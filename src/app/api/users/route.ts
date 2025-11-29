@@ -57,11 +57,29 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
     }
 
-    // Enrich users with status and last_login if missing
-    // Users with a profile are 'active', users from invitations are 'pending'
+    // Get auth users to enrich with email if missing
+    const userIds = (users || []).map(u => u.id);
+    let authUsersMap: Record<string, { email: string }> = {};
+    
+    if (userIds.length > 0) {
+      try {
+        const { data: authUsers } = await adminClient.auth.admin.listUsers();
+        if (authUsers?.users) {
+          authUsersMap = authUsers.users.reduce((acc, au) => {
+            acc[au.id] = { email: au.email || '' };
+            return acc;
+          }, {} as Record<string, { email: string }>);
+        }
+      } catch (e) {
+        console.error('Error fetching auth users:', e);
+      }
+    }
+
+    // Enrich users with status, last_login, and email from auth if missing
     const enrichedUsers = (users || []).map(u => ({
       ...u,
-      status: u.status || 'active', // Default to active for users with profiles
+      email: u.email || authUsersMap[u.id]?.email || null,
+      status: u.status || 'active',
       last_login: u.last_login || null,
     }));
 
