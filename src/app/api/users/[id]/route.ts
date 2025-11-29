@@ -1,4 +1,4 @@
-import { sbServer } from '@/lib/supabase-server';
+import { sbServer, sbAdmin } from '@/lib/supabase-server';
 import { NextRequest, NextResponse } from 'next/server';
 
 interface RouteContext {
@@ -56,14 +56,16 @@ export async function PUT(
   try {
     const { id: userId } = await context.params;
     const supabase = await sbServer();
+    const adminClient = sbAdmin();
+    
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get current user's profile
-    const { data: currentProfile } = await supabase
+    // Get current user's profile using admin client to bypass RLS
+    const { data: currentProfile } = await adminClient
       .from('profiles')
       .select('company_id, role')
       .eq('id', user.id)
@@ -92,12 +94,14 @@ export async function PUT(
     const body = await request.json();
     const { role, status, full_name, department, phone } = body;
 
-    // Get target user profile
-    const { data: targetProfile } = await supabase
+    // Get target user profile using admin client
+    const { data: targetProfile, error: targetError } = await adminClient
       .from('profiles')
       .select('company_id, role')
       .eq('id', userId)
       .single();
+
+    console.log('Target user lookup:', { userId, targetProfile, targetError });
 
     if (!targetProfile) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -137,8 +141,8 @@ export async function PUT(
     if (department !== undefined) updates.department = department;
     if (phone !== undefined) updates.phone = phone;
 
-    // Update user
-    const { data: updatedUser, error: updateError } = await supabase
+    // Update user using admin client to bypass RLS
+    const { data: updatedUser, error: updateError } = await adminClient
       .from('profiles')
       .update(updates)
       .eq('id', userId)
