@@ -159,10 +159,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user already exists in this company
-      return NextResponse.json({ error: 'Email and role are required' }, { status: 400 });
-    }
-
-    // Check if user already exists in this company
     const { data: existingUser } = await supabase
       .from('profiles')
       .select('id')
