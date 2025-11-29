@@ -133,13 +133,12 @@ export async function PUT(
       }
     }
 
-    // Build update object
+    // Build update object - only include columns that exist in profiles table
     const updates: Record<string, unknown> = {};
     if (role) updates.role = role;
     if (status) updates.status = status;
     if (full_name) updates.full_name = full_name;
-    if (department !== undefined) updates.department = department;
-    if (phone !== undefined) updates.phone = phone;
+    // Note: department and phone are stored in user metadata, not profiles table
 
     // Update user using admin client to bypass RLS
     const { data: updatedUser, error: updateError } = await adminClient
