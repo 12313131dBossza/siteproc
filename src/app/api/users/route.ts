@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/users - Invite new user
+// POST /api/users - Invite new user (internal team members only)
 export async function POST(request: NextRequest) {
   try {
     const supabase = await sbServer();
@@ -118,9 +118,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
-    // Check if user has permission to invite users
-    if (!['owner', 'admin'].includes(currentProfile.role)) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    // Role hierarchy for permissions (higher number = more permissions)
+    const roleHierarchy: Record<string, number> = {
+      'viewer': 1,
+      'accountant': 2,
+      'manager': 3,
+      'admin': 4,
+      'owner': 5
+    };
+
+    const currentRoleLevel = roleHierarchy[currentProfile.role] || 0;
+
+    // Only admin and owner can invite users
+    if (currentRoleLevel < roleHierarchy['admin']) {
+      return NextResponse.json({ error: 'Only admins and owners can invite team members' }, { status: 403 });
     }
 
     const body = await request.json();
@@ -131,9 +142,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Email and role are required' }, { status: 400 });
     }
 
-    // Only owners can create other owners
-    if (role === 'owner' && currentProfile.role !== 'owner') {
-      return NextResponse.json({ error: 'Only owners can create other owners' }, { status: 403 });
+    // Validate role is a valid internal team role
+    const validRoles = ['viewer', 'accountant', 'manager', 'admin', 'owner'];
+    if (!validRoles.includes(role)) {
+      return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
+    }
+
+    const targetRoleLevel = roleHierarchy[role] || 0;
+
+    // Users can only invite people with roles LOWER than their own
+    // Exception: owners can invite other owners
+    if (currentProfile.role !== 'owner' && targetRoleLevel >= currentRoleLevel) {
+      return NextResponse.json({ 
+        error: `You can only invite users with roles below ${currentProfile.role}` 
+      }, { status: 403 });
+    }
+
+    // Check if user already exists in this company
+      return NextResponse.json({ error: 'Email and role are required' }, { status: 400 });
     }
 
     // Check if user already exists in this company

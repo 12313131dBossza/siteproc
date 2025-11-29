@@ -24,11 +24,21 @@ import {
   UserCheck,
   UserX,
   MoreVertical,
-  Send
+  Send,
+  AlertCircle
 } from 'lucide-react';
 import { format } from '@/lib/date-format';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+
+// Role hierarchy - higher number = more permissions
+const ROLE_HIERARCHY: Record<string, number> = {
+  'viewer': 1,
+  'accountant': 2,
+  'manager': 3,
+  'admin': 4,
+  'owner': 5
+};
 
 interface UserData {
   id: string;
@@ -41,6 +51,27 @@ interface UserData {
   avatar_url?: string | null;
   phone?: string | null;
   department?: string | null;
+}
+
+function useCurrentUser() {
+  const [currentUser, setCurrentUser] = useState<{ role: string } | null>(null);
+
+  useEffect(() => {
+    async function fetchCurrentUser() {
+      try {
+        const response = await fetch('/api/auth/me');
+        if (response.ok) {
+          const data = await response.json();
+          setCurrentUser({ role: data.profile?.role || 'viewer' });
+        }
+      } catch (error) {
+        console.error('Error fetching current user:', error);
+      }
+    }
+    fetchCurrentUser();
+  }, []);
+
+  return currentUser;
 }
 
 function useUsers() {
@@ -72,6 +103,7 @@ function useUsers() {
 
 export default function UsersPage() {
   const { users, loading, setUsers } = useUsers();
+  const currentUser = useCurrentUser();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
@@ -86,6 +118,41 @@ export default function UsersPage() {
     department: '',
     phone: ''
   });
+
+  // Calculate current user's role level
+  const currentRoleLevel = currentUser ? ROLE_HIERARCHY[currentUser.role] || 0 : 0;
+  const canManageUsers = currentRoleLevel >= ROLE_HIERARCHY['admin'];
+
+  // Get available roles that the current user can assign
+  const getAvailableRoles = () => {
+    if (!currentUser) return [];
+    
+    const allRoles = [
+      { value: 'viewer', label: 'Viewer - Read-only access' },
+      { value: 'accountant', label: 'Accountant - Financial management' },
+      { value: 'manager', label: 'Manager - Operational tasks' },
+      { value: 'admin', label: 'Admin - Manage operations' },
+      { value: 'owner', label: 'Owner - Full access' },
+    ];
+
+    // Owners can assign any role
+    if (currentUser.role === 'owner') {
+      return allRoles;
+    }
+
+    // Others can only assign roles below their level
+    return allRoles.filter(role => ROLE_HIERARCHY[role.value] < currentRoleLevel);
+  };
+
+  // Check if current user can edit a specific user
+  const canEditUser = (targetUser: UserData) => {
+    if (!currentUser) return false;
+    if (currentUser.role === 'owner') return true;
+    if (!canManageUsers) return false;
+    
+    const targetRoleLevel = ROLE_HIERARCHY[targetUser.role || 'viewer'] || 0;
+    return targetRoleLevel < currentRoleLevel;
+  };
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = (user.full_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -274,13 +341,15 @@ export default function UsersPage() {
           <Button variant="ghost" leftIcon={<Download className="h-4 w-4" />}>
             Export
           </Button>
-          <Button variant="primary" leftIcon={<UserPlus className="h-4 w-4" />} onClick={() => {
-            setSelectedUser(null);
-            setFormData({ name: '', email: '', role: '', department: '', phone: '' });
-            setIsModalOpen(true);
-          }}>
-            Invite User
-          </Button>
+          {canManageUsers && (
+            <Button variant="primary" leftIcon={<UserPlus className="h-4 w-4" />} onClick={() => {
+              setSelectedUser(null);
+              setFormData({ name: '', email: '', role: '', department: '', phone: '' });
+              setIsModalOpen(true);
+            }}>
+              Invite User
+            </Button>
+          )}
         </div>
       }
     >
@@ -477,13 +546,15 @@ export default function UsersPage() {
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleEditUser(user)}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
+                          {canEditUser(user) && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleEditUser(user)}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                          )}
                         </div>
                       </div>
 
@@ -573,12 +644,16 @@ export default function UsersPage() {
                     required
                   >
                     <option value="">Select role</option>
-                    <option value="viewer">Viewer - Read-only access</option>
-                    <option value="accountant">Accountant - Financial management</option>
-                    <option value="manager">Manager - Operational tasks</option>
-                    <option value="admin">Admin - Manage operations</option>
-                    <option value="owner">Owner - Full access</option>
+                    {getAvailableRoles().map(role => (
+                      <option key={role.value} value={role.value}>{role.label}</option>
+                    ))}
                   </select>
+                  {getAvailableRoles().length === 0 && (
+                    <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      You don&apos;t have permission to invite users
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>

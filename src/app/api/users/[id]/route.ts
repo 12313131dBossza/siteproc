@@ -73,9 +73,20 @@ export async function PUT(
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
-    // Check permissions (admins and owners can update users)
-    if (!['owner', 'admin'].includes((currentProfile as any).role)) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    // Role hierarchy for permissions (higher number = more permissions)
+    const roleHierarchy: Record<string, number> = {
+      'viewer': 1,
+      'accountant': 2,
+      'manager': 3,
+      'admin': 4,
+      'owner': 5
+    };
+
+    const currentRoleLevel = roleHierarchy[(currentProfile as any).role] || 0;
+
+    // Only admin and owner can update users
+    if (currentRoleLevel < roleHierarchy['admin']) {
+      return NextResponse.json({ error: 'Only admins and owners can update team members' }, { status: 403 });
     }
 
     const body = await request.json();
@@ -97,13 +108,25 @@ export async function PUT(
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
-    // Only owners can change roles to owner, or update other owners
-    if (role === 'owner' && (currentProfile as any).role !== 'owner') {
-      return NextResponse.json({ error: 'Only owners can assign owner role' }, { status: 403 });
+    const targetCurrentRoleLevel = roleHierarchy[(targetProfile as any).role] || 0;
+
+    // Cannot modify users with same or higher role (except owners can modify anyone)
+    if ((currentProfile as any).role !== 'owner' && targetCurrentRoleLevel >= currentRoleLevel) {
+      return NextResponse.json({ 
+        error: `You cannot modify users with ${(targetProfile as any).role} role` 
+      }, { status: 403 });
     }
 
-    if ((targetProfile as any).role === 'owner' && (currentProfile as any).role !== 'owner') {
-      return NextResponse.json({ error: 'Only owners can update other owners' }, { status: 403 });
+    // If changing role, validate the new role
+    if (role) {
+      const newRoleLevel = roleHierarchy[role] || 0;
+      
+      // Cannot assign roles equal to or higher than your own (except owners)
+      if ((currentProfile as any).role !== 'owner' && newRoleLevel >= currentRoleLevel) {
+        return NextResponse.json({ 
+          error: `You can only assign roles below ${(currentProfile as any).role}` 
+        }, { status: 403 });
+      }
     }
 
     // Build update object
