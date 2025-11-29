@@ -12,6 +12,18 @@ This checklist ensures SiteProc is ready for production launch. Complete all ite
 
 ---
 
+## 🎭 Role Permission Matrix
+
+| Role | Full Name | What They CAN Do | What They CANNOT Do |
+|------|-----------|------------------|---------------------|
+| **Viewer** | Read-only access | View all projects, deliveries, orders, expenses, photos, timeline, reports. Open PDFs and download them. Read all messages. | Cannot edit or create anything. Cannot invite anyone. Cannot approve payments or change statuses. |
+| **Accountant** | Financial management | Everything Viewer can do PLUS: Full access to Expenses, Payments, QuickBooks sync. Create/edit expenses and invoices. Approve or reject payments. Run financial reports. | Cannot create or delete projects. Cannot invite suppliers/clients. Cannot change project settings or milestones. |
+| **Manager** | Operational tasks | Everything Accountant can do PLUS: Create/edit projects and milestones. Place orders, assign deliveries. Mark deliveries complete. Invite suppliers and clients. Send messages/DMs. | Cannot delete projects (only Owner/Admin). Cannot change billing or team roles. Cannot access some Enterprise settings. |
+| **Admin** | Manage operations | Everything Manager can do PLUS: Invite and remove team members. Change any user's role (except Owner). Delete or archive projects. Access all settings. | Cannot change billing/subscription (Owner only). Cannot delete the company account. |
+| **Owner** | Full access | Literally everything: All above permissions. Change subscription & billing. Delete the company account. Transfer ownership. | Nothing is blocked – 100% control |
+
+---
+
 ## 🔐 1. Authentication & Security
 
 ### User Authentication
@@ -25,9 +37,10 @@ This checklist ensures SiteProc is ready for production launch. Complete all ite
 
 ### Company & Roles
 - [ ] New user can create a company
-- [ ] User can invite team members via email
+- [ ] User can invite team members via email (Admin/Owner only)
 - [ ] Invited users can accept invitation
-- [ ] Admin can assign roles (Admin, Manager, Member, Viewer)
+- [ ] Admin can assign roles below their level
+- [ ] Owner can assign any role including Owner
 - [ ] Role permissions work correctly (test each role)
 - [ ] Users can only see their company's data (RLS working)
 
@@ -168,7 +181,7 @@ This checklist ensures SiteProc is ready for production launch. Complete all ite
 
 ### Contractors
 - [ ] Can add contractor
-- [ ] Can view contractor list
+- [ ] Can view contractor list 
 - [ ] Can edit contractor details
 - [ ] Can delete contractor
 - [ ] Contractor modal works on mobile (scrollable)
