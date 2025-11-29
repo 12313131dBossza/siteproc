@@ -2,6 +2,12 @@
 -- Creates the project_milestones table for tracking project timeline checkpoints
 -- Run this in Supabase SQL Editor
 
+-- First, create helper function for RLS policies
+CREATE OR REPLACE FUNCTION public.profile_company_id(user_uuid UUID)
+RETURNS UUID AS $$
+  SELECT company_id FROM public.profiles WHERE id = user_uuid;
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
 -- Create milestones table
 CREATE TABLE IF NOT EXISTS public.project_milestones (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -63,7 +69,7 @@ SELECT
   p.company_id,
   'Project Started',
   'Project kickoff and initial setup',
-  COALESCE(p.start_date, p.created_at::date),
+  p.created_at::date,
   TRUE,
   p.created_at,
   0
@@ -92,7 +98,7 @@ BEGIN
     NEW.company_id,
     'Project Started',
     'Project kickoff and initial setup',
-    COALESCE(NEW.start_date, CURRENT_DATE),
+    CURRENT_DATE,
     TRUE,
     NOW(),
     0,

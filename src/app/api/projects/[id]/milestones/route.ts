@@ -22,14 +22,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     // Get milestones for the project
     const { data: milestones, error } = await adminClient
       .from('project_milestones')
-      .select(`
-        *,
-        completed_by_profile:profiles!project_milestones_completed_by_fkey(full_name, username),
-        created_by_profile:profiles!project_milestones_created_by_fkey(full_name, username),
-        linked_delivery:deliveries(id, status),
-        linked_order:orders(id, status),
-        linked_payment:payments(id, status)
-      `)
+      .select('*')
       .eq('project_id', projectId)
       .order('sort_order', { ascending: true })
       .order('target_date', { ascending: true });
