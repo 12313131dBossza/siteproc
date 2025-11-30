@@ -187,7 +187,7 @@ export async function GET() {
       payments: {
         total: payments.reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0),
         paid: payments.filter((p: any) => toLower(p.status) === 'paid').reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0),
-        unpaid: payments.filter((p: any) => toLower(p.status) === 'unpaid').reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0),
+        unpaid: payments.filter((p: any) => toLower(p.status) === 'unpaid' || toLower(p.status) === 'partial' || toLower(p.status) === 'pending').reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0),
         thisMonth: payments.filter((p: any) => {
           if (!p.payment_date) return false;
           const date = new Date(p.payment_date);

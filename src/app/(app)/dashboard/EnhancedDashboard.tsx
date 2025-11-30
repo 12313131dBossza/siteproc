@@ -182,35 +182,6 @@ export default function EnhancedDashboard() {
 
   return (
     <div className="p-2 sm:p-4 md:p-6 space-y-4 sm:space-y-6 max-w-full overflow-hidden">
-      {/* Debug Info */}
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm">
-        <h4 className="font-semibold text-yellow-900 mb-2">🔍 Debug Info:</h4>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-yellow-800">
-          <div>
-            <div className="text-xs opacity-70">Projects</div>
-            <div className="font-mono">{stats.projects.total}</div>
-          </div>
-          <div>
-            <div className="text-xs opacity-70">Budget</div>
-            <div className="font-mono">${stats.projects.totalBudget.toLocaleString()}</div>
-          </div>
-          <div>
-            <div className="text-xs opacity-70">API Success</div>
-            <div className="font-mono">{rawResponse?.success ? '✅' : '❌'}</div>
-          </div>
-          <div>
-            <div className="text-xs opacity-70">Has Data</div>
-            <div className="font-mono">{dashboardData ? '✅' : '❌'}</div>
-          </div>
-        </div>
-        <button 
-          onClick={() => console.log('Full API Response:', rawResponse)}
-          className="mt-2 text-xs text-yellow-700 hover:text-yellow-900 underline"
-        >
-          Log full response to console
-        </button>
-      </div>
-
       {/* KPI Cards Grid */}
   <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
         {/* Projects Card */}
@@ -325,25 +296,39 @@ export default function EnhancedDashboard() {
             </div>
           </div>
           {budgetHealthData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={budgetHealthData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={(entry) => `${entry.name}: ${entry.value}`}
-                  outerRadius={100}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {budgetHealthData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={BUDGET_HEALTH_COLORS[index % BUDGET_HEALTH_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+            <div className="flex flex-col lg:flex-row items-center gap-4">
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie
+                    data={budgetHealthData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={90}
+                    fill="#8884d8"
+                    dataKey="value"
+                    paddingAngle={2}
+                  >
+                    {budgetHealthData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={BUDGET_HEALTH_COLORS[index % BUDGET_HEALTH_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value: any) => `${value} projects`} />
+                </PieChart>
+              </ResponsiveContainer>
+              {/* Legend */}
+              <div className="flex flex-wrap lg:flex-col gap-2 justify-center">
+                {budgetHealthData.map((entry, index) => (
+                  <div key={entry.name} className="flex items-center gap-2">
+                    <div 
+                      className="w-3 h-3 rounded-full" 
+                      style={{ backgroundColor: BUDGET_HEALTH_COLORS[index % BUDGET_HEALTH_COLORS.length] }}
+                    />
+                    <span className="text-sm text-gray-600">{entry.name}: {entry.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           ) : (
             <div className="h-[300px] flex items-center justify-center text-gray-400">
               <div className="text-center">
@@ -368,27 +353,38 @@ export default function EnhancedDashboard() {
               View All
             </Link>
           </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={topVendors} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis 
-                type="number" 
-                tick={{ fontSize: 12 }}
-                tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
-              />
-              <YAxis 
-                dataKey="name" 
-                type="category" 
-                width={100}
-                tick={{ fontSize: 12 }}
-              />
-              <Tooltip 
-                formatter={(value: any) => formatCurrency(value)}
-                contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
-              />
-              <Bar dataKey="totalPaid" fill={COLORS.indigo} radius={[0, 8, 8, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          {hasTopVendors ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={topVendors} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis 
+                  type="number" 
+                  tick={{ fontSize: 12 }}
+                  tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+                />
+                <YAxis 
+                  dataKey="name" 
+                  type="category" 
+                  width={100}
+                  tick={{ fontSize: 12 }}
+                />
+                <Tooltip 
+                  formatter={(value: any) => formatCurrency(value)}
+                  labelFormatter={(label) => `Vendor: ${label}`}
+                  contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
+                />
+                <Bar dataKey="totalPaid" fill={COLORS.indigo} radius={[0, 8, 8, 0]} name="Total Paid" />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[300px] flex items-center justify-center text-gray-400">
+              <div className="text-center">
+                <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No vendor payments yet</p>
+                <p className="text-xs mt-1">Vendor data will appear after recording payments</p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Expense Breakdown */}
@@ -402,26 +398,54 @@ export default function EnhancedDashboard() {
               View All
             </Link>
           </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={topExpenseCategories}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={(entry: any) => `${entry.category}: $${(Number(entry.amount) / 1000).toFixed(0)}k`}
-                outerRadius={100}
-                fill="#8884d8"
-                dataKey="amount"
-              >
-                {topExpenseCategories.map((entry, index) => {
+          {hasExpenseCategories ? (
+            <div className="flex flex-col lg:flex-row items-center gap-4">
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie
+                    data={topExpenseCategories}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={90}
+                    fill="#8884d8"
+                    dataKey="amount"
+                    paddingAngle={2}
+                  >
+                    {topExpenseCategories.map((entry, index) => {
+                      const colors = [COLORS.primary, COLORS.success, COLORS.warning, COLORS.danger, COLORS.purple];
+                      return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
+                    })}
+                  </Pie>
+                  <Tooltip formatter={(value: any) => formatCurrency(value)} />
+                </PieChart>
+              </ResponsiveContainer>
+              {/* Legend */}
+              <div className="flex flex-wrap lg:flex-col gap-2 justify-center min-w-[140px]">
+                {topExpenseCategories.map((entry: any, index) => {
                   const colors = [COLORS.primary, COLORS.success, COLORS.warning, COLORS.danger, COLORS.purple];
-                  return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
+                  return (
+                    <div key={entry.category} className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full flex-shrink-0" 
+                        style={{ backgroundColor: colors[index % colors.length] }}
+                      />
+                      <span className="text-sm text-gray-600 truncate">
+                        {entry.category}: {formatCurrency(entry.amount)}
+                      </span>
+                    </div>
+                  );
                 })}
-              </Pie>
-              <Tooltip formatter={(value: any) => formatCurrency(value)} />
-            </PieChart>
-          </ResponsiveContainer>
+              </div>
+            </div>
+          ) : (
+            <div className="h-[250px] flex items-center justify-center text-gray-400">
+              <div className="text-center">
+                <Receipt className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No expenses recorded yet</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
