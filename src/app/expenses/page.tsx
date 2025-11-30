@@ -21,7 +21,9 @@ import {
   Receipt,
   FileText,
   Users,
-  Building
+  Building,
+  Edit,
+  Trash2
 } from "lucide-react";
 import { format } from "@/lib/date-format";
 import { cn, formatCurrency } from "@/lib/utils";
@@ -63,6 +65,8 @@ export default function ExpensesPage() {
   const [approvalNotes, setApprovalNotes] = useState('');
   const [userProfile, setUserProfile] = useState<any>(null);
   const [newExpense, setNewExpense] = useState({ vendor: '', category: '', amount: '', description: '', project_id: '' } as any);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const [projects, setProjects] = useState<Array<{ id: string; name: string }>>([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
@@ -379,6 +383,86 @@ export default function ExpensesPage() {
     }
   };
 
+  const handleEditExpense = (expense: Expense) => {
+    setEditingExpense(expense);
+    setNewExpense({
+      vendor: expense.vendor,
+      category: expense.category,
+      amount: expense.amount.toString(),
+      description: expense.description || '',
+      project_id: expense.project_id || ''
+    });
+    loadProjects();
+    setIsModalOpen(true);
+  };
+
+  const handleUpdateExpense = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingExpense) return;
+
+    try {
+      const response = await fetch(`/api/expenses/${editingExpense.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vendor: newExpense.vendor,
+          category: newExpense.category,
+          amount: parseFloat(newExpense.amount),
+          description: newExpense.description,
+          project_id: newExpense.project_id || null
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to update expense');
+      }
+
+      const updated = await response.json();
+      
+      setExpenses(prev => prev.map(exp => 
+        exp.id === editingExpense.id 
+          ? { ...exp, ...updated.expense || updated }
+          : exp
+      ));
+      
+      setIsModalOpen(false);
+      setEditingExpense(null);
+      setNewExpense({ vendor: '', category: '', amount: '', description: '', project_id: '' });
+      toast.success('Expense updated successfully');
+    } catch (error) {
+      console.error('Failed to update expense:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to update expense');
+    }
+  };
+
+  const handleDeleteExpense = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this expense? This action cannot be undone.')) {
+      return;
+    }
+
+    setDeleting(id);
+    try {
+      const response = await fetch(`/api/expenses/${id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete expense');
+      }
+
+      setExpenses(prev => prev.filter(exp => exp.id !== id));
+      toast.success('Expense deleted successfully');
+    } catch (error) {
+      console.error('Failed to delete expense:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to delete expense');
+    } finally {
+      setDeleting(null);
+    }
+  };
+
   if (authenticated === null) {
     return (
       <AppLayout title="Expenses" description="Manage and track project expenses">
@@ -609,6 +693,33 @@ export default function ExpensesPage() {
                         </div>
                         <div className="sm:text-right text-left w-full sm:w-auto flex-shrink-0">
                           <div className="text-xl font-bold text-gray-900 whitespace-nowrap sm:whitespace-normal">{formatCurrency(expense.amount)}</div>
+                          
+                          {/* Edit/Delete buttons for admin/owner/manager */}
+                          {userProfile?.role && ['manager', 'admin', 'owner'].includes(userProfile.role) && (
+                            <div className="flex gap-2 mt-2 justify-end">
+                              <button
+                                onClick={() => handleEditExpense(expense)}
+                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                                title="Edit expense"
+                              >
+                                <Edit className="h-4 w-4 text-gray-600" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteExpense(expense.id)}
+                                disabled={deleting === expense.id}
+                                className="p-2 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                                title="Delete expense"
+                              >
+                                {deleting === expense.id ? (
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                                ) : (
+                                  <Trash2 className="h-4 w-4 text-red-600" />
+                                )}
+                              </button>
+                            </div>
+                          )}
+                          
+                          {/* Approve/Reject buttons for pending expenses */}
                           {expense.status === 'pending' && userProfile?.role && ['manager', 'admin', 'owner'].includes(userProfile.role) && (
                             <div className="flex gap-2 mt-2">
                               <Button
@@ -647,16 +758,20 @@ export default function ExpensesPage() {
           </div>
         </div>
 
-        {/* Add Expense Modal */}
+        {/* Add/Edit Expense Modal */}
         <FormModal
           isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          title="Add New Expense"
-          description="Record a new expense and link it to a project for budget tracking"
+          onClose={() => {
+            setIsModalOpen(false);
+            setEditingExpense(null);
+            setNewExpense({ vendor: '', category: '', amount: '', description: '', project_id: '' });
+          }}
+          title={editingExpense ? "Edit Expense" : "Add New Expense"}
+          description={editingExpense ? "Update expense details" : "Record a new expense and link it to a project for budget tracking"}
           icon={<Receipt className="h-5 w-5" />}
           size="lg"
         >
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={editingExpense ? handleUpdateExpense : handleSubmit} className="space-y-6">
             {/* Basic Information Section */}
             <div className="space-y-4">
               <h4 className="font-semibold text-gray-900 text-sm">Basic Information</h4>
@@ -745,8 +860,12 @@ export default function ExpensesPage() {
             )}
 
             <FormModalActions
-              onCancel={() => setIsModalOpen(false)}
-              submitLabel="Add Expense"
+              onCancel={() => {
+                setIsModalOpen(false);
+                setEditingExpense(null);
+                setNewExpense({ vendor: '', category: '', amount: '', description: '', project_id: '' });
+              }}
+              submitLabel={editingExpense ? "Update Expense" : "Add Expense"}
             />
           </form>
         </FormModal>
