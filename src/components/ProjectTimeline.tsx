@@ -344,16 +344,18 @@ export default function ProjectTimeline({
                             
                             {/* Actions */}
                             {canEdit && milestone.name !== 'Project Started' && (
-                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="flex items-center gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                 <button
                                   onClick={() => openEditModal(milestone)}
                                   className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
+                                  title="Edit milestone"
                                 >
                                   <Edit2 className="w-4 h-4" />
                                 </button>
                                 <button
                                   onClick={() => handleDeleteMilestone(milestone.id)}
                                   className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
+                                  title="Delete milestone"
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>

@@ -27,7 +27,8 @@ import {
   ExternalLink,
   Eye,
   Image as ImageIcon,
-  MessageCircle
+  MessageCircle,
+  Trash2
 } from 'lucide-react'
 import { format } from '@/lib/date-format'
 
@@ -78,6 +79,7 @@ export default function ProjectDetailPage() {
   const canEdit = permissions.edit_project
   const canCreate = permissions.create_orders
   const canInvite = permissions.invite_others
+  const canDelete = userRole === 'admin' || userRole === 'owner'
 
   async function load() {
     setError(undefined)
@@ -171,7 +173,25 @@ export default function ProjectDetailPage() {
       // Refresh rollup in background
       fetch(`/api/projects/${id}/rollup`).then(r=>r.json()).then(j=>setRollup(j.data)).catch(()=>{})
     } else {
-      alert('Failed to update status')
+      const errorData = await res.json().catch(()=>({}))
+      alert(errorData.error || 'Failed to update status')
+    }
+  }
+
+  async function deleteProject() {
+    if (!confirm(`Are you sure you want to delete "${project?.name}"?\n\nThis action cannot be undone.`)) return
+    
+    try {
+      const res = await fetch(`/api/projects/${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        alert('Project deleted successfully')
+        router.push('/projects')
+      } else {
+        const error = await res.json().catch(() => ({ error: 'Unknown error' }))
+        alert(error.error || 'Failed to delete project')
+      }
+    } catch (e: any) {
+      alert(`Error: ${e.message}`)
     }
   }
 
@@ -313,6 +333,16 @@ export default function ProjectDetailPage() {
             >
               <Users className="h-4 w-4" />
               <span className="hidden sm:inline">Access</span>
+            </button>
+          )}
+          {canDelete && (
+            <button 
+              onClick={deleteProject} 
+              className="h-10 px-4 rounded-lg border border-red-200 bg-white hover:bg-red-50 text-red-600 text-sm shadow-sm flex items-center gap-2 font-medium transition-all hover:shadow-md"
+              title="Delete project"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Delete</span>
             </button>
           )}
           {canCreate && (
