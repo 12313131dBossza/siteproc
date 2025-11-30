@@ -16,7 +16,7 @@ interface Project {
   id: string;
   name: string;
   code?: string | null;
-  status: "active" | "on_hold" | "closed";
+  status: "planning" | "active" | "on_hold" | "completed" | "cancelled";
   budget: number;
   actual_expenses?: number; // Auto-calculated by triggers
   variance?: number; // Auto-calculated by triggers
@@ -28,7 +28,7 @@ const tabs = [
   { id: "all", label: "All Projects", icon: FolderOpen },
   { id: "active", label: "Active", icon: Clock },
   { id: "on_hold", label: "On Hold", icon: AlertCircle },
-  { id: "closed", label: "Completed", icon: CheckCircle },
+  { id: "completed", label: "Completed", icon: CheckCircle },
 ];
 
 export default function ProjectsPage() {
@@ -390,7 +390,16 @@ function ProjectCard({ project, formatCurrency }: { project: Project; formatCurr
           <h3 className="font-semibold text-base text-gray-900 group-hover:text-blue-600 transition-colors truncate">{project.name}</h3>
           {project.code && (<p className="text-xs text-gray-500 mt-0.5">Code: {project.code}</p>)}
         </div>
-        <span className={cn("px-2 py-0.5 text-xs font-medium rounded-full ml-2 flex-shrink-0", project.status === "active" && "bg-green-100 text-green-800", project.status === "on_hold" && "bg-yellow-100 text-yellow-800", project.status === "closed" && "bg-gray-100 text-gray-800")}>{project.status === "on_hold" ? "On Hold" : project.status.charAt(0).toUpperCase() + project.status.slice(1)}</span>
+        <span className={cn(
+          "px-2 py-0.5 text-xs font-medium rounded-full ml-2 flex-shrink-0", 
+          project.status === "active" && "bg-green-100 text-green-800", 
+          project.status === "on_hold" && "bg-yellow-100 text-yellow-800", 
+          project.status === "completed" && "bg-blue-100 text-blue-800",
+          project.status === "cancelled" && "bg-red-100 text-red-800",
+          project.status === "planning" && "bg-gray-100 text-gray-800"
+        )}>
+          {project.status === "on_hold" ? "On Hold" : project.status.charAt(0).toUpperCase() + project.status.slice(1)}
+        </span>
       </div>
       
       {/* Budget Info - Horizontal on mobile */}

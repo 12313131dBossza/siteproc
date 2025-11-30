@@ -283,9 +283,18 @@ export default function ProjectDetailPage() {
                   ? 'bg-green-50 text-green-700 border-green-200' 
                   : project.status === 'on_hold'
                   ? 'bg-amber-50 text-amber-700 border-amber-200'
+                  : project.status === 'completed'
+                  ? 'bg-blue-50 text-blue-700 border-blue-200'
+                  : project.status === 'cancelled'
+                  ? 'bg-red-50 text-red-700 border-red-200'
                   : 'bg-gray-50 text-gray-700 border-gray-200'
               }`}>
-                {project.status === 'active' ? '● Active' : project.status === 'on_hold' ? '◐ On Hold' : '○ Closed'}
+                {project.status === 'planning' ? '◇ Planning' 
+                  : project.status === 'active' ? '● Active' 
+                  : project.status === 'on_hold' ? '◐ On Hold' 
+                  : project.status === 'completed' ? '✓ Completed'
+                  : project.status === 'cancelled' ? '✕ Cancelled'
+                  : project.status}
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500">
@@ -306,9 +315,11 @@ export default function ProjectDetailPage() {
               onChange={e=>updateStatus(e.target.value)} 
               className="h-10 border rounded-lg px-3 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 text-sm font-medium cursor-pointer"
             >
+              <option value="planning">◇ Planning</option>
               <option value="active">● Active</option>
               <option value="on_hold">◐ On Hold</option>
-              <option value="closed">○ Closed</option>
+              <option value="completed">✓ Completed</option>
+              <option value="cancelled">✕ Cancelled</option>
             </select>
           ) : (
             <span className={`text-xs px-2.5 py-1 rounded-full font-medium border ${
@@ -316,9 +327,18 @@ export default function ProjectDetailPage() {
                 ? 'bg-green-50 text-green-700 border-green-200' 
                 : project.status === 'on_hold'
                 ? 'bg-amber-50 text-amber-700 border-amber-200'
+                : project.status === 'completed'
+                ? 'bg-blue-50 text-blue-700 border-blue-200'
+                : project.status === 'cancelled'
+                ? 'bg-red-50 text-red-700 border-red-200'
                 : 'bg-gray-50 text-gray-700 border-gray-200'
             }`}>
-              {project.status === 'active' ? '● Active' : project.status === 'on_hold' ? '◐ On Hold' : '○ Closed'}
+              {project.status === 'planning' ? '◇ Planning' 
+                : project.status === 'active' ? '● Active' 
+                : project.status === 'on_hold' ? '◐ On Hold' 
+                : project.status === 'completed' ? '✓ Completed'
+                : project.status === 'cancelled' ? '✕ Cancelled'
+                : project.status}
             </span>
           )}
           <button onClick={()=>load()} className="h-10 px-4 rounded-lg border bg-white hover:bg-gray-50 text-sm shadow-sm flex items-center gap-2 font-medium transition-all hover:shadow-md">

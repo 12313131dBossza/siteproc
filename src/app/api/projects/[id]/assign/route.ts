@@ -25,7 +25,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const projectRes: any = await (sb as any).from('projects').select('id, company_id, status').eq('id', params.id).single()
   if (projectRes.error || !projectRes.data) return NextResponse.json({ error: 'project_not_found' }, { status: 404 })
   if ((projectRes.data as any).company_id !== myCompany) return NextResponse.json({ error: 'forbidden' }, { status: 403 })
-  if ((projectRes.data as any).status === 'closed') return NextResponse.json({ error: 'project_closed' }, { status: 400 })
+  if ((projectRes.data as any).status === 'completed' || (projectRes.data as any).status === 'cancelled') return NextResponse.json({ error: 'project_closed' }, { status: 400 })
 
   const ensureCompany = async (table: 'orders'|'expenses'|'deliveries', ids: string[]) => {
     if (!ids?.length) return { ok: true }
