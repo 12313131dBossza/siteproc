@@ -25,7 +25,8 @@ import {
   Truck,
   X,
   TrendingUp,
-  DollarSign
+  DollarSign,
+  Trash2
 } from "lucide-react";
 import { format } from "@/lib/date-format";
 import { cn, formatCurrency } from "@/lib/utils";
@@ -82,6 +83,118 @@ interface TabConfig {
   label: string;
   count?: number;
   filter?: (order: Order) => boolean;
+}
+
+// Edit Order Modal Component
+function EditOrderModal({
+  order,
+  projects,
+  onClose,
+  onSave,
+}: {
+  order: Order;
+  projects: Array<{ id: string; name: string }>;
+  onClose: () => void;
+  onSave: (updates: any) => Promise<void>;
+}) {
+  const [formData, setFormData] = useState({
+    description: order.description || '',
+    category: order.category || '',
+    vendor: order.vendor || '',
+    amount: order.amount || 0,
+    project_id: order.project_id || '',
+  });
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await onSave(formData);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div 
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="bg-white rounded-xl max-w-lg w-full shadow-2xl">
+        <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-gray-900">Edit Order</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Project</label>
+            <select
+              value={formData.project_id}
+              onChange={(e) => setFormData({ ...formData, project_id: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">Select Project</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <input
+              type="text"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+              <input
+                type="text"
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Vendor</label>
+              <input
+                type="text"
+                value={formData.vendor}
+                onChange={(e) => setFormData({ ...formData, vendor: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Amount</label>
+            <input
+              type="number"
+              step="0.01"
+              value={formData.amount}
+              onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
+            />
+          </div>
+          <div className="flex gap-3 pt-4">
+            <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" className="flex-1" disabled={saving}>
+              {saving ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
 }
 
 // Order Detail Modal Component - Uses Portal to render at body level
@@ -347,6 +460,7 @@ export default function OrdersPage() {
   const [decisionAction, setDecisionAction] = useState<'approve' | 'reject'>('approve');
   const [decisionNotes, setDecisionNotes] = useState('');
   const [showNewOrderModal, setShowNewOrderModal] = useState(false);
+  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showDeliveriesModal, setShowDeliveriesModal] = useState(false);
   const [orderDeliveries, setOrderDeliveries] = useState<any[]>([]);
@@ -619,6 +733,31 @@ export default function OrdersPage() {
       toast.error('Failed to update order', {
         description: error instanceof Error ? error.message : 'An error occurred',
         duration: 5000,
+      });
+    }
+  };
+
+  const handleDeleteOrder = async (orderId: string) => {
+    if (!confirm('Are you sure you want to delete this order? This action cannot be undone.')) return;
+
+    try {
+      const response = await fetch(`/api/orders/${orderId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to delete order');
+      }
+
+      // Update local state
+      setOrders(prev => prev.filter(order => order.id !== orderId));
+      
+      toast.success('Order deleted successfully');
+    } catch (error) {
+      console.error('Error deleting order:', error);
+      toast.error('Failed to delete order', {
+        description: error instanceof Error ? error.message : 'An error occurred',
       });
     }
   };
@@ -913,6 +1052,26 @@ export default function OrdersPage() {
                             setSelectedOrder(order);
                             setShowDetailModal(true);
                           }}
+                          title="View details"
+                        >
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          leftIcon={<Edit className="h-4 w-4" />}
+                          onClick={() => {
+                            setEditingOrder(order);
+                            setShowNewOrderModal(true);
+                          }}
+                          title="Edit order"
+                        >
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          leftIcon={<Trash2 className="h-4 w-4 text-red-500" />}
+                          onClick={() => handleDeleteOrder(order.id)}
+                          title="Delete order"
                         >
                         </Button>
                         {canDecide && order.status === 'pending' && (
@@ -920,23 +1079,25 @@ export default function OrdersPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              leftIcon={<CheckCircle className="h-4 w-4" />}
+                              leftIcon={<CheckCircle className="h-4 w-4 text-green-500" />}
                               onClick={() => {
                                 setSelectedOrder(order);
                                 setDecisionAction('approve');
                                 setDecisionModalOpen(true);
                               }}
+                              title="Approve"
                             >
                             </Button>
                             <Button
                               variant="ghost"
                               size="sm"
-                              leftIcon={<XCircle className="h-4 w-4" />}
+                              leftIcon={<XCircle className="h-4 w-4 text-red-500" />}
                               onClick={() => {
                                 setSelectedOrder(order);
                                 setDecisionAction('reject');
                                 setDecisionModalOpen(true);
                               }}
+                              title="Reject"
                             >
                             </Button>
                           </>
@@ -1012,11 +1173,13 @@ export default function OrdersPage() {
       )}
 
       {/* New Order Modal */}
-      {showNewOrderModal && (
+      {showNewOrderModal && !editingOrder && (
         <div 
           className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200"
           onClick={(e) => {
-            if (e.target === e.currentTarget) setShowNewOrderModal(false);
+            if (e.target === e.currentTarget) {
+              setShowNewOrderModal(false);
+            }
           }}
         >
           <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
@@ -1034,17 +1197,43 @@ export default function OrdersPage() {
                 isModal={true}
                 onSuccess={(order) => {
                   setShowNewOrderModal(false);
-                  fetchOrders(); // Refresh orders list
-                  toast.success('Order created successfully!', {
-                    description: 'The order has been added to the list.',
-                    duration: 3000,
-                  });
+                  fetchOrders();
+                  toast.success('Order created successfully!');
                 }}
                 onCancel={() => setShowNewOrderModal(false)}
               />
             </div>
           </div>
         </div>
+      )}
+
+      {/* Edit Order Modal */}
+      {editingOrder && (
+        <EditOrderModal
+          order={editingOrder}
+          projects={projects}
+          onClose={() => setEditingOrder(null)}
+          onSave={async (updates) => {
+            try {
+              const response = await fetch(`/api/orders/${editingOrder.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updates),
+              });
+              
+              if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to update order');
+              }
+              
+              setEditingOrder(null);
+              fetchOrders();
+              toast.success('Order updated successfully!');
+            } catch (error) {
+              toast.error(error instanceof Error ? error.message : 'Failed to update order');
+            }
+          }}
+        />
       )}
 
       {/* Order Detail Modal - Using Portal */}

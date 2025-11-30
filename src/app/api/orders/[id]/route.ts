@@ -3,6 +3,82 @@ import { getCurrentUserProfile } from '@/lib/server-utils'
 import { sendOrderApprovalNotification, sendOrderRejectionNotification } from '@/lib/email'
 import { notifyOrderApproval, notifyOrderRejection } from '@/lib/notification-triggers'
 
+// PUT /api/orders/[id] - Update order details
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const { profile, supabase, error: profileError } = await getCurrentUserProfile()
+    
+    if (profileError || !profile) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const { description, category, vendor, amount, project_id } = body
+    const orderId = params.id
+
+    // Get the order first to verify it exists and user has access
+    const { data: order, error: fetchError } = await supabase
+      .from('purchase_orders')
+      .select(`
+        *,
+        projects!inner(
+          id,
+          name,
+          company_id
+        )
+      `)
+      .eq('id', orderId)
+      .eq('projects.company_id', profile.company_id)
+      .single()
+
+    if (fetchError || !order) {
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+    }
+
+    // Build update object
+    const updateData: any = {
+      updated_at: new Date().toISOString()
+    }
+    
+    if (description !== undefined) updateData.description = description
+    if (category !== undefined) updateData.category = category
+    if (vendor !== undefined) updateData.vendor = vendor
+    if (amount !== undefined) updateData.amount = amount
+    if (project_id !== undefined) updateData.project_id = project_id
+
+    // Update the order
+    const { data: updatedOrder, error: updateError } = await supabase
+      .from('purchase_orders')
+      .update(updateData)
+      .eq('id', orderId)
+      .select(`
+        *,
+        projects(
+          id,
+          name,
+          company_id
+        )
+      `)
+      .single()
+
+    if (updateError) {
+      console.error('Order update error:', updateError)
+      return NextResponse.json({ 
+        error: 'Failed to update order', 
+        details: updateError.message 
+      }, { status: 500 })
+    }
+
+    return NextResponse.json({ ok: true, order: updatedOrder })
+  } catch (error) {
+    console.error('Error in PUT /api/orders/[id]:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
 // PATCH /api/orders/[id] - Approve or reject an order
 export async function PATCH(
   request: NextRequest,
@@ -207,6 +283,73 @@ export async function GET(
     return NextResponse.json({ ok: true, data: order })
   } catch (error) {
     console.error('Error in GET /api/orders/[id]:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+// DELETE /api/orders/[id] - Delete an order
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const { profile, supabase, error: profileError } = await getCurrentUserProfile()
+    
+    if (profileError || !profile) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const orderId = params.id
+
+    // Get the order first to verify it exists and user has access
+    const { data: order, error: fetchError } = await supabase
+      .from('purchase_orders')
+      .select(`
+        *,
+        projects!inner(
+          id,
+          name,
+          company_id
+        )
+      `)
+      .eq('id', orderId)
+      .eq('projects.company_id', profile.company_id)
+      .single()
+
+    if (fetchError || !order) {
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+    }
+
+    // Check if order has deliveries
+    const { data: deliveries } = await supabase
+      .from('deliveries')
+      .select('id')
+      .eq('order_id', orderId)
+      .limit(1)
+
+    if (deliveries && deliveries.length > 0) {
+      return NextResponse.json({ 
+        error: 'Cannot delete order with existing deliveries. Delete deliveries first.' 
+      }, { status: 400 })
+    }
+
+    // Delete the order
+    const { error: deleteError } = await supabase
+      .from('purchase_orders')
+      .delete()
+      .eq('id', orderId)
+
+    if (deleteError) {
+      console.error('Order delete error:', deleteError)
+      return NextResponse.json({ 
+        error: 'Failed to delete order', 
+        details: deleteError.message 
+      }, { status: 500 })
+    }
+
+    return NextResponse.json({ ok: true, message: 'Order deleted successfully' })
+  } catch (error) {
+    console.error('Error in DELETE /api/orders/[id]:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
