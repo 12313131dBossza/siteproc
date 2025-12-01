@@ -103,12 +103,14 @@ const VISIBILITY_OPTIONS = [
 ];
 
 // Default permissions for clients (based on requirements table)
+// Client: Read-only portal - sees progress %, timeline, deliveries + photos, documents, 
+// high-level financial summary, chat with company only. Cannot edit anything or see supplier costs.
 const CLIENT_DEFAULT_PERMISSIONS = {
   view_project: true,      // Can see project dashboard, progress %, timeline, milestones
   edit_project: false,     // Cannot edit anything
   view_orders: true,       // Can see every item, date, status
   create_orders: false,    // Cannot assign, edit, or change status
-  view_expenses: true,     // Can see total spent vs budget (high-level summary only)
+  view_expenses: true,     // Can see total spent vs budget (high-level summary only, not individual supplier costs)
   view_payments: true,     // Can see total invoiced / paid / remaining + PDF invoices
   view_documents: true,    // Can view & download every uploaded file / PDF
   upload_documents: false, // Cannot upload or delete
@@ -119,6 +121,70 @@ const CLIENT_DEFAULT_PERMISSIONS = {
   manage_deliveries: false, // Cannot assign, edit, or change status
   invite_others: false,    // Cannot invite others
 };
+
+// Supplier: Delivery-only view - sees only their assigned deliveries/orders, upload proof photos,
+// chat with company only. Cannot see other suppliers, other projects, or any money.
+const SUPPLIER_DEFAULT_PERMISSIONS = {
+  view_project: false,     // Cannot see full project dashboard
+  edit_project: false,     // Cannot edit anything
+  view_orders: true,       // Can see only their assigned orders/deliveries
+  create_orders: false,    // Cannot create orders
+  view_expenses: false,    // Cannot see any financial data
+  view_payments: false,    // Cannot see any financial data
+  view_documents: false,   // Cannot see general documents
+  upload_documents: false, // Cannot upload general documents
+  view_timeline: false,    // Cannot see timeline
+  view_photos: true,       // Can upload proof photos for their deliveries
+  use_chat: true,          // Can chat with company only
+  view_deliveries: true,   // Can see their assigned deliveries
+  manage_deliveries: true, // Can upload proof photos, mark items delivered
+  invite_others: false,    // Cannot invite others
+};
+
+// Contractor: Same as Supplier for now (can add schedule/punch list later)
+const CONTRACTOR_DEFAULT_PERMISSIONS = {
+  ...SUPPLIER_DEFAULT_PERMISSIONS,
+};
+
+// Consultant: Slightly more than Client - can view plans/documents and sometimes comment
+const CONSULTANT_DEFAULT_PERMISSIONS = {
+  view_project: true,      // Can see project dashboard
+  edit_project: false,     // Cannot edit (maybe light comments later)
+  view_orders: true,       // Can view orders
+  create_orders: false,    // Cannot create orders
+  view_expenses: false,    // Cannot see financial data
+  view_payments: false,    // Cannot see financial data
+  view_documents: true,    // Can view & download documents (plans, drawings)
+  upload_documents: true,  // Can upload documents (reviews, comments)
+  view_timeline: true,     // Can see timeline
+  view_photos: true,       // Can see photos
+  use_chat: true,          // Can chat with company
+  view_deliveries: true,   // Can see deliveries
+  manage_deliveries: false, // Cannot manage deliveries
+  invite_others: false,    // Cannot invite others
+};
+
+// Other: Catch-all, usually same as Client or Consultant - manual customization
+const OTHER_DEFAULT_PERMISSIONS = {
+  ...CLIENT_DEFAULT_PERMISSIONS,
+};
+
+// Get default permissions based on external type
+function getDefaultPermissionsForType(externalType: string): Record<string, boolean> {
+  switch (externalType) {
+    case 'client':
+      return CLIENT_DEFAULT_PERMISSIONS;
+    case 'supplier':
+      return SUPPLIER_DEFAULT_PERMISSIONS;
+    case 'contractor':
+      return CONTRACTOR_DEFAULT_PERMISSIONS;
+    case 'consultant':
+      return CONSULTANT_DEFAULT_PERMISSIONS;
+    case 'other':
+    default:
+      return OTHER_DEFAULT_PERMISSIONS;
+  }
+}
 
 const DEFAULT_PERMISSIONS = {
   view_project: true,
@@ -250,16 +316,19 @@ export function ProjectAccessModal({ projectId, projectName, isOpen, onClose }: 
       if (inviteType === 'internal') {
         payload = { email: inviteEmail, role: inviteRole };
       } else {
-        // For external users
-        const isClient = inviteExternalType === 'client';
+        // For external users - get the appropriate default permissions for their type
+        const defaultPerms = getDefaultPermissionsForType(inviteExternalType);
+        const isClientOrSupplier = ['client', 'supplier', 'contractor'].includes(inviteExternalType);
+        
         payload = {
           external_email: inviteEmail,
           external_name: inviteName,
           external_company: inviteCompany,
           external_type: inviteExternalType,
-          // Clients are always viewers with fixed permissions
-          role: isClient ? 'viewer' : inviteRole,
-          permissions: isClient ? CLIENT_DEFAULT_PERMISSIONS : invitePermissions,
+          // Clients and suppliers are always viewers with fixed permissions
+          role: isClientOrSupplier ? 'viewer' : inviteRole,
+          // Use default permissions for client/supplier/contractor, custom for others
+          permissions: isClientOrSupplier ? defaultPerms : invitePermissions,
         };
       }
 
@@ -623,27 +692,41 @@ export function ProjectAccessModal({ projectId, projectName, isOpen, onClose }: 
                         </>
                       )}
 
-                      {/* Role - Hidden for external clients (always viewer) */}
-                      {inviteType === 'external' && inviteExternalType === 'client' ? (
+                      {/* Role - Fixed for clients, suppliers, contractors */}
+                      {inviteType === 'external' && ['client', 'supplier', 'contractor'].includes(inviteExternalType) ? (
                         <div className="mb-4">
                           <label className="block text-sm font-medium text-gray-700 mb-1.5">Role</label>
                           <div className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-600">
-                            Viewer (Clients are always viewers with limited permissions)
+                            Viewer ({inviteExternalType === 'client' ? 'Clients' : inviteExternalType === 'supplier' ? 'Suppliers' : 'Contractors'} have fixed permissions)
                           </div>
-                          {/* Client Permissions Info */}
-                          <div className="mt-3 bg-blue-50 border border-blue-100 rounded-lg p-3 text-xs">
-                            <p className="font-semibold text-blue-800 mb-2">Client Access (Fixed):</p>
-                            <div className="text-blue-700 space-y-1">
-                              <p>✓ View project dashboard, progress, timeline, milestones</p>
-                              <p>✓ View orders, deliveries, and proof photos</p>
-                              <p>✓ View expenses summary (not individual costs)</p>
-                              <p>✓ View invoices and payment summary</p>
-                              <p>✓ View and download all documents</p>
-                              <p>✓ View photo gallery</p>
-                              <p>✓ Chat with your team (private thread)</p>
-                              <p className="text-blue-500 mt-1.5">✗ Cannot edit, create, delete, or see internal data</p>
+                          {/* External Type Permissions Info */}
+                          {inviteExternalType === 'client' && (
+                            <div className="mt-3 bg-blue-50 border border-blue-100 rounded-lg p-3 text-xs">
+                              <p className="font-semibold text-blue-800 mb-2">Client Access (Fixed):</p>
+                              <div className="text-blue-700 space-y-1">
+                                <p>✓ View project dashboard, progress, timeline, milestones</p>
+                                <p>✓ View orders, deliveries, and proof photos</p>
+                                <p>✓ View expenses summary (not individual supplier costs)</p>
+                                <p>✓ View invoices and payment summary</p>
+                                <p>✓ View and download all documents</p>
+                                <p>✓ View photo gallery</p>
+                                <p>✓ Chat with your team (private thread)</p>
+                                <p className="text-blue-500 mt-1.5">✗ Cannot edit, create, delete, or see supplier costs</p>
+                              </div>
                             </div>
-                          </div>
+                          )}
+                          {(inviteExternalType === 'supplier' || inviteExternalType === 'contractor') && (
+                            <div className="mt-3 bg-purple-50 border border-purple-100 rounded-lg p-3 text-xs">
+                              <p className="font-semibold text-purple-800 mb-2">{inviteExternalType === 'supplier' ? 'Supplier' : 'Contractor'} Access (Fixed):</p>
+                              <div className="text-purple-700 space-y-1">
+                                <p>✓ View only their assigned deliveries/orders</p>
+                                <p>✓ Upload proof photos for deliveries</p>
+                                <p>✓ Mark delivery items as complete</p>
+                                <p>✓ Chat with your team only</p>
+                                <p className="text-purple-500 mt-1.5">✗ Cannot see other suppliers, other projects, or any financial data</p>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <div className="mb-4">
@@ -664,7 +747,8 @@ export function ProjectAccessModal({ projectId, projectName, isOpen, onClose }: 
                       )}
 
                       {/* Permissions (for external - but not for clients which have fixed permissions) */}
-                      {inviteType === 'external' && inviteExternalType !== 'client' && (
+                      {/* Permissions (for external - but not for client/supplier/contractor which have fixed permissions) */}
+                      {inviteType === 'external' && !['client', 'supplier', 'contractor'].includes(inviteExternalType) && (
                         <div className="mb-4">
                           <label className="block text-sm font-medium text-gray-700 mb-2">Permissions</label>
                           <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-3">
@@ -807,13 +891,16 @@ export function ProjectAccessModal({ projectId, projectName, isOpen, onClose }: 
 
                             {/* Bottom row: Role + Actions */}
                             <div className="flex items-center justify-between pl-12">
-                              {/* Role - Clients are forced to Viewer, no dropdown */}
+                              {/* Role - Clients, Suppliers, Contractors are forced to Viewer with fixed permissions */}
                               {member.role === 'owner' ? (
                                 <span className={`text-xs px-2 py-1 rounded-full border font-medium ${getRoleColor('owner')}`}>
                                   Owner
                                 </span>
-                              ) : member.external_type === 'client' ? (
-                                <span className={`text-xs px-2 py-1 rounded-full border font-medium ${getRoleColor('viewer')}`} title="Clients are always Viewers">
+                              ) : ['client', 'supplier', 'contractor'].includes(member.external_type || '') ? (
+                                <span 
+                                  className={`text-xs px-2 py-1 rounded-full border font-medium ${getRoleColor('viewer')}`} 
+                                  title={`${member.external_type === 'client' ? 'Clients' : member.external_type === 'supplier' ? 'Suppliers' : 'Contractors'} have fixed Viewer permissions`}
+                                >
                                   Viewer
                                 </span>
                               ) : (
@@ -829,8 +916,8 @@ export function ProjectAccessModal({ projectId, projectName, isOpen, onClose }: 
                               )}
 
                               <div className="flex items-center gap-1">
-                                {/* Edit Permissions Button - Not shown for clients (fixed permissions) */}
-                                {member.role !== 'owner' && member.external_type !== 'client' && (
+                                {/* Edit Permissions Button - Not shown for clients/suppliers/contractors (fixed permissions) */}
+                                {member.role !== 'owner' && !['client', 'supplier', 'contractor'].includes(member.external_type || '') && (
                                   <button
                                     onClick={() => editingMemberId === member.id ? cancelEditingPermissions() : startEditingPermissions(member)}
                                     className={`p-1.5 rounded transition-colors ${
