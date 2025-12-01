@@ -56,7 +56,9 @@ export async function GET(request: NextRequest) {
       .eq('status', 'active')
       .maybeSingle();
 
-    const isSupplierForProject = projectMembership?.external_type === 'supplier';
+    const isSupplierForProject = projectMembership?.external_type === 'supplier' || 
+                                  projectMembership?.external_type === 'contractor' ||
+                                  projectMembership?.external_type === 'consultant';
     const isClientForProject = projectMembership?.external_type === 'client';
 
     // Verify access
@@ -217,7 +219,9 @@ export async function POST(request: NextRequest) {
       .eq('status', 'active')
       .maybeSingle();
 
-    const isSupplierForProject = projectMembership?.external_type === 'supplier';
+    const isSupplierForProject = projectMembership?.external_type === 'supplier' || 
+                                  projectMembership?.external_type === 'contractor' ||
+                                  projectMembership?.external_type === 'consultant';
     const isClientForProject = projectMembership?.external_type === 'client';
 
     console.log('Project membership:', projectMembership, 'isSupplier:', isSupplierForProject, 'isClient:', isClientForProject);

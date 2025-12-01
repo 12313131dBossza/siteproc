@@ -47,12 +47,14 @@ export async function GET() {
       effectiveRole = 'client';
     } else if (membershipCheck?.external_type === 'contractor' && effectiveRole === 'viewer') {
       effectiveRole = 'contractor';
+    } else if (membershipCheck?.external_type === 'consultant' && effectiveRole === 'viewer') {
+      effectiveRole = 'consultant';
     }
 
     const userRole = effectiveRole;
     const isCompanyMember = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(userRole);
     const isClient = userRole === 'viewer' || userRole === 'client';
-    const isSupplier = userRole === 'supplier' || userRole === 'contractor';
+    const isSupplier = userRole === 'supplier' || userRole === 'contractor' || userRole === 'consultant';
 
     console.log('Conversations API - User:', user.id, 'Profile Role:', profile?.role, 'Effective Role:', effectiveRole, 'Is Supplier:', isSupplier);
 
