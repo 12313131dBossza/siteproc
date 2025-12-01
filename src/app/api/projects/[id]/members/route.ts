@@ -1,4 +1,5 @@
 import { sbServer } from '@/lib/supabase-server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
 import { sendProjectInvitationEmail } from '@/lib/email';
 
@@ -9,6 +10,8 @@ export async function GET(
 ) {
   try {
     const supabase = await sbServer();
+    const adminClient = createAdminClient();
+    
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
@@ -17,8 +20,8 @@ export async function GET(
 
     const { id: projectId } = await params;
 
-    // Get members (without join - we'll enrich separately)
-    const { data: members, error } = await supabase
+    // Get members using admin client to bypass RLS
+    const { data: members, error } = await adminClient
       .from('project_members')
       .select('*')
       .eq('project_id', projectId)
@@ -29,18 +32,33 @@ export async function GET(
       return NextResponse.json({ error: 'Failed to fetch members' }, { status: 500 });
     }
 
-    // Enrich internal members with profile data
+    // Enrich internal members with profile data using admin client
     const enrichedMembers = await Promise.all(
       (members || []).map(async (member) => {
         if (member.user_id) {
-          // Fetch profile for internal users
-          const { data: profile } = await supabase
+          // Fetch profile for internal users using admin client
+          const { data: profile } = await adminClient
             .from('profiles')
-            .select('full_name, email, avatar_url')
+            .select('full_name, username, avatar_url, email')
             .eq('id', member.user_id)
             .single();
           
-          return { ...member, profiles: profile };
+          // If no email in profile, try to get from auth.users
+          let email = profile?.email;
+          if (!email) {
+            const { data: authUser } = await adminClient.auth.admin.getUserById(member.user_id);
+            email = authUser?.user?.email;
+          }
+          
+          return { 
+            ...member, 
+            profiles: {
+              full_name: profile?.full_name,
+              username: profile?.username,
+              avatar_url: profile?.avatar_url,
+              email: email,
+            }
+          };
         }
         return { ...member, profiles: null };
       })
