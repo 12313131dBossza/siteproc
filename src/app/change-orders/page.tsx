@@ -1,6 +1,6 @@
 "use client"
 import { useEffect, useState } from 'react'
-import { CheckCircle, XCircle, Clock, AlertCircle, Eye, EyeOff, Plus, Filter } from 'lucide-react'
+import { CheckCircle, XCircle, Clock, AlertCircle, Eye, EyeOff, Plus, Filter, Trash2 } from 'lucide-react'
 import { AppLayout } from '@/components/app-layout'
 import { Button } from '@/components/ui/Button'
 import { format } from '@/lib/date-format'
@@ -152,6 +152,26 @@ export default function ChangeOrdersPage() {
     setProcessing(null)
   }
 
+  async function deleteChangeOrder(id: string) {
+    if (!confirm('Are you sure you want to delete this change order?')) {
+      return
+    }
+    
+    setProcessing(id)
+    try {
+      const res = await fetch(`/api/change-orders/${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        await load()
+      } else {
+        const error = await res.json()
+        alert(`Failed to delete: ${error.error || 'Unknown error'}`)
+      }
+    } catch (err) {
+      alert('Failed to delete change order')
+    }
+    setProcessing(null)
+  }
+
   async function createChangeOrder(e: React.FormEvent) {
     e.preventDefault()
     setProcessing('new')
@@ -244,28 +264,39 @@ export default function ChangeOrdersPage() {
             )}
           </div>
           
-          {showActions && order.status === 'pending' && (
-            <div className="flex gap-2">
-              <Button
-                onClick={() => approve(order.id)}
-                disabled={processing === order.id}
-                variant="primary"
-                size="sm"
-                leftIcon={<CheckCircle className="w-4 h-4" />}
-              >
-                {processing === order.id ? 'Approving...' : 'Approve'}
-              </Button>
-              <Button
-                onClick={() => reject(order.id)}
-                disabled={processing === order.id}
-                variant="danger"
-                size="sm"
-                leftIcon={<XCircle className="w-4 h-4" />}
-              >
-                {processing === order.id ? 'Rejecting...' : 'Reject'}
-              </Button>
-            </div>
-          )}
+          <div className="flex gap-2">
+            {showActions && order.status === 'pending' && (
+              <>
+                <Button
+                  onClick={() => approve(order.id)}
+                  disabled={processing === order.id}
+                  variant="primary"
+                  size="sm"
+                  leftIcon={<CheckCircle className="w-4 h-4" />}
+                >
+                  {processing === order.id ? 'Approving...' : 'Approve'}
+                </Button>
+                <Button
+                  onClick={() => reject(order.id)}
+                  disabled={processing === order.id}
+                  variant="danger"
+                  size="sm"
+                  leftIcon={<XCircle className="w-4 h-4" />}
+                >
+                  {processing === order.id ? 'Rejecting...' : 'Reject'}
+                </Button>
+              </>
+            )}
+            <Button
+              onClick={() => deleteChangeOrder(order.id)}
+              disabled={processing === order.id}
+              variant="ghost"
+              size="sm"
+              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </div>
     )
