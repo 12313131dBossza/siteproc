@@ -16,6 +16,24 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   
+  // Enable image optimization for external domains
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co',
+        pathname: '/storage/v1/object/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'maps.googleapis.com',
+        pathname: '/maps/api/staticmap/**',
+      },
+    ],
+    // For user-uploaded content, allow unoptimized to reduce server load
+    unoptimized: false,
+  },
+  
   eslint: { ignoreDuringBuilds: true }, // TEMP: allow deploy; re-enable after typing cleanup
   typescript: { ignoreBuildErrors: true }, // TEMP: unblock build; remove after fixing types
   async headers() {
