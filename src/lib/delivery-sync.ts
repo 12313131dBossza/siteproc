@@ -74,7 +74,7 @@ export async function updateOrderAndProjectActuals(
     // Step 2: Get all delivery items for this delivery
     const { data: deliveryItems } = await (sb as any)
       .from('delivery_items')
-      .select('id, product_id, quantity, unit_price, total_price')
+      .select('id, product_id, quantity, unit_price, total_price, qty')
       .eq('company_id', companyId)
       .eq('delivery_id', deliveryId)
 
@@ -83,10 +83,33 @@ export async function updateOrderAndProjectActuals(
       0
     )
 
-    // Step 3: Update order if order_uuid exists (the actual UUID linking to purchase_orders)
-    if (delivery.order_uuid) {
+    // Step 3: Determine the order UUID - either from order_uuid field or by looking up order_id
+    let orderUuid = delivery.order_uuid
+    
+    // If no order_uuid but we have order_id, try to find the matching purchase_order
+    if (!orderUuid && delivery.order_id) {
+      const { data: matchingOrder } = await (sb as any)
+        .from('purchase_orders')
+        .select('id')
+        .eq('company_id', companyId)
+        .or(`id.eq.${delivery.order_id},order_number.eq.${delivery.order_id}`)
+        .single()
+      
+      if (matchingOrder) {
+        orderUuid = matchingOrder.id
+        // Update the delivery with the found order_uuid for future syncs
+        await (sb as any)
+          .from('deliveries')
+          .update({ order_uuid: orderUuid })
+          .eq('id', deliveryId)
+        console.log('✅ Linked delivery to order:', orderUuid)
+      }
+    }
+
+    // Step 4: Update order if we found an order UUID
+    if (orderUuid) {
       await updateOrderStatus(
-        delivery.order_uuid,
+        orderUuid,
         companyId,
         delivery.status,
         totalDeliveredValue,
@@ -94,7 +117,7 @@ export async function updateOrderAndProjectActuals(
       )
     }
 
-    // Step 4: Update project if project_id exists
+    // Step 5: Update project if project_id exists
     if (delivery.project_id) {
       await updateProjectActuals(
         delivery.project_id,
@@ -105,7 +128,7 @@ export async function updateOrderAndProjectActuals(
 
     console.log('✅ Synced delivery updates:', {
       delivery_id: deliveryId,
-      order_uuid: delivery.order_uuid,
+      order_uuid: orderUuid,
       project_id: delivery.project_id,
       status: delivery.status,
       delivered_value: totalDeliveredValue
@@ -131,7 +154,7 @@ async function updateOrderStatus(
   // Get order details from purchase_orders table
   const { data: order, error: orderError } = await (sb as any)
     .from('purchase_orders')
-    .select('id, status, delivered_value, ordered_qty, delivered_qty, quantity')
+    .select('id, status, delivery_progress, delivered_value, ordered_qty, delivered_qty, quantity')
     .eq('id', orderId)
     .single()
 
@@ -140,40 +163,64 @@ async function updateOrderStatus(
     return
   }
 
+  // Get all deliveries for this order
+  const { data: allDeliveries } = await (sb as any)
+    .from('deliveries')
+    .select('id, status, order_uuid')
+    .eq('order_uuid', orderId)
+  
   // Get all delivery items for this order across all deliveries
-  const { data: allDeliveryItems } = await (sb as any)
-    .from('delivery_items')
-    .select(`
-      qty,
-      quantity,
-      total_price,
-      deliveries!inner(order_uuid, status)
-    `)
-    .filter('deliveries.order_uuid', 'eq', orderId)
+  const deliveryIds = (allDeliveries || []).map((d: any) => d.id)
+  let totalDeliveredQty = 0
+  let totalDeliveredValue = 0
+  
+  if (deliveryIds.length > 0) {
+    const { data: allDeliveryItems } = await (sb as any)
+      .from('delivery_items')
+      .select('qty, quantity, total_price')
+      .in('delivery_id', deliveryIds)
+    
+    // Calculate totals - use qty or quantity (different schemas)
+    totalDeliveredQty = (allDeliveryItems || []).reduce(
+      (sum: number, item: any) => sum + (item.qty || item.quantity || 0),
+      0
+    )
+    totalDeliveredValue = (allDeliveryItems || []).reduce(
+      (sum: number, item: any) => sum + (item.total_price || 0),
+      0
+    )
+  }
 
-  // Calculate totals - use qty or quantity (different schemas)
-  const totalDeliveredQty = (allDeliveryItems || []).reduce(
-    (sum: number, item: any) => sum + (item.qty || item.quantity || 0),
-    0
-  )
-  const totalDeliveredValue = (allDeliveryItems || []).reduce(
-    (sum: number, item: any) => sum + (item.total_price || 0),
-    0
-  )
-
-  // Use ordered_qty or quantity for comparison
-  const orderedQty = order.ordered_qty || order.quantity || 0
-  const remainingQty = Math.max(0, orderedQty - totalDeliveredQty)
-
-  // Determine delivery_progress status
+  // Determine delivery_progress based on delivery statuses
   let deliveryProgress = 'not_started'
-  if (totalDeliveredQty > 0) {
-    if (totalDeliveredQty >= orderedQty && orderedQty > 0) {
+  
+  if (allDeliveries && allDeliveries.length > 0) {
+    const hasDelivered = allDeliveries.some((d: any) => d.status === 'delivered')
+    const allDelivered = allDeliveries.every((d: any) => d.status === 'delivered')
+    const hasPartial = allDeliveries.some((d: any) => d.status === 'partial')
+    const hasPending = allDeliveries.some((d: any) => d.status === 'pending')
+    
+    if (allDelivered) {
+      deliveryProgress = 'completed'
+    } else if (hasDelivered || hasPartial) {
+      deliveryProgress = 'partially_delivered'
+    } else if (hasPending) {
+      // At least one delivery exists but all are pending
+      deliveryProgress = 'not_started'
+    }
+  }
+  
+  // Also check by quantity if we have quantity data
+  const orderedQty = order.ordered_qty || order.quantity || 0
+  if (orderedQty > 0 && totalDeliveredQty > 0) {
+    if (totalDeliveredQty >= orderedQty) {
       deliveryProgress = 'completed'
     } else {
       deliveryProgress = 'partially_delivered'
     }
   }
+
+  const remainingQty = Math.max(0, orderedQty - totalDeliveredQty)
 
   // Update purchase_orders with delivery tracking fields
   const { error: updateError } = await (sb as any)
@@ -224,7 +271,8 @@ async function updateOrderStatus(
     order_id: orderId,
     delivery_progress: deliveryProgress,
     delivered_qty: totalDeliveredQty,
-    remaining_qty: remainingQty
+    remaining_qty: remainingQty,
+    delivery_count: allDeliveries?.length || 0
   })
 }
 
