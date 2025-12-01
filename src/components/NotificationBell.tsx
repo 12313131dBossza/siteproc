@@ -104,11 +104,11 @@ export function NotificationBell() {
         )}
       </button>
 
-      {/* Dropdown */}
+      {/* Dropdown - Full screen on mobile, positioned dropdown on desktop */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-[600px] flex flex-col">
+        <div className="fixed inset-0 md:absolute md:inset-auto md:right-0 md:mt-2 w-full md:w-96 bg-white md:rounded-lg shadow-lg border border-gray-200 z-50 h-full md:h-auto md:max-h-[600px] flex flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <div className="flex items-center justify-between p-4 border-b border-gray-200 safe-area-top">
             <div className="flex items-center gap-2">
               <Bell className="h-5 w-5 text-gray-700" />
               <h3 className="font-semibold text-gray-900">Notifications</h3>
