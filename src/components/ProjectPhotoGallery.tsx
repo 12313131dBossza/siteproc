@@ -258,7 +258,7 @@ export default function ProjectPhotoGallery({ projectId }: ProjectPhotoGalleryPr
       {/* Gallery Grid */}
       {filteredPhotos.length === 0 ? (
         <div className="p-8 text-center">
-          <ImageIcon className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+          <ImageIcon className="w-12 h-12 mx-auto text-gray-400 mb-3" />
           <p className="text-gray-500">No photos found</p>
         </div>
       ) : (

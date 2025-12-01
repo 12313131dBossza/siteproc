@@ -354,7 +354,7 @@ export default function ActivityPage() {
           <div className="p-6">
             {filteredActivities.length === 0 ? (
               <div className="text-center py-12">
-                <Activity className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                <Activity className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No activities found</h3>
                 <p className="text-gray-500">Try adjusting your filters or check back later for new activities.</p>
               </div>

@@ -611,7 +611,7 @@ export default function SupplierPortalPage() {
             <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-[300px]">
               {messages.length === 0 ? (
                 <div className="text-center py-8">
-                  <MessageCircle className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                  <MessageCircle className="w-10 h-10 text-gray-400 mx-auto mb-2" />
                   <p className="text-gray-500 text-sm">No messages yet</p>
                   <p className="text-xs text-gray-400">Send a message to the company</p>
                 </div>

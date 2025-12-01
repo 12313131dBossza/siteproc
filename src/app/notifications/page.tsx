@@ -175,7 +175,7 @@ export default function NotificationsPage() {
         </div>
       ) : notifications.length === 0 ? (
         <div className="flex flex-col items-center justify-center p-12 text-gray-500 bg-gray-50 rounded-lg">
-          <Bell className="h-16 w-16 mb-4 text-gray-300" />
+          <Bell className="h-16 w-16 mb-4 text-gray-400" />
           <p className="text-lg font-medium">No notifications</p>
           <p className="text-sm mt-1">You're all caught up!</p>
         </div>

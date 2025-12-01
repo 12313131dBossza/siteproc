@@ -361,7 +361,7 @@ export default function OrderDeliveriesPage() {
           <div className="divide-y divide-gray-200">
             {filteredDeliveries.length === 0 ? (
               <div className="p-12 text-center">
-                <Truck className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                <Truck className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No deliveries found</h3>
                 <p className="text-gray-500 mb-4">
                   {searchQuery
@@ -495,7 +495,7 @@ export default function OrderDeliveriesPage() {
             </div>
             
             <div className="text-center py-8">
-              <Package className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+              <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-500">Delivery recording form would go here</p>
               <p className="text-sm text-gray-400 mt-2">This would integrate with your existing RecordDeliveryForm component</p>
             </div>

@@ -329,7 +329,7 @@ export default function ProjectChat({
           </div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-gray-500">
-            <MessageCircle className="w-12 h-12 mb-2 text-gray-300" />
+            <MessageCircle className="w-12 h-12 mb-2 text-gray-400" />
             <p className="text-sm">No messages yet</p>
             <p className="text-xs">Start the conversation!</p>
           </div>

@@ -271,7 +271,7 @@ export default function ProjectTimeline({
 
             {milestones.length === 0 ? (
               <div className="text-center py-8">
-                <Calendar className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+                <Calendar className="w-12 h-12 mx-auto text-gray-400 mb-3" />
                 <p className="text-gray-500">No milestones yet</p>
                 <p className="text-sm text-gray-400">Add your first milestone to track progress</p>
               </div>
@@ -303,7 +303,7 @@ export default function ProjectTimeline({
                           ) : overdue ? (
                             <AlertCircle className="w-6 h-6 text-red-500" />
                           ) : (
-                            <Circle className="w-6 h-6 text-gray-300" />
+                            <Circle className="w-6 h-6 text-gray-400" />
                           )}
                         </button>
 
