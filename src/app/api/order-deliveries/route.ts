@@ -4,6 +4,7 @@ import { createServerClient } from '@supabase/ssr'
 import { supabaseService } from '@/lib/supabase'
 import { logActivity } from '@/app/api/activity/route'
 import { cookies } from 'next/headers'
+import { updateOrderAndProjectActuals } from '@/lib/delivery-sync'
 
 export const runtime = 'nodejs'
 
@@ -780,6 +781,21 @@ export async function POST(req: NextRequest) {
         unit_price: typeof it.unit_price === 'string' ? Number(it.unit_price) : it.unit_price,
         total_price: typeof it.total_price === 'string' ? Number(it.total_price) : it.total_price,
       }))
+    }
+
+    // Sync order delivery_progress after creating delivery
+    if (user.company_id && newDelivery.id) {
+      try {
+        await updateOrderAndProjectActuals(
+          newDelivery.id,
+          user.company_id,
+          user.id
+        )
+        console.log('✅ Synced order delivery_progress after delivery creation')
+      } catch (syncError) {
+        console.error('Failed to sync order delivery_progress:', syncError)
+        // Don't fail the request, delivery was created successfully
+      }
     }
 
     // Log activity for delivery creation

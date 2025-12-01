@@ -33,6 +33,7 @@ import { cn, formatCurrency } from "@/lib/utils";
 import { createClient } from "@/lib/supabase-client";
 import Link from "next/link";
 import { OrderForm } from "@/components/forms/OrderForm";
+import RecordDeliveryForm from "@/components/RecordDeliveryForm";
 import { toast } from "sonner";
 
 interface Order {
@@ -463,6 +464,7 @@ export default function OrdersPage() {
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showDeliveriesModal, setShowDeliveriesModal] = useState(false);
+  const [showNewDeliveryModal, setShowNewDeliveryModal] = useState(false);
   const [orderDeliveries, setOrderDeliveries] = useState<any[]>([]);
   const [loadingDeliveries, setLoadingDeliveries] = useState(false);
 
@@ -1286,16 +1288,15 @@ export default function OrdersPage() {
                 <p className="text-xs md:text-sm text-gray-600 mt-0.5 md:mt-1">{selectedOrder.description}</p>
               </div>
               <div className="flex items-center gap-2 md:gap-3">
-                <Link href="/deliveries">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="gap-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span className="hidden sm:inline">Create Delivery</span>
-                  </Button>
-                </Link>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => setShowNewDeliveryModal(true)}
+                >
+                  <Plus className="h-4 w-4" />
+                  <span className="hidden sm:inline">Create Delivery</span>
+                </Button>
                 <button
                   onClick={() => {
                     setShowDeliveriesModal(false);
@@ -1320,12 +1321,10 @@ export default function OrdersPage() {
                   <p className="text-gray-500 mb-6">
                     Deliveries for this order will appear here once they are created.
                   </p>
-                  <Link href="/deliveries">
-                    <Button className="gap-2">
-                      <Plus className="h-4 w-4" />
-                      Create First Delivery
-                    </Button>
-                  </Link>
+                  <Button className="gap-2" onClick={() => setShowNewDeliveryModal(true)}>
+                    <Plus className="h-4 w-4" />
+                    Create First Delivery
+                  </Button>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -1409,6 +1408,45 @@ export default function OrdersPage() {
               >
                 Close
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* New Delivery Modal */}
+      {showNewDeliveryModal && selectedOrder && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center">
+          <div 
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowNewDeliveryModal(false)}
+          />
+          <div className="relative bg-white w-full h-full md:h-auto md:max-h-[90vh] md:max-w-2xl md:rounded-xl md:mx-4 overflow-hidden flex flex-col">
+            <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg md:text-xl font-semibold text-gray-900">Create Delivery</h2>
+                <p className="text-xs md:text-sm text-gray-600 mt-0.5">For order: {selectedOrder.description}</p>
+              </div>
+              <button
+                onClick={() => setShowNewDeliveryModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 md:p-6">
+              <RecordDeliveryForm
+                preselectedOrderId={selectedOrder.id}
+                isModal={true}
+                onSuccess={(delivery) => {
+                  setShowNewDeliveryModal(false);
+                  // Refresh the deliveries list
+                  fetchDeliveries(selectedOrder.id);
+                  // Refresh orders to update delivery_progress
+                  fetchOrders();
+                  toast.success('Delivery created successfully!');
+                }}
+                onCancel={() => setShowNewDeliveryModal(false)}
+              />
             </div>
           </div>
         </div>
