@@ -452,7 +452,7 @@ export default function MessagesPage() {
         return;
       }
       
-      const payload = {
+      const payload: any = {
         project_id: selectedProject.id,
         channel: selectedChannel,
         message: file.name,
@@ -460,6 +460,9 @@ export default function MessagesPage() {
         attachment_name: data.attachment.name,
         attachment_type: data.attachment.type,
       };
+      // Include recipient_id for 1:1 DM
+      if (selectedParticipant) payload.recipient_id = selectedParticipant.id;
+      
       const msgRes = await fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -675,7 +678,7 @@ export default function MessagesPage() {
         return;
       }
       
-      const payload = {
+      const payload: any = {
         project_id: selectedProject.id,
         channel: selectedChannel,
         message: '🎤 Voice message',
@@ -684,6 +687,9 @@ export default function MessagesPage() {
         attachment_name: data.attachment.name,
         attachment_type: 'audio/webm',
       };
+      // Include recipient_id for 1:1 DM
+      if (selectedParticipant) payload.recipient_id = selectedParticipant.id;
+      
       const msgRes = await fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -756,7 +762,7 @@ export default function MessagesPage() {
       setSending(true);
       setShowOrderPicker(false); // Close picker immediately
       
-      const payload = {
+      const payload: any = {
         project_id: selectedProject.id,
         channel: selectedChannel,
         message: `📦 Order Reference: ${productName}`,
@@ -771,6 +777,8 @@ export default function MessagesPage() {
           delivery_progress: deliveryProgress,
         }),
       };
+      // Include recipient_id for 1:1 DM
+      if (selectedParticipant) payload.recipient_id = selectedParticipant.id;
       
       console.log('Order reference payload:', payload);
       
@@ -813,7 +821,7 @@ export default function MessagesPage() {
         const { latitude, longitude } = position.coords;
         
         try {
-          const payload = {
+          const payload: any = {
             project_id: selectedProject.id,
             channel: selectedChannel,
             message: `📍 Shared location`,
@@ -824,6 +832,8 @@ export default function MessagesPage() {
               timestamp: new Date().toISOString(),
             }),
           };
+          // Include recipient_id for 1:1 DM
+          if (selectedParticipant) payload.recipient_id = selectedParticipant.id;
           
           const res = await fetch('/api/messages', {
             method: 'POST',
