@@ -19,7 +19,11 @@ interface UserPermissions {
 function getRolePermissions(role: string): UserPermissions {
   const roleMap: Record<string, UserPermissions> = {
     'viewer': { canView: true, canCreate: false, canUpdate: false, canDelete: false },
+    'client': { canView: true, canCreate: false, canUpdate: false, canDelete: false },
     'member': { canView: true, canCreate: true, canUpdate: false, canDelete: false },
+    // Suppliers and contractors can view and update (mark deliveries) but not create or delete
+    'supplier': { canView: true, canCreate: false, canUpdate: true, canDelete: false },
+    'contractor': { canView: true, canCreate: false, canUpdate: true, canDelete: false },
     'bookkeeper': { canView: true, canCreate: true, canUpdate: true, canDelete: true },
     'manager': { canView: true, canCreate: true, canUpdate: true, canDelete: true },
     'admin': { canView: true, canCreate: true, canUpdate: true, canDelete: true },
@@ -91,13 +95,38 @@ async function getAuthenticatedUser() {
       }
     }
 
+    // Check project_members to determine effective role
+    // This handles cases where profile.role is 'viewer' but user is actually a supplier/contractor
+    let effectiveRole = profile.role
+    
+    if (profile.role === 'viewer') {
+      const sb = supabaseService()
+      const { data: membership } = await sb
+        .from('project_members')
+        .select('external_type')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .limit(1)
+        .maybeSingle()
+      
+      if (membership?.external_type === 'supplier') {
+        effectiveRole = 'supplier'
+      } else if (membership?.external_type === 'contractor') {
+        effectiveRole = 'contractor'
+      } else if (membership?.external_type === 'client') {
+        effectiveRole = 'client'
+      }
+      
+      console.log('[getAuthenticatedUser] Profile role is viewer, checked project_members. Effective role:', effectiveRole)
+    }
+
     return {
       id: user.id,
       email: user.email,
-      role: profile.role,
+      role: effectiveRole,
       company_id: profile.company_id,
       full_name: profile.full_name,
-      permissions: getRolePermissions(profile.role)
+      permissions: getRolePermissions(effectiveRole)
     }
   } catch (error) {
     console.error('[getAuthenticatedUser] Exception:', error)

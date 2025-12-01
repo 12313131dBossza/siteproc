@@ -17,7 +17,11 @@ interface UserPermissions {
 function getRolePermissions(role: string): UserPermissions {
   const roleMap: Record<string, UserPermissions> = {
     'viewer': { canView: true, canCreate: false, canUpdate: false, canDelete: false },
+    'client': { canView: true, canCreate: false, canUpdate: false, canDelete: false },
     'member': { canView: true, canCreate: true, canUpdate: false, canDelete: false },
+    // Suppliers and contractors can view and update (mark deliveries) but not create or delete
+    'supplier': { canView: true, canCreate: false, canUpdate: true, canDelete: false },
+    'contractor': { canView: true, canCreate: false, canUpdate: true, canDelete: false },
     'bookkeeper': { canView: true, canCreate: true, canUpdate: true, canDelete: true },
     'manager': { canView: true, canCreate: true, canUpdate: true, canDelete: true },
     'admin': { canView: true, canCreate: true, canUpdate: true, canDelete: true },
@@ -52,19 +56,47 @@ async function getAuthenticatedUser() {
 
   if (!profile) return null
 
+  // Check project_members to determine effective role
+  // This handles cases where profile.role is 'viewer' but user is actually a supplier/contractor
+  let effectiveRole = profile.role
+  
+  if (profile.role === 'viewer') {
+    const sb = supabaseService()
+    const { data: membership } = await sb
+      .from('project_members')
+      .select('external_type')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .limit(1)
+      .maybeSingle()
+    
+    const externalType = (membership as any)?.external_type
+    if (externalType === 'supplier') {
+      effectiveRole = 'supplier'
+    } else if (externalType === 'contractor') {
+      effectiveRole = 'contractor'
+    } else if (externalType === 'client') {
+      effectiveRole = 'client'
+    }
+    
+    console.log('[getAuthenticatedUser] Profile role is viewer, checked project_members. Effective role:', effectiveRole)
+  }
+
   return {
     id: user.id,
     email: user.email,
-    role: profile.role,
+    role: effectiveRole,
     company_id: profile.company_id,
     full_name: profile.full_name,
-    permissions: getRolePermissions(profile.role)
+    permissions: getRolePermissions(effectiveRole)
   }
 }
 
 // GET endpoint - Fetch single delivery
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params
+    
     // Authentication check
     const user = await getAuthenticatedUser()
     if (!user) {
@@ -74,7 +106,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       }, { status: 401 })
     }
 
-    const deliveryId = params.id
+    const deliveryId = id
 
     // Create Supabase client
     const cookieStore = await cookies()
@@ -133,8 +165,10 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 }
 
 // PATCH endpoint - Update delivery status
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params
+    
     // Authentication check
     const user = await getAuthenticatedUser()
     if (!user) {
@@ -151,7 +185,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       }, { status: 403 })
     }
 
-    const deliveryId = params.id
+    const deliveryId = id
     const body = await req.json()
 
     // Extract fields to update

@@ -8,11 +8,12 @@ import { notifyDeliveryStatus } from '@/lib/notification-triggers'
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const { notes, delivered_at } = await request.json()
-    const deliveryId = params.id
+    const deliveryId = id
 
     if (!deliveryId) {
       return NextResponse.json(

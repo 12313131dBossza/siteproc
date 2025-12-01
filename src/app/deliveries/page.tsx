@@ -158,6 +158,12 @@ export default function DeliveriesPage() {
       
       setDeliveries(fetchedDeliveries);
       console.log('Set deliveries:', fetchedDeliveries.length, 'items')
+      
+      // Update user role from API response (includes external_type detection)
+      if (data.user_info?.role) {
+        console.log('Updating user role from API:', data.user_info.role, 'permissions:', data.user_info.permissions)
+        setUserRole(data.user_info.role)
+      }
     } catch (error) {
       console.error('Failed to fetch deliveries:', error);
       
@@ -224,7 +230,7 @@ export default function DeliveriesPage() {
   const markAsInTransit = async (deliveryId: string) => {
     if (!canChangeStatus()) {
       toast.error('Permission denied', {
-        description: 'Only Admin or Manager roles can change delivery status.',
+        description: 'You do not have permission to change delivery status.',
         duration: 4000,
       })
       return
@@ -277,7 +283,7 @@ export default function DeliveriesPage() {
   const markAsDelivered = async (deliveryId: string, notes?: string) => {
     if (!canChangeStatus()) {
       toast.error('Permission denied', {
-        description: 'Only Admin or Manager roles can change delivery status.',
+        description: 'You do not have permission to change delivery status.',
         duration: 4000,
       })
       return
