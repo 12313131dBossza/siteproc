@@ -41,11 +41,20 @@ export async function POST(request: NextRequest) {
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'text/plain',
       'text/csv',
+      // Audio types for voice messages
+      'audio/webm',
+      'audio/mp3',
+      'audio/mpeg',
+      'audio/ogg',
+      'audio/wav',
+      'audio/mp4',
+      'audio/aac',
     ];
 
     if (!allowedTypes.includes(file.type)) {
+      console.error('File type not allowed:', file.type);
       return NextResponse.json({ 
-        error: 'File type not allowed. Allowed: images, PDF, Word, Excel, text files' 
+        error: `File type not allowed: ${file.type}. Allowed: images, PDF, Word, Excel, text, audio files` 
       }, { status: 400 });
     }
 

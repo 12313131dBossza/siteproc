@@ -444,28 +444,38 @@ export default function MessagesPage() {
       formData.append('project_id', selectedProject.id);
 
       const res = await fetch('/api/messages/upload', { method: 'POST', body: formData });
-      if (res.ok) {
-        const data = await res.json();
-        const payload = {
-          project_id: selectedProject.id,
-          channel: selectedChannel,
-          message: file.name,
-          attachment_url: data.attachment.url,
-          attachment_name: data.attachment.name,
-          attachment_type: data.attachment.type,
-        };
-        const msgRes = await fetch('/api/messages', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        if (msgRes.ok) {
-          const msgData = await msgRes.json();
-          setMessages(prev => [...prev, msgData.message]);
-        }
+      const data = await res.json();
+      
+      if (!res.ok) {
+        console.error('Upload failed:', data.error);
+        alert(`Upload failed: ${data.error || 'Unknown error'}`);
+        return;
+      }
+      
+      const payload = {
+        project_id: selectedProject.id,
+        channel: selectedChannel,
+        message: file.name,
+        attachment_url: data.attachment.url,
+        attachment_name: data.attachment.name,
+        attachment_type: data.attachment.type,
+      };
+      const msgRes = await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (msgRes.ok) {
+        const msgData = await msgRes.json();
+        setMessages(prev => [...prev, msgData.message]);
+      } else {
+        const msgError = await msgRes.json();
+        console.error('Failed to send message:', msgError);
+        alert(`Failed to send attachment: ${msgError.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error uploading file:', error);
+      alert('Error uploading file. Please try again.');
     } finally {
       setUploading(false);
     }
@@ -657,29 +667,39 @@ export default function MessagesPage() {
       formData.append('project_id', selectedProject.id);
 
       const res = await fetch('/api/messages/upload', { method: 'POST', body: formData });
-      if (res.ok) {
-        const data = await res.json();
-        const payload = {
-          project_id: selectedProject.id,
-          channel: selectedChannel,
-          message: '🎤 Voice message',
-          message_type: 'voice',
-          attachment_url: data.attachment.url,
-          attachment_name: data.attachment.name,
-          attachment_type: 'audio/webm',
-        };
-        const msgRes = await fetch('/api/messages', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        if (msgRes.ok) {
-          const msgData = await msgRes.json();
-          setMessages(prev => [...prev, msgData.message]);
-        }
+      const data = await res.json();
+      
+      if (!res.ok) {
+        console.error('Voice upload failed:', data.error);
+        alert(`Voice message failed: ${data.error || 'Unknown error'}`);
+        return;
+      }
+      
+      const payload = {
+        project_id: selectedProject.id,
+        channel: selectedChannel,
+        message: '🎤 Voice message',
+        message_type: 'voice',
+        attachment_url: data.attachment.url,
+        attachment_name: data.attachment.name,
+        attachment_type: 'audio/webm',
+      };
+      const msgRes = await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (msgRes.ok) {
+        const msgData = await msgRes.json();
+        setMessages(prev => [...prev, msgData.message]);
+      } else {
+        const msgError = await msgRes.json();
+        console.error('Failed to send voice message:', msgError);
+        alert(`Failed to send voice message: ${msgError.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error sending voice message:', error);
+      alert('Error sending voice message. Please try again.');
     } finally {
       setUploading(false);
       setRecordingTime(0);
@@ -776,7 +796,10 @@ export default function MessagesPage() {
 
   // Share current location
   const shareLocation = async () => {
-    if (!selectedProject || !selectedChannel) return;
+    if (!selectedProject || !selectedChannel) {
+      alert('Please select a project and channel first');
+      return;
+    }
     
     if (!navigator.geolocation) {
       alert('Geolocation is not supported by your browser');
@@ -811,16 +834,29 @@ export default function MessagesPage() {
           if (res.ok) {
             const data = await res.json();
             setMessages(prev => [...prev, data.message]);
+          } else {
+            const errorData = await res.json();
+            console.error('Failed to share location:', errorData);
+            alert(`Failed to share location: ${errorData.error || 'Unknown error'}`);
           }
         } catch (error) {
           console.error('Error sharing location:', error);
+          alert('Error sharing location. Please try again.');
         } finally {
           setSharingLocation(false);
         }
       },
       (error) => {
         console.error('Geolocation error:', error);
-        alert('Could not get your location. Please enable location services.');
+        let errorMsg = 'Could not get your location.';
+        if (error.code === 1) {
+          errorMsg = 'Location access denied. Please enable location permissions for this site.';
+        } else if (error.code === 2) {
+          errorMsg = 'Location unavailable. Please try again.';
+        } else if (error.code === 3) {
+          errorMsg = 'Location request timed out. Please try again.';
+        }
+        alert(errorMsg);
         setSharingLocation(false);
       },
       { enableHighAccuracy: true, timeout: 10000 }
