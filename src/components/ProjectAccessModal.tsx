@@ -102,6 +102,24 @@ const VISIBILITY_OPTIONS = [
   },
 ];
 
+// Default permissions for clients (based on requirements table)
+const CLIENT_DEFAULT_PERMISSIONS = {
+  view_project: true,      // Can see project dashboard, progress %, timeline, milestones
+  edit_project: false,     // Cannot edit anything
+  view_orders: true,       // Can see every item, date, status
+  create_orders: false,    // Cannot assign, edit, or change status
+  view_expenses: true,     // Can see total spent vs budget (high-level summary only)
+  view_payments: true,     // Can see total invoiced / paid / remaining + PDF invoices
+  view_documents: true,    // Can view & download every uploaded file / PDF
+  upload_documents: false, // Cannot upload or delete
+  view_timeline: true,     // Can see timeline
+  view_photos: true,       // Can see full photo gallery with dates and captions
+  use_chat: true,          // Can read & write in their private project thread (with company only)
+  view_deliveries: true,   // Can see every item, date, status, and all proof photos
+  manage_deliveries: false, // Cannot assign, edit, or change status
+  invite_others: false,    // Cannot invite others
+};
+
 const DEFAULT_PERMISSIONS = {
   view_project: true,
   edit_project: false,
@@ -228,16 +246,22 @@ export function ProjectAccessModal({ projectId, projectName, isOpen, onClose }: 
 
     setSaving(true);
     try {
-      const payload = inviteType === 'internal' 
-        ? { email: inviteEmail, role: inviteRole }
-        : {
-            external_email: inviteEmail,
-            external_name: inviteName,
-            external_company: inviteCompany,
-            external_type: inviteExternalType,
-            role: inviteRole,
-            permissions: invitePermissions,
-          };
+      let payload;
+      if (inviteType === 'internal') {
+        payload = { email: inviteEmail, role: inviteRole };
+      } else {
+        // For external users
+        const isClient = inviteExternalType === 'client';
+        payload = {
+          external_email: inviteEmail,
+          external_name: inviteName,
+          external_company: inviteCompany,
+          external_type: inviteExternalType,
+          // Clients are always viewers with fixed permissions
+          role: isClient ? 'viewer' : inviteRole,
+          permissions: isClient ? CLIENT_DEFAULT_PERMISSIONS : invitePermissions,
+        };
+      }
 
       const res = await fetch(`/api/projects/${projectId}/members`, {
         method: 'POST',
@@ -599,25 +623,48 @@ export function ProjectAccessModal({ projectId, projectName, isOpen, onClose }: 
                         </>
                       )}
 
-                      {/* Role */}
-                      <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Role</label>
-                        <select
-                          value={inviteRole}
-                          onChange={(e) => setInviteRole(e.target.value)}
-                          className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                        >
-                          {ROLE_OPTIONS.map(r => (
-                            <option key={r.value} value={r.value}>{r.label}</option>
-                          ))}
-                        </select>
-                        <p className="text-xs text-gray-500 mt-1.5">
-                          {ROLE_OPTIONS.find(r => r.value === inviteRole)?.description}
-                        </p>
-                      </div>
+                      {/* Role - Hidden for external clients (always viewer) */}
+                      {inviteType === 'external' && inviteExternalType === 'client' ? (
+                        <div className="mb-4">
+                          <label className="block text-sm font-medium text-gray-700 mb-1.5">Role</label>
+                          <div className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-600">
+                            Viewer (Clients are always viewers with limited permissions)
+                          </div>
+                          {/* Client Permissions Info */}
+                          <div className="mt-3 bg-blue-50 border border-blue-100 rounded-lg p-3 text-xs">
+                            <p className="font-semibold text-blue-800 mb-2">Client Access (Fixed):</p>
+                            <div className="text-blue-700 space-y-1">
+                              <p>✓ View project dashboard, progress, timeline, milestones</p>
+                              <p>✓ View orders, deliveries, and proof photos</p>
+                              <p>✓ View expenses summary (not individual costs)</p>
+                              <p>✓ View invoices and payment summary</p>
+                              <p>✓ View and download all documents</p>
+                              <p>✓ View photo gallery</p>
+                              <p>✓ Chat with your team (private thread)</p>
+                              <p className="text-blue-500 mt-1.5">✗ Cannot edit, create, delete, or see internal data</p>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mb-4">
+                          <label className="block text-sm font-medium text-gray-700 mb-1.5">Role</label>
+                          <select
+                            value={inviteRole}
+                            onChange={(e) => setInviteRole(e.target.value)}
+                            className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                          >
+                            {ROLE_OPTIONS.map(r => (
+                              <option key={r.value} value={r.value}>{r.label}</option>
+                            ))}
+                          </select>
+                          <p className="text-xs text-gray-500 mt-1.5">
+                            {ROLE_OPTIONS.find(r => r.value === inviteRole)?.description}
+                          </p>
+                        </div>
+                      )}
 
-                      {/* Permissions (for external) */}
-                      {inviteType === 'external' && (
+                      {/* Permissions (for external - but not for clients which have fixed permissions) */}
+                      {inviteType === 'external' && inviteExternalType !== 'client' && (
                         <div className="mb-4">
                           <label className="block text-sm font-medium text-gray-700 mb-2">Permissions</label>
                           <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-3">
@@ -725,14 +772,14 @@ export function ProjectAccessModal({ projectId, projectName, isOpen, onClose }: 
                                 member.external_email || member.external_company ? 'bg-gradient-to-br from-gray-500 to-gray-600' :
                                 'bg-gradient-to-br from-green-500 to-green-600'
                               }`}>
-                                {(member.profiles?.full_name?.[0] || member.external_name?.[0] || '?').toUpperCase()}
+                                {(member.profiles?.full_name?.[0] || member.external_name?.[0] || member.profiles?.email?.[0] || member.external_email?.[0] || '?').toUpperCase()}
                               </div>
                               
                               {/* Info */}
                               <div className="min-w-0 flex-1">
                                 <div className="flex flex-wrap items-center gap-1.5">
                                   <span className="font-medium text-gray-900 text-sm">
-                                    {member.profiles?.full_name || member.external_name || 'Unknown'}
+                                    {member.profiles?.full_name || member.external_name || member.profiles?.email?.split('@')[0] || member.external_email?.split('@')[0] || 'Unknown'}
                                   </span>
                                   {/* Member Type Label */}
                                   {(() => {
@@ -760,8 +807,16 @@ export function ProjectAccessModal({ projectId, projectName, isOpen, onClose }: 
 
                             {/* Bottom row: Role + Actions */}
                             <div className="flex items-center justify-between pl-12">
-                              {/* Role */}
-                              {member.role !== 'owner' ? (
+                              {/* Role - Clients are forced to Viewer, no dropdown */}
+                              {member.role === 'owner' ? (
+                                <span className={`text-xs px-2 py-1 rounded-full border font-medium ${getRoleColor('owner')}`}>
+                                  Owner
+                                </span>
+                              ) : member.external_type === 'client' ? (
+                                <span className={`text-xs px-2 py-1 rounded-full border font-medium ${getRoleColor('viewer')}`} title="Clients are always Viewers">
+                                  Viewer
+                                </span>
+                              ) : (
                                 <select
                                   value={member.role}
                                   onChange={(e) => handleUpdateMemberRole(member.id, e.target.value)}
@@ -771,15 +826,11 @@ export function ProjectAccessModal({ projectId, projectName, isOpen, onClose }: 
                                     <option key={r.value} value={r.value}>{r.label}</option>
                                   ))}
                                 </select>
-                              ) : (
-                                <span className={`text-xs px-2 py-1 rounded-full border font-medium ${getRoleColor('owner')}`}>
-                                  Owner
-                                </span>
                               )}
 
                               <div className="flex items-center gap-1">
-                                {/* Edit Permissions Button */}
-                                {member.role !== 'owner' && (
+                                {/* Edit Permissions Button - Not shown for clients (fixed permissions) */}
+                                {member.role !== 'owner' && member.external_type !== 'client' && (
                                   <button
                                     onClick={() => editingMemberId === member.id ? cancelEditingPermissions() : startEditingPermissions(member)}
                                     className={`p-1.5 rounded transition-colors ${
