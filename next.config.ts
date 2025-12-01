@@ -24,6 +24,22 @@ const nextConfig: NextConfig = {
         source: '/(.*)',
         headers: securityHeaders,
       },
+      // Disable caching for API routes - always get fresh data
+      {
+        source: '/api/(.*)',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate, proxy-revalidate' },
+          { key: 'Pragma', value: 'no-cache' },
+          { key: 'Expires', value: '0' },
+        ],
+      },
+      // Disable caching for dynamic app pages (not static assets)
+      {
+        source: '/(dashboard|projects|orders|deliveries|expenses|payments|messages|documents|settings|people|contractors|clients|bids|reports|activity)(.*)',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate' },
+        ],
+      },
       // Long-term immutable caching for build assets
       {
         source: '/_next/static/(.*)',
