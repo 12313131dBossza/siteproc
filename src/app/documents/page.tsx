@@ -120,8 +120,21 @@ export default function DocumentsPage() {
 
       const data = await response.json();
       
-      // Open download in new tab
-      window.open(data.url, '_blank');
+      // Fetch the file and download it directly
+      const fileResponse = await fetch(data.url);
+      const blob = await fileResponse.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      
+      // Create a temporary link and trigger download
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = doc.file_name || `document-${doc.id}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up the blob URL
+      window.URL.revokeObjectURL(blobUrl);
     } catch (error) {
       console.error('Error downloading:', error);
       alert('Failed to download document');

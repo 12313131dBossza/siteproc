@@ -151,7 +151,33 @@ export default function ProjectPhotoGallery({ projectId }: ProjectPhotoGalleryPr
   const handleDownload = async (photo: Photo) => {
     const url = photo.url || await getPhotoUrl(photo);
     if (url) {
-      window.open(url, '_blank');
+      try {
+        // Fetch the file and download it directly
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        
+        // Create a temporary link and trigger download
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = photo.title || photo.file_name || `photo-${photo.id}.jpg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Clean up the blob URL
+        window.URL.revokeObjectURL(blobUrl);
+      } catch (error) {
+        console.error('Download failed:', error);
+        // Fallback: try to download via anchor tag with download attribute
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = photo.title || photo.file_name || `photo-${photo.id}.jpg`;
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
     }
   };
 
