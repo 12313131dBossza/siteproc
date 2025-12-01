@@ -120,8 +120,9 @@ export default function DeliveriesPage() {
   }
 
   // Check if user has permission to change delivery status
+  // Suppliers can update their assigned deliveries (upload proof photos, mark as delivered)
   const canChangeStatus = () => {
-    const hasPermission = userRole && ['admin', 'manager', 'owner', 'bookkeeper'].includes(userRole.toLowerCase())
+    const hasPermission = userRole && ['admin', 'manager', 'owner', 'bookkeeper', 'supplier', 'contractor'].includes(userRole.toLowerCase())
     console.log('canChangeStatus check:', { userRole, hasPermission })
     return hasPermission
   }

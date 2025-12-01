@@ -29,12 +29,32 @@ export async function GET() {
       .eq('id', user.id)
       .single();
 
-    const userRole = profile?.role || 'viewer';
+    // Also check project_members to see if user has supplier/client external_type
+    // This handles cases where profile.role wasn't updated correctly
+    const { data: membershipCheck } = await adminClient
+      .from('project_members')
+      .select('external_type')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .limit(1)
+      .maybeSingle();
+
+    // Determine effective role - check profile first, then project_members
+    let effectiveRole = profile?.role || 'viewer';
+    if (membershipCheck?.external_type === 'supplier' && effectiveRole === 'viewer') {
+      effectiveRole = 'supplier';
+    } else if (membershipCheck?.external_type === 'client' && effectiveRole === 'viewer') {
+      effectiveRole = 'client';
+    } else if (membershipCheck?.external_type === 'contractor' && effectiveRole === 'viewer') {
+      effectiveRole = 'contractor';
+    }
+
+    const userRole = effectiveRole;
     const isCompanyMember = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(userRole);
     const isClient = userRole === 'viewer' || userRole === 'client';
-    const isSupplier = userRole === 'supplier';
+    const isSupplier = userRole === 'supplier' || userRole === 'contractor';
 
-    console.log('Conversations API - User:', user.id, 'Role:', userRole, 'Is Supplier:', isSupplier);
+    console.log('Conversations API - User:', user.id, 'Profile Role:', profile?.role, 'Effective Role:', effectiveRole, 'Is Supplier:', isSupplier);
 
     let projectIds: string[] = [];
     let projectMap = new Map<string, { name: string; code?: string }>();

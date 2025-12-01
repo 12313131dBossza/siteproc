@@ -280,11 +280,32 @@ export async function GET(req: NextRequest) {
       .eq('id', session.user.id)
       .single()
     
-    const userRole = profile?.role as string | null
+    let userRole = profile?.role as string | null
     
-    // For external viewers: only show deliveries from projects they have access to AND have view_orders permission
-    // (deliveries are part of orders, so we use view_orders permission)
-    if (userRole === 'viewer') {
+    // Check project_members to see if they're a supplier/client/contractor
+    // This handles cases where profile.role wasn't updated correctly
+    const { data: membershipCheck } = await (sb as any)
+      .from('project_members')
+      .select('external_type')
+      .eq('user_id', session.user.id)
+      .eq('status', 'active')
+      .limit(1)
+      .maybeSingle()
+    
+    // Override role based on project membership external_type
+    if (membershipCheck?.external_type === 'supplier' && userRole === 'viewer') {
+      userRole = 'supplier'
+    } else if (membershipCheck?.external_type === 'contractor' && userRole === 'viewer') {
+      userRole = 'contractor'
+    } else if (membershipCheck?.external_type === 'client' && userRole === 'viewer') {
+      userRole = 'client'
+    }
+    
+    const isSupplierOrContractor = userRole === 'supplier' || userRole === 'contractor'
+    
+    // For external viewers/clients: only show deliveries from projects they have access to AND have view_orders permission
+    // For suppliers/contractors: show deliveries from their assigned projects (they can update their deliveries)
+    if (userRole === 'viewer' || userRole === 'client') {
       // Get project IDs the viewer has access to WITH their permissions
       const { data: memberProjects, error: memberError } = await (sb as any)
         .from('project_members')
@@ -322,6 +343,36 @@ export async function GET(req: NextRequest) {
       }
       
       // Build query to filter deliveries by accessible project IDs
+      let query = (sb as any)
+        .from('deliveries')
+        .select('*')
+        .in('project_id', projectIds)
+        .order('created_at', { ascending: false })
+        .limit(limit)
+      
+      if (projectId) query = query.eq('project_id', projectId)
+      if (jobId) query = query.eq('job_id', jobId)
+      if (cursor) query = query.lt('created_at', cursor)
+      
+      const { data, error } = await query
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ success: true, data: data || [] })
+    }
+    
+    // For suppliers/contractors: show deliveries from their assigned projects
+    if (isSupplierOrContractor) {
+      const { data: memberProjects } = await (sb as any)
+        .from('project_members')
+        .select('project_id')
+        .eq('user_id', session.user.id)
+        .eq('status', 'active')
+      
+      if (!memberProjects || memberProjects.length === 0) {
+        return NextResponse.json({ success: true, data: [] })
+      }
+      
+      const projectIds = memberProjects.map((p: any) => p.project_id)
+      
       let query = (sb as any)
         .from('deliveries')
         .select('*')
