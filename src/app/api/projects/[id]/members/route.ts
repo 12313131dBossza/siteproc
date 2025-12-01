@@ -78,6 +78,7 @@ export async function POST(
 ) {
   try {
     const supabase = await sbServer();
+    const adminClient = createAdminClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
@@ -131,10 +132,24 @@ export async function POST(
       memberData.invitation_token = crypto.randomUUID();
       memberData.invitation_sent_at = new Date().toISOString();
     } else {
-      // Internal team member - look up user by email
-      const { data: profile } = await supabase
+      // Internal team member - look up user by email using admin client
+      // First get the current user's company
+      const { data: currentUserProfile } = await adminClient
         .from('profiles')
-        .select('id')
+        .select('company_id')
+        .eq('id', user.id)
+        .single();
+
+      if (!currentUserProfile?.company_id) {
+        return NextResponse.json({ 
+          error: 'Your profile is not associated with a company.' 
+        }, { status: 400 });
+      }
+
+      // Look up the user by email and verify they're in the same company
+      const { data: profile } = await adminClient
+        .from('profiles')
+        .select('id, company_id')
         .eq('email', email)
         .single();
 
@@ -144,12 +159,18 @@ export async function POST(
         }, { status: 404 });
       }
 
+      if (profile.company_id !== currentUserProfile.company_id) {
+        return NextResponse.json({ 
+          error: 'This user is not part of your company. Use External tab to invite external collaborators.' 
+        }, { status: 400 });
+      }
+
       memberData.user_id = profile.id;
       memberData.status = 'active'; // Internal users are active immediately
     }
 
-    // Insert the member
-    const { data: member, error: insertError } = await supabase
+    // Insert the member using admin client to bypass RLS
+    const { data: member, error: insertError } = await adminClient
       .from('project_members')
       .insert(memberData)
       .select()
