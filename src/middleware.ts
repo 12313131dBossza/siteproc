@@ -27,11 +27,21 @@ const supplierBlockedRoutes = ['/dashboard', '/analytics', '/orders', '/expenses
 // Debug/test API routes blocked in production
 const devOnlyApiRoutes = ['/api/dev/', '/api/debug/', '/api/_debug/', '/api/debug-', '/api/test-', '/api/deliveries-debug', '/api/expenses-debug', '/api/orders-debug', '/api/payments-debug', '/api/products-debug', '/api/projects-debug']
 
+// Routes blocked in production (no self-service signup)
+const productionBlockedRoutes = ['/signup']
+
 export async function middleware(req: NextRequest) {
   const url = new URL(req.url)
   
-  // Block debug/test API routes in production
+  // Block signup and debug routes in production
   if (process.env.NODE_ENV === 'production') {
+    // Block self-service signup
+    if (productionBlockedRoutes.some(route => url.pathname.startsWith(route))) {
+      log({ level: 'info', event: 'signup_blocked', path: url.pathname })
+      return NextResponse.redirect(new URL('/', req.url))
+    }
+    
+    // Block debug/test API routes
     const isDevRoute = devOnlyApiRoutes.some(route => url.pathname.startsWith(route))
     if (isDevRoute) {
       log({ level: 'warn', event: 'dev_route_blocked', path: url.pathname })

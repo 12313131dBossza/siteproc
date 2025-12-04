@@ -3,24 +3,27 @@
  * 
  * Role Hierarchy (lowest to highest):
  * 1. Viewer - Read-only access
- * 2. Accountant - Financial management
- * 3. Manager - Operational tasks
- * 4. Admin - Manage operations
- * 5. Owner - Full access
+ * 2. Editor - Basic editing (create/edit, no delete)
+ * 3. Accountant - Financial management
+ * 4. Manager - Operational tasks
+ * 5. Admin - Manage operations
+ * 6. Owner - Full access
  */
 
-export type UserRole = 'owner' | 'admin' | 'manager' | 'accountant' | 'viewer';
+export type UserRole = 'owner' | 'admin' | 'manager' | 'accountant' | 'editor' | 'viewer';
 
 export const ROLE_HIERARCHY: Record<UserRole, number> = {
   'viewer': 1,
-  'accountant': 2,
-  'manager': 3,
-  'admin': 4,
-  'owner': 5
+  'editor': 2,
+  'accountant': 3,
+  'manager': 4,
+  'admin': 5,
+  'owner': 6
 };
 
 export const ROLE_LABELS: Record<UserRole, string> = {
   'viewer': 'Viewer',
+  'editor': 'Editor',
   'accountant': 'Accountant',
   'manager': 'Manager',
   'admin': 'Admin',
@@ -29,6 +32,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 
 export const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
   'viewer': 'Read-only access',
+  'editor': 'Basic editing (create/edit)',
   'accountant': 'Financial management',
   'manager': 'Operational tasks',
   'admin': 'Manage operations',
@@ -43,22 +47,34 @@ export const PERMISSIONS = {
   // ===================
   // VIEW PERMISSIONS (Viewer+)
   // ===================
-  'view:projects': ['viewer', 'accountant', 'manager', 'admin', 'owner'],
-  'view:orders': ['viewer', 'accountant', 'manager', 'admin', 'owner'],
-  'view:deliveries': ['viewer', 'accountant', 'manager', 'admin', 'owner'],
-  'view:expenses': ['viewer', 'accountant', 'manager', 'admin', 'owner'],
-  'view:payments': ['viewer', 'accountant', 'manager', 'admin', 'owner'],
-  'view:reports': ['viewer', 'accountant', 'manager', 'admin', 'owner'],
-  'view:documents': ['viewer', 'accountant', 'manager', 'admin', 'owner'],
-  'view:photos': ['viewer', 'accountant', 'manager', 'admin', 'owner'],
-  'view:timeline': ['viewer', 'accountant', 'manager', 'admin', 'owner'],
-  'view:messages': ['viewer', 'accountant', 'manager', 'admin', 'owner'],
-  'view:contractors': ['viewer', 'accountant', 'manager', 'admin', 'owner'],
-  'view:clients': ['viewer', 'accountant', 'manager', 'admin', 'owner'],
-  'view:products': ['viewer', 'accountant', 'manager', 'admin', 'owner'],
-  'view:bids': ['viewer', 'accountant', 'manager', 'admin', 'owner'],
-  'view:change-orders': ['viewer', 'accountant', 'manager', 'admin', 'owner'],
-  'download:documents': ['viewer', 'accountant', 'manager', 'admin', 'owner'],
+  'view:projects': ['viewer', 'editor', 'accountant', 'manager', 'admin', 'owner'],
+  'view:orders': ['viewer', 'editor', 'accountant', 'manager', 'admin', 'owner'],
+  'view:deliveries': ['viewer', 'editor', 'accountant', 'manager', 'admin', 'owner'],
+  'view:expenses': ['viewer', 'editor', 'accountant', 'manager', 'admin', 'owner'],
+  'view:payments': ['viewer', 'editor', 'accountant', 'manager', 'admin', 'owner'],
+  'view:reports': ['viewer', 'editor', 'accountant', 'manager', 'admin', 'owner'],
+  'view:documents': ['viewer', 'editor', 'accountant', 'manager', 'admin', 'owner'],
+  'view:photos': ['viewer', 'editor', 'accountant', 'manager', 'admin', 'owner'],
+  'view:timeline': ['viewer', 'editor', 'accountant', 'manager', 'admin', 'owner'],
+  'view:messages': ['viewer', 'editor', 'accountant', 'manager', 'admin', 'owner'],
+  'view:contractors': ['viewer', 'editor', 'accountant', 'manager', 'admin', 'owner'],
+  'view:clients': ['viewer', 'editor', 'accountant', 'manager', 'admin', 'owner'],
+  'view:products': ['viewer', 'editor', 'accountant', 'manager', 'admin', 'owner'],
+  'view:bids': ['viewer', 'editor', 'accountant', 'manager', 'admin', 'owner'],
+  'view:change-orders': ['viewer', 'editor', 'accountant', 'manager', 'admin', 'owner'],
+  'download:documents': ['viewer', 'editor', 'accountant', 'manager', 'admin', 'owner'],
+
+  // ===================
+  // EDITOR PERMISSIONS (Editor+) - Create/Edit but no Delete
+  // ===================
+  'create:orders': ['editor', 'manager', 'admin', 'owner'],
+  'edit:orders': ['editor', 'manager', 'admin', 'owner'],
+  'create:deliveries': ['editor', 'manager', 'admin', 'owner'],
+  'edit:deliveries': ['editor', 'manager', 'admin', 'owner'],
+  'complete:deliveries': ['editor', 'manager', 'admin', 'owner'],
+  'upload:documents': ['editor', 'manager', 'admin', 'owner'],
+  'upload:photos': ['editor', 'manager', 'admin', 'owner'],
+  'send:messages': ['editor', 'manager', 'admin', 'owner'],
 
   // ===================
   // FINANCIAL PERMISSIONS (Accountant+)
@@ -84,12 +100,7 @@ export const PERMISSIONS = {
   'edit:milestones': ['manager', 'admin', 'owner'],
   'delete:milestones': ['manager', 'admin', 'owner'],
   'complete:milestones': ['manager', 'admin', 'owner'],
-  'create:orders': ['manager', 'admin', 'owner'],
-  'edit:orders': ['manager', 'admin', 'owner'],
   'delete:orders': ['manager', 'admin', 'owner'],
-  'create:deliveries': ['manager', 'admin', 'owner'],
-  'edit:deliveries': ['manager', 'admin', 'owner'],
-  'complete:deliveries': ['manager', 'admin', 'owner'],
   'assign:deliveries': ['manager', 'admin', 'owner'],
   'create:bids': ['manager', 'admin', 'owner'],
   'edit:bids': ['manager', 'admin', 'owner'],
@@ -105,9 +116,6 @@ export const PERMISSIONS = {
   'edit:clients': ['manager', 'admin', 'owner'],
   'create:products': ['manager', 'admin', 'owner'],
   'edit:products': ['manager', 'admin', 'owner'],
-  'send:messages': ['manager', 'admin', 'owner'],
-  'upload:documents': ['manager', 'admin', 'owner'],
-  'upload:photos': ['manager', 'admin', 'owner'],
   'share:project-access': ['manager', 'admin', 'owner'],
 
   // ===================
