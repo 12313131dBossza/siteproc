@@ -5,6 +5,7 @@ import { Toaster } from 'sonner'
 import { NotificationProvider } from '@/contexts/NotificationContext'
 import { SentryInitializer } from '@/components/SentryInitializer'
 import { ServiceWorkerRegistration } from '@/components/ServiceWorkerRegistration'
+import { OfflineSyncManager } from '@/components/OfflineSyncManager'
 
 // Root layout provides html/body structure and providers for all routes
 export default function RootLayout({
@@ -27,6 +28,7 @@ export default function RootLayout({
           <NotificationProvider>
             <Toaster position="top-right" />
             {children}
+            <OfflineSyncManager />
           </NotificationProvider>
         </ToastProvider>
       </body>

@@ -13,7 +13,9 @@ import {
   Mail,
   Shield,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Link2,
+  CreditCard
 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
@@ -23,7 +25,9 @@ const TABS = [
   { id: 'company', label: 'Company', icon: Building2 },
   { id: 'users', label: 'Users', icon: Users },
   { id: 'suppliers', label: 'Suppliers', icon: Package },
-  { id: 'cost-codes', label: 'Cost Codes', icon: Code }
+  { id: 'cost-codes', label: 'Cost Codes', icon: Code },
+  { id: 'integrations', label: 'Integrations', icon: Link2 },
+  { id: 'billing', label: 'Billing', icon: CreditCard }
 ] as const
 
 type TabId = typeof TABS[number]['id']
@@ -63,6 +67,8 @@ export default function SettingsPage() {
             {tab === 'users' && <UsersTab />}
             {tab === 'suppliers' && <SuppliersTab />}
             {tab === 'cost-codes' && <CostCodesTab />}
+            {tab === 'integrations' && <IntegrationsTab />}
+            {tab === 'billing' && <BillingTab />}
           </div>
         </div>
       </div>
@@ -462,6 +468,157 @@ function CostCodesTab() {
               Cost codes appear in exports and reports, giving you clear visibility into where money is being spent.
             </p>
           </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function IntegrationsTab() {
+  const [qbStatus, setQbStatus] = useState<'disconnected' | 'connected' | 'loading'>('loading')
+  const [qbCompany, setQbCompany] = useState<string | null>(null)
+
+  useEffect(() => {
+    checkQuickBooksStatus()
+  }, [])
+
+  async function checkQuickBooksStatus() {
+    try {
+      const res = await fetch('/api/quickbooks/status')
+      const data = await res.json()
+      if (data.connected) {
+        setQbStatus('connected')
+        setQbCompany(data.companyName || 'Connected')
+      } else {
+        setQbStatus('disconnected')
+      }
+    } catch {
+      setQbStatus('disconnected')
+    }
+  }
+
+  async function connectQuickBooks() {
+    try {
+      const res = await fetch('/api/quickbooks/authorize')
+      const data = await res.json()
+      if (data.authUrl) {
+        window.location.href = data.authUrl
+      } else {
+        toast.error(data.error || 'Failed to start QuickBooks connection')
+      }
+    } catch {
+      toast.error('Failed to connect to QuickBooks')
+    }
+  }
+
+  async function disconnectQuickBooks() {
+    try {
+      await fetch('/api/quickbooks/disconnect', { method: 'POST' })
+      setQbStatus('disconnected')
+      setQbCompany(null)
+      toast.success('QuickBooks disconnected')
+    } catch {
+      toast.error('Failed to disconnect QuickBooks')
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-1">Integrations</h3>
+        <p className="text-sm text-gray-600">Connect third-party services to sync your data</p>
+      </div>
+
+      {/* QuickBooks Integration */}
+      <div className="border border-gray-200 rounded-lg p-6">
+        <div className="flex items-start justify-between">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+              <svg className="w-8 h-8 text-green-600" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+              </svg>
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900">QuickBooks Online</h4>
+              <p className="text-sm text-gray-600 mt-1">
+                Sync expenses, invoices, and payments with QuickBooks
+              </p>
+              {qbStatus === 'connected' && qbCompany && (
+                <div className="flex items-center gap-2 mt-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-green-600">Connected to {qbCompany}</span>
+                </div>
+              )}
+            </div>
+          </div>
+          <div>
+            {qbStatus === 'loading' ? (
+              <Button variant="outline" disabled>
+                Checking...
+              </Button>
+            ) : qbStatus === 'connected' ? (
+              <Button variant="outline" onClick={disconnectQuickBooks}>
+                Disconnect
+              </Button>
+            ) : (
+              <Button onClick={connectQuickBooks}>
+                Connect
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {qbStatus === 'connected' && (
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <h5 className="text-sm font-medium text-gray-900 mb-2">Sync Settings</h5>
+            <div className="space-y-2 text-sm text-gray-600">
+              <div className="flex items-center justify-between">
+                <span>Auto-sync expenses</span>
+                <span className="text-green-600">Enabled</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Auto-sync invoices</span>
+                <span className="text-green-600">Enabled</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* More integrations coming soon */}
+      <div className="border border-dashed border-gray-300 rounded-lg p-6 text-center">
+        <p className="text-gray-500">More integrations coming soon</p>
+        <p className="text-sm text-gray-400 mt-1">Xero, Sage, and more</p>
+      </div>
+    </div>
+  )
+}
+
+function BillingTab() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-1">Billing & Subscription</h3>
+        <p className="text-sm text-gray-600">Manage your subscription and billing details</p>
+      </div>
+
+      <div className="border border-gray-200 rounded-lg p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h4 className="font-semibold text-gray-900">Current Plan</h4>
+            <p className="text-sm text-gray-600 mt-1">View and manage your subscription</p>
+          </div>
+          <Link href="/settings/billing">
+            <Button>
+              Manage Billing
+            </Button>
+          </Link>
+        </div>
+
+        <div className="bg-gray-50 rounded-lg p-4">
+          <p className="text-sm text-gray-600">
+            Click "Manage Billing" to view your current plan, upgrade, or manage payment methods.
+          </p>
         </div>
       </div>
     </div>
