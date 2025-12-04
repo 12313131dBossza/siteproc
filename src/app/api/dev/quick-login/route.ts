@@ -3,6 +3,11 @@ import { sbServer } from '@/lib/supabase-server'
 
 // Quick login for development/testing
 export async function POST() {
+  // Only allow in development
+  if (process.env.NODE_ENV !== 'development') {
+    return NextResponse.json({ error: 'Not available in production' }, { status: 403 })
+  }
+  
   try {
     const supabase = await sbServer()
     

@@ -4,6 +4,11 @@ import { supabaseService } from '@/lib/supabase'
 export const runtime = 'nodejs'
 
 export async function POST() {
+  // Only allow in development
+  if (process.env.NODE_ENV !== 'development') {
+    return NextResponse.json({ error: 'Not available in production' }, { status: 403 })
+  }
+  
   try {
     const sb = supabaseService()
     const { data: company, error: cErr } = await (sb as any)

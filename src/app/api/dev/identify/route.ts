@@ -4,6 +4,11 @@ import { createServerSupabaseClient, createServerSupabaseUserClient } from '@/li
 // POST /api/dev/identify
 // Ensures the current authenticated user has a profile and returns identity details
 export async function POST(req: NextRequest) {
+  // Only allow in development
+  if (process.env.NODE_ENV !== 'development') {
+    return NextResponse.json({ error: 'Not available in production' }, { status: 403 })
+  }
+  
   try {
     const userClient = await createServerSupabaseUserClient()
     const { data: { user } } = await userClient.auth.getUser()

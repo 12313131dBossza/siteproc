@@ -24,8 +24,23 @@ const protectedRoutes = ['/dashboard', '/jobs', '/suppliers', '/settings', '/adm
 // Note: /messages and /projects are allowed for suppliers to communicate
 const supplierBlockedRoutes = ['/dashboard', '/analytics', '/orders', '/expenses', '/deliveries', '/documents', '/change-orders', '/products', '/users', '/activity', '/bids', '/contractors', '/clients', '/payments', '/reports', '/settings']
 
+// Debug/test API routes blocked in production
+const devOnlyApiRoutes = ['/api/dev/', '/api/debug/', '/api/_debug/', '/api/debug-', '/api/test-', '/api/deliveries-debug', '/api/expenses-debug', '/api/orders-debug', '/api/payments-debug', '/api/products-debug', '/api/projects-debug']
+
 export async function middleware(req: NextRequest) {
   const url = new URL(req.url)
+  
+  // Block debug/test API routes in production
+  if (process.env.NODE_ENV === 'production') {
+    const isDevRoute = devOnlyApiRoutes.some(route => url.pathname.startsWith(route))
+    if (isDevRoute) {
+      log({ level: 'warn', event: 'dev_route_blocked', path: url.pathname })
+      return new NextResponse(JSON.stringify({ error: 'Not available in production' }), { 
+        status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
+  }
   
   // Skip middleware for auth callback routes - they need to set session
   if (url.pathname.startsWith('/auth/callback')) {
