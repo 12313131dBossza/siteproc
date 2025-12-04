@@ -10,10 +10,25 @@ import { randomBytes } from 'crypto';
 
 export async function GET(request: NextRequest) {
   try {
+    // Debug: Log configuration status
+    console.log('Zoho Config Check:', {
+      hasClientId: !!process.env.ZOHO_CLIENT_ID,
+      hasClientSecret: !!process.env.ZOHO_CLIENT_SECRET,
+      hasRedirectUri: !!process.env.ZOHO_REDIRECT_URI,
+    });
+
     // Check if Zoho is configured
     if (!isZohoConfigured()) {
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://siteproc1.vercel.app';
-      return NextResponse.redirect(`${baseUrl}/settings?tab=integrations&error=zoho_not_configured`);
+      // Return JSON error for debugging
+      return NextResponse.json({ 
+        error: 'Zoho not configured',
+        missing: {
+          ZOHO_CLIENT_ID: !process.env.ZOHO_CLIENT_ID,
+          ZOHO_CLIENT_SECRET: !process.env.ZOHO_CLIENT_SECRET,
+          ZOHO_REDIRECT_URI: !process.env.ZOHO_REDIRECT_URI,
+        }
+      }, { status: 400 });
     }
 
     const supabase = await createClient();
