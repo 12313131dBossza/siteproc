@@ -479,10 +479,13 @@ function IntegrationsTab() {
   const [qbCompany, setQbCompany] = useState<string | null>(null)
   const [xeroStatus, setXeroStatus] = useState<'disconnected' | 'connected' | 'loading'>('loading')
   const [xeroCompany, setXeroCompany] = useState<string | null>(null)
+  const [zohoStatus, setZohoStatus] = useState<'disconnected' | 'connected' | 'loading'>('loading')
+  const [zohoCompany, setZohoCompany] = useState<string | null>(null)
 
   useEffect(() => {
     checkQuickBooksStatus()
     checkXeroStatus()
+    checkZohoStatus()
   }, [])
 
   async function checkQuickBooksStatus() {
@@ -512,6 +515,21 @@ function IntegrationsTab() {
       }
     } catch {
       setXeroStatus('disconnected')
+    }
+  }
+
+  async function checkZohoStatus() {
+    try {
+      const res = await fetch('/api/zoho/status')
+      const data = await res.json()
+      if (data.connected) {
+        setZohoStatus('connected')
+        setZohoCompany(data.organizationName || 'Connected')
+      } else {
+        setZohoStatus('disconnected')
+      }
+    } catch {
+      setZohoStatus('disconnected')
     }
   }
 
@@ -545,6 +563,21 @@ function IntegrationsTab() {
     }
   }
 
+  async function connectZoho() {
+    window.location.href = '/api/zoho/authorize'
+  }
+
+  async function disconnectZoho() {
+    try {
+      await fetch('/api/zoho/disconnect', { method: 'POST' })
+      setZohoStatus('disconnected')
+      setZohoCompany(null)
+      toast.success('Zoho Books disconnected')
+    } catch {
+      toast.error('Failed to disconnect Zoho Books')
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -552,10 +585,69 @@ function IntegrationsTab() {
         <p className="text-sm text-gray-600">Connect third-party services to sync your data</p>
       </div>
 
-      {/* Xero Integration - Recommended */}
-      <div className="border-2 border-blue-200 bg-blue-50 rounded-lg p-6">
+      {/* Zoho Books Integration - Recommended (FREE) */}
+      <div className="border-2 border-green-200 bg-green-50 rounded-lg p-6">
         <div className="flex items-center gap-2 mb-4">
-          <span className="bg-blue-500 text-white text-xs font-semibold px-2 py-1 rounded">RECOMMENDED</span>
+          <span className="bg-green-500 text-white text-xs font-semibold px-2 py-1 rounded">RECOMMENDED - FREE</span>
+        </div>
+        <div className="flex items-start justify-between">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+              <svg className="w-8 h-8 text-green-600" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+              </svg>
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900">Zoho Books</h4>
+              <p className="text-sm text-gray-600 mt-1">
+                Free accounting software - sync expenses, invoices, and payments
+              </p>
+              {zohoStatus === 'connected' && zohoCompany && (
+                <div className="flex items-center gap-2 mt-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-green-600">Connected to {zohoCompany}</span>
+                </div>
+              )}
+            </div>
+          </div>
+          <div>
+            {zohoStatus === 'loading' ? (
+              <Button variant="ghost" disabled>
+                Checking...
+              </Button>
+            ) : zohoStatus === 'connected' ? (
+              <Button variant="ghost" onClick={disconnectZoho}>
+                Disconnect
+              </Button>
+            ) : (
+              <Button onClick={connectZoho}>
+                Connect
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {zohoStatus === 'connected' && (
+          <div className="mt-4 pt-4 border-t border-green-200">
+            <h5 className="text-sm font-medium text-gray-900 mb-2">Sync Settings</h5>
+            <div className="space-y-2 text-sm text-gray-600">
+              <div className="flex items-center justify-between">
+                <span>Auto-sync expenses</span>
+                <span className="text-green-600">Enabled</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Auto-sync invoices</span>
+                <span className="text-green-600">Enabled</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Xero Integration - Paid */}
+      <div className="border border-gray-200 rounded-lg p-6 opacity-75">
+        <div className="flex items-center gap-2 mb-4">
+          <span className="bg-gray-400 text-white text-xs font-semibold px-2 py-1 rounded">PAID SUBSCRIPTION</span>
         </div>
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-4">
@@ -567,7 +659,7 @@ function IntegrationsTab() {
             <div>
               <h4 className="font-semibold text-gray-900">Xero</h4>
               <p className="text-sm text-gray-600 mt-1">
-                Sync expenses, invoices, and payments with Xero accounting
+                Sync expenses, invoices, and payments with Xero (requires paid Xero account)
               </p>
               {xeroStatus === 'connected' && xeroCompany && (
                 <div className="flex items-center gap-2 mt-2">
@@ -579,11 +671,11 @@ function IntegrationsTab() {
           </div>
           <div>
             {xeroStatus === 'loading' ? (
-              <Button variant="outline" disabled>
+              <Button variant="ghost" disabled>
                 Checking...
               </Button>
             ) : xeroStatus === 'connected' ? (
-              <Button variant="outline" onClick={disconnectXero}>
+              <Button variant="ghost" onClick={disconnectXero}>
                 Disconnect
               </Button>
             ) : (
@@ -595,7 +687,7 @@ function IntegrationsTab() {
         </div>
 
         {xeroStatus === 'connected' && (
-          <div className="mt-4 pt-4 border-t border-blue-200">
+          <div className="mt-4 pt-4 border-t border-gray-200">
             <h5 className="text-sm font-medium text-gray-900 mb-2">Sync Settings</h5>
             <div className="space-y-2 text-sm text-gray-600">
               <div className="flex items-center justify-between">
@@ -635,11 +727,11 @@ function IntegrationsTab() {
           </div>
           <div>
             {qbStatus === 'loading' ? (
-              <Button variant="outline" disabled>
+              <Button variant="ghost" disabled>
                 Checking...
               </Button>
             ) : qbStatus === 'connected' ? (
-              <Button variant="outline" onClick={disconnectQuickBooks}>
+              <Button variant="ghost" onClick={disconnectQuickBooks}>
                 Disconnect
               </Button>
             ) : (

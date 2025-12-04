@@ -1,0 +1,269 @@
+/**
+ * Zoho Books Integration
+ * Handles OAuth 2.0 authentication and API calls to Zoho Books
+ * 
+ * FREE TIER: Available for businesses with less than $50k annual revenue
+ * 
+ * SETUP:
+ * 1. Go to https://api-console.zoho.com/
+ * 2. Click "Add Client" → "Server-based Applications"
+ * 3. Set redirect URI to: https://siteproc1.vercel.app/api/zoho/callback
+ * 4. Copy Client ID and Client Secret
+ * 5. Add to Vercel environment variables
+ */
+
+// Environment variables
+const ZOHO_CLIENT_ID = process.env.ZOHO_CLIENT_ID || '';
+const ZOHO_CLIENT_SECRET = process.env.ZOHO_CLIENT_SECRET || '';
+const ZOHO_REDIRECT_URI = process.env.ZOHO_REDIRECT_URI || 'https://siteproc1.vercel.app/api/zoho/callback';
+
+// Zoho data centers - default to US
+const ZOHO_ACCOUNTS_URL = process.env.ZOHO_ACCOUNTS_URL || 'https://accounts.zoho.com';
+const ZOHO_BOOKS_API = process.env.ZOHO_BOOKS_API || 'https://www.zohoapis.com/books/v3';
+
+// OAuth endpoints
+const ZOHO_AUTH_URL = `${ZOHO_ACCOUNTS_URL}/oauth/v2/auth`;
+const ZOHO_TOKEN_URL = `${ZOHO_ACCOUNTS_URL}/oauth/v2/token`;
+
+// Scopes needed
+const ZOHO_SCOPES = [
+  'ZohoBooks.fullaccess.all'
+].join(',');
+
+/**
+ * Check if Zoho is configured
+ */
+export function isZohoConfigured(): boolean {
+  return !!(ZOHO_CLIENT_ID && ZOHO_CLIENT_SECRET);
+}
+
+/**
+ * Generate Zoho authorization URL
+ */
+export function getZohoAuthUrl(state: string): string {
+  const params = new URLSearchParams({
+    response_type: 'code',
+    client_id: ZOHO_CLIENT_ID,
+    redirect_uri: ZOHO_REDIRECT_URI,
+    scope: ZOHO_SCOPES,
+    state: state,
+    access_type: 'offline', // Get refresh token
+    prompt: 'consent',
+  });
+
+  return `${ZOHO_AUTH_URL}?${params.toString()}`;
+}
+
+/**
+ * Exchange authorization code for tokens
+ */
+export async function exchangeZohoCode(code: string): Promise<{
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+  api_domain: string;
+} | null> {
+  try {
+    const params = new URLSearchParams({
+      grant_type: 'authorization_code',
+      client_id: ZOHO_CLIENT_ID,
+      client_secret: ZOHO_CLIENT_SECRET,
+      redirect_uri: ZOHO_REDIRECT_URI,
+      code,
+    });
+
+    const response = await fetch(`${ZOHO_TOKEN_URL}?${params.toString()}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    });
+
+    if (!response.ok) {
+      console.error('[Zoho] Token exchange failed:', await response.text());
+      return null;
+    }
+
+    const data = await response.json();
+    
+    if (data.error) {
+      console.error('[Zoho] Token error:', data.error);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('[Zoho] Token exchange error:', error);
+    return null;
+  }
+}
+
+/**
+ * Refresh access token
+ */
+export async function refreshZohoToken(refreshToken: string): Promise<{
+  access_token: string;
+  expires_in: number;
+} | null> {
+  try {
+    const params = new URLSearchParams({
+      grant_type: 'refresh_token',
+      client_id: ZOHO_CLIENT_ID,
+      client_secret: ZOHO_CLIENT_SECRET,
+      refresh_token: refreshToken,
+    });
+
+    const response = await fetch(`${ZOHO_TOKEN_URL}?${params.toString()}`, {
+      method: 'POST',
+    });
+
+    if (!response.ok) {
+      console.error('[Zoho] Token refresh failed:', await response.text());
+      return null;
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('[Zoho] Token refresh error:', error);
+    return null;
+  }
+}
+
+/**
+ * Get Zoho Books organizations
+ */
+export async function getZohoOrganizations(accessToken: string): Promise<Array<{
+  organization_id: string;
+  name: string;
+  is_default_org: boolean;
+}> | null> {
+  try {
+    const response = await fetch(`${ZOHO_BOOKS_API}/organizations`, {
+      headers: {
+        'Authorization': `Zoho-oauthtoken ${accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      console.error('[Zoho] Failed to get organizations:', await response.text());
+      return null;
+    }
+
+    const data = await response.json();
+    return data.organizations || [];
+  } catch (error) {
+    console.error('[Zoho] Get organizations error:', error);
+    return null;
+  }
+}
+
+/**
+ * Create an expense in Zoho Books
+ */
+export async function createZohoExpense({
+  accessToken,
+  organizationId,
+  description,
+  amount,
+  date,
+  category,
+  reference,
+}: {
+  accessToken: string;
+  organizationId: string;
+  description: string;
+  amount: number;
+  date: string;
+  category?: string;
+  reference?: string;
+}): Promise<{ expenseId: string } | null> {
+  try {
+    const expense = {
+      account_id: '', // Will use default expense account
+      date: date,
+      amount: amount,
+      description: description,
+      reference_number: reference || `SP-${Date.now()}`,
+    };
+
+    const response = await fetch(`${ZOHO_BOOKS_API}/expenses?organization_id=${organizationId}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Zoho-oauthtoken ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(expense),
+    });
+
+    if (!response.ok) {
+      console.error('[Zoho] Create expense failed:', await response.text());
+      return null;
+    }
+
+    const data = await response.json();
+    return { expenseId: data.expense?.expense_id };
+  } catch (error) {
+    console.error('[Zoho] Create expense error:', error);
+    return null;
+  }
+}
+
+/**
+ * Create an invoice in Zoho Books
+ */
+export async function createZohoInvoice({
+  accessToken,
+  organizationId,
+  customerName,
+  description,
+  amount,
+  date,
+  dueDate,
+  reference,
+}: {
+  accessToken: string;
+  organizationId: string;
+  customerName: string;
+  description: string;
+  amount: number;
+  date: string;
+  dueDate?: string;
+  reference?: string;
+}): Promise<{ invoiceId: string } | null> {
+  try {
+    // First, get or create customer
+    const invoice = {
+      customer_name: customerName,
+      date: date,
+      due_date: dueDate || date,
+      reference_number: reference || `SP-${Date.now()}`,
+      line_items: [
+        {
+          description: description,
+          rate: amount,
+          quantity: 1,
+        },
+      ],
+    };
+
+    const response = await fetch(`${ZOHO_BOOKS_API}/invoices?organization_id=${organizationId}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Zoho-oauthtoken ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(invoice),
+    });
+
+    if (!response.ok) {
+      console.error('[Zoho] Create invoice failed:', await response.text());
+      return null;
+    }
+
+    const data = await response.json();
+    return { invoiceId: data.invoice?.invoice_id };
+  } catch (error) {
+    console.error('[Zoho] Create invoice error:', error);
+    return null;
+  }
+}
