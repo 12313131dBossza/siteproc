@@ -30,28 +30,19 @@ export async function GET() {
     }
 
     // Check for Zoho integration
-    const { data: integration, error: intError } = await supabase
+    const { data: integration } = await supabase
       .from('integrations')
       .select('tenant_name, connected_at, status')
       .eq('company_id', profile.company_id)
       .eq('provider', 'zoho')
+      .eq('status', 'connected')
       .single();
-
-    console.log('[Zoho] Status check:', { 
-      companyId: profile.company_id, 
-      integration, 
-      error: intError?.message 
-    });
-
-    // Consider connected if we have a record (even if status check differs)
-    const isConnected = !!integration && integration.status === 'connected';
 
     return NextResponse.json({
       configured: isZohoConfigured(),
-      connected: isConnected,
+      connected: !!integration,
       organizationName: integration?.tenant_name || null,
       connectedAt: integration?.connected_at || null,
-      debug: { hasRecord: !!integration, status: integration?.status, error: intError?.message }
     });
 
   } catch (error) {

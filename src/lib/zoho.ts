@@ -158,6 +158,34 @@ export async function getZohoOrganizations(accessToken: string): Promise<Array<{
 }
 
 /**
+ * Get expense accounts from Zoho Books
+ */
+export async function getZohoExpenseAccounts(accessToken: string, organizationId: string): Promise<Array<{
+  account_id: string;
+  account_name: string;
+  account_type: string;
+}> | null> {
+  try {
+    const response = await fetch(`${ZOHO_BOOKS_API}/chartofaccounts?organization_id=${organizationId}&account_type=expense`, {
+      headers: {
+        'Authorization': `Zoho-oauthtoken ${accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      console.error('[Zoho] Failed to get expense accounts:', await response.text());
+      return null;
+    }
+
+    const data = await response.json();
+    return data.chartofaccounts || [];
+  } catch (error) {
+    console.error('[Zoho] Get expense accounts error:', error);
+    return null;
+  }
+}
+
+/**
  * Create an expense in Zoho Books
  */
 export async function createZohoExpense({
@@ -178,8 +206,26 @@ export async function createZohoExpense({
   reference?: string;
 }): Promise<{ expenseId: string } | null> {
   try {
+    // Get expense accounts to find a valid account_id
+    const accounts = await getZohoExpenseAccounts(accessToken, organizationId);
+    
+    // Find an appropriate expense account based on category, or use the first available
+    let accountId = '';
+    if (accounts && accounts.length > 0) {
+      // Try to match category to account name, or use first expense account
+      const matchedAccount = category 
+        ? accounts.find(a => a.account_name.toLowerCase().includes(category.toLowerCase()))
+        : null;
+      accountId = matchedAccount?.account_id || accounts[0].account_id;
+    }
+
+    if (!accountId) {
+      console.error('[Zoho] No expense account found');
+      return null;
+    }
+
     const expense = {
-      account_id: '', // Will use default expense account
+      account_id: accountId,
       date: date,
       amount: amount,
       description: description,
@@ -196,7 +242,8 @@ export async function createZohoExpense({
     });
 
     if (!response.ok) {
-      console.error('[Zoho] Create expense failed:', await response.text());
+      const errorText = await response.text();
+      console.error('[Zoho] Create expense failed:', errorText);
       return null;
     }
 

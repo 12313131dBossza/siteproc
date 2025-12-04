@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/supabase-service';
 import { sendExpenseNotifications } from '@/lib/notifications';
 import { logActivity } from '@/app/api/activity/route';
 import { notifyExpenseApproval, notifyExpenseRejection } from '@/lib/notification-triggers';
+import { autoSyncExpenseToZoho } from '@/lib/zoho-autosync';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
@@ -218,6 +219,21 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       })
     } catch (logError) {
       console.error('Failed to log expense approval activity:', logError)
+    }
+
+    // Auto-sync to Zoho Books if expense is approved
+    if (action === 'approve' && profile.company_id) {
+      try {
+        const zohoResult = await autoSyncExpenseToZoho(profile.company_id, expenseId, 'approved')
+        if (zohoResult.synced) {
+          console.log(`[Zoho] Expense ${expenseId} synced to Zoho: ${zohoResult.zohoId}`)
+        } else if (zohoResult.error && !zohoResult.error.includes('not connected')) {
+          console.warn(`[Zoho] Expense sync skipped: ${zohoResult.error}`)
+        }
+      } catch (zohoErr) {
+        // Non-blocking - just log and continue
+        console.error('[Zoho] Auto-sync error:', zohoErr)
+      }
     }
     
     return NextResponse.json({

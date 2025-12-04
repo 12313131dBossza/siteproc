@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { logActivity } from '@/app/api/activity/route'
 import { sendExpenseSubmissionNotification } from '@/lib/email'
 import { getCompanyAdminEmails } from '@/lib/server-utils'
+import { autoSyncExpenseToZoho } from '@/lib/zoho-autosync'
 
 // GET /api/expenses - List expenses for user's company
 export async function GET(request: NextRequest) {
@@ -260,6 +261,21 @@ export async function POST(request: NextRequest) {
         amount: expense.amount
       })
     } catch {}
+
+    // Auto-sync to Zoho Books if connected and expense is approved
+    if (expense.status === 'approved' && profile.company_id) {
+      try {
+        const zohoResult = await autoSyncExpenseToZoho(profile.company_id, expense.id, expense.status)
+        if (zohoResult.synced) {
+          console.log(`[Zoho] Expense ${expense.id} synced to Zoho: ${zohoResult.zohoId}`)
+        } else if (zohoResult.error && !zohoResult.error.includes('not connected')) {
+          console.warn(`[Zoho] Expense sync skipped: ${zohoResult.error}`)
+        }
+      } catch (zohoErr) {
+        // Non-blocking - just log and continue
+        console.error('[Zoho] Auto-sync error:', zohoErr)
+      }
+    }
 
     return NextResponse.json({
       id: expense.id,
