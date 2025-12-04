@@ -361,6 +361,7 @@ export async function createZohoExpense({
   category,
   reference,
   vendor,
+  paymentMethod,
 }: {
   accessToken: string;
   organizationId: string;
@@ -370,6 +371,7 @@ export async function createZohoExpense({
   category?: string;
   reference?: string;
   vendor?: string;
+  paymentMethod?: string;
 }): Promise<{ expenseId: string } | null> {
   try {
     // Get expense accounts to find a valid account_id
@@ -390,11 +392,43 @@ export async function createZohoExpense({
       return null;
     }
 
-    // Get a cash/bank account for "Paid Through"
+    // Get a cash/bank account for "Paid Through" based on user's payment method selection
     const cashAccounts = await getZohoCashAccounts(accessToken, organizationId);
-    const paidThroughAccountId = cashAccounts && cashAccounts.length > 0 
-      ? cashAccounts[0].account_id 
-      : null;
+    let paidThroughAccountId: string | null = null;
+    
+    if (cashAccounts && cashAccounts.length > 0) {
+      // Map payment method to likely Zoho account name
+      const methodToAccountMap: { [key: string]: string[] } = {
+        'petty_cash': ['petty cash', 'petty'],
+        'cash': ['cash', 'petty cash'],
+        'bank_transfer': ['bank', 'checking', 'savings'],
+        'credit_card': ['credit card', 'credit', 'card'],
+        'check': ['checking', 'bank'],
+        'other': [], // Will use first available
+      };
+      
+      const searchTerms = paymentMethod ? methodToAccountMap[paymentMethod] || [] : [];
+      
+      // Try to find matching account
+      if (searchTerms.length > 0) {
+        for (const term of searchTerms) {
+          const matchedAccount = cashAccounts.find(a => 
+            a.account_name.toLowerCase().includes(term)
+          );
+          if (matchedAccount) {
+            paidThroughAccountId = matchedAccount.account_id;
+            console.log(`[Zoho] Using "${matchedAccount.account_name}" for payment method "${paymentMethod}"`);
+            break;
+          }
+        }
+      }
+      
+      // Fallback to first available if no match or no payment method specified
+      if (!paidThroughAccountId) {
+        paidThroughAccountId = cashAccounts[0].account_id;
+        console.log(`[Zoho] No matching account for "${paymentMethod}", using "${cashAccounts[0].account_name}"`);
+      }
+    }
 
     const expense: any = {
       account_id: accountId,

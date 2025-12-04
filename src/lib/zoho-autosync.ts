@@ -169,6 +169,7 @@ export async function autoSyncExpenseToZoho(
       category: expense.category,
       reference: `SP-EXP-${expense.id.slice(0, 8)}`,
       vendor: vendorName,
+      paymentMethod: expense.payment_method, // User-selected payment method
     });
 
     if (!result) {

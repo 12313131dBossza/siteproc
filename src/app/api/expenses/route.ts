@@ -195,6 +195,7 @@ export async function POST(request: NextRequest) {
       user_id: user.id,
       submitted_by: user.id, // Set submitted_by for notification triggers
       receipt_url: body.receipt_url || null,
+      payment_method: body.payment_method || null, // User-selected payment method for Zoho
     }
 
     // Handle project association - only use project_id column (added by migration)

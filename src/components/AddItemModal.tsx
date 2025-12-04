@@ -33,7 +33,8 @@ export function AddItemModal({ isOpen, onClose, projectId, type, onSuccess }: Ad
     category: 'materials',
     amount: 0,
     description: '',
-    status: 'pending'
+    status: 'pending',
+    payment_method: 'petty_cash'
   });
 
   // Delivery form fields
@@ -121,6 +122,7 @@ export function AddItemModal({ isOpen, onClose, projectId, type, onSuccess }: Ad
           ...expenseForm,
           vendor: expenseForm.vendor.trim(),
           project_id: projectId,
+          payment_method: expenseForm.payment_method,
         };
         console.log('Creating expense:', body);
       } else if (type === 'delivery') {
@@ -160,7 +162,7 @@ export function AddItemModal({ isOpen, onClose, projectId, type, onSuccess }: Ad
       
       // Reset forms
       setOrderForm({ vendor: '', product_name: '', qty: 1, unit_price: 0, status: 'pending' });
-      setExpenseForm({ vendor: '', category: 'materials', amount: 0, description: '', status: 'pending' });
+      setExpenseForm({ vendor: '', category: 'materials', amount: 0, description: '', status: 'pending', payment_method: 'petty_cash' });
       setDeliveryForm({ delivery_date: new Date().toISOString().split('T')[0], status: 'pending', notes: '', proof_url: '' });
     } catch (err: any) {
       console.error('Form submission error:', err);
@@ -357,6 +359,24 @@ export function AddItemModal({ isOpen, onClose, projectId, type, onSuccess }: Ad
                   placeholder="Optional description"
                   rows={3}
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Paid Through <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={expenseForm.payment_method}
+                  onChange={(e) => setExpenseForm({ ...expenseForm, payment_method: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="petty_cash">Petty Cash</option>
+                  <option value="bank_transfer">Bank Transfer</option>
+                  <option value="credit_card">Credit Card</option>
+                  <option value="cash">Cash</option>
+                  <option value="check">Check</option>
+                  <option value="other">Other</option>
+                </select>
               </div>
 
               <div>

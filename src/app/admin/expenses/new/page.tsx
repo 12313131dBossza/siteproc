@@ -13,6 +13,7 @@ export default function NewExpense(){
   const [amount,setAmount]=useState("");
   const [date,setDate]=useState(""); // YYYY-MM-DD
   const [memo,setMemo]=useState("");
+  const [paymentMethod,setPaymentMethod]=useState("");
   const [loading,setLoading]=useState(false);
   const { push } = useToast();
 
@@ -33,12 +34,12 @@ export default function NewExpense(){
       const res = await fetch('/api/expenses', {
         method:'POST',
         headers:{ 'content-type':'application/json','x-company-id':cid,'x-role':role },
-        body: JSON.stringify({ job_id: jobId, vendor: vendor.trim(), amount: Number(amount), spent_at: date, memo: memo || undefined })
+        body: JSON.stringify({ job_id: jobId, vendor: vendor.trim(), amount: Number(amount), spent_at: date, memo: memo || undefined, payment_method: paymentMethod || undefined })
       });
       const data = await res.json().catch(()=>({}));
       if(res.ok){
         push({ title:'Expense created', variant:'success' });
-        setVendor(''); setAmount(''); setMemo('');
+        setVendor(''); setAmount(''); setMemo(''); setPaymentMethod('');
         // Redirect back to list so server component refetches fresh DB rows.
         setTimeout(()=>{ location.href='/admin/expenses'; }, 350);
       } else {
@@ -69,6 +70,18 @@ export default function NewExpense(){
       <div className="sp-field">
         <label className="text-xs font-medium">Memo</label>
         <input className="sp-input" value={memo} onChange={e=>setMemo(e.target.value)} />
+      </div>
+      <div className="sp-field">
+        <label className="text-xs font-medium">Payment Method (Paid Through)</label>
+        <select className="sp-input" value={paymentMethod} onChange={e=>setPaymentMethod(e.target.value)}>
+          <option value="">Select payment method...</option>
+          <option value="petty_cash">Petty Cash</option>
+          <option value="bank_transfer">Bank Transfer</option>
+          <option value="credit_card">Credit Card</option>
+          <option value="cash">Cash</option>
+          <option value="check">Check</option>
+          <option value="other">Other</option>
+        </select>
       </div>
       <Button type='submit' disabled={loading}>{loading?'Saving…':'Save'}</Button>
     </form>
