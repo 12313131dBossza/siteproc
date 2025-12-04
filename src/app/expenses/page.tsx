@@ -64,7 +64,7 @@ export default function ExpensesPage() {
   const [approvalAction, setApprovalAction] = useState<'approve' | 'reject'>('approve');
   const [approvalNotes, setApprovalNotes] = useState('');
   const [userProfile, setUserProfile] = useState<any>(null);
-  const [newExpense, setNewExpense] = useState({ vendor: '', category: '', amount: '', description: '', project_id: '' } as any);
+  const [newExpense, setNewExpense] = useState({ vendor: '', category: '', amount: '', description: '', project_id: '', payment_method: '' } as any);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [projects, setProjects] = useState<Array<{ id: string; name: string }>>([]);
@@ -307,7 +307,8 @@ export default function ExpensesPage() {
         category: newExpense.category,
         amount: parseFloat(newExpense.amount),
         description: newExpense.description,
-        project_id: newExpense.project_id
+        project_id: newExpense.project_id,
+        payment_method: newExpense.payment_method || undefined
       };
       
       console.log('Sending request with body:', requestBody);
@@ -366,7 +367,8 @@ export default function ExpensesPage() {
         category: 'materials',
         amount: '',
         description: '',
-        project_id: ''
+        project_id: '',
+        payment_method: ''
       });
       toast.success('Expense created successfully');
       console.log('=== EXPENSE SUBMISSION COMPLETE ===');
@@ -390,7 +392,8 @@ export default function ExpensesPage() {
       category: expense.category,
       amount: expense.amount.toString(),
       description: expense.description || '',
-      project_id: expense.project_id || ''
+      project_id: expense.project_id || '',
+      payment_method: (expense as any).payment_method || ''
     });
     loadProjects();
     setIsModalOpen(true);
@@ -428,7 +431,7 @@ export default function ExpensesPage() {
       
       setIsModalOpen(false);
       setEditingExpense(null);
-      setNewExpense({ vendor: '', category: '', amount: '', description: '', project_id: '' });
+      setNewExpense({ vendor: '', category: '', amount: '', description: '', project_id: '', payment_method: '' });
       toast.success('Expense updated successfully');
     } catch (error) {
       console.error('Failed to update expense:', error);
@@ -764,7 +767,7 @@ export default function ExpensesPage() {
           onClose={() => {
             setIsModalOpen(false);
             setEditingExpense(null);
-            setNewExpense({ vendor: '', category: '', amount: '', description: '', project_id: '' });
+            setNewExpense({ vendor: '', category: '', amount: '', description: '', project_id: '', payment_method: '' });
           }}
           title={editingExpense ? "Edit Expense" : "Add New Expense"}
           description={editingExpense ? "Update expense details" : "Record a new expense and link it to a project for budget tracking"}
@@ -832,6 +835,27 @@ export default function ExpensesPage() {
               />
             </div>
 
+            {/* Payment Method Section */}
+            <div className="space-y-4">
+              <h4 className="font-semibold text-gray-900 text-sm">Payment Details</h4>
+              
+              <Select
+                label="Payment Method (Paid Through)"
+                value={newExpense.payment_method}
+                onChange={(e) => setNewExpense((v: any) => ({ ...v, payment_method: e.target.value }))}
+                options={[
+                  { value: '', label: 'Select payment method...' },
+                  { value: 'petty_cash', label: 'Petty Cash' },
+                  { value: 'bank_transfer', label: 'Bank Transfer' },
+                  { value: 'credit_card', label: 'Credit Card' },
+                  { value: 'cash', label: 'Cash' },
+                  { value: 'check', label: 'Check' },
+                  { value: 'other', label: 'Other' }
+                ]}
+                helpText="How was this expense paid? This syncs to Zoho Books."
+              />
+            </div>
+
             {/* Description Section */}
             <TextArea
               label="Description"
@@ -863,7 +887,7 @@ export default function ExpensesPage() {
               onCancel={() => {
                 setIsModalOpen(false);
                 setEditingExpense(null);
-                setNewExpense({ vendor: '', category: '', amount: '', description: '', project_id: '' });
+                setNewExpense({ vendor: '', category: '', amount: '', description: '', project_id: '', payment_method: '' });
               }}
               submitLabel={editingExpense ? "Update Expense" : "Add Expense"}
             />

@@ -44,7 +44,7 @@ export default function PaymentsPageClient() {
     vendor_name: '',
     amount: '',
     payment_date: new Date().toISOString().split('T')[0],
-    payment_method: 'check',
+    payment_method: '',  // User must select - no hardcoded default
     reference_number: '',
     notes: '',
     status: 'unpaid' as 'unpaid' | 'partial' | 'paid',
@@ -115,7 +115,7 @@ export default function PaymentsPageClient() {
         vendor_name: '',
         amount: '',
         payment_date: new Date().toISOString().split('T')[0],
-        payment_method: 'check',
+        payment_method: '',  // User must select
         reference_number: '',
         notes: '',
         status: 'unpaid',
@@ -225,7 +225,7 @@ export default function PaymentsPageClient() {
               vendor_name: '',
               amount: '',
               payment_date: new Date().toISOString().split('T')[0],
-              payment_method: 'check',
+              payment_method: '',  // User must select
               reference_number: '',
               notes: '',
               status: 'unpaid',
@@ -469,14 +469,18 @@ export default function PaymentsPageClient() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <Select
               label="Payment Method"
+              required
               value={form.payment_method}
               onChange={(e) => setForm({ ...form, payment_method: e.target.value })}
               options={[
-                { value: 'check', label: 'Check' },
+                { value: '', label: 'Select payment method...' },
+                { value: 'check', label: 'Check / Cheque' },
+                { value: 'bank_transfer', label: 'Bank Transfer' },
+                { value: 'wise', label: 'Wise' },
+                { value: 'ach', label: 'ACH' },
                 { value: 'cash', label: 'Cash' },
-                { value: 'transfer', label: 'Transfer' },
-                { value: 'card', label: 'Card' },
-                { value: 'ach', label: 'ACH' }
+                { value: 'credit_card', label: 'Credit Card' },
+                { value: 'other', label: 'Other' }
               ]}
             />
 

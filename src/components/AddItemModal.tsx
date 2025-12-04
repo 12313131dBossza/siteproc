@@ -34,7 +34,7 @@ export function AddItemModal({ isOpen, onClose, projectId, type, onSuccess }: Ad
     amount: 0,
     description: '',
     status: 'pending',
-    payment_method: 'petty_cash'
+    payment_method: ''  // User must select - no hardcoded default
   });
 
   // Delivery form fields
@@ -162,7 +162,7 @@ export function AddItemModal({ isOpen, onClose, projectId, type, onSuccess }: Ad
       
       // Reset forms
       setOrderForm({ vendor: '', product_name: '', qty: 1, unit_price: 0, status: 'pending' });
-      setExpenseForm({ vendor: '', category: 'materials', amount: 0, description: '', status: 'pending', payment_method: 'petty_cash' });
+      setExpenseForm({ vendor: '', category: 'materials', amount: 0, description: '', status: 'pending', payment_method: '' });
       setDeliveryForm({ delivery_date: new Date().toISOString().split('T')[0], status: 'pending', notes: '', proof_url: '' });
     } catch (err: any) {
       console.error('Form submission error:', err);

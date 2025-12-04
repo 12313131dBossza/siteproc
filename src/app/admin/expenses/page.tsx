@@ -48,7 +48,8 @@ function ExpensesContent() {
     category: '',
     amount: '',
     notes: '',
-    receiptUrl: ''
+    receiptUrl: '',
+    payment_method: ''
   });
 
   const filteredExpenses = expenses.filter(expense => {
@@ -72,7 +73,7 @@ function ExpensesContent() {
       date: new Date().toISOString().split('T')[0]
     };
     setExpenses(prev => [newExpense, ...prev]);
-    setFormData({ vendor: '', category: '', amount: '', notes: '', receiptUrl: '' });
+    setFormData({ vendor: '', category: '', amount: '', notes: '', receiptUrl: '', payment_method: '' });
     setIsModalOpen(false);
   };
 
@@ -245,6 +246,22 @@ function ExpensesContent() {
                 value={formData.notes}
                 onChange={(value) => setFormData(prev => ({ ...prev, notes: value }))}
                 placeholder="Additional details about this expense..."
+              />
+              <FormField
+                label="Payment Method (Paid Through)"
+                id="payment_method"
+                type="select"
+                value={formData.payment_method}
+                onChange={(value) => setFormData(prev => ({ ...prev, payment_method: value }))}
+                options={[
+                  { value: '', label: 'Select payment method...' },
+                  { value: 'petty_cash', label: 'Petty Cash' },
+                  { value: 'bank_transfer', label: 'Bank Transfer' },
+                  { value: 'credit_card', label: 'Credit Card' },
+                  { value: 'cash', label: 'Cash' },
+                  { value: 'check', label: 'Check' },
+                  { value: 'other', label: 'Other' }
+                ]}
               />
               <FormField
                 label="Receipt URL"

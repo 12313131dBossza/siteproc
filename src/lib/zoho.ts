@@ -401,9 +401,13 @@ export async function createZohoExpense({
       const methodToAccountMap: { [key: string]: string[] } = {
         'petty_cash': ['petty cash', 'petty'],
         'cash': ['cash', 'petty cash'],
-        'bank_transfer': ['bank', 'checking', 'savings'],
+        'bank_transfer': ['bank', 'checking', 'savings', 'transfer'],
+        'wise': ['wise', 'bank', 'transfer'],
+        'ach': ['ach', 'bank', 'checking'],
         'credit_card': ['credit card', 'credit', 'card'],
-        'check': ['checking', 'bank'],
+        'check': ['checking', 'bank', 'cheque'],
+        'transfer': ['bank', 'transfer', 'checking'],
+        'card': ['credit card', 'card', 'credit'],
         'other': [], // Will use first available
       };
       
