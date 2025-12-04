@@ -2831,9 +2831,59 @@
         .delay-2 { animation-delay: 0.2s; opacity: 0; }
         .delay-3 { animation-delay: 0.3s; opacity: 0; }
         .delay-4 { animation-delay: 0.4s; opacity: 0; }
+
+        /* Floating Exclusive Badge */
+        .floating-badge {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border: 1px solid rgba(37, 99, 235, 0.4);
+            padding: 0.875rem 1.5rem;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #f1f5f9;
+            z-index: 100;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(37, 99, 235, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            animation: floatBadge 3s ease-in-out infinite;
+        }
+        .floating-badge::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: #f59e0b;
+            border-radius: 50%;
+            animation: badgePulse 2s infinite;
+        }
+        @keyframes floatBadge {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+        @keyframes badgePulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        @media (max-width: 768px) {
+            .floating-badge {
+                bottom: 1rem;
+                right: 1rem;
+                left: 1rem;
+                justify-content: center;
+                font-size: 0.8rem;
+            }
+        }
     </style>
 </head>
 <body>
+    <!-- Floating Exclusive Badge -->
+    <div class="floating-badge">
+        Personal onboarding only — no self-service
+    </div>
+
     <!-- Navigation -->
     <header class="site-header">
         <div class="nav-container">
@@ -2861,16 +2911,6 @@
                         </svg>
                         Features
                     </a></li>
-                    <li><a href="#documentation">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                            <polyline points="14 2 14 8 20 8"></polyline>
-                            <line x1="16" y1="13" x2="8" y2="13"></line>
-                            <line x1="16" y1="17" x2="8" y2="17"></line>
-                            <polyline points="10 9 9 9 8 9"></polyline>
-                        </svg>
-                        Documentation
-                    </a></li>
                     <li><a href="#pricing">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="12" y1="1" x2="12" y2="23"></line>
@@ -2882,13 +2922,7 @@
             </nav>
             
             <div class="nav-actions">
-                <a href="https://siteproc1.vercel.app/login" target="_blank" 
-                   style="padding: 0.5rem 1.25rem; font-size: 0.9375rem; color: var(--text-light); background: transparent; border: 1px solid rgba(148, 163, 184, 0.3); border-radius: 8px; font-weight: 500; transition: all 0.3s ease; text-decoration: none; display: inline-block;"
-                   onmouseover="this.style.borderColor='rgba(37, 99, 235, 0.5)'; this.style.color='var(--white)'"
-                   onmouseout="this.style.borderColor='rgba(148, 163, 184, 0.3)'; this.style.color='var(--text-light)'">
-                    Login
-                </a>
-                <a href="#contact" class="nav-cta" style="padding: 0.5rem 1.5rem; font-size: 0.9375rem;">Get Started</a>
+                <a href="https://calendly.com/chayaponyaibandit/30min" target="_blank" class="nav-cta" style="padding: 0.5rem 1.5rem; font-size: 0.9375rem;">Request Private Demo</a>
             </div>
             
             <button class="mobile-menu-toggle">☰</button>
@@ -2923,9 +2957,11 @@
                 </div>
                 
                 <div class="hero-buttons animate-in delay-3">
-                    <a href="#contact" class="btn btn-primary">Start Free Trial</a>
-                    <a href="#features" class="btn btn-secondary">Explore Features</a>
+                    <a href="https://calendly.com/chayaponyaibandit/30min" target="_blank" class="btn btn-primary">Request Private Demo</a>
                 </div>
+                <p class="animate-in delay-3" style="margin-top: 0.75rem; font-size: 0.95rem; color: var(--text-gray); font-weight: 500;">
+                    Personal onboarding · Limited spots this month
+                </p>
                 
                 <div class="hero-trust animate-in delay-4">
                     <div class="trust-item">
@@ -2944,7 +2980,18 @@
             </div>
             
             <div class="hero-visual animate-in delay-4">
-                <div class="dashboard-preview">
+                <div class="dashboard-preview" style="position: relative;">
+                    <!-- Blur Overlay -->
+                    <div style="position: absolute; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(8px); border-radius: 20px;">
+                        <div style="text-align: center; padding: 2rem;">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="1.5" style="margin: 0 auto 1rem; display: block;">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                            </svg>
+                            <p style="font-size: 1.25rem; font-weight: 600; color: white; margin-bottom: 0.5rem;">Live dashboard shown only in private demo</p>
+                            <a href="https://calendly.com/chayaponyaibandit/30min" target="_blank" style="color: #60a5fa; font-weight: 500; text-decoration: underline;">Request access →</a>
+                        </div>
+                    </div>
                     <!-- Browser Chrome -->
                     <div class="browser-chrome">
                         <div class="chrome-dots">
@@ -3606,171 +3653,6 @@
         </div>
     </section>
 
-    <!-- Documentation & Guides Section -->
-    <section id="documentation" class="screenshot-section">
-        <div class="section-container">
-            <div class="section-header">
-                <span class="section-badge">DOCUMENTATION</span>
-                <h2 class="section-title">How SiteProc Works End-to-End</h2>
-                <p class="section-description">
-                    Complete guides for every role—from suppliers to site managers. Get started in minutes.
-                </p>
-            </div>
-            
-            <div class="screenshot-grid">
-                <div class="screenshot-card guide-card">
-                    <div class="screenshot-image guide-icon">
-                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                            <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"></path>
-                            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                            <line x1="12" y1="22.08" x2="12" y2="12"></line>
-                        </svg>
-                    </div>
-                    <div class="screenshot-info">
-                        <h3 class="screenshot-title">Supplier Guide</h3>
-                        <p class="screenshot-desc">
-                            Learn how to receive orders, update delivery status, upload proof of delivery, and manage your supplier profile.
-                        </p>
-                        <a href="docs/supplier-guide.pdf" class="guide-link" download>
-                            <span>Download PDF Guide</span>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"></path>
-                                <polyline points="7 10 12 15 17 10"></polyline>
-                                <line x1="12" y1="15" x2="12" y2="3"></line>
-                            </svg>
-                        </a>
-                    </div>
-                </div>
-                
-                <div class="screenshot-card guide-card">
-                    <div class="screenshot-image guide-icon">
-                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path>
-                            <polyline points="9 22 9 12 15 12 15 22"></polyline>
-                        </svg>
-                    </div>
-                    <div class="screenshot-info">
-                        <h3 class="screenshot-title">Company Admin Guide</h3>
-                        <p class="screenshot-desc">
-                            Set up your company, manage team members, create projects, track budgets, and configure system settings.
-                        </p>
-                        <a href="docs/company-admin-guide.pdf" class="guide-link" download>
-                            <span>Download PDF Guide</span>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"></path>
-                                <polyline points="7 10 12 15 17 10"></polyline>
-                                <line x1="12" y1="15" x2="12" y2="3"></line>
-                            </svg>
-                        </a>
-                    </div>
-                </div>
-                
-                <div class="screenshot-card guide-card">
-                    <div class="screenshot-image guide-icon">
-                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"></path>
-                            <circle cx="12" cy="7" r="4"></circle>
-                        </svg>
-                    </div>
-                    <div class="screenshot-info">
-                        <h3 class="screenshot-title">Site Manager Guide</h3>
-                        <p class="screenshot-desc">
-                            Create orders, track deliveries, manage contractors, approve change orders, and monitor project progress daily.
-                        </p>
-                        <a href="docs/site-manager-guide.pdf" class="guide-link" download>
-                            <span>Download PDF Guide</span>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"></path>
-                                <polyline points="7 10 12 15 17 10"></polyline>
-                                <line x1="12" y1="15" x2="12" y2="3"></line>
-                            </svg>
-                        </a>
-                    </div>
-                </div>
-                
-                <div class="screenshot-card guide-card">
-                    <div class="screenshot-image guide-icon">
-                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-                        </svg>
-                    </div>
-                    <div class="screenshot-info">
-                        <h3 class="screenshot-title">Quick Start Guide</h3>
-                        <p class="screenshot-desc">
-                            Get up and running in 5 minutes. Step-by-step walkthrough from signup to your first completed order.
-                        </p>
-                        <a href="docs/quick-start-guide.pdf" class="guide-link" download>
-                            <span>Download PDF Guide</span>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"></path>
-                                <polyline points="7 10 12 15 17 10"></polyline>
-                                <line x1="12" y1="15" x2="12" y2="3"></line>
-                            </svg>
-                        </a>
-                    </div>
-                </div>
-
-                <div class="screenshot-card guide-card">
-                    <div class="screenshot-image guide-icon">
-                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <line x1="12" y1="16" x2="12" y2="12"></line>
-                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                        </svg>
-                    </div>
-                    <div class="screenshot-info">
-                        <h3 class="screenshot-title">API Documentation</h3>
-                        <p class="screenshot-desc">
-                            Integrate SiteProc with your existing tools. REST API docs, webhooks, authentication, and code examples.
-                        </p>
-                        <a href="docs/api-documentation.pdf" class="guide-link" target="_blank">
-                            <span>View API Docs</span>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"></path>
-                                <polyline points="15 3 21 3 21 9"></polyline>
-                                <line x1="10" y1="14" x2="21" y2="3"></line>
-                            </svg>
-                        </a>
-                    </div>
-                </div>
-
-                <div class="screenshot-card guide-card">
-                    <div class="screenshot-image guide-icon">
-                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                            <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"></path>
-                        </svg>
-                    </div>
-                    <div class="screenshot-info">
-                        <h3 class="screenshot-title">Troubleshooting & FAQ</h3>
-                        <p class="screenshot-desc">
-                            Common issues, solutions, and frequently asked questions. Get answers fast without contacting support.
-                        </p>
-                        <a href="docs/faq-troubleshooting.pdf" class="guide-link" target="_blank">
-                            <span>View FAQ</span>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"></path>
-                                <polyline points="15 3 21 3 21 9"></polyline>
-                                <line x1="10" y1="14" x2="21" y2="3"></line>
-                            </svg>
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Additional Resources -->
-            <div class="docs-footer">
-                <div class="docs-cta">
-                    <h3>Need More Help?</h3>
-                    <p>Our support team is available 24/7 to help you get the most out of SiteProc</p>
-                    <div class="docs-actions">
-                        <a href="mailto:support@siteproc.com" class="btn btn-primary">Contact Support</a>
-                        <a href="#video-tutorials" class="btn btn-secondary">Watch Video Tutorials</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
     <!-- CTA Section -->
     <section id="contact" class="cta-section">
         <div class="cta-container">
@@ -3786,17 +3668,12 @@
                         <line x1="8" y1="2" x2="8" y2="6"></line>
                         <line x1="3" y1="10" x2="21" y2="10"></line>
                     </svg>
-                    Schedule a Demo
-                </a>
-                <a href="mailto:support@siteproc.com" class="btn btn-secondary" 
-                   style="border-color: white; color: white;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.5rem;">
-                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                        <polyline points="22,6 12,13 2,6"></polyline>
-                    </svg>
-                    Contact Sales
+                    Request Private Demo
                 </a>
             </div>
+            <p style="margin-top: 1rem; font-size: 0.95rem; color: rgba(255,255,255,0.8); font-weight: 500;">
+                Personal onboarding · Limited spots this month
+            </p>
         </div>
     </section>
 
@@ -3870,129 +3747,19 @@
                     </li>
                 </ul>
 
-                <button class="pricing-cta" onclick="window.location.href='#contact'">
+                <a href="https://calendly.com/chayaponyaibandit/30min" target="_blank" class="pricing-cta">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                        <polyline points="17 8 12 3 7 8"></polyline>
-                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
                     </svg>
-                    Contact Sales for Custom Pricing
-                </button>
+                    Request Private Demo
+                </a>
 
-                <p class="pricing-note">
-                    💼 Schedule a demo to see how SiteProc can transform your construction management
+                <p class="pricing-note" style="margin-top: 1.5rem; font-size: 0.95rem; color: var(--text-gray);">
+                    Final pricing & custom onboarding confirmed after your private demo.
                 </p>
-            </div>
-        </div>
-    </section>
-
-    <!-- Comparison Section -->
-    <section class="comparison-section">
-        <div class="comparison-container">
-            <div class="section-header" style="text-align: center;">
-                <span class="section-badge">COMPARISON</span>
-                <h2 class="section-title">Why Choose SiteProc?</h2>
-                <p class="section-description">
-                    See how SiteProc compares to traditional construction management methods
-                </p>
-            </div>
-
-            <div class="comparison-table">
-                <div class="comparison-header">
-                    <div class="comparison-header-cell">Feature</div>
-                    <div class="comparison-header-cell">Traditional Methods</div>
-                    <div class="comparison-header-cell">SiteProc</div>
-                </div>
-
-                <div class="comparison-row">
-                    <div class="comparison-cell">Real-time order tracking</div>
-                    <div class="comparison-cell"><span class="comparison-cross">✗</span></div>
-                    <div class="comparison-cell"><span class="comparison-check">✓</span></div>
-                </div>
-
-                <div class="comparison-row">
-                    <div class="comparison-cell">Automated delivery notifications</div>
-                    <div class="comparison-cell"><span class="comparison-cross">✗</span></div>
-                    <div class="comparison-cell"><span class="comparison-check">✓</span></div>
-                </div>
-
-                <div class="comparison-row">
-                    <div class="comparison-cell">Centralized project management</div>
-                    <div class="comparison-cell"><span class="comparison-cross">✗</span></div>
-                    <div class="comparison-cell"><span class="comparison-check">✓</span></div>
-                </div>
-
-                <div class="comparison-row">
-                    <div class="comparison-cell">Budget tracking & analytics</div>
-                    <div class="comparison-cell"><span class="comparison-cross">✗</span></div>
-                    <div class="comparison-cell"><span class="comparison-check">✓</span></div>
-                </div>
-
-                <div class="comparison-row">
-                    <div class="comparison-cell">Mobile accessibility</div>
-                    <div class="comparison-cell"><span class="comparison-cross">✗</span></div>
-                    <div class="comparison-cell"><span class="comparison-check">✓</span></div>
-                </div>
-
-                <div class="comparison-row">
-                    <div class="comparison-cell">Proof of delivery uploads</div>
-                    <div class="comparison-cell"><span class="comparison-cross">✗</span></div>
-                    <div class="comparison-cell"><span class="comparison-check">✓</span></div>
-                </div>
-
-                <div class="comparison-row">
-                    <div class="comparison-cell">Multi-user collaboration</div>
-                    <div class="comparison-cell"><span class="comparison-cross">✗</span></div>
-                    <div class="comparison-cell"><span class="comparison-check">✓</span></div>
-                </div>
-
-                <div class="comparison-row">
-                    <div class="comparison-cell">Role-based permissions</div>
-                    <div class="comparison-cell"><span class="comparison-cross">✗</span></div>
-                    <div class="comparison-cell"><span class="comparison-check">✓</span></div>
-                </div>
-
-                <div class="comparison-row">
-                    <div class="comparison-cell">Automated expense tracking</div>
-                    <div class="comparison-cell"><span class="comparison-cross">✗</span></div>
-                    <div class="comparison-cell"><span class="comparison-check">✓</span></div>
-                </div>
-
-                <div class="comparison-row">
-                    <div class="comparison-cell">Comprehensive reporting</div>
-                    <div class="comparison-cell"><span class="comparison-cross">✗</span></div>
-                    <div class="comparison-cell"><span class="comparison-check">✓</span></div>
-                </div>
-
-                <div class="comparison-row">
-                    <div class="comparison-cell">API access for integrations</div>
-                    <div class="comparison-cell"><span class="comparison-cross">✗</span></div>
-                    <div class="comparison-cell"><span class="comparison-check">✓</span></div>
-                </div>
-
-                <div class="comparison-row">
-                    <div class="comparison-cell">Contractor management</div>
-                    <div class="comparison-cell"><span class="comparison-cross">✗</span></div>
-                    <div class="comparison-cell"><span class="comparison-check">✓</span></div>
-                </div>
-
-                <div class="comparison-row">
-                    <div class="comparison-cell">Time saved per week</div>
-                    <div class="comparison-cell">0 hours</div>
-                    <div class="comparison-cell"><strong>15+ hours</strong></div>
-                </div>
-
-                <div class="comparison-row">
-                    <div class="comparison-cell">Error reduction</div>
-                    <div class="comparison-cell">0%</div>
-                    <div class="comparison-cell"><strong>90%</strong></div>
-                </div>
-
-                <div class="comparison-row">
-                    <div class="comparison-cell">Cost savings</div>
-                    <div class="comparison-cell">0%</div>
-                    <div class="comparison-cell"><strong>Up to 25%</strong></div>
-                </div>
             </div>
         </div>
     </section>
@@ -4011,128 +3778,39 @@
             <div class="faq-list">
                 <div class="faq-item">
                     <div class="faq-question" onclick="this.parentElement.classList.toggle('active')">
-                        <span>What is SiteProc and who is it for?</span>
+                        <span>How do I get started?</span>
                         <span class="faq-icon">+</span>
                     </div>
                     <div class="faq-answer">
                         <p>
-                            SiteProc is a comprehensive construction management platform designed specifically for the U.S. construction industry. 
-                            It's perfect for construction companies, contractors, project managers, site supervisors, and material suppliers who need 
-                            to manage projects, track orders, coordinate deliveries, and monitor expenses all in one place.
+                            Covered in your private demo — request below. We'll walk you through the entire onboarding process, 
+                            set up your company profile, and get you started with personalized guidance.
                         </p>
                     </div>
                 </div>
 
                 <div class="faq-item">
                     <div class="faq-question" onclick="this.parentElement.classList.toggle('active')">
-                        <span>How long does implementation take?</span>
+                        <span>Is there a free trial?</span>
                         <span class="faq-icon">+</span>
                     </div>
                     <div class="faq-answer">
                         <p>
-                            Most companies are up and running within 1-2 weeks. We provide comprehensive onboarding support including data migration, 
-                            team training, and custom configuration. Our dedicated implementation team works with you to ensure a smooth transition 
-                            from your current system with minimal disruption to your operations.
+                            Covered in your private demo — request below. We'll discuss trial options and custom arrangements 
+                            tailored to your specific needs and workflow requirements.
                         </p>
                     </div>
                 </div>
 
                 <div class="faq-item">
                     <div class="faq-question" onclick="this.parentElement.classList.toggle('active')">
-                        <span>Can I integrate SiteProc with my existing tools?</span>
+                        <span>Do suppliers or clients pay?</span>
                         <span class="faq-icon">+</span>
                     </div>
                     <div class="faq-answer">
                         <p>
-                            Yes! SiteProc offers a robust REST API with 50+ endpoints for seamless integration with your existing tools. 
-                            We support integrations with popular accounting software (QuickBooks, Xero), project management tools, 
-                            and custom internal systems. Our team can help set up custom integrations specific to your workflow.
-                        </p>
-                    </div>
-                </div>
-
-                <div class="faq-item">
-                    <div class="faq-question" onclick="this.parentElement.classList.toggle('active')">
-                        <span>Is my data secure?</span>
-                        <span class="faq-icon">+</span>
-                    </div>
-                    <div class="faq-answer">
-                        <p>
-                            Absolutely. We take security seriously. SiteProc is built on enterprise-grade infrastructure with SOC 2 compliance, 
-                            end-to-end encryption, and company-based data isolation. We implement role-based access control with 6 permission levels, 
-                            maintain regular security audits, and offer 99.9% uptime SLA. Your data is backed up daily and stored in secure, 
-                            geographically distributed data centers.
-                        </p>
-                    </div>
-                </div>
-
-                <div class="faq-item">
-                    <div class="faq-question" onclick="this.parentElement.classList.toggle('active')">
-                        <span>Do you offer mobile access?</span>
-                        <span class="faq-icon">+</span>
-                    </div>
-                    <div class="faq-answer">
-                        <p>
-                            Yes! SiteProc is fully responsive and works seamlessly on mobile devices. Site managers can receive deliveries, 
-                            upload proof of delivery documents, update project progress, and manage orders right from their smartphones or tablets. 
-                            The mobile experience is optimized for on-site use with offline capabilities for areas with poor connectivity.
-                        </p>
-                    </div>
-                </div>
-
-                <div class="faq-item">
-                    <div class="faq-question" onclick="this.parentElement.classList.toggle('active')">
-                        <span>What kind of support do you provide?</span>
-                        <span class="faq-icon">+</span>
-                    </div>
-                    <div class="faq-answer">
-                        <p>
-                            We provide comprehensive support including email support, live chat, and phone support for enterprise customers. 
-                            You'll also get access to detailed documentation, video tutorials, and a dedicated customer success manager. 
-                            Our support team is available during business hours with extended hours for critical issues. We also offer 
-                            on-site training for larger teams.
-                        </p>
-                    </div>
-                </div>
-
-                <div class="faq-item">
-                    <div class="faq-question" onclick="this.parentElement.classList.toggle('active')">
-                        <span>Can I try SiteProc before committing?</span>
-                        <span class="faq-icon">+</span>
-                    </div>
-                    <div class="faq-answer">
-                        <p>
-                            Yes! We offer a personalized demo and trial period so you can test SiteProc with your actual projects and workflows. 
-                            Contact our sales team to schedule a demo where we'll walk you through the platform, answer your specific questions, 
-                            and set up a trial environment configured for your needs.
-                        </p>
-                    </div>
-                </div>
-
-                <div class="faq-item">
-                    <div class="faq-question" onclick="this.parentElement.classList.toggle('active')">
-                        <span>How does pricing work?</span>
-                        <span class="faq-icon">+</span>
-                    </div>
-                    <div class="faq-answer">
-                        <p>
-                            We offer custom enterprise pricing based on your company size, number of projects, and specific feature requirements. 
-                            This ensures you only pay for what you need. Pricing includes unlimited users, full platform access, dedicated support, 
-                            and regular updates. Contact our sales team for a personalized quote tailored to your business.
-                        </p>
-                    </div>
-                </div>
-
-                <div class="faq-item">
-                    <div class="faq-question" onclick="this.parentElement.classList.toggle('active')">
-                        <span>What if I need custom features?</span>
-                        <span class="faq-icon">+</span>
-                    </div>
-                    <div class="faq-answer">
-                        <p>
-                            We understand that every construction company has unique needs. Our enterprise plan includes the option for custom 
-                            feature development. Our development team will work with you to understand your requirements and build custom modules 
-                            or integrations that fit perfectly into your workflow. Contact us to discuss your specific needs.
+                            Covered in your private demo — request below. We'll explain our pricing model and how it works 
+                            for all parties involved in your construction projects.
                         </p>
                     </div>
                 </div>
@@ -4156,12 +3834,12 @@
                         <line x1="8" y1="2" x2="8" y2="6"></line>
                         <line x1="3" y1="10" x2="21" y2="10"></line>
                     </svg>
-                    Schedule a Demo
-                </a>
-                <a href="#pricing" class="btn btn-secondary" style="font-size: 1.25rem; padding: 1.25rem 3rem;">
-                    View Pricing
+                    Request Private Demo
                 </a>
             </div>
+            <p style="margin-top: 1rem; font-size: 0.95rem; color: var(--text-gray); font-weight: 500;">
+                Personal onboarding · Limited spots this month
+            </p>
 
             <div class="final-cta-stats">
                 <div class="final-cta-stat">
@@ -4256,23 +3934,16 @@
                     <ul class="footer-links">
                         <li><a href="#features">Features</a></li>
                         <li><a href="#pricing">Pricing</a></li>
-                        <li><a href="https://siteproc1.vercel.app" target="_blank">Live Dashboard</a></li>
-                        <li><a href="#documentation">Documentation</a></li>
-                        <li><a href="docs/api-documentation.pdf" target="_blank">API Reference</a></li>
-                        <li><a href="#comparison">Why SiteProc</a></li>
+                        <li><a href="https://calendly.com/chayaponyaibandit/30min" target="_blank">Request Demo</a></li>
                     </ul>
                 </div>
                 
-                <!-- Resources Column -->
+                <!-- Account Column -->
                 <div class="footer-column">
-                    <h4>Resources</h4>
+                    <h4>Account</h4>
                     <ul class="footer-links">
-                        <li><a href="docs/quick-start-guide.pdf" download>Quick Start Guide</a></li>
-                        <li><a href="docs/company-admin-guide.pdf" download>Admin Guide</a></li>
-                        <li><a href="docs/site-manager-guide.pdf" download>Site Manager Guide</a></li>
-                        <li><a href="docs/supplier-guide.pdf" download>Supplier Guide</a></li>
-                        <li><a href="docs/faq-troubleshooting.pdf" target="_blank">FAQ & Troubleshooting</a></li>
-                        <li><a href="https://github.com/12313131dBossza/siteproc" target="_blank">GitHub Repository</a></li>
+                        <li><a href="https://siteproc1.vercel.app/login" target="_blank">Existing user? Log in →</a></li>
+                        <li><a href="mailto:support@siteproc.com">Support Team</a></li>
                     </ul>
                 </div>
                 
@@ -4280,12 +3951,9 @@
                 <div class="footer-column">
                     <h4>Company</h4>
                     <ul class="footer-links">
-                        <li><a href="#contact">Contact Sales</a></li>
-                        <li><a href="mailto:support@siteproc.com">Support Team</a></li>
-                        <li><a href="#about">About Us</a></li>
+                        <li><a href="mailto:support@siteproc.com">Contact</a></li>
                         <li><a href="/privacy">Privacy Policy</a></li>
                         <li><a href="/terms">Terms of Service</a></li>
-                        <li><a href="#security">Security</a></li>
                     </ul>
                 </div>
             </div>
@@ -4300,19 +3968,11 @@
                         </p>
                     </div>
                     <div style="display: flex; gap: 2rem; align-items: center; flex-wrap: wrap;">
-                        <span style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; padding: 0.5rem 1rem; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.2); border-radius: 8px;">
-                            <span style="width: 8px; height: 8px; background: #22c55e; border-radius: 50%; animation: pulse 2s infinite;"></span>
-                            <span style="color: var(--success); font-weight: 500;">Production Live</span>
-                        </span>
-                        <a href="https://siteproc1.vercel.app" target="_blank" 
-                           style="font-size: 0.875rem; color: var(--primary-color); font-weight: 600; display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: rgba(37, 99, 235, 0.1); border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 8px; transition: all 0.3s ease;"
-                           onmouseover="this.style.background='rgba(37, 99, 235, 0.2)'; this.style.borderColor='rgba(37, 99, 235, 0.4)'"
-                           onmouseout="this.style.background='rgba(37, 99, 235, 0.1)'; this.style.borderColor='rgba(37, 99, 235, 0.2)'">
-                            Access Dashboard
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="7" y1="17" x2="17" y2="7"></line>
-                                <polyline points="7 7 17 7 17 17"></polyline>
-                            </svg>
+                        <a href="https://siteproc1.vercel.app/login" target="_blank" 
+                           style="font-size: 0.875rem; color: var(--text-gray); font-weight: 500; display: flex; align-items: center; gap: 0.5rem; transition: color 0.3s ease; text-decoration: none;"
+                           onmouseover="this.style.color='var(--primary-color)'"
+                           onmouseout="this.style.color='var(--text-gray)'">
+                            Existing user? Log in →
                         </a>
                     </div>
                 </div>
