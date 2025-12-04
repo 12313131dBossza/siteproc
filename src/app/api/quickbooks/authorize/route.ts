@@ -36,10 +36,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Check if user has permission (admin only)
-    if (profile.role !== 'admin') {
+    // Check if user has permission (admin or owner only)
+    if (!['admin', 'owner'].includes(profile.role || '')) {
       return NextResponse.json(
-        { error: 'Insufficient permissions. Admin role required.' },
+        { error: 'Insufficient permissions. Admin or Owner role required.' },
         { status: 403 }
       );
     }

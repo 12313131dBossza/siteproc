@@ -498,17 +498,8 @@ function IntegrationsTab() {
   }
 
   async function connectQuickBooks() {
-    try {
-      const res = await fetch('/api/quickbooks/authorize')
-      const data = await res.json()
-      if (data.authUrl) {
-        window.location.href = data.authUrl
-      } else {
-        toast.error(data.error || 'Failed to start QuickBooks connection')
-      }
-    } catch {
-      toast.error('Failed to connect to QuickBooks')
-    }
+    // Redirect directly to the authorize endpoint - it will handle the OAuth redirect
+    window.location.href = '/api/quickbooks/authorize'
   }
 
   async function disconnectQuickBooks() {
