@@ -209,13 +209,32 @@ export async function getZohoCashAccounts(accessToken: string, organizationId: s
     const data = await response.json();
     const accounts = data.chartofaccounts || [];
     
-    // Filter for cash, bank, and petty cash accounts
-    return accounts.filter((a: any) => 
-      a.account_type === 'cash' || 
-      a.account_type === 'bank' ||
-      a.account_name.toLowerCase().includes('petty cash') ||
-      a.account_name.toLowerCase().includes('cash on hand')
-    );
+    // Filter for cash and bank accounts, EXCLUDING "Undeposited Funds"
+    const cashAccounts = accounts.filter((a: any) => {
+      const type = (a.account_type || '').toLowerCase();
+      const name = (a.account_name || '').toLowerCase();
+      
+      // Exclude "Undeposited Funds" - we want actual cash/bank accounts
+      if (name.includes('undeposited')) {
+        return false;
+      }
+      
+      return type === 'cash' || 
+             type === 'bank' ||
+             name.includes('petty cash') ||
+             name.includes('cash on hand');
+    });
+
+    // Prioritize "Petty Cash" if available
+    cashAccounts.sort((a: any, b: any) => {
+      const aName = (a.account_name || '').toLowerCase();
+      const bName = (b.account_name || '').toLowerCase();
+      if (aName.includes('petty cash')) return -1;
+      if (bName.includes('petty cash')) return 1;
+      return 0;
+    });
+
+    return cashAccounts;
   } catch (error) {
     console.error('[Zoho] Get cash accounts error:', error);
     return null;
