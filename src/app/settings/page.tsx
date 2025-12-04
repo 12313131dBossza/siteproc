@@ -486,6 +486,21 @@ function IntegrationsTab() {
     checkQuickBooksStatus()
     checkXeroStatus()
     checkZohoStatus()
+    
+    // Check URL params for success/error messages
+    const params = new URLSearchParams(window.location.search)
+    const success = params.get('success')
+    const error = params.get('error')
+    
+    if (success === 'zoho_connected') {
+      toast.success('Zoho Books connected successfully!')
+      // Clean URL
+      window.history.replaceState({}, '', '/settings?tab=integrations')
+    } else if (error === 'zoho_no_org') {
+      toast.error('Please create a Zoho Books organization first at books.zoho.com')
+    } else if (error?.startsWith('zoho_')) {
+      toast.error('Failed to connect Zoho Books: ' + error)
+    }
   }, [])
 
   async function checkQuickBooksStatus() {
