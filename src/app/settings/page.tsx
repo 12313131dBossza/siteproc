@@ -477,9 +477,12 @@ function CostCodesTab() {
 function IntegrationsTab() {
   const [qbStatus, setQbStatus] = useState<'disconnected' | 'connected' | 'loading'>('loading')
   const [qbCompany, setQbCompany] = useState<string | null>(null)
+  const [xeroStatus, setXeroStatus] = useState<'disconnected' | 'connected' | 'loading'>('loading')
+  const [xeroCompany, setXeroCompany] = useState<string | null>(null)
 
   useEffect(() => {
     checkQuickBooksStatus()
+    checkXeroStatus()
   }, [])
 
   async function checkQuickBooksStatus() {
@@ -497,8 +500,22 @@ function IntegrationsTab() {
     }
   }
 
+  async function checkXeroStatus() {
+    try {
+      const res = await fetch('/api/xero/status')
+      const data = await res.json()
+      if (data.connected) {
+        setXeroStatus('connected')
+        setXeroCompany(data.tenantName || 'Connected')
+      } else {
+        setXeroStatus('disconnected')
+      }
+    } catch {
+      setXeroStatus('disconnected')
+    }
+  }
+
   async function connectQuickBooks() {
-    // Redirect directly to the authorize endpoint - it will handle the OAuth redirect
     window.location.href = '/api/quickbooks/authorize'
   }
 
@@ -513,11 +530,85 @@ function IntegrationsTab() {
     }
   }
 
+  async function connectXero() {
+    window.location.href = '/api/xero/authorize'
+  }
+
+  async function disconnectXero() {
+    try {
+      await fetch('/api/xero/disconnect', { method: 'POST' })
+      setXeroStatus('disconnected')
+      setXeroCompany(null)
+      toast.success('Xero disconnected')
+    } catch {
+      toast.error('Failed to disconnect Xero')
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-1">Integrations</h3>
         <p className="text-sm text-gray-600">Connect third-party services to sync your data</p>
+      </div>
+
+      {/* Xero Integration - Recommended */}
+      <div className="border-2 border-blue-200 bg-blue-50 rounded-lg p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <span className="bg-blue-500 text-white text-xs font-semibold px-2 py-1 rounded">RECOMMENDED</span>
+        </div>
+        <div className="flex items-start justify-between">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+              <svg className="w-8 h-8 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+              </svg>
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900">Xero</h4>
+              <p className="text-sm text-gray-600 mt-1">
+                Sync expenses, invoices, and payments with Xero accounting
+              </p>
+              {xeroStatus === 'connected' && xeroCompany && (
+                <div className="flex items-center gap-2 mt-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-green-600">Connected to {xeroCompany}</span>
+                </div>
+              )}
+            </div>
+          </div>
+          <div>
+            {xeroStatus === 'loading' ? (
+              <Button variant="outline" disabled>
+                Checking...
+              </Button>
+            ) : xeroStatus === 'connected' ? (
+              <Button variant="outline" onClick={disconnectXero}>
+                Disconnect
+              </Button>
+            ) : (
+              <Button onClick={connectXero}>
+                Connect
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {xeroStatus === 'connected' && (
+          <div className="mt-4 pt-4 border-t border-blue-200">
+            <h5 className="text-sm font-medium text-gray-900 mb-2">Sync Settings</h5>
+            <div className="space-y-2 text-sm text-gray-600">
+              <div className="flex items-center justify-between">
+                <span>Auto-sync expenses</span>
+                <span className="text-green-600">Enabled</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Auto-sync invoices</span>
+                <span className="text-green-600">Enabled</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* QuickBooks Integration */}
@@ -574,12 +665,6 @@ function IntegrationsTab() {
             </div>
           </div>
         )}
-      </div>
-
-      {/* More integrations coming soon */}
-      <div className="border border-dashed border-gray-300 rounded-lg p-6 text-center">
-        <p className="text-gray-500">More integrations coming soon</p>
-        <p className="text-sm text-gray-400 mt-1">Xero, Sage, and more</p>
       </div>
     </div>
   )
