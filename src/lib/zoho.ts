@@ -186,6 +186,43 @@ export async function getZohoExpenseAccounts(accessToken: string, organizationId
 }
 
 /**
+ * Get cash/bank accounts from Zoho Books for "Paid Through"
+ */
+export async function getZohoCashAccounts(accessToken: string, organizationId: string): Promise<Array<{
+  account_id: string;
+  account_name: string;
+  account_type: string;
+}> | null> {
+  try {
+    // Get cash and bank accounts
+    const response = await fetch(`${ZOHO_BOOKS_API}/chartofaccounts?organization_id=${organizationId}`, {
+      headers: {
+        'Authorization': `Zoho-oauthtoken ${accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      console.error('[Zoho] Failed to get cash accounts:', await response.text());
+      return null;
+    }
+
+    const data = await response.json();
+    const accounts = data.chartofaccounts || [];
+    
+    // Filter for cash, bank, and petty cash accounts
+    return accounts.filter((a: any) => 
+      a.account_type === 'cash' || 
+      a.account_type === 'bank' ||
+      a.account_name.toLowerCase().includes('petty cash') ||
+      a.account_name.toLowerCase().includes('cash on hand')
+    );
+  } catch (error) {
+    console.error('[Zoho] Get cash accounts error:', error);
+    return null;
+  }
+}
+
+/**
  * Create an expense in Zoho Books
  */
 export async function createZohoExpense({
@@ -196,6 +233,7 @@ export async function createZohoExpense({
   date,
   category,
   reference,
+  vendor,
 }: {
   accessToken: string;
   organizationId: string;
@@ -204,6 +242,7 @@ export async function createZohoExpense({
   date: string;
   category?: string;
   reference?: string;
+  vendor?: string;
 }): Promise<{ expenseId: string } | null> {
   try {
     // Get expense accounts to find a valid account_id
@@ -224,13 +263,29 @@ export async function createZohoExpense({
       return null;
     }
 
-    const expense = {
+    // Get a cash/bank account for "Paid Through"
+    const cashAccounts = await getZohoCashAccounts(accessToken, organizationId);
+    const paidThroughAccountId = cashAccounts && cashAccounts.length > 0 
+      ? cashAccounts[0].account_id 
+      : null;
+
+    const expense: any = {
       account_id: accountId,
       date: date,
       amount: amount,
       description: description,
       reference_number: reference || `SP-${Date.now()}`,
     };
+
+    // Add paid_through_account_id if we found a cash/bank account
+    if (paidThroughAccountId) {
+      expense.paid_through_account_id = paidThroughAccountId;
+    }
+
+    // Add vendor name if provided
+    if (vendor) {
+      expense.vendor_name = vendor;
+    }
 
     const response = await fetch(`${ZOHO_BOOKS_API}/expenses?organization_id=${organizationId}`, {
       method: 'POST',
