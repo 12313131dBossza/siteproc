@@ -9,6 +9,7 @@ import { useToast } from '@/components/ui/Toast';
 
 export default function NewExpense(){
   const [jobId,setJobId]=useState("");
+  const [vendor,setVendor]=useState("");
   const [amount,setAmount]=useState("");
   const [date,setDate]=useState(""); // YYYY-MM-DD
   const [memo,setMemo]=useState("");
@@ -17,6 +18,10 @@ export default function NewExpense(){
 
   async function submit(e:React.FormEvent){
     e.preventDefault();
+    if(!vendor.trim()){
+      push({ title:"Vendor / Supplier is required", variant:"error" });
+      return;
+    }
     if(!jobId || !amount || !date){
       push({ title:"Fill all required fields", variant:"error" });
       return;
@@ -28,12 +33,12 @@ export default function NewExpense(){
       const res = await fetch('/api/expenses', {
         method:'POST',
         headers:{ 'content-type':'application/json','x-company-id':cid,'x-role':role },
-        body: JSON.stringify({ job_id: jobId, amount: Number(amount), spent_at: date, memo: memo || undefined })
+        body: JSON.stringify({ job_id: jobId, vendor: vendor.trim(), amount: Number(amount), spent_at: date, memo: memo || undefined })
       });
       const data = await res.json().catch(()=>({}));
       if(res.ok){
         push({ title:'Expense created', variant:'success' });
-        setAmount(''); setMemo('');
+        setVendor(''); setAmount(''); setMemo('');
         // Redirect back to list so server component refetches fresh DB rows.
         setTimeout(()=>{ location.href='/admin/expenses'; }, 350);
       } else {
@@ -45,6 +50,10 @@ export default function NewExpense(){
   return (
     <form onSubmit={submit} className="space-y-5 max-w-lg">
       <h1 className="text-xl font-semibold">New Expense</h1>
+      <div className="sp-field">
+        <label className="text-xs font-medium">Vendor / Supplier <span className="text-red-500">*</span></label>
+        <input className="sp-input" value={vendor} onChange={e=>setVendor(e.target.value)} placeholder="e.g. Home Depot, ABC Concrete" required />
+      </div>
       <div className="sp-field">
         <label className="text-xs font-medium">Job ID *</label>
         <input className="sp-input" value={jobId} onChange={e=>setJobId(e.target.value)} placeholder="uuid of job" />

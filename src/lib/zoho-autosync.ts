@@ -157,6 +157,9 @@ export async function autoSyncExpenseToZoho(
     }
 
     // Create expense in Zoho Books
+    // Use vendor from expense, or fallback to clear identifier for review
+    const vendorName = expense.vendor?.trim() || 'UNKNOWN VENDOR – REVIEW NEEDED';
+    
     const result = await createZohoExpense({
       accessToken,
       organizationId: integration.tenant_id,
@@ -165,7 +168,7 @@ export async function autoSyncExpenseToZoho(
       date: expense.spent_at || expense.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
       category: expense.category,
       reference: `SP-EXP-${expense.id.slice(0, 8)}`,
-      vendor: expense.vendor,
+      vendor: vendorName,
     });
 
     if (!result) {

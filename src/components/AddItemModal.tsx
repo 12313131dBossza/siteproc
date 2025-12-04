@@ -110,9 +110,16 @@ export function AddItemModal({ isOpen, onClose, projectId, type, onSuccess }: Ad
         };
         console.log('Creating order:', body);
       } else if (type === 'expense') {
+        // Validate vendor is provided
+        if (!expenseForm.vendor.trim()) {
+          setError('Vendor / Supplier is required');
+          setLoading(false);
+          return;
+        }
         endpoint = `/api/expenses`;
         body = {
           ...expenseForm,
+          vendor: expenseForm.vendor.trim(),
           project_id: projectId,
         };
         console.log('Creating expense:', body);
@@ -293,7 +300,7 @@ export function AddItemModal({ isOpen, onClose, projectId, type, onSuccess }: Ad
             <>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Vendor <span className="text-red-500">*</span>
+                  Vendor / Supplier <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -301,7 +308,7 @@ export function AddItemModal({ isOpen, onClose, projectId, type, onSuccess }: Ad
                   value={expenseForm.vendor}
                   onChange={(e) => setExpenseForm({ ...expenseForm, vendor: e.target.value })}
                   className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter vendor/supplier name"
+                  placeholder="e.g. Home Depot, ABC Concrete, John's Trucking"
                 />
               </div>
 

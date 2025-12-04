@@ -208,11 +208,11 @@ function ExpensesContent() {
           >
             <form onSubmit={handleSubmit} className="space-y-4">
               <FormField
-                label="Vendor"
+                label="Vendor / Supplier"
                 id="vendor"
                 value={formData.vendor}
                 onChange={(value) => setFormData(prev => ({ ...prev, vendor: value }))}
-                placeholder="ABC Company"
+                placeholder="e.g. Home Depot, ABC Concrete, John's Trucking"
                 required
               />
               <FormField

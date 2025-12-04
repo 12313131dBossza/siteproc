@@ -176,7 +176,10 @@ export async function POST(request: NextRequest) {
     const amount = parseFloat(body.amount)
     if (isNaN(amount) || amount <= 0) return NextResponse.json({ error: 'Valid amount is required' }, { status: 400 })
 
-    const vendor = body.vendor || (body.description ? String(body.description).slice(0, 100) : 'Expense')
+    // Vendor is required
+    const vendor = body.vendor?.trim()
+    if (!vendor) return NextResponse.json({ error: 'Vendor / Supplier is required' }, { status: 400 })
+
     const category = body.category || 'other'
     const spendDate = body.spend_date || new Date().toISOString().split('T')[0]
 
