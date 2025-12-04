@@ -158,6 +158,114 @@ export async function getZohoOrganizations(accessToken: string): Promise<Array<{
 }
 
 /**
+ * Search for a vendor/contact in Zoho Books
+ */
+export async function searchZohoVendor(
+  accessToken: string, 
+  organizationId: string, 
+  vendorName: string
+): Promise<{ contact_id: string; contact_name: string } | null> {
+  try {
+    const searchName = encodeURIComponent(vendorName);
+    const response = await fetch(
+      `${ZOHO_BOOKS_API}/contacts?organization_id=${organizationId}&contact_type=vendor&search_text=${searchName}`,
+      {
+        headers: {
+          'Authorization': `Zoho-oauthtoken ${accessToken}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      console.error('[Zoho] Failed to search vendors:', await response.text());
+      return null;
+    }
+
+    const data = await response.json();
+    const contacts = data.contacts || [];
+    
+    // Find exact or close match
+    const exactMatch = contacts.find((c: any) => 
+      c.contact_name.toLowerCase() === vendorName.toLowerCase()
+    );
+    
+    if (exactMatch) {
+      return { contact_id: exactMatch.contact_id, contact_name: exactMatch.contact_name };
+    }
+    
+    // Return first match if any
+    if (contacts.length > 0) {
+      return { contact_id: contacts[0].contact_id, contact_name: contacts[0].contact_name };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('[Zoho] Search vendor error:', error);
+    return null;
+  }
+}
+
+/**
+ * Create a vendor/contact in Zoho Books
+ */
+export async function createZohoVendor(
+  accessToken: string, 
+  organizationId: string, 
+  vendorName: string
+): Promise<{ contact_id: string; contact_name: string } | null> {
+  try {
+    const vendor = {
+      contact_name: vendorName,
+      contact_type: 'vendor',
+    };
+
+    const response = await fetch(`${ZOHO_BOOKS_API}/contacts?organization_id=${organizationId}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Zoho-oauthtoken ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(vendor),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[Zoho] Failed to create vendor:', errorText);
+      return null;
+    }
+
+    const data = await response.json();
+    if (data.contact) {
+      return { contact_id: data.contact.contact_id, contact_name: data.contact.contact_name };
+    }
+    return null;
+  } catch (error) {
+    console.error('[Zoho] Create vendor error:', error);
+    return null;
+  }
+}
+
+/**
+ * Get or create a vendor in Zoho Books
+ */
+export async function getOrCreateZohoVendor(
+  accessToken: string, 
+  organizationId: string, 
+  vendorName: string
+): Promise<{ contact_id: string; contact_name: string } | null> {
+  // First, search for existing vendor
+  const existing = await searchZohoVendor(accessToken, organizationId, vendorName);
+  if (existing) {
+    console.log(`[Zoho] Found existing vendor: ${existing.contact_name} (${existing.contact_id})`);
+    return existing;
+  }
+  
+  // Create new vendor
+  console.log(`[Zoho] Creating new vendor: ${vendorName}`);
+  return await createZohoVendor(accessToken, organizationId, vendorName);
+}
+
+/**
  * Get expense accounts from Zoho Books
  */
 export async function getZohoExpenseAccounts(accessToken: string, organizationId: string): Promise<Array<{
@@ -301,9 +409,15 @@ export async function createZohoExpense({
       expense.paid_through_account_id = paidThroughAccountId;
     }
 
-    // Add vendor name if provided
+    // Get or create vendor in Zoho and link by vendor_id
     if (vendor) {
-      expense.vendor_name = vendor;
+      const zohoVendor = await getOrCreateZohoVendor(accessToken, organizationId, vendor);
+      if (zohoVendor) {
+        expense.vendor_id = zohoVendor.contact_id;
+        console.log(`[Zoho] Linking expense to vendor: ${zohoVendor.contact_name} (${zohoVendor.contact_id})`);
+      } else {
+        console.warn(`[Zoho] Could not create/find vendor: ${vendor}`);
+      }
     }
 
     const response = await fetch(`${ZOHO_BOOKS_API}/expenses?organization_id=${organizationId}`, {
