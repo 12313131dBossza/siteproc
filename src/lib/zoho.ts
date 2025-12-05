@@ -193,10 +193,9 @@ export async function searchZohoVendor(
       return { contact_id: exactMatch.contact_id, contact_name: exactMatch.contact_name };
     }
     
-    // Return first match if any
-    if (contacts.length > 0) {
-      return { contact_id: contacts[0].contact_id, contact_name: contacts[0].contact_name };
-    }
+    // Only return existing vendor if it's an EXACT match
+    // Don't use partial matches - create a new vendor instead
+    // This prevents using wrong vendors like "DFF" when searching for "sdd"
     
     return null;
   } catch (error) {
