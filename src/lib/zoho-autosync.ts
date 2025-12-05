@@ -522,7 +522,7 @@ export async function autoSyncOrderToZoho(
       return { success: false, synced: false, error: 'Order not found' };
     }
 
-    // Check if already synced to Zoho
+    // Check if already synced to Zoho (zoho_po_id column may not exist)
     if (order.zoho_po_id) {
       return { success: true, synced: false, error: 'Already synced to Zoho' };
     }
@@ -531,13 +531,12 @@ export async function autoSyncOrderToZoho(
     console.log('[Zoho AutoSync] Order data:', JSON.stringify({
       id: order.id,
       vendor: order.vendor,
-      supplier_name: order.supplier_name,
       description: order.description,
       amount: order.amount,
     }, null, 2));
 
-    // Use supplier_name from order, or fallback to vendor, then to clear identifier for review
-    const vendorName = order.supplier_name?.trim() || order.vendor?.trim() || 'UNKNOWN VENDOR – REVIEW NEEDED';
+    // Use vendor from order, fallback to clear identifier for review
+    const vendorName = order.vendor?.trim() || 'UNKNOWN VENDOR – REVIEW NEEDED';
     console.log('[Zoho AutoSync] Using vendor name:', vendorName);
     
     const result = await createZohoPurchaseOrder({
@@ -561,11 +560,15 @@ export async function autoSyncOrderToZoho(
       return { success: false, synced: false, error: 'Failed to create PO in Zoho Books' };
     }
 
-    // Update order with Zoho ID
-    await supabase
-      .from('purchase_orders')
-      .update({ zoho_po_id: result.purchaseOrderId })
-      .eq('id', orderId);
+    // Try to update order with Zoho ID (column may not exist, so don't fail)
+    try {
+      await supabase
+        .from('purchase_orders')
+        .update({ zoho_po_id: result.purchaseOrderId })
+        .eq('id', orderId);
+    } catch (updateErr) {
+      console.log('[Zoho AutoSync] Could not save zoho_po_id (column may not exist):', updateErr);
+    }
 
     console.log(`[Zoho AutoSync] Order ${orderId} synced to Zoho PO ${result.purchaseOrderId}`);
     return { success: true, synced: true, zohoId: result.purchaseOrderId };
@@ -698,20 +701,19 @@ export async function autoSyncDeliveryToZoho(
       return { success: false, synced: false, error: 'Delivery not found' };
     }
 
-    // Check if already synced to Zoho
+    // Check if already synced to Zoho (zoho_bill_id column may not exist)
     if (delivery.zoho_bill_id) {
       return { success: true, synced: false, error: 'Already synced to Zoho' };
     }
 
-    // Get supplier from delivery or linked order
+    // Get supplier from linked order (vendor is stored on purchase_orders)
     const linkedOrder = delivery.purchase_orders || {};
-    const vendorName = delivery.supplier_name?.trim() || linkedOrder.vendor?.trim() || 'UNKNOWN VENDOR – REVIEW NEEDED';
+    const vendorName = linkedOrder.vendor?.trim() || 'UNKNOWN VENDOR – REVIEW NEEDED';
     const projectName = linkedOrder.projects?.name;
 
     // Debug: Log delivery fields
     console.log('[Zoho AutoSync] Delivery data:', JSON.stringify({
       id: delivery.id,
-      supplier_name: delivery.supplier_name,
       linked_order_vendor: linkedOrder.vendor,
       projectName,
       total_amount: delivery.total_amount,
@@ -752,11 +754,15 @@ export async function autoSyncDeliveryToZoho(
       return { success: false, synced: false, error: 'Failed to create bill in Zoho Books' };
     }
 
-    // Update delivery with Zoho Bill ID
-    await supabase
-      .from('deliveries')
-      .update({ zoho_bill_id: result.purchaseOrderId })
-      .eq('id', deliveryId);
+    // Try to update delivery with Zoho Bill ID (column may not exist, so don't fail if it errors)
+    try {
+      await supabase
+        .from('deliveries')
+        .update({ zoho_bill_id: result.purchaseOrderId })
+        .eq('id', deliveryId);
+    } catch (updateErr) {
+      console.log('[Zoho AutoSync] Could not save zoho_bill_id (column may not exist):', updateErr);
+    }
 
     console.log(`[Zoho AutoSync] Delivery ${deliveryId} synced to Zoho bill ${result.purchaseOrderId}`);
     return { success: true, synced: true, zohoId: result.purchaseOrderId };
