@@ -36,6 +36,9 @@ interface Delivery {
   }>
   created_at: string
   updated_at: string
+  // Supplier info inherited from the linked order
+  supplier_name?: string
+  order_vendor?: string
 }
 
 const statusConfig = {

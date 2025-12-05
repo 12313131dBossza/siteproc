@@ -412,7 +412,8 @@ export default function ExpensesPage() {
           category: newExpense.category,
           amount: parseFloat(newExpense.amount),
           description: newExpense.description,
-          project_id: newExpense.project_id || null
+          project_id: newExpense.project_id || null,
+          payment_method: newExpense.payment_method
         })
       });
 
@@ -841,6 +842,7 @@ export default function ExpensesPage() {
               
               <Select
                 label="Payment Method (Paid Through)"
+                required
                 value={newExpense.payment_method}
                 onChange={(e) => setNewExpense((v: any) => ({ ...v, payment_method: e.target.value }))}
                 options={[
@@ -849,10 +851,12 @@ export default function ExpensesPage() {
                   { value: 'bank_transfer', label: 'Bank Transfer' },
                   { value: 'credit_card', label: 'Credit Card' },
                   { value: 'cash', label: 'Cash' },
-                  { value: 'check', label: 'Check' },
+                  { value: 'check', label: 'Check / Cheque' },
+                  { value: 'wise', label: 'Wise' },
+                  { value: 'ach', label: 'ACH' },
                   { value: 'other', label: 'Other' }
                 ]}
-                helpText="How was this expense paid? This syncs to Zoho Books."
+                helpText="Required - How was this expense paid? This syncs to Zoho Books."
               />
             </div>
 

@@ -104,6 +104,7 @@ function EditOrderModal({
     vendor: order.vendor || '',
     amount: order.amount || 0,
     project_id: order.project_id || '',
+    payment_terms: (order as any).payment_terms || '',
   });
   const [saving, setSaving] = useState(false);
 
@@ -164,14 +165,34 @@ function EditOrderModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Vendor</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Supplier / Vendor <span className="text-red-500">*</span></label>
               <input
                 type="text"
+                required
                 value={formData.vendor}
                 onChange={(e) => setFormData({ ...formData, vendor: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Enter supplier or vendor name"
               />
             </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Payment Terms <span className="text-red-500">*</span></label>
+            <select
+              required
+              value={formData.payment_terms}
+              onChange={(e) => setFormData({ ...formData, payment_terms: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">Select payment terms...</option>
+              <option value="prepaid">Prepaid (Pay before delivery)</option>
+              <option value="cod">COD (Cash on Delivery)</option>
+              <option value="due_on_receipt">Due on Receipt</option>
+              <option value="net_15">Net 15 (Due in 15 days)</option>
+              <option value="net_30">Net 30 (Due in 30 days)</option>
+              <option value="net_45">Net 45 (Due in 45 days)</option>
+              <option value="net_60">Net 60 (Due in 60 days)</option>
+            </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Amount</label>
@@ -185,7 +206,7 @@ function EditOrderModal({
             />
           </div>
           <div className="flex gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+            <Button type="button" variant="ghost" onClick={onClose} className="flex-1">
               Cancel
             </Button>
             <Button type="submit" variant="primary" className="flex-1" disabled={saving}>

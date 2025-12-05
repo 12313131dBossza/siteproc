@@ -3,7 +3,7 @@
  * Automatically sync expenses and invoices to Zoho Books when created/updated
  */
 
-import { createZohoExpense, createZohoInvoice, updateZohoExpense, deleteZohoExpense, refreshZohoToken } from './zoho';
+import { createZohoExpense, createZohoInvoice, updateZohoExpense, deleteZohoExpense, refreshZohoToken, createZohoPurchaseOrder, createZohoVendorPayment } from './zoho';
 import { createServiceClient } from './supabase-service';
 
 interface AutoSyncResult {
@@ -195,6 +195,7 @@ export async function autoSyncExpenseToZoho(
 /**
  * Sync expense UPDATE to Zoho Books
  * Call this after updating an expense that's already synced
+ * If expense is approved but not yet synced, will create it in Zoho first
  */
 export async function syncExpenseUpdateToZoho(
   companyId: string,
@@ -225,9 +226,38 @@ export async function syncExpenseUpdateToZoho(
       return { success: false, synced: false, error: 'Expense not found' };
     }
 
-    // Only sync if already has a Zoho ID
+    // If expense doesn't have a Zoho ID but is approved, create it first
     if (!expense.zoho_expense_id) {
-      return { success: true, synced: false, error: 'Expense not yet synced to Zoho' };
+      if (expense.status === 'approved') {
+        // Create the expense in Zoho
+        const vendorName = expense.vendor?.trim() || 'UNKNOWN VENDOR – REVIEW NEEDED';
+        const createResult = await createZohoExpense({
+          accessToken,
+          organizationId: integration.tenant_id,
+          description: expense.description || expense.memo || 'Expense from SiteProc',
+          amount: expense.amount,
+          date: expense.spent_at || expense.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+          category: expense.category,
+          reference: `SP-EXP-${expense.id.slice(0, 8)}`,
+          vendor: vendorName,
+          paymentMethod: expense.payment_method,
+        });
+
+        if (!createResult) {
+          console.error('[Zoho AutoSync] Failed to create expense in Zoho during update');
+          return { success: false, synced: false, error: 'Failed to create expense in Zoho Books' };
+        }
+
+        // Update expense with Zoho ID
+        await supabase
+          .from('expenses')
+          .update({ zoho_expense_id: createResult.expenseId })
+          .eq('id', expenseId);
+
+        console.log(`[Zoho AutoSync] Expense ${expenseId} created in Zoho as ${createResult.expenseId} during update`);
+        return { success: true, synced: true, zohoId: createResult.expenseId };
+      }
+      return { success: true, synced: false, error: 'Expense not approved - not synced to Zoho' };
     }
 
     // Update expense in Zoho Books
@@ -441,5 +471,169 @@ export async function syncAllExpensesToZoho(companyId: string): Promise<{
     return result;
   } catch (error) {
     return { ...result, success: false, errors: [error instanceof Error ? error.message : 'Unknown error'] };
+  }
+}
+
+/**
+ * Auto-sync a purchase order to Zoho Books
+ * Call this after creating or approving a purchase order
+ */
+export async function autoSyncOrderToZoho(
+  companyId: string,
+  orderId: string,
+  status: string
+): Promise<AutoSyncResult> {
+  // Only sync approved orders
+  if (status !== 'approved') {
+    return { success: true, synced: false, error: 'Only approved orders are synced to Zoho' };
+  }
+
+  try {
+    // Get Zoho integration
+    const integration = await getZohoIntegration(companyId);
+    if (!integration) {
+      return { success: true, synced: false, error: 'Zoho not connected' };
+    }
+
+    // Get valid access token
+    const accessToken = await getValidAccessToken(integration);
+    if (!accessToken) {
+      return { success: false, synced: false, error: 'Failed to get valid Zoho access token' };
+    }
+
+    // Get order details
+    const supabase = createServiceClient();
+    const { data: order, error: orderError } = await supabase
+      .from('purchase_orders')
+      .select(`
+        *,
+        projects(name)
+      `)
+      .eq('id', orderId)
+      .single();
+
+    if (orderError || !order) {
+      return { success: false, synced: false, error: 'Order not found' };
+    }
+
+    // Check if already synced to Zoho
+    if (order.zoho_po_id) {
+      return { success: true, synced: false, error: 'Already synced to Zoho' };
+    }
+
+    // Use vendor from order, or fallback to clear identifier for review
+    const vendorName = order.vendor?.trim() || 'UNKNOWN VENDOR – REVIEW NEEDED';
+    
+    const result = await createZohoPurchaseOrder({
+      accessToken,
+      organizationId: integration.tenant_id,
+      vendorName,
+      description: order.description || order.product_name || 'Purchase Order from SiteProc',
+      amount: order.amount,
+      date: order.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+      reference: `SP-PO-${order.id.slice(0, 8)}`,
+      paymentTerms: order.payment_terms,
+      items: order.product_name ? [{
+        name: order.product_name,
+        quantity: order.quantity || 1,
+        rate: order.unit_price || order.amount,
+      }] : undefined,
+    });
+
+    if (!result) {
+      console.error('[Zoho AutoSync] Failed to create PO in Zoho');
+      return { success: false, synced: false, error: 'Failed to create PO in Zoho Books' };
+    }
+
+    // Update order with Zoho ID
+    await supabase
+      .from('purchase_orders')
+      .update({ zoho_po_id: result.purchaseOrderId })
+      .eq('id', orderId);
+
+    console.log(`[Zoho AutoSync] Order ${orderId} synced to Zoho PO ${result.purchaseOrderId}`);
+    return { success: true, synced: true, zohoId: result.purchaseOrderId };
+
+  } catch (error) {
+    console.error('[Zoho AutoSync] Error syncing order:', error);
+    return { success: false, synced: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
+/**
+ * Auto-sync a payment to Zoho Books
+ * Call this after creating a payment
+ */
+export async function autoSyncPaymentToZoho(
+  companyId: string,
+  paymentId: string,
+  status: string
+): Promise<AutoSyncResult> {
+  // Only sync paid payments
+  if (status !== 'paid') {
+    return { success: true, synced: false, error: 'Only paid payments are synced to Zoho' };
+  }
+
+  try {
+    // Get Zoho integration
+    const integration = await getZohoIntegration(companyId);
+    if (!integration) {
+      return { success: true, synced: false, error: 'Zoho not connected' };
+    }
+
+    // Get valid access token
+    const accessToken = await getValidAccessToken(integration);
+    if (!accessToken) {
+      return { success: false, synced: false, error: 'Failed to get valid Zoho access token' };
+    }
+
+    // Get payment details
+    const supabase = createServiceClient();
+    const { data: payment, error: paymentError } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('id', paymentId)
+      .single();
+
+    if (paymentError || !payment) {
+      return { success: false, synced: false, error: 'Payment not found' };
+    }
+
+    // Check if already synced to Zoho
+    if (payment.zoho_payment_id) {
+      return { success: true, synced: false, error: 'Already synced to Zoho' };
+    }
+
+    // Use vendor from payment, or fallback to clear identifier for review
+    const vendorName = payment.vendor_name?.trim() || 'UNKNOWN VENDOR – REVIEW NEEDED';
+    
+    const result = await createZohoVendorPayment({
+      accessToken,
+      organizationId: integration.tenant_id,
+      vendorName,
+      amount: payment.amount,
+      date: payment.payment_date || new Date().toISOString().split('T')[0],
+      paymentMethod: payment.payment_method,
+      reference: payment.reference_number || `SP-PAY-${payment.id.slice(0, 8)}`,
+      description: payment.notes || `Payment to ${vendorName}`,
+    });
+
+    if (!result) {
+      console.error('[Zoho AutoSync] Failed to create payment in Zoho');
+      return { success: false, synced: false, error: 'Failed to create payment in Zoho Books' };
+    }
+
+    // Update payment with Zoho ID
+    await supabase
+      .from('payments')
+      .update({ zoho_payment_id: result.paymentId })
+      .eq('id', paymentId);
+
+    console.log(`[Zoho AutoSync] Payment ${paymentId} synced to Zoho ${result.paymentId}`);
+    return { success: true, synced: true, zohoId: result.paymentId };
+
+  } catch (error) {
+    console.error('[Zoho AutoSync] Error syncing payment:', error);
+    return { success: false, synced: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }

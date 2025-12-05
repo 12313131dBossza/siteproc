@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUserProfile } from '@/lib/server-utils'
 import { sendOrderApprovalNotification, sendOrderRejectionNotification } from '@/lib/email'
 import { notifyOrderApproval, notifyOrderRejection } from '@/lib/notification-triggers'
+import { autoSyncOrderToZoho } from '@/lib/zoho-autosync'
 
 // PUT /api/orders/[id] - Update order details
 export async function PUT(
@@ -16,7 +17,7 @@ export async function PUT(
     }
 
     const body = await request.json()
-    const { description, category, vendor, amount, project_id } = body
+    const { description, category, vendor, amount, project_id, payment_terms } = body
     const orderId = params.id
 
     // Get the order first to verify it exists and user has access
@@ -48,6 +49,7 @@ export async function PUT(
     if (vendor !== undefined) updateData.vendor = vendor
     if (amount !== undefined) updateData.amount = amount
     if (project_id !== undefined) updateData.project_id = project_id
+    if (payment_terms !== undefined) updateData.payment_terms = payment_terms
 
     // Update the order
     const { data: updatedOrder, error: updateError } = await supabase
@@ -209,6 +211,19 @@ export async function PATCH(
             approverName
           })
           console.log('✅ Order approval notification sent')
+          
+          // Sync approved order to Zoho Books
+          try {
+            const zohoResult = await autoSyncOrderToZoho(profile.company_id, orderId, 'approved')
+            if (zohoResult.synced) {
+              console.log(`✅ Order synced to Zoho Books: ${zohoResult.zohoId}`)
+            } else if (zohoResult.error) {
+              console.log(`⚠️ Zoho sync skipped: ${zohoResult.error}`)
+            }
+          } catch (zohoError) {
+            console.error('❌ Zoho sync error:', zohoError)
+            // Don't fail - order was approved successfully
+          }
         } else {
           await notifyOrderRejection({
             orderId: orderId,

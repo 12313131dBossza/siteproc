@@ -646,6 +646,210 @@ export async function deleteZohoExpense({
 }
 
 /**
+ * Create a Purchase Order in Zoho Books
+ */
+export async function createZohoPurchaseOrder({
+  accessToken,
+  organizationId,
+  vendorName,
+  description,
+  amount,
+  date,
+  reference,
+  paymentTerms,
+  items,
+}: {
+  accessToken: string;
+  organizationId: string;
+  vendorName: string;
+  description: string;
+  amount: number;
+  date: string;
+  reference?: string;
+  paymentTerms?: string;
+  items?: Array<{ name: string; quantity: number; rate: number }>;
+}): Promise<{ purchaseOrderId: string } | null> {
+  try {
+    // Get or create vendor in Zoho
+    const vendorToUse = vendorName?.trim() || 'UNKNOWN VENDOR – REVIEW NEEDED';
+    const zohoVendor = await getOrCreateZohoVendor(accessToken, organizationId, vendorToUse);
+    
+    if (!zohoVendor) {
+      console.error('[Zoho] Could not get/create vendor for PO');
+      return null;
+    }
+
+    // Map payment terms to Zoho format
+    const paymentTermsMap: { [key: string]: string } = {
+      'net_15': 'Net 15',
+      'net_30': 'Net 30',
+      'net_45': 'Net 45',
+      'net_60': 'Net 60',
+      'due_on_receipt': 'Due on Receipt',
+      'cod': 'Due on Receipt', // COD maps to immediate
+      'prepaid': 'Due on Receipt', // Prepaid - already paid
+    };
+
+    const purchaseOrder: any = {
+      vendor_id: zohoVendor.contact_id,
+      date: date,
+      reference_number: reference || `SP-PO-${Date.now()}`,
+      line_items: items && items.length > 0 
+        ? items.map(item => ({
+            name: item.name,
+            quantity: item.quantity,
+            rate: item.rate,
+          }))
+        : [{
+            name: description || 'Purchase Order from SiteProc',
+            quantity: 1,
+            rate: amount,
+          }],
+    };
+
+    // Add payment terms if provided
+    if (paymentTerms && paymentTermsMap[paymentTerms]) {
+      purchaseOrder.payment_terms_label = paymentTermsMap[paymentTerms];
+    }
+
+    console.log(`[Zoho] Creating PO for vendor: ${zohoVendor.contact_name}, payment terms: ${paymentTerms}`);
+
+    const response = await fetch(`${ZOHO_BOOKS_API}/purchaseorders?organization_id=${organizationId}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Zoho-oauthtoken ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(purchaseOrder),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[Zoho] Create PO failed:', errorText);
+      return null;
+    }
+
+    const data = await response.json();
+    console.log(`[Zoho] Successfully created PO: ${data.purchaseorder?.purchaseorder_id}`);
+    return { purchaseOrderId: data.purchaseorder?.purchaseorder_id };
+  } catch (error) {
+    console.error('[Zoho] Create PO error:', error);
+    return null;
+  }
+}
+
+/**
+ * Create a vendor payment (bill payment) in Zoho Books
+ */
+export async function createZohoVendorPayment({
+  accessToken,
+  organizationId,
+  vendorName,
+  amount,
+  date,
+  paymentMethod,
+  reference,
+  description,
+}: {
+  accessToken: string;
+  organizationId: string;
+  vendorName: string;
+  amount: number;
+  date: string;
+  paymentMethod?: string;
+  reference?: string;
+  description?: string;
+}): Promise<{ paymentId: string } | null> {
+  try {
+    // Get or create vendor in Zoho
+    const vendorToUse = vendorName?.trim() || 'UNKNOWN VENDOR – REVIEW NEEDED';
+    const zohoVendor = await getOrCreateZohoVendor(accessToken, organizationId, vendorToUse);
+    
+    if (!zohoVendor) {
+      console.error('[Zoho] Could not get/create vendor for payment');
+      return null;
+    }
+
+    // Get cash/bank account based on payment method
+    const cashAccounts = await getZohoCashAccounts(accessToken, organizationId);
+    let accountId: string | null = null;
+
+    if (cashAccounts && cashAccounts.length > 0) {
+      const methodToAccountMap: { [key: string]: string[] } = {
+        'petty_cash': ['petty cash', 'petty'],
+        'cash': ['cash', 'petty cash'],
+        'bank_transfer': ['bank', 'checking', 'savings', 'transfer', 'current'],
+        'wise': ['wise', 'bank', 'transfer'],
+        'ach': ['ach', 'bank', 'checking'],
+        'credit_card': ['credit card', 'credit', 'card'],
+        'check': ['checking', 'bank', 'cheque', 'current'],
+      };
+      
+      const searchTerms = paymentMethod ? methodToAccountMap[paymentMethod] || [] : [];
+      
+      for (const term of searchTerms) {
+        const matchedAccount = cashAccounts.find(a => 
+          a.account_name.toLowerCase().includes(term)
+        );
+        if (matchedAccount) {
+          accountId = matchedAccount.account_id;
+          break;
+        }
+      }
+      
+      // Fallback to first available
+      if (!accountId) {
+        accountId = cashAccounts[0].account_id;
+      }
+    }
+
+    // Create vendor payment (as an expense - vendor payments require a bill first)
+    // Using expense endpoint is simpler for direct payments
+    const expense: any = {
+      vendor_id: zohoVendor.contact_id,
+      date: date,
+      amount: amount,
+      description: description || `Payment to ${vendorToUse}`,
+      reference_number: reference || `SP-PAY-${Date.now()}`,
+    };
+
+    if (accountId) {
+      expense.paid_through_account_id = accountId;
+    }
+
+    // Get expense account
+    const accounts = await getZohoExpenseAccounts(accessToken, organizationId);
+    if (accounts && accounts.length > 0) {
+      expense.account_id = accounts[0].account_id;
+    }
+
+    console.log(`[Zoho] Creating payment for vendor: ${zohoVendor.contact_name}, method: ${paymentMethod}`);
+
+    const response = await fetch(`${ZOHO_BOOKS_API}/expenses?organization_id=${organizationId}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Zoho-oauthtoken ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(expense),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[Zoho] Create payment failed:', errorText);
+      return null;
+    }
+
+    const data = await response.json();
+    console.log(`[Zoho] Successfully created payment: ${data.expense?.expense_id}`);
+    return { paymentId: data.expense?.expense_id };
+  } catch (error) {
+    console.error('[Zoho] Create payment error:', error);
+    return null;
+  }
+}
+
+/**
  * Create an invoice in Zoho Books
  */
 export async function createZohoInvoice({

@@ -24,7 +24,8 @@ export function AddItemModal({ isOpen, onClose, projectId, type, onSuccess }: Ad
     product_name: '',
     qty: 1,
     unit_price: 0,
-    status: 'pending'
+    status: 'pending',
+    payment_terms: ''
   });
 
   // Expense form fields
@@ -104,9 +105,23 @@ export function AddItemModal({ isOpen, onClose, projectId, type, onSuccess }: Ad
       let body: any = {};
 
       if (type === 'order') {
+        // Validate vendor is provided
+        if (!orderForm.vendor.trim()) {
+          setError('Supplier / Vendor is required');
+          setLoading(false);
+          return;
+        }
+        // Validate payment terms is selected
+        if (!orderForm.payment_terms) {
+          setError('Payment Terms is required');
+          setLoading(false);
+          return;
+        }
         endpoint = `/api/orders`;
         body = {
           ...orderForm,
+          vendor: orderForm.vendor.trim(),
+          payment_terms: orderForm.payment_terms,
           project_id: projectId,
         };
         console.log('Creating order:', body);
@@ -114,6 +129,12 @@ export function AddItemModal({ isOpen, onClose, projectId, type, onSuccess }: Ad
         // Validate vendor is provided
         if (!expenseForm.vendor.trim()) {
           setError('Vendor / Supplier is required');
+          setLoading(false);
+          return;
+        }
+        // Validate payment method is selected
+        if (!expenseForm.payment_method) {
+          setError('Payment Method is required');
           setLoading(false);
           return;
         }
@@ -161,7 +182,7 @@ export function AddItemModal({ isOpen, onClose, projectId, type, onSuccess }: Ad
       onClose();
       
       // Reset forms
-      setOrderForm({ vendor: '', product_name: '', qty: 1, unit_price: 0, status: 'pending' });
+      setOrderForm({ vendor: '', product_name: '', qty: 1, unit_price: 0, status: 'pending', payment_terms: '' });
       setExpenseForm({ vendor: '', category: 'materials', amount: 0, description: '', status: 'pending', payment_method: '' });
       setDeliveryForm({ delivery_date: new Date().toISOString().split('T')[0], status: 'pending', notes: '', proof_url: '' });
     } catch (err: any) {
@@ -220,7 +241,7 @@ export function AddItemModal({ isOpen, onClose, projectId, type, onSuccess }: Ad
             <>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Vendor <span className="text-red-500">*</span>
+                  Supplier / Vendor <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -228,8 +249,30 @@ export function AddItemModal({ isOpen, onClose, projectId, type, onSuccess }: Ad
                   value={orderForm.vendor}
                   onChange={(e) => setOrderForm({ ...orderForm, vendor: e.target.value })}
                   className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter vendor name"
+                  placeholder="Enter supplier or vendor name"
                 />
+                <p className="text-xs text-gray-500 mt-1">Required - Who are you ordering from?</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Payment Terms <span className="text-red-500">*</span>
+                </label>
+                <select
+                  required
+                  value={orderForm.payment_terms}
+                  onChange={(e) => setOrderForm({ ...orderForm, payment_terms: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select payment terms...</option>
+                  <option value="prepaid">Prepaid (Pay before delivery)</option>
+                  <option value="cod">COD (Cash on Delivery)</option>
+                  <option value="due_on_receipt">Due on Receipt</option>
+                  <option value="net_15">Net 15 (Due in 15 days)</option>
+                  <option value="net_30">Net 30 (Due in 30 days)</option>
+                  <option value="net_45">Net 45 (Due in 45 days)</option>
+                  <option value="net_60">Net 60 (Due in 60 days)</option>
+                </select>
               </div>
 
               <div>
@@ -366,17 +409,22 @@ export function AddItemModal({ isOpen, onClose, projectId, type, onSuccess }: Ad
                   Paid Through <span className="text-red-500">*</span>
                 </label>
                 <select
+                  required
                   value={expenseForm.payment_method}
                   onChange={(e) => setExpenseForm({ ...expenseForm, payment_method: e.target.value })}
                   className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
+                  <option value="">Select payment method...</option>
                   <option value="petty_cash">Petty Cash</option>
                   <option value="bank_transfer">Bank Transfer</option>
                   <option value="credit_card">Credit Card</option>
                   <option value="cash">Cash</option>
-                  <option value="check">Check</option>
+                  <option value="check">Check / Cheque</option>
+                  <option value="wise">Wise</option>
+                  <option value="ach">ACH</option>
                   <option value="other">Other</option>
                 </select>
+                <p className="text-xs text-gray-500 mt-1">Required - syncs to Zoho Books</p>
               </div>
 
               <div>

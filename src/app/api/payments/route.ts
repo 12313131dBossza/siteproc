@@ -3,6 +3,7 @@ import { sbServer } from '@/lib/supabase-server'
 import { createServiceClient } from '@/lib/supabase-service'
 import { logActivity } from '@/app/api/activity/route'
 import { notifyPaymentCreated } from '@/lib/notification-triggers'
+import { autoSyncPaymentToZoho } from '@/lib/zoho-autosync'
 
 export const runtime = 'nodejs'
 
@@ -138,23 +139,31 @@ export async function POST(req: NextRequest) {
       status 
     } = body
 
-    // Validation
-    if (!vendor_name) {
-      return NextResponse.json({ error: 'vendor_name is required' }, { status: 400 })
+    // Validation - vendor is REQUIRED
+    if (!vendor_name || !vendor_name.trim()) {
+      return NextResponse.json({ error: 'Vendor / Payee is required. Please select or enter a vendor name.' }, { status: 400 })
     }
     if (!amount || amount <= 0) {
       return NextResponse.json({ error: 'amount must be greater than 0' }, { status: 400 })
     }
+    // Validation - payment_method is REQUIRED
+    if (!payment_method || !payment_method.trim()) {
+      return NextResponse.json({ error: 'Payment Method is required. Please select how this payment was made.' }, { status: 400 })
+    }
+
+    // Use fallback vendor name if somehow empty
+    const finalVendorName = vendor_name.trim() || 'UNKNOWN VENDOR – REVIEW NEEDED';
+    const finalPaymentMethod = payment_method.trim() || 'other';
 
     const paymentData = {
       company_id: profile.company_id,
       project_id: project_id || null,
       order_id: order_id || null,
       expense_id: expense_id || null,
-      vendor_name,
+      vendor_name: finalVendorName,
       amount: parseFloat(amount),
       payment_date: payment_date || new Date().toISOString().split('T')[0],
-      payment_method: payment_method || 'check',
+      payment_method: finalPaymentMethod,
       reference_number: reference_number || null,
       notes: notes || null,
       status: status || 'unpaid',
@@ -255,6 +264,21 @@ export async function POST(req: NextRequest) {
     } catch (notifError) {
       console.error('Failed to create payment notification:', notifError)
       // Don't fail the request if notification fails
+    }
+
+    // Sync paid payments to Zoho Books
+    if (payment.status === 'paid') {
+      try {
+        const zohoResult = await autoSyncPaymentToZoho(profile.company_id, payment.id, 'paid')
+        if (zohoResult.synced) {
+          console.log(`✅ Payment synced to Zoho Books: ${zohoResult.zohoId}`)
+        } else if (zohoResult.error) {
+          console.log(`⚠️ Zoho sync skipped: ${zohoResult.error}`)
+        }
+      } catch (zohoError) {
+        console.error('❌ Zoho sync error:', zohoError)
+        // Don't fail - payment was created successfully
+      }
     }
 
     return NextResponse.json({ ok: true, data: payment }, { status: 201 })

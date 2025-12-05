@@ -237,7 +237,7 @@ export async function GET(req: NextRequest) {
     // Build query for deliveries with items; select wildcard to avoid missing-column errors
     let query = supabase
       .from('deliveries')
-      .select(`*, delivery_items (*)`)
+      .select(`*, delivery_items (*), purchase_orders:order_id (id, vendor, supplier, description, product_name)`)
       .order('created_at', { ascending: false })
     
     // Company filtering - ensures users only see their company's deliveries when available
@@ -308,7 +308,11 @@ export async function GET(req: NextRequest) {
       // Ensure delivery_items is an array
       const rawItems = Array.isArray(delivery.delivery_items) ? delivery.delivery_items : []
       
-      console.log(`🔍 DEBUG: Delivery ${delivery.id?.slice(-8)} has ${rawItems.length} raw items:`, rawItems.map(i => ({
+      // Get supplier name from linked order if available
+      const linkedOrder = delivery.purchase_orders || {}
+      const supplierName = linkedOrder.vendor || linkedOrder.supplier || null
+      
+      console.log(`🔍 DEBUG: Delivery ${delivery.id?.slice(-8)} has ${rawItems.length} raw items, linked order supplier: ${supplierName}`, rawItems.map(i => ({
         id: i.id,
         product_name: i.product_name,
         quantity: i.quantity,
@@ -357,7 +361,15 @@ export async function GET(req: NextRequest) {
         console.log(`✅ Items for ${delivery.id?.slice(-8)}:`, items.map(i => `${i.product_name} (${i.quantity})`))
       }
       
-      return { ...delivery, items, total_amount, proof_url }
+      return { 
+        ...delivery, 
+        items, 
+        total_amount, 
+        proof_url,
+        // Include supplier name from linked order for Zoho sync
+        supplier_name: supplierName,
+        order_vendor: supplierName
+      }
     })
 
     // If nested items came back empty (likely due to RLS or missing grants), try a follow-up fetch and merge

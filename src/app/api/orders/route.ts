@@ -3,6 +3,7 @@ import { getCurrentUserProfile, validateRole, getCompanyAdminEmails, response } 
 import { logActivity } from '@/app/api/activity/route'
 import { sendOrderRequestNotification, sendOrderApprovalNotification, sendOrderRejectionNotification } from '@/lib/email'
 import { createServiceClient } from '@/lib/supabase-service'
+import { autoSyncOrderToZoho } from '@/lib/zoho-autosync'
 
 // GET /api/orders - List orders for user's company
 export async function GET(request: NextRequest) {
@@ -276,6 +277,7 @@ export async function POST(request: NextRequest) {
     if (orderData.product_name) insertData.product_name = orderData.product_name
     if (orderData.quantity) insertData.quantity = orderData.quantity
     if (orderData.unit_price) insertData.unit_price = orderData.unit_price
+    if (body.payment_terms) insertData.payment_terms = body.payment_terms
     
     // Store product_id for inventory deduction
     const product_id = body.product_id

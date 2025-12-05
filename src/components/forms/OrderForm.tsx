@@ -32,7 +32,9 @@ export function OrderForm({ isModal = false, onSuccess, onCancel }: OrderFormPro
     product_id: '',
     qty: '',
     notes: '',
-    projectId: ''
+    projectId: '',
+    vendor: '',
+    payment_terms: ''
   });
 
   const [projects, setProjects] = useState<Array<{ id: string; name: string; code?: string }>>([]);
@@ -88,13 +90,25 @@ export function OrderForm({ isModal = false, onSuccess, onCancel }: OrderFormPro
   const handleProductChange = (productId: string) => {
     const product = products.find(p => p.id === productId);
     setSelectedProduct(product || null);
-    setFormData(prev => ({ ...prev, product_id: productId, qty: '', projectId: prev.projectId }));
+    setFormData(prev => ({ ...prev, product_id: productId, qty: '', projectId: prev.projectId, vendor: prev.vendor, payment_terms: prev.payment_terms }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedProduct || !formData.qty || !formData.projectId) {
       toast.error('Please fill in all required fields');
+      return;
+    }
+
+    // Validate vendor is provided
+    if (!formData.vendor.trim()) {
+      toast.error('Supplier / Vendor is required');
+      return;
+    }
+
+    // Validate payment terms is selected
+    if (!formData.payment_terms) {
+      toast.error('Payment Terms is required');
       return;
     }
 
@@ -119,7 +133,9 @@ export function OrderForm({ isModal = false, onSuccess, onCancel }: OrderFormPro
           category: selectedProduct.category || 'General',
           product_id: selectedProduct.id,
           quantity: qty,
-          unit: selectedProduct.unit
+          unit: selectedProduct.unit,
+          vendor: formData.vendor.trim(),
+          payment_terms: formData.payment_terms
         })
       });
 
@@ -137,7 +153,7 @@ export function OrderForm({ isModal = false, onSuccess, onCancel }: OrderFormPro
       await fetchProducts();
       
       // Reset form
-      setFormData({ product_id: '', qty: '', notes: '', projectId: formData.projectId });
+      setFormData({ product_id: '', qty: '', notes: '', projectId: formData.projectId, vendor: '', payment_terms: '' });
       setSelectedProduct(null);
       
       if (onSuccess) {
@@ -199,6 +215,36 @@ export function OrderForm({ isModal = false, onSuccess, onCancel }: OrderFormPro
                 value: project.id,
                 label: project.name
               }))
+            ]}
+          />
+
+          <FormField
+            label="Supplier / Vendor"
+            id="vendor"
+            type="text"
+            value={formData.vendor}
+            onChange={(value) => setFormData(prev => ({ ...prev, vendor: value }))}
+            required
+            placeholder="Enter supplier or vendor name..."
+            helpText="Required - Who are you ordering from?"
+          />
+
+          <FormField
+            label="Payment Terms"
+            id="payment_terms"
+            type="select"
+            value={formData.payment_terms}
+            onChange={(value) => setFormData(prev => ({ ...prev, payment_terms: value }))}
+            required
+            options={[
+              { value: '', label: 'Select payment terms...' },
+              { value: 'prepaid', label: 'Prepaid (Pay before delivery)' },
+              { value: 'cod', label: 'COD (Cash on Delivery)' },
+              { value: 'due_on_receipt', label: 'Due on Receipt' },
+              { value: 'net_15', label: 'Net 15 (Due in 15 days)' },
+              { value: 'net_30', label: 'Net 30 (Due in 30 days)' },
+              { value: 'net_45', label: 'Net 45 (Due in 45 days)' },
+              { value: 'net_60', label: 'Net 60 (Due in 60 days)' },
             ]}
           />
 
