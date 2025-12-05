@@ -265,6 +265,109 @@ export async function getOrCreateZohoVendor(
 }
 
 /**
+ * Search for a customer/contact in Zoho Books
+ */
+export async function searchZohoCustomer(
+  accessToken: string, 
+  organizationId: string, 
+  customerName: string
+): Promise<{ contact_id: string; contact_name: string } | null> {
+  try {
+    const searchName = encodeURIComponent(customerName);
+    const response = await fetch(
+      `${ZOHO_BOOKS_API}/contacts?organization_id=${organizationId}&contact_type=customer&search_text=${searchName}`,
+      {
+        headers: {
+          'Authorization': `Zoho-oauthtoken ${accessToken}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      console.error('[Zoho] Failed to search customers:', await response.text());
+      return null;
+    }
+
+    const data = await response.json();
+    const contacts = data.contacts || [];
+    
+    // Find exact match
+    const exactMatch = contacts.find((c: any) => 
+      c.contact_name.toLowerCase() === customerName.toLowerCase()
+    );
+    
+    if (exactMatch) {
+      return { contact_id: exactMatch.contact_id, contact_name: exactMatch.contact_name };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('[Zoho] Search customer error:', error);
+    return null;
+  }
+}
+
+/**
+ * Create a customer/contact in Zoho Books
+ */
+export async function createZohoCustomer(
+  accessToken: string, 
+  organizationId: string, 
+  customerName: string
+): Promise<{ contact_id: string; contact_name: string } | null> {
+  try {
+    const customer = {
+      contact_name: customerName,
+      contact_type: 'customer',
+    };
+
+    const response = await fetch(`${ZOHO_BOOKS_API}/contacts?organization_id=${organizationId}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Zoho-oauthtoken ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(customer),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[Zoho] Failed to create customer:', errorText);
+      return null;
+    }
+
+    const data = await response.json();
+    if (data.contact) {
+      return { contact_id: data.contact.contact_id, contact_name: data.contact.contact_name };
+    }
+    return null;
+  } catch (error) {
+    console.error('[Zoho] Create customer error:', error);
+    return null;
+  }
+}
+
+/**
+ * Get or create a customer in Zoho Books
+ */
+export async function getOrCreateZohoCustomer(
+  accessToken: string, 
+  organizationId: string, 
+  customerName: string
+): Promise<{ contact_id: string; contact_name: string } | null> {
+  // First, search for existing customer
+  const existing = await searchZohoCustomer(accessToken, organizationId, customerName);
+  if (existing) {
+    console.log(`[Zoho] Found existing customer: ${existing.contact_name} (${existing.contact_id})`);
+    return existing;
+  }
+  
+  // Create new customer
+  console.log(`[Zoho] Creating new customer: ${customerName}`);
+  return await createZohoCustomer(accessToken, organizationId, customerName);
+}
+
+/**
  * Get expense accounts from Zoho Books
  */
 export async function getZohoExpenseAccounts(accessToken: string, organizationId: string): Promise<Array<{
@@ -477,10 +580,17 @@ export async function createZohoExpense({
       }
     }
 
-    // Add project name to description for tracking (Zoho Books doesn't have native project support in expenses)
+    // Add project name to description for tracking
     if (projectName) {
       expense.description = `[${projectName}] ${expense.description || description}`;
       console.log(`[Zoho] Adding project to expense: ${projectName}`);
+      
+      // Also link project as customer in Zoho
+      const zohoCustomer = await getOrCreateZohoCustomer(accessToken, organizationId, projectName);
+      if (zohoCustomer) {
+        expense.customer_id = zohoCustomer.contact_id;
+        console.log(`[Zoho] Linking expense to customer (project): ${zohoCustomer.contact_name} (${zohoCustomer.contact_id})`);
+      }
     }
 
     const response = await fetch(`${ZOHO_BOOKS_API}/expenses?organization_id=${organizationId}`, {
@@ -519,6 +629,7 @@ export async function updateZohoExpense({
   category,
   vendor,
   paymentMethod,
+  projectName,
 }: {
   accessToken: string;
   organizationId: string;
@@ -529,6 +640,7 @@ export async function updateZohoExpense({
   category?: string;
   vendor?: string;
   paymentMethod?: string;
+  projectName?: string;
 }): Promise<{ success: boolean } | null> {
   try {
     const expense: any = {};
@@ -587,6 +699,15 @@ export async function updateZohoExpense({
       if (zohoVendor) {
         expense.vendor_id = zohoVendor.contact_id;
         console.log(`[Zoho] Updating expense vendor to: ${zohoVendor.contact_name}`);
+      }
+    }
+
+    // Update customer (project) if provided
+    if (projectName) {
+      const zohoCustomer = await getOrCreateZohoCustomer(accessToken, organizationId, projectName);
+      if (zohoCustomer) {
+        expense.customer_id = zohoCustomer.contact_id;
+        console.log(`[Zoho] Updating expense customer (project) to: ${zohoCustomer.contact_name}`);
       }
     }
 

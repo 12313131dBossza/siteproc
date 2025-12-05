@@ -278,6 +278,7 @@ export async function syncExpenseUpdateToZoho(
       category: expense.category,
       vendor: vendorName,
       paymentMethod: expense.payment_method,
+      projectName: expense.projects?.name,
     });
 
     if (!result) {
