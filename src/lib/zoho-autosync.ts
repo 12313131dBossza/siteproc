@@ -688,12 +688,13 @@ export async function autoSyncDeliveryToZoho(
       .select(`
         *,
         delivery_items (*),
-        purchase_orders:order_id (id, vendor, supplier, description, product_name, project_id, projects:project_id (name))
+        purchase_orders:order_id (id, vendor, description, product_name, project_id, projects:project_id (name))
       `)
       .eq('id', deliveryId)
       .single();
 
     if (deliveryError || !delivery) {
+      console.error('[Zoho AutoSync] Delivery fetch error:', deliveryError);
       return { success: false, synced: false, error: 'Delivery not found' };
     }
 
@@ -704,7 +705,7 @@ export async function autoSyncDeliveryToZoho(
 
     // Get supplier from delivery or linked order
     const linkedOrder = delivery.purchase_orders || {};
-    const vendorName = delivery.supplier_name?.trim() || linkedOrder.vendor?.trim() || linkedOrder.supplier?.trim() || 'UNKNOWN VENDOR – REVIEW NEEDED';
+    const vendorName = delivery.supplier_name?.trim() || linkedOrder.vendor?.trim() || 'UNKNOWN VENDOR – REVIEW NEEDED';
     const projectName = linkedOrder.projects?.name;
 
     // Debug: Log delivery fields
