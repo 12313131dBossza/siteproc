@@ -5,6 +5,7 @@ import { supabaseService } from '@/lib/supabase'
 import { syncOrderStatus } from '@/lib/orderSync'
 import { logActivity } from '@/app/api/activity/route'
 import { notifyDeliveryStatus } from '@/lib/notification-triggers'
+import { autoSyncDeliveryToZoho } from '@/lib/zoho-autosync'
 
 export async function PATCH(
   request: NextRequest,
@@ -196,6 +197,36 @@ export async function PATCH(
     } catch (notifError) {
       console.error('Failed to create delivery notification:', notifError)
       // Don't fail the request if notification fails
+    }
+
+    // Sync delivered delivery to Zoho Books as a Bill
+    try {
+      // Get company_id from order or delivery
+      let companyId = updatedDelivery?.company_id
+      if (!companyId && delivery.order_id) {
+        const { data: orderData } = await supabase
+          .from('purchase_orders')
+          .select('company_id')
+          .eq('id', delivery.order_id)
+          .single()
+        companyId = orderData?.company_id
+      }
+      
+      if (companyId) {
+        console.log(`🔄 Attempting Zoho sync for delivered delivery ${deliveryId}...`)
+        const zohoResult = await autoSyncDeliveryToZoho(companyId, deliveryId, 'delivered')
+        console.log(`📊 Zoho sync result:`, JSON.stringify(zohoResult))
+        if (zohoResult.synced) {
+          console.log(`✅ Delivery synced to Zoho Books as Bill: ${zohoResult.zohoId}`)
+        } else if (zohoResult.error) {
+          console.log(`⚠️ Zoho sync skipped: ${zohoResult.error}`)
+        }
+      } else {
+        console.log(`⚠️ Zoho sync skipped: No company_id found`)
+      }
+    } catch (zohoError) {
+      console.error('❌ Zoho sync error:', zohoError)
+      // Don't fail - delivery was updated successfully
     }
 
     // Try to update project actuals if delivery is linked to a project
