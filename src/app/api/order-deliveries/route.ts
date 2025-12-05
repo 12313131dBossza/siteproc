@@ -591,7 +591,11 @@ export async function POST(req: NextRequest) {
   let deliveryError: any = null
   let fallbackError: any = null
     let dbForItems: any = supabase
+    let insertAttempt = 0
+    console.log('📦 Attempting delivery insert with data:', JSON.stringify(deliveryData, null, 2))
     {
+      insertAttempt++
+      console.log(`📦 Insert attempt ${insertAttempt}: Standard insert`)
       const res = await supabase
         .from('deliveries')
         .insert([deliveryData])
@@ -599,6 +603,8 @@ export async function POST(req: NextRequest) {
         .single()
       newDelivery = res.data
       deliveryError = res.error
+      if (deliveryError) console.log(`❌ Attempt ${insertAttempt} failed:`, deliveryError.message)
+      else console.log(`✅ Attempt ${insertAttempt} succeeded, delivery ID:`, newDelivery?.id)
     }
     // If insert failed due to missing column proof_urls, add it then retry once
     if (deliveryError && /column .*proof_urls.* does not exist/i.test(deliveryError.message || '')) {
@@ -739,6 +745,7 @@ export async function POST(req: NextRequest) {
     }
 
   // Prepare delivery items data
+    console.log('📦 Preparing delivery items:', body.items.length, 'items for delivery ID:', newDelivery.id)
     const itemsData = body.items.map((item: any) => ({
       delivery_id: newDelivery.id,
       product_name: item.product_name.trim(),
@@ -751,23 +758,27 @@ export async function POST(req: NextRequest) {
     // Insert delivery items into database with adaptive column mapping
     async function insertItemsAdaptively(client: any) {
       const shapes = [
-        // Try with description (your schema requires this)
-        (it: any) => ({ delivery_id: newDelivery.id, description: it.product_name, quantity: it.quantity, unit: it.unit, unit_price: it.unit_price, total_price: it.total_price, company_id: user.company_id }),
-        // Standard patterns with company_id
+        // Try with product_name first (matches schema)
+        (it: any) => ({ delivery_id: newDelivery.id, product_name: it.product_name, quantity: it.quantity, unit: it.unit, unit_price: it.unit_price, total_price: it.total_price }),
+        // Try with company_id
         (it: any) => ({ delivery_id: newDelivery.id, product_name: it.product_name, quantity: it.quantity, unit: it.unit, unit_price: it.unit_price, total_price: it.total_price, company_id: user.company_id }),
-        (it: any) => ({ delivery_id: newDelivery.id, product: it.product_name, quantity: it.quantity, unit: it.unit, unit_price: it.unit_price, total_price: it.total_price, company_id: user.company_id }),
-        (it: any) => ({ delivery_id: newDelivery.id, item_name: it.product_name, quantity: it.quantity, unit: it.unit, unit_price: it.unit_price, total_price: it.total_price, company_id: user.company_id }),
-        (it: any) => ({ delivery_id: newDelivery.id, name: it.product_name, quantity: it.quantity, unit: it.unit, unit_price: it.unit_price, total_price: it.total_price, company_id: user.company_id }),
+        // Try with description (your schema may require this)
+        (it: any) => ({ delivery_id: newDelivery.id, description: it.product_name, quantity: it.quantity, unit: it.unit, unit_price: it.unit_price, total_price: it.total_price, company_id: user.company_id }),
         // Fallbacks without company_id
         (it: any) => ({ delivery_id: newDelivery.id, description: it.product_name, quantity: it.quantity, unit: it.unit, unit_price: it.unit_price, total_price: it.total_price }),
-        (it: any) => ({ delivery_id: newDelivery.id, product_name: it.product_name, quantity: it.quantity, unit: it.unit, unit_price: it.unit_price, total_price: it.total_price }),
-        (it: any) => ({ delivery_id: newDelivery.id, product: it.product_name, quantity: it.quantity, unit: it.unit, unit_price: it.unit_price, total_price: it.total_price })
       ]
       let lastErr: any = null
+      let attemptNum = 0
       for (const shape of shapes) {
+        attemptNum++
         const rows = itemsData.map(shape)
+        console.log(`📦 Items insert attempt ${attemptNum}:`, Object.keys(rows[0] || {}))
         const { data, error } = await client.from('delivery_items').insert(rows).select()
-        if (!error) return { data, error: null, attempted: Object.keys(rows[0] || {}) }
+        if (!error) {
+          console.log(`✅ Items insert attempt ${attemptNum} succeeded`)
+          return { data, error: null, attempted: Object.keys(rows[0] || {}) }
+        }
+        console.log(`❌ Items insert attempt ${attemptNum} failed:`, error.message)
         lastErr = error
         // If the error was clearly due to missing column, try next; else break
         const msg = (error.message || '').toLowerCase()
@@ -784,26 +795,42 @@ export async function POST(req: NextRequest) {
       const msg = (itemsError.message || '').toLowerCase()
       const rlsBlocked = /row-level security|permission denied|not allowed|rls/i.test(msg)
       if (rlsBlocked) {
+        console.log('📦 Items insert blocked by RLS, retrying with service role...')
         try {
           const sbSvc = supabaseService()
           const retry = await insertItemsAdaptively(sbSvc) as any
           if (!retry.error) {
+            console.log('✅ Service role retry succeeded')
             newItems = retry.data
             itemsError = null
           } else {
+            console.log('❌ Service role retry failed:', retry.error.message)
             itemsError = retry.error
           }
         } catch (e) {
+          console.log('❌ Service role retry exception:', (e as Error).message)
           // keep original error
         }
       }
     }
 
     if (itemsError) {
-      console.error('Database error creating delivery items:', itemsError)
+      console.error('❌ DELIVERY ITEMS FAILED - ROLLING BACK DELIVERY:', itemsError.message)
+      console.error('📦 Full items error:', itemsError)
       // Rollback delivery if items failed
-      try { await dbForItems.from('deliveries').delete().eq('id', newDelivery.id) } catch {}
-      try { const sbSvc = supabaseService(); await (sbSvc as any).from('deliveries').delete().eq('id', newDelivery.id) } catch {}
+      try { 
+        await dbForItems.from('deliveries').delete().eq('id', newDelivery.id) 
+        console.log('🗑️ Rolled back delivery ID:', newDelivery.id)
+      } catch (e) {
+        console.log('⚠️ Rollback with dbForItems failed:', (e as Error).message)
+      }
+      try { 
+        const sbSvc = supabaseService()
+        await (sbSvc as any).from('deliveries').delete().eq('id', newDelivery.id)
+        console.log('🗑️ Rolled back delivery with service role')
+      } catch (e) {
+        console.log('⚠️ Rollback with service role failed:', (e as Error).message)
+      }
       const hasServiceKey = !!(process.env.SUPABASE_SERVICE_ROLE || process.env.SUPABASE_SERVICE_ROLE_KEY)
       return NextResponse.json({
         success: false,
