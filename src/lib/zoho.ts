@@ -867,7 +867,8 @@ export async function createZohoPurchaseOrder({
           }],
     };
 
-    console.log(`[Zoho] Creating Bill for vendor: ${zohoVendor.contact_name}, due: ${bill.due_date}`);
+    console.log(`[Zoho] Creating Bill for vendor: ${zohoVendor.contact_name}, date: ${date}, due: ${bill.due_date}`);
+    console.log(`[Zoho] Bill payload:`, JSON.stringify(bill, null, 2));
 
     const response = await fetch(`${ZOHO_BOOKS_API}/bills?organization_id=${organizationId}`, {
       method: 'POST',
@@ -878,13 +879,16 @@ export async function createZohoPurchaseOrder({
       body: JSON.stringify(bill),
     });
 
+    const responseText = await response.text();
+    console.log(`[Zoho] Bill API response status: ${response.status}`);
+    console.log(`[Zoho] Bill API response: ${responseText}`);
+
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[Zoho] Create Bill failed:', errorText);
+      console.error('[Zoho] Create Bill failed:', responseText);
       return null;
     }
 
-    const data = await response.json();
+    const data = JSON.parse(responseText);
     console.log(`[Zoho] Successfully created Bill: ${data.bill?.bill_id}`);
     return { purchaseOrderId: data.bill?.bill_id };
   } catch (error) {
