@@ -778,13 +778,12 @@ export async function POST(req: NextRequest) {
     // Insert delivery items into database with adaptive column mapping
     async function insertItemsAdaptively(client: any) {
       const shapes = [
-        // Try with product_name + company_id first (your schema requires company_id)
-        (it: any) => ({ delivery_id: newDelivery.id, product_name: it.product_name, quantity: it.quantity, unit: it.unit, unit_price: it.unit_price, total_price: it.total_price, company_id: itemsCompanyId }),
-        // Try with description + company_id
+        // Schema requires: description (NOT NULL) + company_id (NOT NULL)
         (it: any) => ({ delivery_id: newDelivery.id, description: it.product_name, quantity: it.quantity, unit: it.unit, unit_price: it.unit_price, total_price: it.total_price, company_id: itemsCompanyId }),
-        // Fallbacks without company_id (in case column doesn't exist)
-        (it: any) => ({ delivery_id: newDelivery.id, product_name: it.product_name, quantity: it.quantity, unit: it.unit, unit_price: it.unit_price, total_price: it.total_price }),
-        (it: any) => ({ delivery_id: newDelivery.id, description: it.product_name, quantity: it.quantity, unit: it.unit, unit_price: it.unit_price, total_price: it.total_price }),
+        // Fallback: maybe product_name instead of description
+        (it: any) => ({ delivery_id: newDelivery.id, product_name: it.product_name, description: it.product_name, quantity: it.quantity, unit: it.unit, unit_price: it.unit_price, total_price: it.total_price, company_id: itemsCompanyId }),
+        // Fallback: just product_name + company_id
+        (it: any) => ({ delivery_id: newDelivery.id, product_name: it.product_name, quantity: it.quantity, unit: it.unit, unit_price: it.unit_price, total_price: it.total_price, company_id: itemsCompanyId }),
       ]
       let lastErr: any = null
       let attemptNum = 0
