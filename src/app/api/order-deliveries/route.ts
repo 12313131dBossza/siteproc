@@ -237,7 +237,7 @@ export async function GET(req: NextRequest) {
     // Build query for deliveries with items; select wildcard to avoid missing-column errors
     let query = supabase
       .from('deliveries')
-      .select(`*, delivery_items (*), purchase_orders:order_id (id, vendor, supplier, description, product_name)`)
+      .select(`*, delivery_items (*), purchase_orders:order_id (id, vendor, description, product_name)`)
       .order('created_at', { ascending: false })
     
     // Company filtering - ensures users only see their company's deliveries when available
@@ -310,7 +310,7 @@ export async function GET(req: NextRequest) {
       
       // Get supplier name from linked order if available
       const linkedOrder = delivery.purchase_orders || {}
-      const supplierName = linkedOrder.vendor || linkedOrder.supplier || null
+      const supplierName = linkedOrder.vendor || null
       
       console.log(`🔍 DEBUG: Delivery ${delivery.id?.slice(-8)} has ${rawItems.length} raw items, linked order supplier: ${supplierName}`, rawItems.map(i => ({
         id: i.id,
