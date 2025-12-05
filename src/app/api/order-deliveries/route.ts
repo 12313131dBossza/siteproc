@@ -552,6 +552,22 @@ export async function POST(req: NextRequest) {
     // Prepare delivery data
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
     
+    // Get company_id - try user first, then fetch from order if needed
+    let companyId = user.company_id
+    if (!companyId && body.order_uuid && uuidRegex.test(String(body.order_uuid))) {
+      console.log('📦 User has no company_id, fetching from order:', body.order_uuid)
+      const sbSvc = supabaseService()
+      const { data: orderData } = await sbSvc
+        .from('purchase_orders')
+        .select('company_id')
+        .eq('id', body.order_uuid)
+        .single()
+      if (orderData?.company_id) {
+        companyId = orderData.company_id
+        console.log('📦 Got company_id from order:', companyId)
+      }
+    }
+    
     const deliveryData: any = {
       order_uuid: body.order_uuid || null,
       // order_id is a UUID foreign key - only set if provided and is valid UUID
@@ -562,7 +578,7 @@ export async function POST(req: NextRequest) {
       vehicle_number: body.vehicle_number || null,
       notes: body.notes || null,
       total_amount: totalAmount,
-      company_id: user.company_id,
+      company_id: companyId,
       created_by: user.id,
       project_id: body.project_id || null, // Add project_id support
     }
@@ -755,16 +771,19 @@ export async function POST(req: NextRequest) {
       total_price: roundToTwo(item.quantity * item.unit_price)
     }))
 
+    // Get company_id from the delivery or user (ensure we have a valid one)
+    const itemsCompanyId = newDelivery.company_id || user.company_id
+    console.log('📦 Items company_id:', itemsCompanyId, 'from delivery:', newDelivery.company_id, 'from user:', user.company_id)
+
     // Insert delivery items into database with adaptive column mapping
     async function insertItemsAdaptively(client: any) {
       const shapes = [
-        // Try with product_name first (matches schema)
+        // Try with product_name + company_id first (your schema requires company_id)
+        (it: any) => ({ delivery_id: newDelivery.id, product_name: it.product_name, quantity: it.quantity, unit: it.unit, unit_price: it.unit_price, total_price: it.total_price, company_id: itemsCompanyId }),
+        // Try with description + company_id
+        (it: any) => ({ delivery_id: newDelivery.id, description: it.product_name, quantity: it.quantity, unit: it.unit, unit_price: it.unit_price, total_price: it.total_price, company_id: itemsCompanyId }),
+        // Fallbacks without company_id (in case column doesn't exist)
         (it: any) => ({ delivery_id: newDelivery.id, product_name: it.product_name, quantity: it.quantity, unit: it.unit, unit_price: it.unit_price, total_price: it.total_price }),
-        // Try with company_id
-        (it: any) => ({ delivery_id: newDelivery.id, product_name: it.product_name, quantity: it.quantity, unit: it.unit, unit_price: it.unit_price, total_price: it.total_price, company_id: user.company_id }),
-        // Try with description (your schema may require this)
-        (it: any) => ({ delivery_id: newDelivery.id, description: it.product_name, quantity: it.quantity, unit: it.unit, unit_price: it.unit_price, total_price: it.total_price, company_id: user.company_id }),
-        // Fallbacks without company_id
         (it: any) => ({ delivery_id: newDelivery.id, description: it.product_name, quantity: it.quantity, unit: it.unit, unit_price: it.unit_price, total_price: it.total_price }),
       ]
       let lastErr: any = null
@@ -772,7 +791,7 @@ export async function POST(req: NextRequest) {
       for (const shape of shapes) {
         attemptNum++
         const rows = itemsData.map(shape)
-        console.log(`📦 Items insert attempt ${attemptNum}:`, Object.keys(rows[0] || {}))
+        console.log(`📦 Items insert attempt ${attemptNum}:`, Object.keys(rows[0] || {}), 'company_id value:', rows[0]?.company_id)
         const { data, error } = await client.from('delivery_items').insert(rows).select()
         if (!error) {
           console.log(`✅ Items insert attempt ${attemptNum} succeeded`)
