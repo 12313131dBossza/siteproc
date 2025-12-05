@@ -788,9 +788,23 @@ export async function POST(req: NextRequest) {
       return { data: null, error: lastErr, attempted: null }
     }
 
-    let { data: newItems, error: itemsError, attempted } = await insertItemsAdaptively(dbForItems) as any
+    // Always try service role first for items to avoid RLS timing issues
+    console.log('📦 Attempting items insert with service role to avoid RLS timing issues')
+    const sbSvcForItems = supabaseService()
+    let { data: newItems, error: itemsError, attempted } = await insertItemsAdaptively(sbSvcForItems) as any
 
-    // If RLS/permission blocks items insert, retry with service role
+    // If service role failed, try with normal client as fallback
+    if (itemsError) {
+      console.log('📦 Service role items insert failed, trying with user client...')
+      const retry = await insertItemsAdaptively(dbForItems) as any
+      if (!retry.error) {
+        newItems = retry.data
+        itemsError = null
+        attempted = retry.attempted
+      }
+    }
+
+    // If still failing with RLS error, keep trying
     if (itemsError) {
       const msg = (itemsError.message || '').toLowerCase()
       const rlsBlocked = /row-level security|permission denied|not allowed|rls/i.test(msg)
