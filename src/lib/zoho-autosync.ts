@@ -686,12 +686,13 @@ export async function autoSyncDeliveryToZoho(
 
     // Get delivery details with items and linked order
     const supabase = createServiceClient();
+    console.log('[Zoho AutoSync] Fetching delivery:', deliveryId);
+    
     const { data: delivery, error: deliveryError } = await supabase
       .from('deliveries')
       .select(`
         *,
-        delivery_items (*),
-        purchase_orders:order_id (id, vendor, description, product_name, project_id, projects:project_id (name))
+        delivery_items (*)
       `)
       .eq('id', deliveryId)
       .single();
@@ -701,24 +702,45 @@ export async function autoSyncDeliveryToZoho(
       return { success: false, synced: false, error: 'Delivery not found' };
     }
 
+    console.log('[Zoho AutoSync] Delivery fetched:', JSON.stringify({
+      id: delivery.id,
+      order_id: delivery.order_id,
+      order_uuid: delivery.order_uuid,
+      company_id: delivery.company_id,
+      total_amount: delivery.total_amount,
+      items_count: delivery.delivery_items?.length || 0
+    }, null, 2));
+
     // Check if already synced to Zoho (zoho_bill_id column may not exist)
     if (delivery.zoho_bill_id) {
       return { success: true, synced: false, error: 'Already synced to Zoho' };
     }
 
-    // Get supplier from linked order (vendor is stored on purchase_orders)
-    const linkedOrder = delivery.purchase_orders || {};
-    const vendorName = linkedOrder.vendor?.trim() || 'UNKNOWN VENDOR – REVIEW NEEDED';
-    const projectName = linkedOrder.projects?.name;
+    // Try to get linked order using order_id or order_uuid
+    let linkedOrder: any = null;
+    const orderId = delivery.order_id || delivery.order_uuid;
+    if (orderId) {
+      const { data: orderData } = await supabase
+        .from('purchase_orders')
+        .select('id, vendor, description, product_name, project_id, projects:project_id (name)')
+        .eq('id', orderId)
+        .single();
+      linkedOrder = orderData;
+      console.log('[Zoho AutoSync] Linked order:', linkedOrder);
+    }
+
+    // Get vendor from linked order, or use a default
+    const vendorName = linkedOrder?.vendor?.trim() || delivery.driver_name || 'DELIVERY VENDOR – REVIEW NEEDED';
+    const projectName = linkedOrder?.projects?.name;
 
     // Debug: Log delivery fields
     console.log('[Zoho AutoSync] Delivery data:', JSON.stringify({
       id: delivery.id,
-      linked_order_vendor: linkedOrder.vendor,
+      linked_order_vendor: linkedOrder?.vendor,
+      using_vendor: vendorName,
       projectName,
       total_amount: delivery.total_amount,
     }, null, 2));
-    console.log('[Zoho AutoSync] Using vendor name for delivery:', vendorName);
 
     // Build line items from delivery_items
     const items = (delivery.delivery_items || []).map((item: any) => ({
