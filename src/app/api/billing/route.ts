@@ -6,14 +6,21 @@ import { createServiceClient } from '@/lib/supabase-service';
 // GET /api/billing - Get current billing status
 export async function GET() {
   try {
+    console.log('[Billing] GET request started');
     const { profile, error: profileError } = await getCurrentUserProfile();
 
     if (profileError || !profile) {
+      console.log('[Billing] Unauthorized - no profile');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    console.log('[Billing] User:', profile.email, 'Company:', profile.company_id);
+
     // Check if Stripe is configured
-    if (!isStripeConfigured()) {
+    const stripeConfigured = await isStripeConfigured();
+    console.log('[Billing] Stripe configured:', stripeConfigured);
+    
+    if (!stripeConfigured) {
       return NextResponse.json({
         configured: false,
         message: 'Stripe billing is not configured',
@@ -70,7 +77,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Only admins and owners can manage billing' }, { status: 403 });
     }
 
-    if (!isStripeConfigured()) {
+    if (!(await isStripeConfigured())) {
       return NextResponse.json({ error: 'Stripe billing is not configured' }, { status: 400 });
     }
 
