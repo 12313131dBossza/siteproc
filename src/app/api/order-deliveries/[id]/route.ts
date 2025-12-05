@@ -370,8 +370,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
       // Sync delivered deliveries to Zoho Books as Bills
       if (status === 'delivered' && user.company_id) {
+        console.log(`🔄 Attempting Zoho sync for delivery ${deliveryId}...`)
         try {
           const zohoResult = await autoSyncDeliveryToZoho(user.company_id, deliveryId, 'delivered')
+          console.log(`📊 Zoho sync result:`, JSON.stringify(zohoResult))
           if (zohoResult.synced) {
             console.log(`✅ Delivery synced to Zoho Books: ${zohoResult.zohoId}`)
           } else if (zohoResult.error) {
@@ -381,6 +383,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           console.error('❌ Zoho sync error:', zohoError)
           // Don't fail - delivery was updated successfully
         }
+      } else {
+        console.log(`⏭️ Zoho sync skipped: status=${status}, company_id=${user.company_id}`)
       }
     }
 
