@@ -1,6 +1,7 @@
 import { sbServer } from '@/lib/supabase-server';
 import { sendOrderNotifications } from '@/lib/notifications';
 import { logActivity } from '@/app/api/activity/route';
+import { autoSyncOrderToZoho } from '@/lib/zoho-autosync';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(
@@ -137,6 +138,30 @@ export async function POST(
       });
     } catch (logError) {
       console.error('Failed to log activity:', logError);
+    }
+
+    // Sync approved order to Zoho Books
+    if (action === 'approve') {
+      try {
+        // Get company_id from user's profile
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('company_id')
+          .eq('id', user.id)
+          .single();
+        
+        if (userProfile?.company_id) {
+          const zohoResult = await autoSyncOrderToZoho(userProfile.company_id, orderId, 'approved');
+          if (zohoResult.synced) {
+            console.log(`✅ Order synced to Zoho Books: ${zohoResult.zohoId}`);
+          } else if (zohoResult.error) {
+            console.log(`⚠️ Zoho sync skipped: ${zohoResult.error}`);
+          }
+        }
+      } catch (zohoError) {
+        console.error('❌ Zoho sync error:', zohoError);
+        // Don't fail - order was approved successfully
+      }
     }
 
     return NextResponse.json(updatedOrder);
