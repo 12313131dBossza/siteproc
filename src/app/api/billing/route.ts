@@ -30,14 +30,38 @@ export async function GET() {
 
     const supabase = createServiceClient();
 
-    // Get company billing info
-    const { data: company, error: companyError } = await supabase
+    // Get company billing info - try with all columns first, fallback to basic
+    let company: any = null;
+    let companyError: any = null;
+    
+    // Try with billing columns
+    const result1 = await supabase
       .from('companies')
       .select('id, name, stripe_customer_id, plan, billing_email')
       .eq('id', profile.company_id)
       .single();
+    
+    if (result1.error) {
+      console.log('[Billing] Full select failed, trying basic:', result1.error.message);
+      // Fallback to basic columns if billing columns don't exist
+      const result2 = await supabase
+        .from('companies')
+        .select('id, name')
+        .eq('id', profile.company_id)
+        .single();
+      
+      if (result2.data) {
+        company = { ...result2.data, stripe_customer_id: null, plan: 'free', billing_email: null };
+      }
+      companyError = result2.error;
+    } else {
+      company = result1.data;
+    }
+
+    console.log('[Billing] Company lookup:', company ? `Found ${company.name}` : 'Not found', companyError?.message || '');
 
     if (companyError || !company) {
+      console.error('[Billing] Company not found for profile:', profile.company_id, companyError);
       return NextResponse.json({ error: 'Company not found' }, { status: 404 });
     }
 
