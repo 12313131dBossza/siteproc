@@ -769,6 +769,14 @@ export async function autoSyncDeliveryToZoho(
       }
     }
     console.log('[Zoho AutoSync] Using bill date:', billDate);
+    console.log('[Zoho AutoSync] Creating bill with:', JSON.stringify({
+      vendorName,
+      description: projectName ? `[${projectName}] Delivery` : 'Delivery from SiteProc',
+      amount: delivery.total_amount || 0,
+      date: billDate,
+      reference: `SP-DEL-${delivery.id.slice(0, 8)}`,
+      itemsCount: items.length
+    }));
 
     // Create bill in Zoho
     const result = await createZohoPurchaseOrder({
@@ -783,8 +791,10 @@ export async function autoSyncDeliveryToZoho(
       items,
     });
 
+    console.log('[Zoho AutoSync] createZohoPurchaseOrder result:', result);
+
     if (!result) {
-      console.error('[Zoho AutoSync] Failed to create bill for delivery in Zoho');
+      console.error('[Zoho AutoSync] ❌ Failed to create bill for delivery in Zoho - result was null');
       return { success: false, synced: false, error: 'Failed to create bill in Zoho Books' };
     }
 
