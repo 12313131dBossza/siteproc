@@ -3,7 +3,7 @@
  * Automatically sync expenses and invoices to Zoho Books when created/updated
  */
 
-import { createZohoExpense, createZohoInvoice, refreshZohoToken } from './zoho';
+import { createZohoExpense, createZohoInvoice, updateZohoExpense, deleteZohoExpense, refreshZohoToken } from './zoho';
 import { createServiceClient } from './supabase-service';
 
 interface AutoSyncResult {
@@ -188,6 +188,132 @@ export async function autoSyncExpenseToZoho(
 
   } catch (error) {
     console.error('[Zoho AutoSync] Error syncing expense:', error);
+    return { success: false, synced: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
+/**
+ * Sync expense UPDATE to Zoho Books
+ * Call this after updating an expense that's already synced
+ */
+export async function syncExpenseUpdateToZoho(
+  companyId: string,
+  expenseId: string
+): Promise<AutoSyncResult> {
+  try {
+    // Get Zoho integration
+    const integration = await getZohoIntegration(companyId);
+    if (!integration) {
+      return { success: true, synced: false, error: 'Zoho not connected' };
+    }
+
+    // Get valid access token
+    const accessToken = await getValidAccessToken(integration);
+    if (!accessToken) {
+      return { success: false, synced: false, error: 'Failed to get valid Zoho access token' };
+    }
+
+    // Get expense details
+    const supabase = createServiceClient();
+    const { data: expense, error: expenseError } = await supabase
+      .from('expenses')
+      .select('*')
+      .eq('id', expenseId)
+      .single();
+
+    if (expenseError || !expense) {
+      return { success: false, synced: false, error: 'Expense not found' };
+    }
+
+    // Only sync if already has a Zoho ID
+    if (!expense.zoho_expense_id) {
+      return { success: true, synced: false, error: 'Expense not yet synced to Zoho' };
+    }
+
+    // Update expense in Zoho Books
+    const vendorName = expense.vendor?.trim() || 'UNKNOWN VENDOR – REVIEW NEEDED';
+    
+    const result = await updateZohoExpense({
+      accessToken,
+      organizationId: integration.tenant_id,
+      zohoExpenseId: expense.zoho_expense_id,
+      description: expense.description || expense.memo || 'Expense from SiteProc',
+      amount: expense.amount,
+      date: expense.spent_at || expense.created_at?.split('T')[0],
+      category: expense.category,
+      vendor: vendorName,
+      paymentMethod: expense.payment_method,
+    });
+
+    if (!result) {
+      console.error('[Zoho AutoSync] Failed to update expense in Zoho');
+      return { success: false, synced: false, error: 'Failed to update expense in Zoho Books' };
+    }
+
+    console.log(`[Zoho AutoSync] Expense ${expenseId} updated in Zoho`);
+    return { success: true, synced: true, zohoId: expense.zoho_expense_id };
+
+  } catch (error) {
+    console.error('[Zoho AutoSync] Error updating expense in Zoho:', error);
+    return { success: false, synced: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
+/**
+ * Sync expense DELETE to Zoho Books
+ * Call this before deleting an expense that's synced
+ */
+export async function syncExpenseDeleteToZoho(
+  companyId: string,
+  expenseId: string
+): Promise<AutoSyncResult> {
+  try {
+    // Get Zoho integration
+    const integration = await getZohoIntegration(companyId);
+    if (!integration) {
+      return { success: true, synced: false, error: 'Zoho not connected' };
+    }
+
+    // Get valid access token
+    const accessToken = await getValidAccessToken(integration);
+    if (!accessToken) {
+      return { success: false, synced: false, error: 'Failed to get valid Zoho access token' };
+    }
+
+    // Get expense details
+    const supabase = createServiceClient();
+    const { data: expense, error: expenseError } = await supabase
+      .from('expenses')
+      .select('zoho_expense_id')
+      .eq('id', expenseId)
+      .single();
+
+    if (expenseError || !expense) {
+      return { success: false, synced: false, error: 'Expense not found' };
+    }
+
+    // Only delete from Zoho if it has a Zoho ID
+    if (!expense.zoho_expense_id) {
+      return { success: true, synced: false, error: 'Expense not synced to Zoho' };
+    }
+
+    // Delete expense from Zoho Books
+    const result = await deleteZohoExpense({
+      accessToken,
+      organizationId: integration.tenant_id,
+      zohoExpenseId: expense.zoho_expense_id,
+    });
+
+    if (!result) {
+      console.error('[Zoho AutoSync] Failed to delete expense from Zoho');
+      return { success: false, synced: false, error: 'Failed to delete expense from Zoho Books' };
+    }
+
+    console.log(`[Zoho AutoSync] Expense ${expenseId} deleted from Zoho`);
+    return { success: true, synced: true };
+
+  } catch (error) {
+    console.error('[Zoho AutoSync] Error deleting expense from Zoho:', error);
     return { success: false, synced: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }

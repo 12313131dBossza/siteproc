@@ -499,6 +499,153 @@ export async function createZohoExpense({
 }
 
 /**
+ * Update an existing expense in Zoho Books
+ */
+export async function updateZohoExpense({
+  accessToken,
+  organizationId,
+  zohoExpenseId,
+  description,
+  amount,
+  date,
+  category,
+  vendor,
+  paymentMethod,
+}: {
+  accessToken: string;
+  organizationId: string;
+  zohoExpenseId: string;
+  description?: string;
+  amount?: number;
+  date?: string;
+  category?: string;
+  vendor?: string;
+  paymentMethod?: string;
+}): Promise<{ success: boolean } | null> {
+  try {
+    const expense: any = {};
+    
+    // Only include fields that are being updated
+    if (description !== undefined) expense.description = description;
+    if (amount !== undefined) expense.amount = amount;
+    if (date !== undefined) expense.date = date;
+
+    // Get expense accounts if category changed
+    if (category) {
+      const accounts = await getZohoExpenseAccounts(accessToken, organizationId);
+      if (accounts && accounts.length > 0) {
+        const matchedAccount = accounts.find(a => 
+          a.account_name.toLowerCase().includes(category.toLowerCase())
+        );
+        if (matchedAccount) {
+          expense.account_id = matchedAccount.account_id;
+        }
+      }
+    }
+
+    // Update paid_through_account_id if payment method changed
+    if (paymentMethod) {
+      const cashAccounts = await getZohoCashAccounts(accessToken, organizationId);
+      if (cashAccounts && cashAccounts.length > 0) {
+        const methodToAccountMap: { [key: string]: string[] } = {
+          'petty_cash': ['petty cash', 'petty'],
+          'cash': ['cash', 'petty cash'],
+          'bank_transfer': ['bank', 'checking', 'savings', 'transfer', 'current'],
+          'wise': ['wise', 'bank', 'transfer'],
+          'ach': ['ach', 'bank', 'checking'],
+          'credit_card': ['credit card', 'credit', 'card'],
+          'check': ['checking', 'bank', 'cheque', 'current'],
+          'transfer': ['bank', 'transfer', 'checking', 'current'],
+          'card': ['credit card', 'card', 'credit'],
+          'other': [],
+        };
+        
+        const searchTerms = methodToAccountMap[paymentMethod] || [];
+        for (const term of searchTerms) {
+          const matchedAccount = cashAccounts.find(a => 
+            a.account_name.toLowerCase().includes(term)
+          );
+          if (matchedAccount) {
+            expense.paid_through_account_id = matchedAccount.account_id;
+            break;
+          }
+        }
+      }
+    }
+
+    // Update vendor if changed
+    if (vendor) {
+      const zohoVendor = await getOrCreateZohoVendor(accessToken, organizationId, vendor);
+      if (zohoVendor) {
+        expense.vendor_id = zohoVendor.contact_id;
+        console.log(`[Zoho] Updating expense vendor to: ${zohoVendor.contact_name}`);
+      }
+    }
+
+    // If no updates, skip
+    if (Object.keys(expense).length === 0) {
+      console.log('[Zoho] No fields to update');
+      return { success: true };
+    }
+
+    const response = await fetch(`${ZOHO_BOOKS_API}/expenses/${zohoExpenseId}?organization_id=${organizationId}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Zoho-oauthtoken ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(expense),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[Zoho] Update expense failed:', errorText);
+      return null;
+    }
+
+    console.log(`[Zoho] Successfully updated expense ${zohoExpenseId}`);
+    return { success: true };
+  } catch (error) {
+    console.error('[Zoho] Update expense error:', error);
+    return null;
+  }
+}
+
+/**
+ * Delete an expense from Zoho Books
+ */
+export async function deleteZohoExpense({
+  accessToken,
+  organizationId,
+  zohoExpenseId,
+}: {
+  accessToken: string;
+  organizationId: string;
+  zohoExpenseId: string;
+}): Promise<{ success: boolean } | null> {
+  try {
+    const response = await fetch(`${ZOHO_BOOKS_API}/expenses/${zohoExpenseId}?organization_id=${organizationId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Zoho-oauthtoken ${accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[Zoho] Delete expense failed:', errorText);
+      return null;
+    }
+
+    console.log(`[Zoho] Successfully deleted expense ${zohoExpenseId}`);
+    return { success: true };
+  } catch (error) {
+    console.error('[Zoho] Delete expense error:', error);
+    return null;
+  }
+}
+
+/**
  * Create an invoice in Zoho Books
  */
 export async function createZohoInvoice({

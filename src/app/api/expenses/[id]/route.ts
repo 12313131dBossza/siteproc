@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseService } from '@/lib/supabase'
 import { getSessionProfile } from '@/lib/auth'
+import { syncExpenseUpdateToZoho, syncExpenseDeleteToZoho } from '@/lib/zoho-autosync'
 
 export const runtime = 'nodejs'
 
@@ -55,6 +56,7 @@ export async function PATCH(req: NextRequest, context: any) {
     if (body.amount !== undefined) updateData.amount = body.amount
     if (body.description !== undefined) updateData.description = body.description
     if (body.project_id !== undefined) updateData.project_id = body.project_id
+    if (body.payment_method !== undefined) updateData.payment_method = body.payment_method
     updateData.updated_at = new Date().toISOString()
     
     const { data, error } = await sb
@@ -68,6 +70,11 @@ export async function PATCH(req: NextRequest, context: any) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
+    
+    // Sync update to Zoho (async, don't wait)
+    syncExpenseUpdateToZoho(companyId, expenseId).catch(err => {
+      console.error('[Expense API] Failed to sync update to Zoho:', err)
+    })
     
     return NextResponse.json({ expense: data })
   } catch (e: any) {
@@ -94,13 +101,23 @@ export async function DELETE(req: NextRequest, context: any) {
     // Verify expense belongs to company
     const { data: existing, error: fetchError } = await sb
       .from('expenses')
-      .select('id')
+      .select('id, zoho_expense_id')
       .eq('id', expenseId)
       .eq('company_id', companyId)
       .single()
     
     if (fetchError || !existing) {
       return NextResponse.json({ error: 'Expense not found' }, { status: 404 })
+    }
+    
+    // Delete from Zoho first (if synced)
+    if (existing.zoho_expense_id) {
+      try {
+        await syncExpenseDeleteToZoho(companyId, expenseId)
+      } catch (err) {
+        console.error('[Expense API] Failed to delete from Zoho:', err)
+        // Continue with local delete even if Zoho fails
+      }
     }
     
     // Delete expense
