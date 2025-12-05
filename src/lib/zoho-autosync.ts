@@ -169,7 +169,8 @@ export async function autoSyncExpenseToZoho(
       category: expense.category,
       reference: `SP-EXP-${expense.id.slice(0, 8)}`,
       vendor: vendorName,
-      paymentMethod: expense.payment_method, // User-selected payment method
+      paymentMethod: expense.payment_method,
+      projectName: expense.projects?.name, // Add project name for tracking
     });
 
     if (!result) {
@@ -218,7 +219,10 @@ export async function syncExpenseUpdateToZoho(
     const supabase = createServiceClient();
     const { data: expense, error: expenseError } = await supabase
       .from('expenses')
-      .select('*')
+      .select(`
+        *,
+        projects(name)
+      `)
       .eq('id', expenseId)
       .single();
 
@@ -241,6 +245,7 @@ export async function syncExpenseUpdateToZoho(
           reference: `SP-EXP-${expense.id.slice(0, 8)}`,
           vendor: vendorName,
           paymentMethod: expense.payment_method,
+          projectName: expense.projects?.name,
         });
 
         if (!createResult) {
@@ -634,6 +639,108 @@ export async function autoSyncPaymentToZoho(
 
   } catch (error) {
     console.error('[Zoho AutoSync] Error syncing payment:', error);
+    return { success: false, synced: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
+/**
+ * Auto-sync delivery to Zoho Books as a Bill
+ * Call this when a delivery is marked as "delivered" (completed)
+ */
+export async function autoSyncDeliveryToZoho(
+  companyId: string,
+  deliveryId: string,
+  status: string
+): Promise<AutoSyncResult> {
+  // Only sync delivered/completed deliveries
+  if (status !== 'delivered' && status !== 'completed') {
+    return { success: true, synced: false, error: 'Only delivered/completed deliveries are synced to Zoho' };
+  }
+
+  try {
+    // Get Zoho integration
+    const integration = await getZohoIntegration(companyId);
+    if (!integration) {
+      return { success: true, synced: false, error: 'Zoho not connected' };
+    }
+
+    // Get valid access token
+    const accessToken = await getValidAccessToken(integration);
+    if (!accessToken) {
+      return { success: false, synced: false, error: 'Failed to get valid Zoho access token' };
+    }
+
+    // Get delivery details with items and linked order
+    const supabase = createServiceClient();
+    const { data: delivery, error: deliveryError } = await supabase
+      .from('deliveries')
+      .select(`
+        *,
+        delivery_items (*),
+        purchase_orders:order_id (id, vendor, supplier, description, product_name, project_id, projects:project_id (name))
+      `)
+      .eq('id', deliveryId)
+      .single();
+
+    if (deliveryError || !delivery) {
+      return { success: false, synced: false, error: 'Delivery not found' };
+    }
+
+    // Check if already synced to Zoho
+    if (delivery.zoho_bill_id) {
+      return { success: true, synced: false, error: 'Already synced to Zoho' };
+    }
+
+    // Get supplier from delivery or linked order
+    const linkedOrder = delivery.purchase_orders || {};
+    const vendorName = delivery.supplier_name?.trim() || linkedOrder.vendor?.trim() || linkedOrder.supplier?.trim() || 'UNKNOWN VENDOR – REVIEW NEEDED';
+    const projectName = linkedOrder.projects?.name;
+
+    // Build line items from delivery_items
+    const items = (delivery.delivery_items || []).map((item: any) => ({
+      name: item.product_name || item.description || 'Delivery Item',
+      quantity: item.quantity || item.qty || 1,
+      rate: item.unit_price || 0,
+    }));
+
+    // If no items, create a single line item with total
+    if (items.length === 0) {
+      items.push({
+        name: linkedOrder.description || linkedOrder.product_name || 'Delivery from SiteProc',
+        quantity: 1,
+        rate: delivery.total_amount || 0,
+      });
+    }
+
+    // Create bill in Zoho
+    const result = await createZohoPurchaseOrder({
+      accessToken,
+      organizationId: integration.tenant_id,
+      vendorName,
+      description: projectName ? `[${projectName}] Delivery` : 'Delivery from SiteProc',
+      amount: delivery.total_amount || 0,
+      date: delivery.delivery_date || new Date().toISOString().split('T')[0],
+      reference: `SP-DEL-${delivery.id.slice(0, 8)}`,
+      paymentTerms: 'due_on_receipt',
+      items,
+    });
+
+    if (!result) {
+      console.error('[Zoho AutoSync] Failed to create bill for delivery in Zoho');
+      return { success: false, synced: false, error: 'Failed to create bill in Zoho Books' };
+    }
+
+    // Update delivery with Zoho Bill ID
+    await supabase
+      .from('deliveries')
+      .update({ zoho_bill_id: result.purchaseOrderId })
+      .eq('id', deliveryId);
+
+    console.log(`[Zoho AutoSync] Delivery ${deliveryId} synced to Zoho bill ${result.purchaseOrderId}`);
+    return { success: true, synced: true, zohoId: result.purchaseOrderId };
+
+  } catch (error) {
+    console.error('[Zoho AutoSync] Error syncing delivery:', error);
     return { success: false, synced: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }

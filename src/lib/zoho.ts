@@ -363,6 +363,7 @@ export async function createZohoExpense({
   reference,
   vendor,
   paymentMethod,
+  projectName,
 }: {
   accessToken: string;
   organizationId: string;
@@ -373,6 +374,7 @@ export async function createZohoExpense({
   reference?: string;
   vendor?: string;
   paymentMethod?: string;
+  projectName?: string;
 }): Promise<{ expenseId: string } | null> {
   try {
     // Get expense accounts to find a valid account_id
@@ -473,6 +475,12 @@ export async function createZohoExpense({
       } else {
         console.warn(`[Zoho] Could not create/find vendor: ${vendor}`);
       }
+    }
+
+    // Add project name to description for tracking (Zoho Books doesn't have native project support in expenses)
+    if (projectName) {
+      expense.description = `[${projectName}] ${expense.description || description}`;
+      console.log(`[Zoho] Adding project to expense: ${projectName}`);
     }
 
     const response = await fetch(`${ZOHO_BOOKS_API}/expenses?organization_id=${organizationId}`, {

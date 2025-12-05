@@ -17,6 +17,9 @@ ALTER TABLE payments ADD COLUMN IF NOT EXISTS payment_method TEXT DEFAULT 'check
 -- 5. Add supplier column to deliveries (for cost tracking when delivery becomes cost)
 ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS supplier_name TEXT;
 
+-- 5b. Add zoho_bill_id to deliveries (to track synced deliveries)
+ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS zoho_bill_id TEXT;
+
 -- 6. Create index for faster Zoho sync lookups
 CREATE INDEX IF NOT EXISTS idx_purchase_orders_zoho_po_id ON purchase_orders(zoho_po_id) WHERE zoho_po_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_payments_zoho_payment_id ON payments(zoho_payment_id) WHERE zoho_payment_id IS NOT NULL;

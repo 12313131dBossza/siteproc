@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr'
 import { supabaseService } from '@/lib/supabase'
 import { cookies } from 'next/headers'
 import { logActivity } from '@/app/api/activity/route'
+import { autoSyncDeliveryToZoho } from '@/lib/zoho-autosync'
 
 export const runtime = 'nodejs'
 
@@ -365,6 +366,21 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       } catch (activityError) {
         console.error('⚠️ Failed to log delivery activity:', activityError)
         // Don't fail the delivery update if activity logging fails
+      }
+
+      // Sync delivered deliveries to Zoho Books as Bills
+      if (status === 'delivered' && user.company_id) {
+        try {
+          const zohoResult = await autoSyncDeliveryToZoho(user.company_id, deliveryId, 'delivered')
+          if (zohoResult.synced) {
+            console.log(`✅ Delivery synced to Zoho Books: ${zohoResult.zohoId}`)
+          } else if (zohoResult.error) {
+            console.log(`⚠️ Zoho sync skipped: ${zohoResult.error}`)
+          }
+        } catch (zohoError) {
+          console.error('❌ Zoho sync error:', zohoError)
+          // Don't fail - delivery was updated successfully
+        }
       }
     }
 
