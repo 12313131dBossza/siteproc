@@ -762,18 +762,24 @@ export async function POST(req: NextRequest) {
 
   // Prepare delivery items data
     console.log('📦 Preparing delivery items:', body.items.length, 'items for delivery ID:', newDelivery.id)
+    console.log('📦 Raw items from body:', JSON.stringify(body.items, null, 2))
     const itemsData = body.items.map((item: any) => ({
       delivery_id: newDelivery.id,
-      product_name: item.product_name.trim(),
+      product_name: (item.product_name || item.description || item.name || 'Unknown Item').trim(),
       quantity: item.quantity,
       unit: item.unit || 'pieces',
       unit_price: roundToTwo(item.unit_price),
       total_price: roundToTwo(item.quantity * item.unit_price)
     }))
+    console.log('📦 Processed itemsData:', JSON.stringify(itemsData, null, 2))
 
     // Get company_id from the delivery or user (ensure we have a valid one)
     const itemsCompanyId = newDelivery.company_id || user.company_id
     console.log('📦 Items company_id:', itemsCompanyId, 'from delivery:', newDelivery.company_id, 'from user:', user.company_id)
+    
+    if (!itemsCompanyId) {
+      console.error('❌ CRITICAL: No company_id available for items!')
+    }
 
     // Insert delivery items into database with adaptive column mapping
     async function insertItemsAdaptively(client: any) {
@@ -790,13 +796,13 @@ export async function POST(req: NextRequest) {
       for (const shape of shapes) {
         attemptNum++
         const rows = itemsData.map(shape)
-        console.log(`📦 Items insert attempt ${attemptNum}:`, Object.keys(rows[0] || {}), 'company_id value:', rows[0]?.company_id)
+        console.log(`📦 Items insert attempt ${attemptNum} - Full row data:`, JSON.stringify(rows[0], null, 2))
         const { data, error } = await client.from('delivery_items').insert(rows).select()
         if (!error) {
-          console.log(`✅ Items insert attempt ${attemptNum} succeeded`)
+          console.log(`✅ Items insert attempt ${attemptNum} succeeded, got ${data?.length} items`)
           return { data, error: null, attempted: Object.keys(rows[0] || {}) }
         }
-        console.log(`❌ Items insert attempt ${attemptNum} failed:`, error.message)
+        console.log(`❌ Items insert attempt ${attemptNum} failed:`, error.message, 'code:', error.code, 'details:', error.details)
         lastErr = error
         // If the error was clearly due to missing column, try next; else break
         const msg = (error.message || '').toLowerCase()
