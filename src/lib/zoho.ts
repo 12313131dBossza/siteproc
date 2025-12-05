@@ -705,6 +705,25 @@ export async function createZohoPurchaseOrder({
     const dueDate = new Date(billDate);
     dueDate.setDate(dueDate.getDate() + daysToAdd);
 
+    // Get expense account for line items (required by Zoho)
+    const expenseAccounts = await getZohoExpenseAccounts(accessToken, organizationId);
+    let expenseAccountId = '';
+    if (expenseAccounts && expenseAccounts.length > 0) {
+      // Try to find "Cost of Goods Sold" or similar, fallback to first expense account
+      const cogsAccount = expenseAccounts.find(a => 
+        a.account_name.toLowerCase().includes('cost of goods') ||
+        a.account_name.toLowerCase().includes('purchases') ||
+        a.account_name.toLowerCase().includes('materials')
+      );
+      expenseAccountId = cogsAccount?.account_id || expenseAccounts[0].account_id;
+      console.log(`[Zoho] Using expense account for bill: ${cogsAccount?.account_name || expenseAccounts[0].account_name}`);
+    }
+
+    if (!expenseAccountId) {
+      console.error('[Zoho] No expense account found for bill line items');
+      return null;
+    }
+
     const bill: any = {
       vendor_id: zohoVendor.contact_id,
       bill_number: reference || `SP-PO-${Date.now()}`,
@@ -716,13 +735,14 @@ export async function createZohoPurchaseOrder({
             description: item.name,
             quantity: item.quantity,
             rate: item.rate,
-            account_id: '', // Will use default expense account
+            account_id: expenseAccountId,
           }))
         : [{
             name: description || 'Purchase Order from SiteProc',
             description: description || 'Purchase Order from SiteProc',
             quantity: 1,
             rate: amount,
+            account_id: expenseAccountId,
           }],
     };
 
