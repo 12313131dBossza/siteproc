@@ -34,6 +34,7 @@ interface ZohoIntegration {
  */
 async function getZohoIntegration(companyId: string): Promise<ZohoIntegration | null> {
   try {
+    console.log('[Zoho AutoSync] Looking for Zoho integration for company:', companyId);
     const supabase = createServiceClient();
     
     const { data: integration, error } = await supabase
@@ -45,9 +46,15 @@ async function getZohoIntegration(companyId: string): Promise<ZohoIntegration | 
       .single();
 
     if (error || !integration) {
+      console.log('[Zoho AutoSync] No Zoho integration found:', error?.message || 'No data');
       return null;
     }
 
+    console.log('[Zoho AutoSync] Found Zoho integration:', {
+      id: integration.id,
+      tenant_id: integration.tenant_id,
+      token_expires_at: integration.token_expires_at
+    });
     return integration as ZohoIntegration;
   } catch (error) {
     console.error('[Zoho AutoSync] Error getting integration:', error);

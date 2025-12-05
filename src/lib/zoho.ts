@@ -827,7 +827,10 @@ export async function createZohoPurchaseOrder({
     dueDate.setDate(dueDate.getDate() + daysToAdd);
 
     // Get expense account for line items (required by Zoho)
+    console.log('[Zoho] Fetching expense accounts...');
     const expenseAccounts = await getZohoExpenseAccounts(accessToken, organizationId);
+    console.log('[Zoho] Expense accounts result:', expenseAccounts ? `${expenseAccounts.length} accounts found` : 'null');
+    
     let expenseAccountId = '';
     if (expenseAccounts && expenseAccounts.length > 0) {
       // Try to find "Cost of Goods Sold" or similar, fallback to first expense account
@@ -837,11 +840,11 @@ export async function createZohoPurchaseOrder({
         a.account_name.toLowerCase().includes('materials')
       );
       expenseAccountId = cogsAccount?.account_id || expenseAccounts[0].account_id;
-      console.log(`[Zoho] Using expense account for bill: ${cogsAccount?.account_name || expenseAccounts[0].account_name}`);
+      console.log(`[Zoho] Using expense account for bill: ${cogsAccount?.account_name || expenseAccounts[0].account_name} (${expenseAccountId})`);
     }
 
     if (!expenseAccountId) {
-      console.error('[Zoho] No expense account found for bill line items');
+      console.error('[Zoho] ❌ No expense account found for bill line items - this will cause the bill to fail');
       return null;
     }
 
