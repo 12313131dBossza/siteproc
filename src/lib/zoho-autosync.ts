@@ -752,11 +752,23 @@ export async function autoSyncDeliveryToZoho(
     // If no items, create a single line item with total
     if (items.length === 0) {
       items.push({
-        name: linkedOrder.description || linkedOrder.product_name || 'Delivery from SiteProc',
+        name: linkedOrder?.description || linkedOrder?.product_name || 'Delivery from SiteProc',
         quantity: 1,
         rate: delivery.total_amount || 0,
       });
     }
+
+    // Format date as YYYY-MM-DD for Zoho API
+    let billDate = new Date().toISOString().split('T')[0];
+    if (delivery.delivery_date) {
+      try {
+        const d = new Date(delivery.delivery_date);
+        billDate = d.toISOString().split('T')[0];
+      } catch {
+        // Keep default
+      }
+    }
+    console.log('[Zoho AutoSync] Using bill date:', billDate);
 
     // Create bill in Zoho
     const result = await createZohoPurchaseOrder({
@@ -765,7 +777,7 @@ export async function autoSyncDeliveryToZoho(
       vendorName,
       description: projectName ? `[${projectName}] Delivery` : 'Delivery from SiteProc',
       amount: delivery.total_amount || 0,
-      date: delivery.delivery_date || new Date().toISOString().split('T')[0],
+      date: billDate,
       reference: `SP-DEL-${delivery.id.slice(0, 8)}`,
       paymentTerms: 'due_on_receipt',
       items,
