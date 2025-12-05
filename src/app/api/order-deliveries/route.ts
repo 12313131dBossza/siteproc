@@ -555,13 +555,16 @@ export async function POST(req: NextRequest) {
     // Get supplier name from linked order if order_id is provided
     let supplierFromOrder: string | null = null
     if (body.order_id && uuidRegex.test(String(body.order_id))) {
-      const { data: linkedOrder } = await supabase
+      const { data: linkedOrder, error: orderErr } = await supabase
         .from('purchase_orders')
-        .select('vendor, supplier')
+        .select('vendor')
         .eq('id', body.order_id)
         .single()
+      if (orderErr) {
+        console.log('⚠️ Could not fetch linked order for supplier:', orderErr.message)
+      }
       if (linkedOrder) {
-        supplierFromOrder = linkedOrder.vendor || linkedOrder.supplier || null
+        supplierFromOrder = linkedOrder.vendor || null
       }
     }
     
@@ -578,7 +581,12 @@ export async function POST(req: NextRequest) {
       company_id: user.company_id,
       created_by: user.id,
       project_id: body.project_id || null, // Add project_id support
-      supplier_name: body.supplier_name || supplierFromOrder || null, // Store supplier for Zoho sync
+      // Note: supplier_name will be fetched from linked order during Zoho sync
+    }
+    
+    // Try to add supplier_name if the column exists (may not exist on all deployments)
+    if (body.supplier_name || supplierFromOrder) {
+      deliveryData.supplier_name = body.supplier_name || supplierFromOrder
     }
     
     // Only set order_id if it's a valid UUID (references purchase_orders table)
