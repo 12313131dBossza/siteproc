@@ -707,6 +707,16 @@ export async function autoSyncDeliveryToZoho(
     const vendorName = delivery.supplier_name?.trim() || linkedOrder.vendor?.trim() || linkedOrder.supplier?.trim() || 'UNKNOWN VENDOR – REVIEW NEEDED';
     const projectName = linkedOrder.projects?.name;
 
+    // Debug: Log delivery fields
+    console.log('[Zoho AutoSync] Delivery data:', JSON.stringify({
+      id: delivery.id,
+      supplier_name: delivery.supplier_name,
+      linked_order_vendor: linkedOrder.vendor,
+      projectName,
+      total_amount: delivery.total_amount,
+    }, null, 2));
+    console.log('[Zoho AutoSync] Using vendor name for delivery:', vendorName);
+
     // Build line items from delivery_items
     const items = (delivery.delivery_items || []).map((item: any) => ({
       name: item.product_name || item.description || 'Delivery Item',
