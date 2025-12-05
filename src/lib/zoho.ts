@@ -646,7 +646,8 @@ export async function deleteZohoExpense({
 }
 
 /**
- * Create a Purchase Order in Zoho Books
+ * Create a Bill in Zoho Books (for approved purchase orders)
+ * Bills appear under Purchases → Bills
  */
 export async function createZohoPurchaseOrder({
   accessToken,
@@ -675,65 +676,70 @@ export async function createZohoPurchaseOrder({
     const zohoVendor = await getOrCreateZohoVendor(accessToken, organizationId, vendorToUse);
     
     if (!zohoVendor) {
-      console.error('[Zoho] Could not get/create vendor for PO');
+      console.error('[Zoho] Could not get/create vendor for Bill');
       return null;
     }
 
-    // Map payment terms to Zoho format
-    const paymentTermsMap: { [key: string]: string } = {
-      'net_15': 'Net 15',
-      'net_30': 'Net 30',
-      'net_45': 'Net 45',
-      'net_60': 'Net 60',
-      'due_on_receipt': 'Due on Receipt',
-      'cod': 'Due on Receipt', // COD maps to immediate
-      'prepaid': 'Due on Receipt', // Prepaid - already paid
+    // Map payment terms to Zoho format (for due date calculation)
+    const paymentTermsMap: { [key: string]: number } = {
+      'net_15': 15,
+      'net_30': 30,
+      'net_45': 45,
+      'net_60': 60,
+      'due_on_receipt': 0,
+      'cod': 0,
+      'prepaid': 0,
     };
 
-    const purchaseOrder: any = {
+    // Calculate due date based on payment terms
+    const daysToAdd = paymentTerms ? (paymentTermsMap[paymentTerms] || 30) : 30;
+    const billDate = new Date(date);
+    const dueDate = new Date(billDate);
+    dueDate.setDate(dueDate.getDate() + daysToAdd);
+
+    const bill: any = {
       vendor_id: zohoVendor.contact_id,
+      bill_number: reference || `SP-PO-${Date.now()}`,
       date: date,
-      reference_number: reference || `SP-PO-${Date.now()}`,
+      due_date: dueDate.toISOString().split('T')[0],
       line_items: items && items.length > 0 
         ? items.map(item => ({
             name: item.name,
+            description: item.name,
             quantity: item.quantity,
             rate: item.rate,
+            account_id: '', // Will use default expense account
           }))
         : [{
             name: description || 'Purchase Order from SiteProc',
+            description: description || 'Purchase Order from SiteProc',
             quantity: 1,
             rate: amount,
           }],
     };
 
-    // Add payment terms if provided
-    if (paymentTerms && paymentTermsMap[paymentTerms]) {
-      purchaseOrder.payment_terms_label = paymentTermsMap[paymentTerms];
-    }
+    console.log(`[Zoho] Creating Bill for vendor: ${zohoVendor.contact_name}, due: ${bill.due_date}`);
 
-    console.log(`[Zoho] Creating PO for vendor: ${zohoVendor.contact_name}, payment terms: ${paymentTerms}`);
-
-    const response = await fetch(`${ZOHO_BOOKS_API}/purchaseorders?organization_id=${organizationId}`, {
+    const response = await fetch(`${ZOHO_BOOKS_API}/bills?organization_id=${organizationId}`, {
       method: 'POST',
       headers: {
         'Authorization': `Zoho-oauthtoken ${accessToken}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(purchaseOrder),
+      body: JSON.stringify(bill),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('[Zoho] Create PO failed:', errorText);
+      console.error('[Zoho] Create Bill failed:', errorText);
       return null;
     }
 
     const data = await response.json();
-    console.log(`[Zoho] Successfully created PO: ${data.purchaseorder?.purchaseorder_id}`);
-    return { purchaseOrderId: data.purchaseorder?.purchaseorder_id };
+    console.log(`[Zoho] Successfully created Bill: ${data.bill?.bill_id}`);
+    return { purchaseOrderId: data.bill?.bill_id };
   } catch (error) {
-    console.error('[Zoho] Create PO error:', error);
+    console.error('[Zoho] Create Bill error:', error);
     return null;
   }
 }
