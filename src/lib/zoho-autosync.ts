@@ -527,8 +527,18 @@ export async function autoSyncOrderToZoho(
       return { success: true, synced: false, error: 'Already synced to Zoho' };
     }
 
-    // Use supplier_name from order, or fallback to clear identifier for review
+    // Debug: Log order fields to see what's available
+    console.log('[Zoho AutoSync] Order data:', JSON.stringify({
+      id: order.id,
+      vendor: order.vendor,
+      supplier_name: order.supplier_name,
+      description: order.description,
+      amount: order.amount,
+    }, null, 2));
+
+    // Use supplier_name from order, or fallback to vendor, then to clear identifier for review
     const vendorName = order.supplier_name?.trim() || order.vendor?.trim() || 'UNKNOWN VENDOR – REVIEW NEEDED';
+    console.log('[Zoho AutoSync] Using vendor name:', vendorName);
     
     const result = await createZohoPurchaseOrder({
       accessToken,
