@@ -333,12 +333,14 @@ export async function getZohoCashAccounts(accessToken: string, organizationId: s
              name.includes('cash on hand');
     });
 
-    // Prioritize "Petty Cash" if available
+    // Sort by account type: bank accounts first, then cash accounts
+    // This way bank_transfer won't accidentally fall back to Petty Cash
     cashAccounts.sort((a: any, b: any) => {
-      const aName = (a.account_name || '').toLowerCase();
-      const bName = (b.account_name || '').toLowerCase();
-      if (aName.includes('petty cash')) return -1;
-      if (bName.includes('petty cash')) return 1;
+      const aType = (a.account_type || '').toLowerCase();
+      const bType = (b.account_type || '').toLowerCase();
+      // Bank accounts first
+      if (aType === 'bank' && bType !== 'bank') return -1;
+      if (bType === 'bank' && aType !== 'bank') return 1;
       return 0;
     });
 
@@ -396,22 +398,26 @@ export async function createZohoExpense({
     const cashAccounts = await getZohoCashAccounts(accessToken, organizationId);
     let paidThroughAccountId: string | null = null;
     
+    console.log(`[Zoho] Payment method received: "${paymentMethod}"`);
+    console.log(`[Zoho] Available cash/bank accounts:`, cashAccounts?.map(a => a.account_name));
+    
     if (cashAccounts && cashAccounts.length > 0) {
       // Map payment method to likely Zoho account name
       const methodToAccountMap: { [key: string]: string[] } = {
         'petty_cash': ['petty cash', 'petty'],
         'cash': ['cash', 'petty cash'],
-        'bank_transfer': ['bank', 'checking', 'savings', 'transfer'],
+        'bank_transfer': ['bank', 'checking', 'savings', 'transfer', 'current'],
         'wise': ['wise', 'bank', 'transfer'],
         'ach': ['ach', 'bank', 'checking'],
         'credit_card': ['credit card', 'credit', 'card'],
-        'check': ['checking', 'bank', 'cheque'],
-        'transfer': ['bank', 'transfer', 'checking'],
+        'check': ['checking', 'bank', 'cheque', 'current'],
+        'transfer': ['bank', 'transfer', 'checking', 'current'],
         'card': ['credit card', 'card', 'credit'],
         'other': [], // Will use first available
       };
       
       const searchTerms = paymentMethod ? methodToAccountMap[paymentMethod] || [] : [];
+      console.log(`[Zoho] Search terms for "${paymentMethod}":`, searchTerms);
       
       // Try to find matching account
       if (searchTerms.length > 0) {
@@ -421,7 +427,7 @@ export async function createZohoExpense({
           );
           if (matchedAccount) {
             paidThroughAccountId = matchedAccount.account_id;
-            console.log(`[Zoho] Using "${matchedAccount.account_name}" for payment method "${paymentMethod}"`);
+            console.log(`[Zoho] ✓ MATCHED: Using "${matchedAccount.account_name}" for payment method "${paymentMethod}"`);
             break;
           }
         }
@@ -429,8 +435,20 @@ export async function createZohoExpense({
       
       // Fallback to first available if no match or no payment method specified
       if (!paidThroughAccountId) {
-        paidThroughAccountId = cashAccounts[0].account_id;
-        console.log(`[Zoho] No matching account for "${paymentMethod}", using "${cashAccounts[0].account_name}"`);
+        // If bank_transfer was requested but no bank found, prefer any non-petty-cash account
+        if (paymentMethod === 'bank_transfer' || paymentMethod === 'check' || paymentMethod === 'wise') {
+          const nonPettyCash = cashAccounts.find(a => !a.account_name.toLowerCase().includes('petty'));
+          if (nonPettyCash) {
+            paidThroughAccountId = nonPettyCash.account_id;
+            console.log(`[Zoho] Using non-petty-cash account "${nonPettyCash.account_name}" for "${paymentMethod}"`);
+          } else {
+            paidThroughAccountId = cashAccounts[0].account_id;
+            console.log(`[Zoho] No matching account for "${paymentMethod}", falling back to "${cashAccounts[0].account_name}"`);
+          }
+        } else {
+          paidThroughAccountId = cashAccounts[0].account_id;
+          console.log(`[Zoho] No matching account for "${paymentMethod}", using "${cashAccounts[0].account_name}"`);
+        }
       }
     }
 
