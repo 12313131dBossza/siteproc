@@ -38,7 +38,10 @@ let stripe: any = null;
 async function getStripe() {
   if (stripe) return stripe;
   
+  console.log('[Stripe] Checking STRIPE_SECRET_KEY:', process.env.STRIPE_SECRET_KEY ? 'SET (length: ' + process.env.STRIPE_SECRET_KEY.length + ')' : 'NOT SET');
+  
   if (!process.env.STRIPE_SECRET_KEY) {
+    console.log('[Stripe] No STRIPE_SECRET_KEY found');
     return null;
   }
 
@@ -47,9 +50,10 @@ async function getStripe() {
     stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
       apiVersion: '2024-11-20.acacia' as any,
     });
+    console.log('[Stripe] Successfully initialized Stripe client');
     return stripe;
   } catch (error) {
-    console.warn('[Stripe] Module not installed. Run `npm install stripe` to enable billing.');
+    console.error('[Stripe] Failed to initialize:', error);
     return null;
   }
 }
