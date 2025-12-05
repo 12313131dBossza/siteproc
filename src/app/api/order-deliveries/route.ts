@@ -5,6 +5,7 @@ import { supabaseService } from '@/lib/supabase'
 import { logActivity } from '@/app/api/activity/route'
 import { cookies } from 'next/headers'
 import { updateOrderAndProjectActuals } from '@/lib/delivery-sync'
+import { autoSyncDeliveryToZoho } from '@/lib/zoho-autosync'
 
 export const runtime = 'nodejs'
 
@@ -927,6 +928,27 @@ export async function POST(req: NextRequest) {
       })
     } catch (logError) {
       console.error('Failed to log delivery activity:', logError)
+    }
+
+    // Sync to Zoho Books if delivery is created as "delivered"
+    const deliveryStatus = body.status || 'pending'
+    if (deliveryStatus === 'delivered' && (newDelivery.company_id || user.company_id)) {
+      const companyIdForZoho = newDelivery.company_id || user.company_id
+      console.log(`🔄 Delivery created as 'delivered', syncing to Zoho...`)
+      try {
+        const zohoResult = await autoSyncDeliveryToZoho(companyIdForZoho, newDelivery.id, 'delivered')
+        console.log(`📊 Zoho sync result:`, JSON.stringify(zohoResult))
+        if (zohoResult.synced) {
+          console.log(`✅ Delivery synced to Zoho Books as Bill: ${zohoResult.zohoId}`)
+        } else if (zohoResult.error) {
+          console.log(`⚠️ Zoho sync skipped: ${zohoResult.error}`)
+        }
+      } catch (zohoError) {
+        console.error('❌ Zoho sync error:', zohoError)
+        // Don't fail - delivery was created successfully
+      }
+    } else {
+      console.log(`⏭️ Zoho sync skipped on create: status=${deliveryStatus}, will sync when marked delivered`)
     }
 
     return NextResponse.json({
