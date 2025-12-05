@@ -182,11 +182,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     console.log('📥 Order creation request body:', body)
     
-    // Support both formats: old (description/category) and new (vendor/product_name/qty/unit_price)
+    // Support multiple formats for order creation
     let orderData: any = {}
     
     if (body.vendor && body.product_name && body.qty && body.unit_price) {
-      // New format from AddItemModal
+      // Format from AddItemModal (uses qty/unit_price)
       const totalAmount = body.qty * body.unit_price
       orderData = {
         project_id: body.project_id,
@@ -198,19 +198,23 @@ export async function POST(request: NextRequest) {
         quantity: body.qty,
         unit_price: body.unit_price
       }
-      console.log('✅ Using new format (vendor/product/qty/price)')
-    } else if (body.amount && body.description && body.category) {
-      // Old format (backwards compatibility)
+      console.log('✅ Using AddItemModal format (vendor/product/qty/unit_price)')
+    } else if (body.amount && body.description) {
+      // Format from OrderForm (uses amount/description, optionally vendor)
       orderData = {
         project_id: body.project_id,
         amount: body.amount,
         description: body.description,
-        category: body.category
+        category: body.category,
+        vendor: body.vendor, // Include vendor from OrderForm!
+        product_id: body.product_id,
+        quantity: body.quantity,
+        unit: body.unit,
       }
-      console.log('✅ Using old format (amount/description/category)')
+      console.log('✅ Using OrderForm format (amount/description/vendor)')
     } else {
       console.error('❌ Invalid order data:', body)
-      return response.error('Either (vendor, product_name, qty, unit_price) or (amount, description, category) are required', 400)
+      return response.error('Either (vendor, product_name, qty, unit_price) or (amount, description) are required', 400)
     }
 
     const { project_id, amount } = orderData
