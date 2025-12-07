@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { AppLayout } from '@/components/app-layout';
 import { Button } from '@/components/ui/Button';
-import { Check, CreditCard, Loader2, ExternalLink, AlertCircle, Crown } from 'lucide-react';
+import { Check, CreditCard, Loader2, ExternalLink, AlertCircle, Crown, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSearchParams } from 'next/navigation';
 
@@ -109,6 +109,27 @@ export default function BillingPage() {
     }
   }
 
+  async function handleSyncBilling() {
+    setActionLoading('sync');
+    try {
+      const res = await fetch('/api/billing/sync');
+      const data = await res.json();
+
+      if (data.success) {
+        toast.success(data.message || 'Subscription synced!');
+        // Refresh billing data
+        fetchBilling();
+      } else {
+        toast.error(data.error || 'Sync failed');
+        console.log('Sync response:', data);
+      }
+    } catch (error) {
+      toast.error('Failed to sync billing');
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
   if (loading) {
     return (
       <AppLayout title="Billing" description="Manage your subscription and billing">
@@ -189,6 +210,20 @@ export default function BillingPage() {
                 Manage Billing
               </Button>
             )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSyncBilling}
+              disabled={actionLoading === 'sync'}
+              className="text-gray-500 hover:text-gray-700"
+              title="Sync subscription from Stripe"
+            >
+              {actionLoading === 'sync' ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+            </Button>
           </div>
         </div>
 
@@ -197,8 +232,7 @@ export default function BillingPage() {
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Available Plans</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {plans.map((plan) => {
-              const isCurrentPlan = billing.subscription?.planId === plan.id || 
-                (!billing.subscription && currentPlan === plan.id);
+              const isCurrentPlan = currentPlan === plan.id;
               const isUpgrade = plan.price > (billing.plans[currentPlan]?.price || 0);
 
               return (

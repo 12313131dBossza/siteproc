@@ -5,31 +5,47 @@ import { sendEmail, isEmailEnabled } from '@/lib/email';
 
 // Helper to determine plan from price/product ID
 function determinePlan(priceId: string | null, productId: string | null, productName?: string | null): string {
-  const starterPriceOrProduct = process.env.STRIPE_STARTER_PRICE_ID || '';
-  const proPriceOrProduct = process.env.STRIPE_PRO_PRICE_ID || '';
-  const enterprisePriceOrProduct = process.env.STRIPE_ENTERPRISE_PRICE_ID || '';
+  const starterProduct = process.env.STRIPE_STARTER_PRICE_ID || '';
+  const proProduct = process.env.STRIPE_PRO_PRICE_ID || '';
+  const enterpriseProduct = process.env.STRIPE_ENTERPRISE_PRICE_ID || '';
   
-  console.log(`[Webhook] Determining plan - priceId: ${priceId}, productId: ${productId}, productName: ${productName}`);
-  console.log(`[Webhook] Env IDs - starter: ${starterPriceOrProduct}, pro: ${proPriceOrProduct}, enterprise: ${enterprisePriceOrProduct}`);
+  console.log(`[Webhook] Determining plan:`);
+  console.log(`  - priceId: ${priceId}`);
+  console.log(`  - productId: ${productId}`);
+  console.log(`  - productName: ${productName}`);
+  console.log(`  - Env starter: ${starterProduct}`);
+  console.log(`  - Env pro: ${proProduct}`);
+  console.log(`  - Env enterprise: ${enterpriseProduct}`);
   
-  // Check both price ID and product ID
-  if (priceId === proPriceOrProduct || productId === proPriceOrProduct) {
-    return 'pro';
+  // Check product ID against env vars (most reliable)
+  // Env vars can be either prod_xxx or price_xxx
+  if (productId) {
+    if (productId === proProduct) return 'pro';
+    if (productId === enterpriseProduct) return 'enterprise';
+    if (productId === starterProduct) return 'starter';
   }
-  if (priceId === enterprisePriceOrProduct || productId === enterprisePriceOrProduct) {
-    return 'enterprise';
-  }
-  if (priceId === starterPriceOrProduct || productId === starterPriceOrProduct) {
-    return 'starter';
+  
+  // Check price ID against env vars  
+  if (priceId) {
+    if (priceId === proProduct) return 'pro';
+    if (priceId === enterpriseProduct) return 'enterprise';
+    if (priceId === starterProduct) return 'starter';
   }
   
   // Fallback: check product name (case insensitive)
   if (productName) {
     const nameLower = productName.toLowerCase();
+    console.log(`  - Checking product name: "${nameLower}"`);
     if (nameLower.includes('enterprise')) return 'enterprise';
     if (nameLower.includes('pro')) return 'pro';
     if (nameLower.includes('starter')) return 'starter';
   }
+  
+  // Last resort: check if productId/priceId contains plan name
+  const allIds = `${priceId || ''} ${productId || ''}`.toLowerCase();
+  if (allIds.includes('enterprise')) return 'enterprise';
+  if (allIds.includes('pro')) return 'pro';
+  if (allIds.includes('starter')) return 'starter';
   
   // Default to starter if we can't determine
   console.log('[Webhook] Could not determine plan, defaulting to starter');
