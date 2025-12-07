@@ -37,12 +37,15 @@ export default function BillingPage() {
   const [billing, setBilling] = useState<BillingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
   const searchParams = useSearchParams();
 
   useEffect(() => {
     // Handle success/cancel from Stripe checkout
     if (searchParams?.get('success') === 'true') {
       toast.success('Subscription activated successfully!');
+      // Auto-sync after successful checkout
+      syncBilling();
     } else if (searchParams?.get('canceled') === 'true') {
       toast.info('Checkout was canceled');
     }
@@ -50,11 +53,40 @@ export default function BillingPage() {
     fetchBilling();
   }, [searchParams]);
 
+  // Auto-sync subscription from Stripe on page load
+  async function syncBilling() {
+    setSyncing(true);
+    try {
+      const res = await fetch('/api/billing/sync');
+      const data = await res.json();
+      if (data.success) {
+        console.log('Subscription synced:', data.message);
+      }
+    } catch (error) {
+      console.error('Sync error:', error);
+    } finally {
+      setSyncing(false);
+      // Refresh billing data after sync
+      fetchBilling();
+    }
+  }
+
   async function fetchBilling() {
     try {
       const res = await fetch('/api/billing');
       const data = await res.json();
       setBilling(data);
+      
+      // Auto-sync if we have a Stripe customer but plan might be out of sync
+      if (data.configured && data.company && !syncing) {
+        // Only auto-sync on initial load, not on every fetch
+        const lastSync = sessionStorage.getItem('lastBillingSync');
+        const now = Date.now();
+        if (!lastSync || now - parseInt(lastSync) > 60000) { // Sync max once per minute
+          sessionStorage.setItem('lastBillingSync', now.toString());
+          syncBilling();
+        }
+      }
     } catch (error) {
       console.error('Failed to fetch billing:', error);
       toast.error('Failed to load billing information');
@@ -264,14 +296,18 @@ export default function BillingPage() {
                   </div>
 
                   <div className="mt-1 text-xs text-gray-400">
-                    {plan.id === 'starter' && '($39/user/year - 20% off)'}
-                    {plan.id === 'pro' && '($79/user/year - 20% off)'}
-                    {plan.id === 'enterprise' && '(Custom quote - 20% off annual)'}
+                    {plan.id === 'starter' && `$${(plan as any).annualPrice || 39}/user/year ($${((plan as any).annualPrice || 39) * 12}/year) - 20% off`}
+                    {plan.id === 'pro' && `$${(plan as any).annualPrice || 79}/user/year ($${((plan as any).annualPrice || 79) * 12}/year) - 20% off`}
+                    {plan.id === 'enterprise' && 'Custom quote - volume discounts available'}
                   </div>
 
-                  <div className="mt-2 text-sm text-gray-500">
-                    {plan.users === -1 ? 'Unlimited users' : `Up to ${plan.users} users`} • 
-                    {plan.projects === -1 ? 'Unlimited projects' : `${plan.projects} projects`}
+                  <div className="mt-2 text-xs text-gray-500 italic">
+                    {(plan as any).targetAudience || ''}
+                  </div>
+
+                  <div className="mt-2 text-sm font-medium text-gray-600">
+                    {plan.users === -1 ? 'Unlimited users' : `Up to ${plan.users} internal users`} • 
+                    {plan.projects === -1 ? 'Unlimited projects' : `${plan.projects} active projects`}
                   </div>
 
                   <ul className="mt-6 space-y-3">

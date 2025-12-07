@@ -61,54 +61,64 @@ async function getStripe() {
 // Product IDs for different plans (set these in your Stripe Dashboard)
 // These can be either Price IDs (price_xxx) or Product IDs (prod_xxx)
 // If Product IDs are used, we'll fetch the default price automatically
-// Pricing: Per user per month. Annual = 20% off
+// Pricing: Per internal user per month. Annual = 20% off
+// See /src/lib/plans.ts for full feature definitions
 export const STRIPE_PLANS = {
   starter: {
     id: 'starter',
     name: 'Starter',
     priceOrProductId: process.env.STRIPE_STARTER_PRICE_ID || 'price_starter',
-    price: 49, // Per user/month ($39/year)
+    price: 49, // Per user/month ($39/year = $468/year)
+    annualPrice: 39,
     users: 5,
     projects: 10,
+    targetAudience: 'Solo builders or small teams (1-5 users)',
     features: [
-      'Up to 5 users & 10 active projects',
+      'Up to 5 internal users & 10 active projects',
       'Core modules: deliveries, orders, projects, basic payments',
       'QuickBooks/Xero sync (invoices only)',
       'Offline PWA & WhatsApp alerts',
-      'Email support'
+      'Unlimited free external users (suppliers & clients)',
+      'Email support (24-48 hours)',
     ]
   },
   pro: {
     id: 'pro',
     name: 'Pro',
     priceOrProductId: process.env.STRIPE_PRO_PRICE_ID || 'price_pro',
-    price: 99, // Per user/month ($79/year)
+    price: 99, // Per user/month ($79/year = $948/year)
+    annualPrice: 79,
     users: -1, // Unlimited
     projects: -1, // Unlimited
+    targetAudience: 'Growing teams (6-30 users)',
     features: [
       'Unlimited users & projects',
+      'Everything in Starter',
       'Advanced reports/analytics/custom fields',
-      'Full QuickBooks/Xero sync (expenses, webhooks)',
-      'In-app DM/chat',
+      'Full QuickBooks/Xero sync (expenses, change orders, payments)',
+      'In-app DM/chat per project',
       'Email/SMS notifications',
-      'Priority Slack/email support'
+      'Priority Slack/email support',
+      'CSV/PDF export with charts',
     ]
   },
   enterprise: {
     id: 'enterprise',
     name: 'Enterprise',
     priceOrProductId: process.env.STRIPE_ENTERPRISE_PRICE_ID || 'price_enterprise',
-    price: 149, // Starting price (custom quote)
+    price: 149, // Starting price (custom quote, $99-$129/user after volume discount)
+    annualPrice: 99,
     users: -1, // Unlimited
     projects: -1, // Unlimited
+    targetAudience: 'Large firms (30+ users)',
     features: [
       'Everything in Pro',
       'Unlimited scale/multi-company',
-      'Dedicated onboarding/training',
+      'Dedicated onboarding & training',
       'Custom API/integrations (50+ endpoints)',
-      'White-label option',
+      'White-label (your logo, colors, domain)',
       '24/7 phone support',
-      'SOC 2/SLAs/on-premise option'
+      'SOC 2 compliance / SLAs / on-premise option',
     ]
   }
 } as const;

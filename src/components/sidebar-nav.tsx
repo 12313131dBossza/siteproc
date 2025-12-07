@@ -75,6 +75,26 @@ export function SidebarNav() {
     status: string;
   } | null>(null);
 
+  // Auto-sync subscription on mount (once per session)
+  useEffect(() => {
+    const syncSubscription = async () => {
+      const lastSync = sessionStorage.getItem('sidebarPlanSync');
+      const now = Date.now();
+      if (!lastSync || now - parseInt(lastSync) > 300000) { // Sync every 5 minutes max
+        try {
+          const res = await fetch('/api/billing/sync');
+          const data = await res.json();
+          if (data.success) {
+            sessionStorage.setItem('sidebarPlanSync', now.toString());
+          }
+        } catch (e) {
+          // Ignore sync errors silently
+        }
+      }
+    };
+    syncSubscription();
+  }, []);
+
   useEffect(() => {
     const loadUser = async () => {
       try {
