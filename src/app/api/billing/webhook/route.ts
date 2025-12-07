@@ -241,7 +241,6 @@ export async function POST(request: NextRequest) {
             .update({
               stripe_customer_id: customerId,
               subscription_status: 'active',
-              updated_at: new Date().toISOString(),
             })
             .eq('id', companyId);
 
@@ -316,7 +315,6 @@ export async function POST(request: NextRequest) {
               plan,
               subscription_status: status,
               subscription_ends_at: subscription.cancel_at_period_end ? periodEnd : null,
-              updated_at: new Date().toISOString(),
             })
             .eq('id', targetCompanyId);
 
@@ -377,7 +375,6 @@ export async function POST(request: NextRequest) {
               plan: 'free',
               subscription_status: 'canceled',
               subscription_ends_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
             })
             .eq('id', targetCompanyId);
 
@@ -413,7 +410,6 @@ export async function POST(request: NextRequest) {
             .from('companies')
             .update({
               subscription_status: 'past_due',
-              updated_at: new Date().toISOString(),
             })
             .eq('id', company.id);
 
@@ -451,7 +447,6 @@ export async function POST(request: NextRequest) {
               .from('companies')
               .update({
                 subscription_status: 'active',
-                updated_at: new Date().toISOString(),
               })
               .eq('id', company.id);
 

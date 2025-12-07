@@ -97,7 +97,7 @@ export async function GET() {
     // Update company - try full update first, then fallback to simpler update
     let updateError: any = null;
     
-    // Try with all billing columns
+    // Try with all billing columns (no updated_at - companies table may not have it)
     const result1 = await supabase
       .from('companies')
       .update({
@@ -106,7 +106,6 @@ export async function GET() {
         subscription_ends_at: subscription.cancel_at_period_end 
           ? new Date(subscription.current_period_end * 1000).toISOString()
           : null,
-        updated_at: new Date().toISOString(),
       })
       .eq('id', company.id);
 
@@ -118,7 +117,6 @@ export async function GET() {
         .from('companies')
         .update({
           plan,
-          updated_at: new Date().toISOString(),
         })
         .eq('id', company.id);
       
