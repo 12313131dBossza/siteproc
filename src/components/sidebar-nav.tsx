@@ -26,7 +26,10 @@ import {
   User,
   Files,
   MessageCircle,
-  Truck
+  Truck,
+  Crown,
+  Sparkles,
+  Zap
 } from "lucide-react";
 
 // Full navigation with required roles
@@ -67,6 +70,10 @@ export function SidebarNav() {
   const [userName, setUserName] = useState<string>('User');
   const [userRole, setUserRole] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
+  const [subscription, setSubscription] = useState<{
+    plan: string;
+    status: string;
+  } | null>(null);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -81,10 +88,10 @@ export function SidebarNav() {
         if (user) {
           setUserEmail(user.email || '');
           
-          // Get profile with role
+          // Get profile with role and company_id
           const { data: profile } = await supabase
             .from('profiles')
-            .select('full_name, username, role')
+            .select('full_name, username, role, company_id')
             .eq('id', user.id)
             .single();
           
@@ -98,6 +105,27 @@ export function SidebarNav() {
           
           // Set user role
           setUserRole(profile?.role || 'viewer');
+
+          // Fetch subscription status for internal members
+          if (profile?.company_id && ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(profile?.role || '')) {
+            try {
+              const { data: company } = await supabase
+                .from('companies')
+                .select('plan, subscription_status')
+                .eq('id', profile.company_id)
+                .single();
+              
+              if (company) {
+                setSubscription({
+                  plan: company.plan || 'free',
+                  status: company.subscription_status || 'inactive'
+                });
+              }
+            } catch (e) {
+              // Columns might not exist yet
+              setSubscription({ plan: 'free', status: 'inactive' });
+            }
+          }
         }
       } catch (error) {
         console.error('Error loading user:', error);
@@ -161,6 +189,59 @@ export function SidebarNav() {
           </h1>
         </div>
       </div>
+
+      {/* Subscription Status Badge */}
+      {subscription && (
+        <Link 
+          href="/settings/billing"
+          className="mx-3 mt-3 group"
+        >
+          <div className={cn(
+            "flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200",
+            subscription.plan === 'enterprise' 
+              ? "bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-200 hover:border-purple-300" 
+              : subscription.plan === 'pro'
+              ? "bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-200 hover:border-blue-300"
+              : subscription.plan === 'starter'
+              ? "bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-200 hover:border-green-300"
+              : "bg-gray-50 border border-gray-200 hover:border-gray-300"
+          )}>
+            {subscription.plan === 'enterprise' ? (
+              <Crown className="h-4 w-4 text-purple-500" />
+            ) : subscription.plan === 'pro' ? (
+              <Zap className="h-4 w-4 text-blue-500" />
+            ) : subscription.plan === 'starter' ? (
+              <Sparkles className="h-4 w-4 text-green-500" />
+            ) : (
+              <Package className="h-4 w-4 text-gray-400" />
+            )}
+            <div className="flex-1 min-w-0">
+              <p className={cn(
+                "text-xs font-semibold capitalize",
+                subscription.plan === 'enterprise' ? "text-purple-700" :
+                subscription.plan === 'pro' ? "text-blue-700" :
+                subscription.plan === 'starter' ? "text-green-700" :
+                "text-gray-600"
+              )}>
+                {subscription.plan === 'free' ? 'Free Plan' : `${subscription.plan} Plan`}
+              </p>
+              <p className="text-[10px] text-gray-500">
+                {subscription.status === 'active' ? (
+                  <span className="text-green-600">● Active</span>
+                ) : subscription.status === 'past_due' ? (
+                  <span className="text-amber-600">● Payment Due</span>
+                ) : subscription.status === 'canceled' ? (
+                  <span className="text-red-600">● Canceled</span>
+                ) : subscription.plan === 'free' ? (
+                  <span className="text-gray-500 group-hover:text-blue-600">Upgrade →</span>
+                ) : (
+                  <span className="text-gray-500">● Inactive</span>
+                )}
+              </p>
+            </div>
+          </div>
+        </Link>
+      )}
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-3 py-4">
