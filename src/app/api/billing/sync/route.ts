@@ -94,8 +94,11 @@ export async function GET() {
     else if (productName.toLowerCase().includes('enterprise')) plan = 'enterprise';
     else if (productName.toLowerCase().includes('starter')) plan = 'starter';
 
-    // Update company
-    const { error: updateError } = await supabase
+    // Update company - try full update first, then fallback to simpler update
+    let updateError: any = null;
+    
+    // Try with all billing columns
+    const result1 = await supabase
       .from('companies')
       .update({
         plan,
@@ -107,8 +110,29 @@ export async function GET() {
       })
       .eq('id', company.id);
 
-    if (updateError) {
-      return NextResponse.json({ error: 'Failed to update company', details: updateError }, { status: 500 });
+    if (result1.error) {
+      console.log('[Sync] Full update failed, trying plan only:', result1.error.message);
+      
+      // Fallback: just try updating plan column
+      const result2 = await supabase
+        .from('companies')
+        .update({
+          plan,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', company.id);
+      
+      if (result2.error) {
+        console.log('[Sync] Plan update failed too:', result2.error.message);
+        
+        // Last resort: Raw SQL via RPC or just report the plan
+        return NextResponse.json({ 
+          error: 'Database columns missing. Run ADD-BILLING-COLUMNS.sql in Supabase first.',
+          plan_detected: plan,
+          details: result2.error,
+          sql_to_run: `UPDATE companies SET plan = '${plan}' WHERE id = '${company.id}';`
+        }, { status: 500 });
+      }
     }
 
     return NextResponse.json({
