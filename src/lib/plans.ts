@@ -6,17 +6,17 @@
  * 
  * PRICING MODEL:
  * - All plans are PER INTERNAL USER (owner, admin, manager, bookkeeper, member)
- * - Suppliers and clients are ALWAYS FREE
+ * - External users (client, supplier, contractor, consultant) are ALWAYS FREE
  * - Enterprise has volume discounts based on user count
  */
 
 export type PlanId = 'free' | 'starter' | 'pro' | 'enterprise';
 
-// Internal roles that count toward billing
+// Internal roles that count toward billing (PAID)
 export const BILLABLE_ROLES = ['owner', 'admin', 'manager', 'bookkeeper', 'member'];
 
-// Roles that are always free (external users)
-export const FREE_ROLES = ['supplier', 'client', 'viewer'];
+// External roles that are ALWAYS FREE (never charged)
+export const FREE_ROLES = ['client', 'supplier', 'contractor', 'consultant', 'subcontractor', 'viewer'];
 
 /**
  * Enterprise volume discount tiers

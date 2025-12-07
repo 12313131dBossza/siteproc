@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
+import { syncSubscriptionQuantity } from '@/lib/billing-utils'
 
 const Body = z.object({ companyId: z.string().uuid() })
 
@@ -108,6 +109,15 @@ export async function POST(req: Request) {
       timeline.push({ step: 'insert_profile', error: ins.error?.message, code: ins.error?.code })
       if (!ins.error) {
         log('info','joined_insert',{ user: user.id, company: company.id })
+        
+        // Sync billing - 'member' is a billable role, charge prorated amount
+        try {
+          await syncSubscriptionQuantity(company.id)
+          log('info', 'billing_synced', { company: company.id })
+        } catch (e) {
+          log('error', 'billing_sync_failed', { error: e })
+        }
+        
         return NextResponse.json({ ok: true, method: 'insert', timeline })
       }
       // If insert failed due to duplicate (race), continue to update path
@@ -121,6 +131,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'update_failed', details: upd.error.message, code: upd.error.code, timeline }, { status: 500 })
     }
     log('info','joined_update',{ user: user.id, company: company.id, before: existing.data?.company_id })
+    
+    // Sync billing after update too (in case role changed to billable)
+    try {
+      await syncSubscriptionQuantity(company.id)
+    } catch (e) {
+      log('error', 'billing_sync_failed', { error: e })
+    }
+    
     return NextResponse.json({ ok: true, method: 'update', timeline })
 
     /* if (upsertErr) {
