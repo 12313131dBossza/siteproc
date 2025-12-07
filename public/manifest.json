@@ -2,7 +2,7 @@
   "name": "SiteProc - Project Management",
   "short_name": "SiteProc",
   "description": "Complete project management solution for orders, expenses, and deliveries",
-  "start_url": "/",
+  "start_url": "/dashboard",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#ffffff",
