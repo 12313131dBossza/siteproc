@@ -140,6 +140,17 @@ export default function BillingPage() {
   const currentPlan = billing.company?.plan || 'free';
   const plans = Object.values(billing.plans || {});
 
+  // Get display name for current plan
+  const getPlanDisplayName = (plan: string) => {
+    const planNames: Record<string, string> = {
+      'free': 'Free',
+      'starter': 'Starter',
+      'pro': 'Pro',
+      'enterprise': 'Enterprise'
+    };
+    return planNames[plan.toLowerCase()] || plan;
+  };
+
   return (
     <AppLayout title="Billing" description="Manage your subscription and billing">
       <div className="max-w-5xl mx-auto p-6 space-y-8">
@@ -150,8 +161,8 @@ export default function BillingPage() {
               <h2 className="text-lg font-semibold text-gray-900">Current Plan</h2>
               <div className="flex items-center gap-2 mt-1">
                 <Crown className="h-5 w-5 text-yellow-500" />
-                <span className="text-xl font-bold text-gray-900 capitalize">
-                  {billing.subscription?.planId || currentPlan}
+                <span className="text-xl font-bold text-gray-900">
+                  {getPlanDisplayName(currentPlan)}
                 </span>
                 {billing.subscription?.status === 'active' && (
                   <span className="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 rounded-full">

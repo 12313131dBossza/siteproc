@@ -4,10 +4,13 @@ import { createServiceClient } from '@/lib/supabase-service';
 import { sendEmail, isEmailEnabled } from '@/lib/email';
 
 // Helper to determine plan from price/product ID
-function determinePlan(priceId: string | null, productId: string | null): string {
+function determinePlan(priceId: string | null, productId: string | null, productName?: string | null): string {
   const starterPriceOrProduct = process.env.STRIPE_STARTER_PRICE_ID || '';
   const proPriceOrProduct = process.env.STRIPE_PRO_PRICE_ID || '';
   const enterprisePriceOrProduct = process.env.STRIPE_ENTERPRISE_PRICE_ID || '';
+  
+  console.log(`[Webhook] Determining plan - priceId: ${priceId}, productId: ${productId}, productName: ${productName}`);
+  console.log(`[Webhook] Env IDs - starter: ${starterPriceOrProduct}, pro: ${proPriceOrProduct}, enterprise: ${enterprisePriceOrProduct}`);
   
   // Check both price ID and product ID
   if (priceId === proPriceOrProduct || productId === proPriceOrProduct) {
@@ -20,7 +23,16 @@ function determinePlan(priceId: string | null, productId: string | null): string
     return 'starter';
   }
   
+  // Fallback: check product name (case insensitive)
+  if (productName) {
+    const nameLower = productName.toLowerCase();
+    if (nameLower.includes('enterprise')) return 'enterprise';
+    if (nameLower.includes('pro')) return 'pro';
+    if (nameLower.includes('starter')) return 'starter';
+  }
+  
   // Default to starter if we can't determine
+  console.log('[Webhook] Could not determine plan, defaulting to starter');
   return 'starter';
 }
 
@@ -251,12 +263,15 @@ export async function POST(request: NextRequest) {
         const customerId = subscription.customer;
         const companyId = subscription.metadata?.companyId;
         
-        // Get price and product IDs
+        // Get price, product IDs, and product name
         const priceId = subscription.items?.data[0]?.price?.id;
         const productId = subscription.items?.data[0]?.price?.product;
+        const productName = subscription.items?.data[0]?.price?.product?.name || 
+                           subscription.items?.data[0]?.plan?.product?.name ||
+                           subscription.plan?.product?.name;
         
         // Determine the plan
-        const plan = determinePlan(priceId, productId);
+        const plan = determinePlan(priceId, productId, productName);
         const status = subscription.status; // 'active', 'past_due', 'canceled', etc.
         const periodEnd = new Date(subscription.current_period_end * 1000).toISOString();
 
