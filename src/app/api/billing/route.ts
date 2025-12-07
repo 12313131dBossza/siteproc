@@ -111,14 +111,31 @@ export async function POST(request: NextRequest) {
     const supabase = createServiceClient();
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://siteproc1.vercel.app';
 
-    // Get company info
-    const { data: company, error: companyError } = await supabase
+    // Get company info - try with billing columns, fallback to basic
+    let company: any = null;
+    
+    const result1 = await supabase
       .from('companies')
       .select('id, name, stripe_customer_id, billing_email')
       .eq('id', profile.company_id)
       .single();
+    
+    if (result1.error) {
+      // Fallback to basic columns
+      const result2 = await supabase
+        .from('companies')
+        .select('id, name')
+        .eq('id', profile.company_id)
+        .single();
+      
+      if (result2.data) {
+        company = { ...result2.data, stripe_customer_id: null, billing_email: null };
+      }
+    } else {
+      company = result1.data;
+    }
 
-    if (companyError || !company) {
+    if (!company) {
       return NextResponse.json({ error: 'Company not found' }, { status: 404 });
     }
 
