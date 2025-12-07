@@ -212,13 +212,21 @@ export default function BillingPage() {
 
                   <h3 className="text-xl font-bold text-gray-900">{plan.name}</h3>
                   <div className="mt-2">
-                    <span className="text-4xl font-bold text-gray-900">${plan.price}</span>
-                    <span className="text-gray-500">/month</span>
+                    <span className="text-4xl font-bold text-gray-900">
+                      ${plan.price}{plan.id === 'enterprise' && '+'}
+                    </span>
+                    <span className="text-gray-500">/user/month</span>
+                  </div>
+
+                  <div className="mt-1 text-xs text-gray-400">
+                    {plan.id === 'starter' && '($39/user/year - 20% off)'}
+                    {plan.id === 'pro' && '($79/user/year - 20% off)'}
+                    {plan.id === 'enterprise' && '(Custom quote - 20% off annual)'}
                   </div>
 
                   <div className="mt-2 text-sm text-gray-500">
-                    {plan.users === -1 ? 'Unlimited' : plan.users} users • 
-                    {plan.projects === -1 ? 'Unlimited' : plan.projects} projects
+                    {plan.users === -1 ? 'Unlimited users' : `Up to ${plan.users} users`} • 
+                    {plan.projects === -1 ? 'Unlimited projects' : `${plan.projects} projects`}
                   </div>
 
                   <ul className="mt-6 space-y-3">

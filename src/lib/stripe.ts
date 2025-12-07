@@ -61,52 +61,54 @@ async function getStripe() {
 // Product IDs for different plans (set these in your Stripe Dashboard)
 // These can be either Price IDs (price_xxx) or Product IDs (prod_xxx)
 // If Product IDs are used, we'll fetch the default price automatically
+// Pricing: Per user per month. Annual = 20% off
 export const STRIPE_PLANS = {
   starter: {
     id: 'starter',
     name: 'Starter',
     priceOrProductId: process.env.STRIPE_STARTER_PRICE_ID || 'price_starter',
-    price: 49,
+    price: 49, // Per user/month ($39/year)
     users: 5,
     projects: 10,
     features: [
-      '5 team members',
-      '10 active projects',
-      'Order & delivery tracking',
-      'Basic reports',
+      'Up to 5 users & 10 active projects',
+      'Core modules: deliveries, orders, projects, basic payments',
+      'QuickBooks/Xero sync (invoices only)',
+      'Offline PWA & WhatsApp alerts',
       'Email support'
     ]
   },
   pro: {
     id: 'pro',
-    name: 'Professional',
+    name: 'Pro',
     priceOrProductId: process.env.STRIPE_PRO_PRICE_ID || 'price_pro',
-    price: 99,
-    users: 20,
-    projects: 50,
+    price: 99, // Per user/month ($79/year)
+    users: -1, // Unlimited
+    projects: -1, // Unlimited
     features: [
-      '20 team members',
-      '50 active projects',
-      'Advanced reports',
-      'QuickBooks integration',
-      'Priority support',
-      'API access'
+      'Unlimited users & projects',
+      'Advanced reports/analytics/custom fields',
+      'Full QuickBooks/Xero sync (expenses, webhooks)',
+      'In-app DM/chat',
+      'Email/SMS notifications',
+      'Priority Slack/email support'
     ]
   },
   enterprise: {
     id: 'enterprise',
     name: 'Enterprise',
     priceOrProductId: process.env.STRIPE_ENTERPRISE_PRICE_ID || 'price_enterprise',
-    price: 299,
+    price: 149, // Starting price (custom quote)
     users: -1, // Unlimited
     projects: -1, // Unlimited
     features: [
-      'Unlimited team members',
-      'Unlimited projects',
-      'Custom integrations',
-      'Dedicated support',
-      'SLA guarantee',
-      'On-premises option'
+      'Everything in Pro',
+      'Unlimited scale/multi-company',
+      'Dedicated onboarding/training',
+      'Custom API/integrations (50+ endpoints)',
+      'White-label option',
+      '24/7 phone support',
+      'SOC 2/SLAs/on-premise option'
     ]
   }
 } as const;
