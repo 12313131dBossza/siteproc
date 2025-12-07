@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserProfile } from '@/lib/server-utils';
 import { createCheckoutSession, createPortalSession, getSubscription, getOrCreateCustomer, STRIPE_PLANS, isStripeConfigured } from '@/lib/stripe';
 import { createServiceClient } from '@/lib/supabase-service';
+import { countBillableUsers, getUserBreakdown } from '@/lib/billing-utils';
+import { calculateMonthlyTotal, getPricePerUser, isAtUserLimit } from '@/lib/plans';
 
 // GET /api/billing - Get current billing status
 export async function GET() {
@@ -70,6 +72,14 @@ export async function GET() {
       subscription = await getSubscription(company.stripe_customer_id);
     }
 
+    // Get user counts for billing calculation
+    const userBreakdown = await getUserBreakdown(company.id);
+    const currentPlan = (company.plan || 'free') as 'free' | 'starter' | 'pro' | 'enterprise';
+    const billableUsers = userBreakdown.billable;
+    const pricePerUser = getPricePerUser(currentPlan, billableUsers);
+    const monthlyTotal = calculateMonthlyTotal(currentPlan, billableUsers);
+    const atUserLimit = isAtUserLimit(currentPlan, billableUsers);
+
     return NextResponse.json({
       configured: true,
       company: {
@@ -80,6 +90,16 @@ export async function GET() {
       },
       subscription,
       plans: STRIPE_PLANS,
+      // Per-user billing info
+      billing: {
+        billableUsers,
+        freeUsers: userBreakdown.free,
+        totalUsers: userBreakdown.total,
+        pricePerUser,
+        monthlyTotal,
+        atUserLimit,
+        usersByRole: userBreakdown.byRole,
+      },
     });
   } catch (error) {
     console.error('[Billing] GET error:', error);
@@ -168,10 +188,17 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
       }
 
+      // Count billable users for per-seat pricing
+      const userCount = await countBillableUsers(company.id);
+      const quantity = Math.max(1, userCount); // At least 1 user
+
+      console.log(`[Billing] Checkout for ${planId}: ${quantity} users`);
+
       const session = await createCheckoutSession({
         companyId: company.id,
         customerId,
         priceId: plan.priceOrProductId, // Can be price_xxx or prod_xxx
+        quantity, // Per-seat billing
         successUrl: `${baseUrl}/settings/billing?success=true`,
         cancelUrl: `${baseUrl}/settings/billing?canceled=true`,
         email: company.billing_email || profile.email,

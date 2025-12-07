@@ -1,11 +1,110 @@
 /**
  * SiteProc Pricing Plans - December 2025
  * 
- * This file defines all plan features and limits.
+ * This file defines all plan features, limits, and pricing.
  * Used for both display and feature gating.
+ * 
+ * PRICING MODEL:
+ * - All plans are PER INTERNAL USER (owner, admin, manager, bookkeeper, member)
+ * - Suppliers and clients are ALWAYS FREE
+ * - Enterprise has volume discounts based on user count
  */
 
 export type PlanId = 'free' | 'starter' | 'pro' | 'enterprise';
+
+// Internal roles that count toward billing
+export const BILLABLE_ROLES = ['owner', 'admin', 'manager', 'bookkeeper', 'member'];
+
+// Roles that are always free (external users)
+export const FREE_ROLES = ['supplier', 'client', 'viewer'];
+
+/**
+ * Enterprise volume discount tiers
+ * Price per user decreases as you add more users
+ */
+export const ENTERPRISE_TIERS = [
+  { minUsers: 1, maxUsers: 15, pricePerUser: 149 },
+  { minUsers: 16, maxUsers: 30, pricePerUser: 129 },
+  { minUsers: 31, maxUsers: 75, pricePerUser: 99 },
+  { minUsers: 76, maxUsers: Infinity, pricePerUser: 79 },
+];
+
+/**
+ * Calculate Enterprise price per user based on total user count
+ */
+export function getEnterprisePricePerUser(userCount: number): number {
+  for (const tier of ENTERPRISE_TIERS) {
+    if (userCount >= tier.minUsers && userCount <= tier.maxUsers) {
+      return tier.pricePerUser;
+    }
+  }
+  return ENTERPRISE_TIERS[ENTERPRISE_TIERS.length - 1].pricePerUser;
+}
+
+/**
+ * Calculate total monthly cost for a plan
+ */
+export function calculateMonthlyTotal(planId: PlanId, userCount: number): number {
+  if (userCount <= 0) return 0;
+  
+  switch (planId) {
+    case 'free':
+      return 0;
+    case 'starter':
+      // $49/user, max 5 users
+      return Math.min(userCount, 5) * 49;
+    case 'pro':
+      // $99/user, unlimited
+      return userCount * 99;
+    case 'enterprise':
+      // Volume discount based on total users
+      const pricePerUser = getEnterprisePricePerUser(userCount);
+      return userCount * pricePerUser;
+    default:
+      return 0;
+  }
+}
+
+/**
+ * Get price per user for display
+ */
+export function getPricePerUser(planId: PlanId, userCount: number = 1): number {
+  switch (planId) {
+    case 'free':
+      return 0;
+    case 'starter':
+      return 49;
+    case 'pro':
+      return 99;
+    case 'enterprise':
+      return getEnterprisePricePerUser(userCount);
+    default:
+      return 0;
+  }
+}
+
+/**
+ * Check if user is at plan limit
+ */
+export function isAtUserLimit(planId: PlanId, currentUserCount: number): boolean {
+  if (planId === 'starter' && currentUserCount >= 5) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Get upgrade message when at user limit
+ */
+export function getUserLimitMessage(planId: PlanId, currentUserCount: number): string | null {
+  if (planId === 'starter' && currentUserCount >= 5) {
+    return 'You\'ve reached the 5 user limit on Starter. Upgrade to Pro for unlimited users.';
+  }
+  if (planId === 'starter' && currentUserCount >= 4) {
+    return 'You have 1 user slot remaining. Upgrade to Pro for unlimited users.';
+  }
+  return null;
+}
 
 export interface PlanFeatures {
   // Limits

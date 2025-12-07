@@ -1,5 +1,6 @@
 import { sbServer, sbAdmin } from '@/lib/supabase-server';
 import { NextRequest, NextResponse } from 'next/server';
+import { syncSubscriptionQuantity } from '@/lib/billing-utils';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -165,6 +166,16 @@ export async function PUT(
       console.error('Failed to log activity:', e);
     }
 
+    // Sync Stripe subscription quantity if role changed (may affect billing)
+    if (role) {
+      try {
+        await syncSubscriptionQuantity((currentProfile as any).company_id);
+      } catch (e) {
+        console.error('Failed to sync billing after role update:', e);
+        // Don't fail the response - user update was successful
+      }
+    }
+
     return NextResponse.json(updatedUser);
   } catch (error) {
     console.error('Unexpected error:', error);
@@ -244,6 +255,14 @@ export async function DELETE(
       });
     } catch (e) {
       console.error('Failed to log activity:', e);
+    }
+
+    // Sync Stripe subscription quantity after user removal
+    try {
+      await syncSubscriptionQuantity((currentProfile as any).company_id);
+    } catch (e) {
+      console.error('Failed to sync billing after user removal:', e);
+      // Don't fail the response - user removal was successful
     }
 
     return NextResponse.json({ success: true, message: 'User removed successfully' });

@@ -16,6 +16,16 @@ interface Plan {
   features: string[];
 }
 
+interface BillingInfo {
+  billableUsers: number;
+  freeUsers: number;
+  totalUsers: number;
+  pricePerUser: number;
+  monthlyTotal: number;
+  atUserLimit: boolean;
+  usersByRole: Record<string, number>;
+}
+
 interface BillingData {
   configured: boolean;
   company?: {
@@ -31,6 +41,7 @@ interface BillingData {
     cancelAtPeriodEnd: boolean;
   };
   plans: Record<string, Plan>;
+  billing?: BillingInfo;
 }
 
 export default function BillingPage() {
@@ -232,31 +243,97 @@ export default function BillingPage() {
                 </p>
               )}
             </div>
-            {billing.subscription && (
+            <div className="flex items-center gap-2">
+              {billing.subscription && (
+                <Button
+                  variant="ghost"
+                  onClick={handleManageBilling}
+                  disabled={actionLoading === 'portal'}
+                  leftIcon={actionLoading === 'portal' ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                >
+                  Manage Billing
+                </Button>
+              )}
               <Button
                 variant="ghost"
-                onClick={handleManageBilling}
-                disabled={actionLoading === 'portal'}
-                leftIcon={actionLoading === 'portal' ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                size="sm"
+                onClick={handleSyncBilling}
+                disabled={actionLoading === 'sync'}
+                className="text-gray-500 hover:text-gray-700"
+                title="Sync subscription from Stripe"
               >
-                Manage Billing
+                {actionLoading === 'sync' ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
               </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleSyncBilling}
-              disabled={actionLoading === 'sync'}
-              className="text-gray-500 hover:text-gray-700"
-              title="Sync subscription from Stripe"
-            >
-              {actionLoading === 'sync' ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="h-4 w-4" />
-              )}
-            </Button>
+            </div>
           </div>
+
+          {/* Per-User Billing Breakdown */}
+          {billing.billing && currentPlan !== 'free' && (
+            <div className="mt-6 pt-6 border-t border-gray-100">
+              <h3 className="text-sm font-medium text-gray-700 mb-3">Billing Breakdown</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-blue-50 rounded-lg p-3">
+                  <p className="text-xs text-gray-500">Billable Users</p>
+                  <p className="text-xl font-bold text-blue-700">{billing.billing.billableUsers}</p>
+                  <p className="text-xs text-gray-400">Internal team</p>
+                </div>
+                <div className="bg-green-50 rounded-lg p-3">
+                  <p className="text-xs text-gray-500">Free Users</p>
+                  <p className="text-xl font-bold text-green-700">{billing.billing.freeUsers}</p>
+                  <p className="text-xs text-gray-400">Clients & Suppliers</p>
+                </div>
+                <div className="bg-purple-50 rounded-lg p-3">
+                  <p className="text-xs text-gray-500">Price Per User</p>
+                  <p className="text-xl font-bold text-purple-700">${billing.billing.pricePerUser}</p>
+                  <p className="text-xs text-gray-400">/month</p>
+                </div>
+                <div className="bg-orange-50 rounded-lg p-3">
+                  <p className="text-xs text-gray-500">Monthly Total</p>
+                  <p className="text-xl font-bold text-orange-700">
+                    ${billing.billing.monthlyTotal.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    ${billing.billing.pricePerUser} × {billing.billing.billableUsers} users
+                  </p>
+                </div>
+              </div>
+              
+              {/* User limit warning */}
+              {billing.billing.atUserLimit && (
+                <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5 text-yellow-600" />
+                  <span className="text-sm text-yellow-700">
+                    You've reached the maximum users for your plan. Upgrade to add more users.
+                  </span>
+                </div>
+              )}
+
+              {/* User breakdown by role */}
+              {billing.billing.usersByRole && Object.keys(billing.billing.usersByRole).length > 0 && (
+                <div className="mt-4">
+                  <p className="text-xs text-gray-500 mb-2">Users by Role</p>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(billing.billing.usersByRole).map(([role, count]) => (
+                      <span 
+                        key={role} 
+                        className={`px-2 py-1 text-xs rounded-full ${
+                          ['client', 'supplier', 'subcontractor'].includes(role.toLowerCase())
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-blue-100 text-blue-700'
+                        }`}
+                      >
+                        {role}: {count}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Available Plans */}
@@ -346,21 +423,30 @@ export default function BillingPage() {
           <h3 className="font-semibold text-gray-900 mb-4">Billing FAQ</h3>
           <div className="space-y-4 text-sm">
             <div>
-              <p className="font-medium text-gray-700">How does billing work?</p>
+              <p className="font-medium text-gray-700">How does per-user billing work?</p>
               <p className="text-gray-600">
-                You'll be billed monthly based on your plan. All plans include a 14-day free trial.
+                You&apos;re charged per internal user (owners, admins, managers, members, accountants). 
+                External users like clients and suppliers are always free and don&apos;t count toward your bill.
+              </p>
+            </div>
+            <div>
+              <p className="font-medium text-gray-700">What are Enterprise volume discounts?</p>
+              <p className="text-gray-600">
+                Enterprise plans get volume discounts: $149/user for 1-15 users, $129/user for 16-30 users, 
+                $99/user for 31-75 users, and $79/user for 76+ users.
+              </p>
+            </div>
+            <div>
+              <p className="font-medium text-gray-700">What happens when I add or remove users?</p>
+              <p className="text-gray-600">
+                Your subscription automatically adjusts when team members are added or removed. 
+                You&apos;ll be charged a prorated amount for new users added mid-billing cycle.
               </p>
             </div>
             <div>
               <p className="font-medium text-gray-700">Can I cancel anytime?</p>
               <p className="text-gray-600">
                 Yes, you can cancel at any time. Your plan will remain active until the end of your billing period.
-              </p>
-            </div>
-            <div>
-              <p className="font-medium text-gray-700">What happens if I upgrade?</p>
-              <p className="text-gray-600">
-                When you upgrade, you'll only pay the prorated difference for the rest of the billing period.
               </p>
             </div>
           </div>

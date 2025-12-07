@@ -1,5 +1,7 @@
 import { sbAdmin } from '@/lib/supabase-server';
 import { NextRequest, NextResponse } from 'next/server';
+import { syncSubscriptionQuantity } from '@/lib/billing-utils';
+import { BILLABLE_ROLES } from '@/lib/plans';
 
 export async function POST(request: NextRequest) {
   try {
@@ -50,6 +52,18 @@ export async function POST(request: NextRequest) {
           accepted_at: new Date().toISOString(),
         })
         .eq('id', invitationId);
+    }
+
+    // Sync Stripe subscription quantity if this is a billable user
+    // This will charge the company for the new user
+    if (BILLABLE_ROLES.includes(role)) {
+      try {
+        const result = await syncSubscriptionQuantity(companyId);
+        console.log('[Accept Invitation] Billing sync result:', result);
+      } catch (billingError) {
+        console.error('[Accept Invitation] Failed to sync billing:', billingError);
+        // Don't fail the invitation acceptance - billing sync is non-critical
+      }
     }
 
     return NextResponse.json({ success: true, message: 'Profile created successfully' });

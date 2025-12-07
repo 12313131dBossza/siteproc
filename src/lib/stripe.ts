@@ -168,11 +168,13 @@ export async function isStripeConfigured(): Promise<boolean> {
 
 /**
  * Create a Stripe Checkout session for subscription
+ * Quantity = number of billable users (per-seat pricing)
  */
 export async function createCheckoutSession({
   companyId,
   customerId,
   priceId,
+  quantity = 1,
   successUrl,
   cancelUrl,
   email,
@@ -180,6 +182,7 @@ export async function createCheckoutSession({
   companyId: string;
   customerId?: string;
   priceId: string; // Can be price_xxx or prod_xxx
+  quantity?: number; // Number of seats/users
   successUrl: string;
   cancelUrl: string;
   email?: string;
@@ -198,6 +201,8 @@ export async function createCheckoutSession({
   }
 
   try {
+    console.log(`[Stripe] Creating checkout: price=${resolvedPriceId}, quantity=${quantity}`);
+    
     const session = await stripeClient.checkout.sessions.create({
       mode: 'subscription',
       payment_method_types: ['card'],
@@ -206,17 +211,19 @@ export async function createCheckoutSession({
       line_items: [
         {
           price: resolvedPriceId,
-          quantity: 1,
+          quantity: quantity, // Per-seat billing
         },
       ],
       success_url: successUrl,
       cancel_url: cancelUrl,
       metadata: {
         companyId,
+        initialUserCount: quantity.toString(),
       },
       subscription_data: {
         metadata: {
           companyId,
+          initialUserCount: quantity.toString(),
         },
       },
     });
