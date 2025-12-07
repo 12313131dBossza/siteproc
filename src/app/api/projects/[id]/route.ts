@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sbServer } from '@/lib/supabase-server'
 import { createServiceClient } from '@/lib/supabase-service'
+import { hasPermission } from '@/lib/roles'
 
 // Default permissions for full company members
 const FULL_PERMISSIONS = {
@@ -133,10 +134,9 @@ export async function PUT(
       return NextResponse.json({ error: 'No company associated' }, { status: 400 })
     }
 
-    // Check if user can edit (admin, owner, manager, or project owner)
-    const canEditRoles = ['admin', 'owner', 'manager', 'bookkeeper']
-    if (!canEditRoles.includes(profile.role || '')) {
-      return NextResponse.json({ error: 'You do not have permission to update this project' }, { status: 403 })
+    // Check if user can edit (using centralized role permissions)
+    if (!hasPermission(profile.role, 'project.edit')) {
+      return NextResponse.json({ error: 'You do not have permission to edit projects' }, { status: 403 });
     }
 
     const body = await request.json()
@@ -218,9 +218,9 @@ export async function DELETE(
       return NextResponse.json({ error: 'No company associated' }, { status: 400 })
     }
 
-    // Only admins/owners can delete projects
-    if (!['admin', 'owner'].includes(profile.role || '')) {
-      return NextResponse.json({ error: 'Only admins can delete projects' }, { status: 403 })
+    // Only admins/owners can delete projects (using centralized role permissions)
+    if (!hasPermission(profile.role, 'project.delete')) {
+      return NextResponse.json({ error: 'You do not have permission to delete projects' }, { status: 403 });
     }
 
     const serviceSb = createServiceClient()

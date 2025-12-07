@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { hasPermission } from '@/lib/roles';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -103,6 +104,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     if (profile?.company_id !== project.company_id) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    }
+
+    // Check role permission for creating milestones
+    if (!hasPermission(profile?.role, 'milestone.create')) {
+      return NextResponse.json({ error: 'You do not have permission to create milestones' }, { status: 403 });
     }
 
     // Get max sort_order for this project

@@ -7,6 +7,7 @@ import { ProjectAccessModal } from '@/components/ProjectAccessModal'
 import ProjectTimeline from '@/components/ProjectTimeline'
 import ProjectPhotoGallery from '@/components/ProjectPhotoGallery'
 import ProjectChat from '@/components/ProjectChat'
+import { hasPermission } from '@/lib/roles'
 import { 
   Plus, 
   Users, 
@@ -28,7 +29,9 @@ import {
   Eye,
   Image as ImageIcon,
   MessageCircle,
-  Trash2
+  Trash2,
+  Pencil,
+  X
 } from 'lucide-react'
 import { format } from '@/lib/date-format'
 
@@ -50,6 +53,9 @@ export default function ProjectDetailPage() {
   const [showAddModal, setShowAddModal] = useState<'order' | 'expense' | 'delivery' | null>(null)
   // Modal state for project access
   const [showAccessModal, setShowAccessModal] = useState(false)
+  // Modal state for editing project
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editForm, setEditForm] = useState({ name: '', budget: '', project_number: '' })
   // Chat state
   const [showChat, setShowChat] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string>('')
@@ -76,10 +82,13 @@ export default function ProjectDetailPage() {
     invite_others: false,
   }
   const userRole = project?.userRole || 'viewer'
-  const canEdit = permissions.edit_project
-  const canCreate = permissions.create_orders
-  const canInvite = permissions.invite_others
-  const canDelete = userRole === 'admin' || userRole === 'owner'
+  
+  // Use centralized role-based permissions
+  const canEdit = hasPermission(userRole, 'project.edit')
+  const canCreate = hasPermission(userRole, 'order.create')
+  const canInvite = hasPermission(userRole, 'user.invite')
+  const canDelete = hasPermission(userRole, 'project.delete')
+  const canEditMilestones = hasPermission(userRole, 'milestone.edit')
 
   async function load() {
     setError(undefined)
@@ -192,6 +201,44 @@ export default function ProjectDetailPage() {
       }
     } catch (e: any) {
       alert(`Error: ${e.message}`)
+    }
+  }
+
+  function openEditModal() {
+    setEditForm({
+      name: project?.name || '',
+      budget: project?.budget?.toString() || '',
+      project_number: project?.project_number || project?.code || ''
+    })
+    setShowEditModal(true)
+  }
+
+  async function saveProjectDetails() {
+    setSaving(true)
+    try {
+      const updates: any = {}
+      if (editForm.name.trim()) updates.name = editForm.name.trim()
+      if (editForm.budget) updates.budget = parseFloat(editForm.budget)
+      if (editForm.project_number.trim()) updates.project_number = editForm.project_number.trim()
+
+      const res = await fetch(`/api/projects/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        setProject(data.data || data)
+        setShowEditModal(false)
+      } else {
+        const error = await res.json().catch(() => ({ error: 'Unknown error' }))
+        alert(error.error || 'Failed to update project')
+      }
+    } catch (e: any) {
+      alert(`Error: ${e.message}`)
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -345,6 +392,16 @@ export default function ProjectDetailPage() {
             <RefreshCw className="h-4 w-4" />
             <span className="hidden sm:inline">Refresh</span>
           </button>
+          {canEdit && (
+            <button 
+              onClick={openEditModal} 
+              className="h-10 px-4 rounded-lg border bg-white hover:bg-gray-50 text-sm shadow-sm flex items-center gap-2 font-medium transition-all hover:shadow-md"
+              title="Edit project details"
+            >
+              <Pencil className="h-4 w-4" />
+              <span className="hidden sm:inline">Edit</span>
+            </button>
+          )}
           {canInvite && (
             <button 
               onClick={() => setShowAccessModal(true)} 
@@ -551,6 +608,7 @@ export default function ProjectDetailPage() {
             projectStatus={project.status}
             projectStartDate={project.created_at}
             projectEndDate={project.end_date}
+            canEdit={canEdit}
           />
         </div>
       )}
@@ -772,6 +830,104 @@ export default function ProjectDetailPage() {
         isOpen={showAccessModal}
         onClose={() => setShowAccessModal(false)}
       />
+
+      {/* Edit Project Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4 shadow-xl">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-gray-900">Edit Project</h2>
+              <button 
+                onClick={() => setShowEditModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <form onSubmit={async (e) => { 
+              e.preventDefault()
+              setSaving(true)
+              try {
+                const res = await fetch(`/api/projects/${id}`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    name: editForm.name,
+                    budget: editForm.budget ? parseFloat(editForm.budget) : null,
+                    project_number: editForm.project_number || null
+                  })
+                })
+                if (!res.ok) {
+                  const err = await res.json()
+                  throw new Error(err.error || 'Failed to update project')
+                }
+                setShowEditModal(false)
+                load() // Refresh data
+              } catch (err: any) {
+                alert(err.message)
+              } finally {
+                setSaving(false)
+              }
+            }} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Project Name
+                </label>
+                <input
+                  type="text"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Project name"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Project Number
+                </label>
+                <input
+                  type="text"
+                  value={editForm.project_number}
+                  onChange={(e) => setEditForm({ ...editForm, project_number: e.target.value })}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="e.g., PRJ-001"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Budget
+                </label>
+                <input
+                  type="number"
+                  value={editForm.budget}
+                  onChange={(e) => setEditForm({ ...editForm, budget: e.target.value })}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="0.00"
+                  step="0.01"
+                  min="0"
+                />
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                >
+                  {saving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Project Chat */}
       {currentUserId && (

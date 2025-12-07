@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { hasPermission } from '@/lib/roles';
 
 interface RouteContext {
   params: Promise<{ id: string; milestoneId: string }>;
@@ -32,15 +33,20 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'Milestone not found' }, { status: 404 });
     }
 
-    // Verify user belongs to the company
+    // Verify user belongs to the company and has permission
     const { data: profile } = await adminClient
       .from('profiles')
-      .select('company_id')
+      .select('company_id, role')
       .eq('id', user.id)
       .single();
 
     if (profile?.company_id !== (milestone.projects as any)?.company_id) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    }
+
+    // Check role permission for editing milestones
+    if (!hasPermission(profile?.role, 'milestone.edit')) {
+      return NextResponse.json({ error: 'You do not have permission to edit milestones' }, { status: 403 });
     }
 
     // Build update object
@@ -150,7 +156,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'Milestone not found' }, { status: 404 });
     }
 
-    // Verify user belongs to the company
+    // Verify user belongs to the company and has permission
     const { data: profile } = await adminClient
       .from('profiles')
       .select('company_id, role')
@@ -159,6 +165,11 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
 
     if (profile?.company_id !== (milestone.projects as any)?.company_id) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    }
+
+    // Check role permission for deleting milestones (stricter than edit)
+    if (!hasPermission(profile?.role, 'milestone.delete')) {
+      return NextResponse.json({ error: 'You do not have permission to delete milestones' }, { status: 403 });
     }
 
     // Don't allow deleting "Project Started" milestone
