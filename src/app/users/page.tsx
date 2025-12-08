@@ -113,6 +113,9 @@ export default function UsersPage() {
   const currentUser = useCurrentUser();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
+  const [userToRemove, setUserToRemove] = useState<UserData | null>(null);
+  const [isRemoving, setIsRemoving] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
@@ -164,6 +167,45 @@ export default function UsersPage() {
     
     const targetRoleLevel = ROLE_HIERARCHY[targetUser.role || 'viewer'] || 0;
     return targetRoleLevel < currentRoleLevel;
+  };
+
+  // Check if current user can remove a specific user (only owners)
+  const canRemoveUser = (targetUser: UserData) => {
+    if (currentUser.loading) return false;
+    if (currentUser.role !== 'owner') return false;
+    // Can't remove yourself
+    return targetUser.status !== 'inactive'; // Can only remove active/pending users
+  };
+
+  // Handle remove user
+  const handleRemoveUser = async () => {
+    if (!userToRemove) return;
+    
+    setIsRemoving(true);
+    try {
+      const response = await fetch(`/api/users/${userToRemove.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to remove user');
+      }
+
+      // Update local state - set user to inactive
+      setUsers(prev => prev.map(u => 
+        u.id === userToRemove.id ? { ...u, status: 'inactive' as const } : u
+      ));
+      
+      toast.success(`${userToRemove.full_name || userToRemove.email} has been removed`);
+      setIsRemoveModalOpen(false);
+      setUserToRemove(null);
+    } catch (error: any) {
+      console.error('Error removing user:', error);
+      toast.error(error.message || 'Failed to remove user');
+    } finally {
+      setIsRemoving(false);
+    }
   };
 
   const filteredUsers = users.filter(user => {
@@ -567,6 +609,19 @@ export default function UsersPage() {
                               <Edit className="w-4 h-4" />
                             </Button>
                           )}
+                          {canRemoveUser(user) && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => {
+                                setUserToRemove(user);
+                                setIsRemoveModalOpen(true);
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
                         </div>
                       </div>
 
@@ -792,16 +847,95 @@ export default function UsersPage() {
                 >
                   Close
                 </Button>
+                {canRemoveUser(selectedUser) && (
+                  <Button
+                    variant="ghost"
+                    className="text-red-600 hover:bg-red-50"
+                    onClick={() => {
+                      setIsDetailsModalOpen(false);
+                      setUserToRemove(selectedUser);
+                      setIsRemoveModalOpen(true);
+                    }}
+                    leftIcon={<Trash2 className="w-4 h-4" />}
+                  >
+                    Remove
+                  </Button>
+                )}
+                {canEditUser(selectedUser) && (
+                  <Button
+                    variant="primary"
+                    onClick={() => {
+                      setIsDetailsModalOpen(false);
+                      handleEditUser(selectedUser);
+                    }}
+                    className="flex-1"
+                    leftIcon={<Edit className="w-4 h-4" />}
+                  >
+                    Edit User
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Remove User Confirmation Modal */}
+        {isRemoveModalOpen && userToRemove && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl max-w-md w-full p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                  <Trash2 className="w-6 h-6 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Remove User</h3>
+                  <p className="text-sm text-gray-500">This action cannot be undone</p>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                    <span className="text-sm font-semibold text-blue-600">
+                      {getInitials(userToRemove.full_name, userToRemove.email)}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">{getDisplayName(userToRemove)}</p>
+                    <p className="text-sm text-gray-500">{userToRemove.email}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="text-sm text-gray-600 mb-6">
+                <p className="mb-2">Removing this user will:</p>
+                <ul className="list-disc list-inside space-y-1 text-gray-500">
+                  <li>Set their status to inactive</li>
+                  <li>Revoke all access to your company</li>
+                  <li>Reduce your billing seat count</li>
+                </ul>
+              </div>
+
+              <div className="flex gap-2">
                 <Button
-                  variant="primary"
+                  variant="ghost"
                   onClick={() => {
-                    setIsDetailsModalOpen(false);
-                    handleEditUser(selectedUser);
+                    setIsRemoveModalOpen(false);
+                    setUserToRemove(null);
                   }}
                   className="flex-1"
-                  leftIcon={<Edit className="w-4 h-4" />}
+                  disabled={isRemoving}
                 >
-                  Edit User
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  className="flex-1 bg-red-600 hover:bg-red-700"
+                  onClick={handleRemoveUser}
+                  disabled={isRemoving}
+                  leftIcon={isRemoving ? undefined : <Trash2 className="w-4 h-4" />}
+                >
+                  {isRemoving ? 'Removing...' : 'Remove User'}
                 </Button>
               </div>
             </div>
