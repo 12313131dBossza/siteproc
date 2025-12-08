@@ -3,6 +3,7 @@ import { getCurrentUserProfile } from '@/lib/server-utils'
 import { sendOrderApprovalNotification, sendOrderRejectionNotification } from '@/lib/email'
 import { notifyOrderApproval, notifyOrderRejection } from '@/lib/notification-triggers'
 import { autoSyncOrderToZoho } from '@/lib/zoho-autosync'
+import { hasPermission } from '@/lib/roles'
 
 // PUT /api/orders/[id] - Update order details
 export async function PUT(
@@ -14,6 +15,11 @@ export async function PUT(
     
     if (profileError || !profile) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Check permission - only owner, admin, manager can edit orders
+    if (!hasPermission(profile.role, 'order.edit')) {
+      return NextResponse.json({ error: 'You do not have permission to edit orders' }, { status: 403 })
     }
 
     const body = await request.json()
@@ -92,6 +98,11 @@ export async function PATCH(
     if (profileError || !profile) {
       console.error('Profile error:', profileError)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Check permission - only owner, admin, manager can approve/reject orders
+    if (!hasPermission(profile.role, 'order.approve')) {
+      return NextResponse.json({ error: 'You do not have permission to approve or reject orders' }, { status: 403 })
     }
 
     const body = await request.json()
@@ -312,6 +323,11 @@ export async function DELETE(
     
     if (profileError || !profile) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Check permission - only owner and admin can delete orders
+    if (!hasPermission(profile.role, 'order.delete')) {
+      return NextResponse.json({ error: 'You do not have permission to delete orders' }, { status: 403 })
     }
 
     const orderId = params.id

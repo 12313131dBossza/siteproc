@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { SearchBar } from "@/components/ui";
 import { OrdersFilterPanel } from "@/components/OrdersFilterPanel";
 import { StatCard } from "@/components/StatCard";
+import { hasPermission } from "@/lib/roles";
 import {
   ShoppingCart,
   Plus,
@@ -67,7 +68,7 @@ interface Order {
 
 interface UserProfile {
   id: string;
-  role: 'owner' | 'admin' | 'member';
+  role: string;
 }
 
 interface OrderStats {
@@ -833,6 +834,8 @@ export default function OrdersPage() {
   };
 
   const canDecide = userProfile?.role && ['owner', 'admin', 'manager'].includes(userProfile.role);
+  const canEdit = hasPermission(userProfile?.role, 'order.edit');
+  const canDelete = hasPermission(userProfile?.role, 'order.delete');
 
   if (loading) {
     return (
@@ -1078,25 +1081,29 @@ export default function OrdersPage() {
                           title="View details"
                         >
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          leftIcon={<Edit className="h-4 w-4" />}
-                          onClick={() => {
-                            setEditingOrder(order);
-                            setShowNewOrderModal(true);
-                          }}
-                          title="Edit order"
-                        >
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          leftIcon={<Trash2 className="h-4 w-4 text-red-500" />}
-                          onClick={() => handleDeleteOrder(order.id)}
-                          title="Delete order"
-                        >
-                        </Button>
+                        {canEdit && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            leftIcon={<Edit className="h-4 w-4" />}
+                            onClick={() => {
+                              setEditingOrder(order);
+                              setShowNewOrderModal(true);
+                            }}
+                            title="Edit order"
+                          >
+                          </Button>
+                        )}
+                        {canDelete && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            leftIcon={<Trash2 className="h-4 w-4 text-red-500" />}
+                            onClick={() => handleDeleteOrder(order.id)}
+                            title="Delete order"
+                          >
+                          </Button>
+                        )}
                         {canDecide && order.status === 'pending' && (
                           <>
                             <Button
