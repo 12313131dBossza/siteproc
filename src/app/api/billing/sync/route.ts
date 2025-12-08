@@ -79,20 +79,41 @@ export async function GET() {
     });
 
     // Determine plan from product
-    const starterProduct = process.env.STRIPE_STARTER_PRICE_ID || '';
-    const proProduct = process.env.STRIPE_PRO_PRICE_ID || '';
-    const enterpriseProduct = process.env.STRIPE_ENTERPRISE_PRICE_ID || '';
+    const starterEnv = process.env.STRIPE_STARTER_PRICE_ID || '';
+    const proEnv = process.env.STRIPE_PRO_PRICE_ID || '';
+    const enterpriseEnv = process.env.STRIPE_ENTERPRISE_PRICE_ID || '';
 
     let plan = 'starter';
     
-    // Check by product ID
-    if (productId === proProduct) plan = 'pro';
-    else if (productId === enterpriseProduct) plan = 'enterprise';
-    else if (productId === starterProduct) plan = 'starter';
-    // Check by product name
-    else if (productName.toLowerCase().includes('pro')) plan = 'pro';
-    else if (productName.toLowerCase().includes('enterprise')) plan = 'enterprise';
-    else if (productName.toLowerCase().includes('starter')) plan = 'starter';
+    // Check ALL IDs against ALL env vars (env can be price_xxx OR prod_xxx)
+    const allIncomingIds = [priceId, productId].filter(Boolean);
+    const planMappings = [
+      { plan: 'enterprise', envVal: enterpriseEnv },
+      { plan: 'pro', envVal: proEnv },
+      { plan: 'starter', envVal: starterEnv },
+    ];
+    
+    // Direct match first
+    let matched = false;
+    for (const id of allIncomingIds) {
+      for (const { plan: p, envVal } of planMappings) {
+        if (envVal && id === envVal) {
+          plan = p;
+          matched = true;
+          console.log(`[Sync] ✓ Direct match: ${id} === ${envVal} → ${plan}`);
+          break;
+        }
+      }
+      if (matched) break;
+    }
+    
+    // Fallback to product name if no direct match
+    if (!matched && productName) {
+      const nameLower = productName.toLowerCase();
+      if (nameLower.includes('enterprise')) plan = 'enterprise';
+      else if (nameLower.includes('pro') && !nameLower.includes('proc')) plan = 'pro';
+      else if (nameLower.includes('starter')) plan = 'starter';
+    }
 
     // Update company - try full update first, then fallback to simpler update
     let updateError: any = null;

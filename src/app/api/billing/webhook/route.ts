@@ -5,31 +5,34 @@ import { sendEmail, isEmailEnabled } from '@/lib/email';
 
 // Helper to determine plan from price/product ID
 function determinePlan(priceId: string | null, productId: string | null, productName?: string | null): string {
-  const starterProduct = process.env.STRIPE_STARTER_PRICE_ID || '';
-  const proProduct = process.env.STRIPE_PRO_PRICE_ID || '';
-  const enterpriseProduct = process.env.STRIPE_ENTERPRISE_PRICE_ID || '';
+  const starterEnv = process.env.STRIPE_STARTER_PRICE_ID || '';
+  const proEnv = process.env.STRIPE_PRO_PRICE_ID || '';
+  const enterpriseEnv = process.env.STRIPE_ENTERPRISE_PRICE_ID || '';
   
   console.log(`[Webhook] Determining plan:`);
   console.log(`  - priceId: ${priceId}`);
   console.log(`  - productId: ${productId}`);
   console.log(`  - productName: ${productName}`);
-  console.log(`  - Env starter: ${starterProduct}`);
-  console.log(`  - Env pro: ${proProduct}`);
-  console.log(`  - Env enterprise: ${enterpriseProduct}`);
+  console.log(`  - Env starter: ${starterEnv}`);
+  console.log(`  - Env pro: ${proEnv}`);
+  console.log(`  - Env enterprise: ${enterpriseEnv}`);
   
-  // Check product ID against env vars (most reliable)
-  // Env vars can be either prod_xxx or price_xxx
-  if (productId) {
-    if (productId === proProduct) return 'pro';
-    if (productId === enterpriseProduct) return 'enterprise';
-    if (productId === starterProduct) return 'starter';
-  }
+  // Check ALL IDs against ALL env vars (env can be price_xxx OR prod_xxx)
+  const allIncomingIds = [priceId, productId].filter(Boolean);
+  const allEnvValues = [
+    { plan: 'enterprise', envVal: enterpriseEnv },
+    { plan: 'pro', envVal: proEnv },
+    { plan: 'starter', envVal: starterEnv },
+  ];
   
-  // Check price ID against env vars  
-  if (priceId) {
-    if (priceId === proProduct) return 'pro';
-    if (priceId === enterpriseProduct) return 'enterprise';
-    if (priceId === starterProduct) return 'starter';
+  // Direct match: check if any incoming ID matches any env value
+  for (const id of allIncomingIds) {
+    for (const { plan, envVal } of allEnvValues) {
+      if (envVal && id === envVal) {
+        console.log(`[Webhook] ✓ Direct match: ${id} === ${envVal} → ${plan}`);
+        return plan;
+      }
+    }
   }
   
   // Fallback: check product name (case insensitive)
@@ -37,14 +40,14 @@ function determinePlan(priceId: string | null, productId: string | null, product
     const nameLower = productName.toLowerCase();
     console.log(`  - Checking product name: "${nameLower}"`);
     if (nameLower.includes('enterprise')) return 'enterprise';
-    if (nameLower.includes('pro')) return 'pro';
+    if (nameLower.includes('pro') && !nameLower.includes('proc')) return 'pro'; // Avoid matching 'siteproc'
     if (nameLower.includes('starter')) return 'starter';
   }
   
   // Last resort: check if productId/priceId contains plan name
   const allIds = `${priceId || ''} ${productId || ''}`.toLowerCase();
   if (allIds.includes('enterprise')) return 'enterprise';
-  if (allIds.includes('pro')) return 'pro';
+  if (allIds.includes('pro') && !allIds.includes('proc')) return 'pro';
   if (allIds.includes('starter')) return 'starter';
   
   // Default to starter if we can't determine
