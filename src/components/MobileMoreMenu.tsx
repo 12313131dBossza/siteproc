@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { createBrowserClient } from '@supabase/ssr';
 import {
   Users,
   FileText,
@@ -11,6 +12,7 @@ import {
   CreditCard,
   BarChart3,
   X,
+  LogOut,
 } from "lucide-react";
 
 interface MenuItem {
@@ -81,6 +83,25 @@ interface MobileMoreMenuProps {
 
 export function MobileMoreMenu({ isOpen, onClose, userRole = '' }: MobileMoreMenuProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+      await supabase.auth.signOut();
+      onClose();
+      router.push('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -190,6 +211,25 @@ export function MobileMoreMenu({ isOpen, onClose, userRole = '' }: MobileMoreMen
                 </Link>
               );
             })}
+
+            {/* Logout Button */}
+            <button
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className="w-full flex items-center gap-4 p-4 rounded-xl transition-all active:scale-95 bg-white border-2 border-red-100 hover:border-red-200 hover:bg-red-50 mt-4"
+            >
+              <div className="p-2.5 rounded-lg flex-shrink-0 bg-red-100">
+                <LogOut className="h-5 w-5 text-red-600" strokeWidth={2.5} />
+              </div>
+              <div className="flex-1 min-w-0 text-left">
+                <div className="font-semibold text-sm text-red-700">
+                  {isLoggingOut ? 'Logging out...' : 'Logout'}
+                </div>
+                <div className="text-xs mt-0.5 text-red-500">
+                  Sign out of your account
+                </div>
+              </div>
+            </button>
           </div>
         </div>
       </div>
