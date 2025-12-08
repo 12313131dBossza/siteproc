@@ -145,10 +145,10 @@ export async function syncSubscriptionQuantity(companyId: string): Promise<{
       return { success: true, message: `Quantity already at ${quantity} users`, newQuantity: quantity };
     }
 
-    // Update the quantity
+    // Update the quantity with immediate invoice
     await stripe.subscriptionItems.update(subscriptionItemId, {
       quantity,
-      proration_behavior: 'create_prorations', // Prorate for immediate changes
+      proration_behavior: 'always_invoice', // Invoice immediately for changes
     });
 
     console.log(`[Billing] ✓ Updated subscription quantity from ${currentQuantity} to ${quantity} for company ${companyId}`);
