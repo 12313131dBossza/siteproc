@@ -90,45 +90,46 @@ function AcceptInvitationContent() {
     setSubmitting(true);
 
     try {
-      // Step 1: Create auth user
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+      // Create user via API - this skips email verification
+      const response = await fetch('/api/accept-invitation/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: invitation.email,
+          password: password,
+          fullName: fullName,
+          token: token,
+          companyId: invitation.company_id,
+          role: invitation.role,
+          invitationId: invitation.id,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error('Registration error:', result);
+        
+        if (result.code === 'USER_EXISTS') {
+          toast.error('This email is already registered. Please log in instead.');
+          setTimeout(() => router.push('/login'), 2000);
+        } else {
+          toast.error(result.error || 'Failed to create account');
+        }
+        setSubmitting(false);
+        return;
+      }
+
+      // Now sign in the user
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email: invitation.email,
         password: password,
       });
 
-      if (signUpError) {
-        console.error('Sign up error:', signUpError);
-        toast.error(signUpError.message || 'Failed to create account');
-        setSubmitting(false);
-        return;
-      }
-
-      if (!authData.user) {
-        toast.error('Failed to create user account');
-        setSubmitting(false);
-        return;
-      }
-
-      // Step 2: Create profile via API (bypasses RLS)
-      const profileResponse = await fetch('/api/accept-invitation', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: authData.user.id,
-          email: invitation.email,
-          fullName: fullName,
-          companyId: invitation.company_id,
-          role: invitation.role,
-          invitationId: invitation.id,
-          metadata: invitation.metadata,
-        }),
-      });
-
-      if (!profileResponse.ok) {
-        const error = await profileResponse.json();
-        console.error('Profile creation error:', error);
-        toast.error('Failed to create profile');
-        setSubmitting(false);
+      if (signInError) {
+        console.error('Sign in error:', signInError);
+        toast.success('Account created! Please log in.');
+        setTimeout(() => router.push('/login'), 2000);
         return;
       }
 
@@ -137,7 +138,7 @@ function AcceptInvitationContent() {
       // Wait a moment then redirect
       setTimeout(() => {
         router.push('/dashboard');
-      }, 2000);
+      }, 1500);
     } catch (err: any) {
       console.error('Error accepting invitation:', err);
       toast.error(err.message || 'Failed to accept invitation');
