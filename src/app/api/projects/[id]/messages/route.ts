@@ -28,7 +28,7 @@ export async function GET(
     
     // Check if user is company member or project member
     const isCompanyMember = profile?.company_id && 
-      ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(profile.role || '');
+      ['admin', 'owner', 'manager', 'accountant', 'bookkeeper', 'member'].includes(profile.role || '');
     
     if (!isCompanyMember) {
       // Check project membership for external users
@@ -151,7 +151,7 @@ export async function POST(
 
     // Check if user has access
     const isCompanyMember = profile?.company_id === project.company_id && 
-      ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(profile?.role || '');
+      ['admin', 'owner', 'manager', 'accountant', 'bookkeeper', 'member'].includes(profile?.role || '');
     
     if (!isCompanyMember) {
       const { data: membership } = await adminClient

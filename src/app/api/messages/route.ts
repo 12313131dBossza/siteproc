@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
       .single();
 
     const userRole = profile?.role || 'viewer';
-    const isCompanyMember = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(userRole);
+    const isCompanyMember = ['admin', 'owner', 'manager', 'accountant', 'bookkeeper', 'member'].includes(userRole);
 
     console.log('Messages GET - User:', user.id, 'Role:', userRole, 'Project:', projectId, 'Channel:', channel);
 
@@ -195,7 +195,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     const userRole = profile?.role || 'viewer';
-    const isCompanyMember = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(userRole);
+    const isCompanyMember = ['admin', 'owner', 'manager', 'accountant', 'bookkeeper', 'member'].includes(userRole);
 
     console.log('Message POST - User:', user.id, 'Role:', userRole, 'Project:', project_id, 'Channel:', channel);
 

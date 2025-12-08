@@ -54,7 +54,7 @@ async function handleProjectDelivery(body: any, session: any) {
     .eq('id', session.user.id)
     .single()
   
-  const isFullCompanyMember = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(profile?.role || '')
+  const isFullCompanyMember = ['admin', 'owner', 'manager', 'accountant', 'bookkeeper', 'member'].includes(profile?.role || '')
   
   if (!isFullCompanyMember) {
     // External user - check project_members for create_orders permission

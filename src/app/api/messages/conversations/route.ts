@@ -194,7 +194,7 @@ export async function GET() {
           .from('profiles')
           .select('id, full_name, username, email, role')
           .in('company_id', companyIds)
-          .in('role', ['admin', 'owner', 'manager', 'bookkeeper', 'member']);
+          .in('role', ['admin', 'owner', 'manager', 'accountant', 'bookkeeper', 'member']);
         
         if (companyMembers && companyMembers.length > 0) {
           for (const cm of companyMembers) {
