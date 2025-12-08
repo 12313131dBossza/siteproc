@@ -85,16 +85,16 @@ export default function DebugNotificationsPage() {
           <h2 className="text-lg font-semibold">Debug Controls</h2>
           
           <div className="flex gap-3">
-            <Button onClick={checkSession} disabled={loading} variant="secondary">
+            <Button onClick={checkSession} disabled={loading} variant="ghost">
               Check Session
             </Button>
-            <Button onClick={testGetNotifications} disabled={loading} variant="secondary">
+            <Button onClick={testGetNotifications} disabled={loading} variant="ghost">
               GET /api/notifications
             </Button>
             <Button onClick={testCreateNotification} disabled={loading} variant="primary">
               Create Test Notification
             </Button>
-            <Button onClick={testDirectDB} disabled={loading} variant="secondary">
+            <Button onClick={testDirectDB} disabled={loading} variant="ghost">
               Direct DB Check
             </Button>
           </div>

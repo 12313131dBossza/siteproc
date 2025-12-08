@@ -110,11 +110,11 @@ async function getAuthenticatedUser() {
         .limit(1)
         .maybeSingle()
       
-      if (membership?.external_type === 'supplier') {
+      if (membership && membership.external_type === 'supplier') {
         effectiveRole = 'supplier'
-      } else if (membership?.external_type === 'contractor') {
+      } else if (membership && membership.external_type === 'contractor') {
         effectiveRole = 'contractor'
-      } else if (membership?.external_type === 'client') {
+      } else if (membership && membership.external_type === 'client') {
         effectiveRole = 'client'
       }
       
@@ -563,8 +563,8 @@ export async function POST(req: NextRequest) {
         .select('company_id')
         .eq('id', body.order_uuid)
         .single()
-      if (orderData?.company_id) {
-        companyId = orderData.company_id
+      if (orderData && 'company_id' in orderData && orderData.company_id) {
+        companyId = (orderData as { company_id: string }).company_id
         console.log('📦 Got company_id from order:', companyId)
       }
     }

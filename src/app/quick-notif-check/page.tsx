@@ -60,7 +60,7 @@ export default function QuickNotificationCheck() {
         <Button onClick={checkNotifications} disabled={loading}>
           Check My Notifications
         </Button>
-        <Button onClick={createTest} disabled={loading} variant="secondary">
+        <Button onClick={createTest} disabled={loading} variant="ghost">
           Create Test Notification
         </Button>
       </div>

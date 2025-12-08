@@ -280,6 +280,19 @@ export const ROLE_PERMISSIONS_SUMMARY: Record<UserRole, { canDo: string[]; canno
       'Cannot approve payments or change statuses',
     ],
   },
+  editor: {
+    canDo: [
+      'Everything Viewer can do PLUS:',
+      'Create and edit orders, deliveries',
+      'Upload documents and photos',
+      'Basic data entry tasks',
+    ],
+    cannotDo: [
+      'Cannot delete items',
+      'Cannot invite anyone',
+      'Cannot approve payments or expenses',
+    ],
+  },
   accountant: {
     canDo: [
       'Everything Viewer can do PLUS:',

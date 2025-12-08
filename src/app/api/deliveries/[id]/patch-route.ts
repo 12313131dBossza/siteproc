@@ -29,8 +29,8 @@ export async function PATCH(
       return NextResponse.json({ error: 'No company' }, { status: 400 })
     }
 
-    // Enforce editor role for status changes
-    enforceRole('editor', session)
+    // Enforce manager role for status changes
+    enforceRole('manager', session)
 
     const deliveryId = params.id
     const body = await req.json()
@@ -75,7 +75,7 @@ export async function PATCH(
       // Check if delivery is locked (already delivered)
       if (
         currentDelivery.status === 'delivered' &&
-        session.userRole !== 'admin'
+        (session as any).userRole !== 'admin'
       ) {
         return NextResponse.json(
           {
