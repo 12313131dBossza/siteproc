@@ -47,7 +47,7 @@ export default function ProjectsPage() {
   const router = useRouter();
 
   // Check if user can create projects (internal members only)
-  const canCreateProject = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(userRole);
+  const canCreateProject = ['admin', 'owner', 'manager'].includes(userRole);
 
   // Fetch user role on mount
   useEffect(() => {

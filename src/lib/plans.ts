@@ -13,7 +13,7 @@
 export type PlanId = 'free' | 'starter' | 'pro' | 'enterprise';
 
 // Internal roles that count toward billing (PAID)
-export const BILLABLE_ROLES = ['owner', 'admin', 'manager', 'bookkeeper', 'member'];
+export const BILLABLE_ROLES = ['owner', 'admin', 'manager', 'accountant', 'bookkeeper', 'member'];
 
 // External roles that are ALWAYS FREE (never charged)
 export const FREE_ROLES = ['client', 'supplier', 'contractor', 'consultant', 'subcontractor', 'viewer'];

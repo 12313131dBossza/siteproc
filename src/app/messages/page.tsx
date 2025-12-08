@@ -909,7 +909,7 @@ export default function MessagesPage() {
   };
 
   const totalUnread = conversations.reduce((sum, c) => sum + c.unread_count, 0);
-  const isCompanyMember = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(userRole);
+  const isCompanyMember = ['admin', 'owner', 'manager', 'accountant', 'bookkeeper', 'member'].includes(userRole);
   const isSupplier = userRole === 'supplier';
   const isClient = userRole === 'viewer' || userRole === 'client';
 

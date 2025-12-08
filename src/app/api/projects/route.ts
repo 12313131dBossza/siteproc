@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
 
     // Check if user is a full company member (admin/owner/manager/bookkeeper/member)
     // or just an external viewer with project-specific access
-    const isFullCompanyMember = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(profile.role || '')
+    const isFullCompanyMember = ['admin', 'owner', 'manager', 'accountant', 'bookkeeper', 'member'].includes(profile.role || '')
     
     let projects: any[] = []
     

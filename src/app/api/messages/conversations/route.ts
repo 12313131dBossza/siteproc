@@ -52,7 +52,7 @@ export async function GET() {
     }
 
     const userRole = effectiveRole;
-    const isCompanyMember = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(userRole);
+    const isCompanyMember = ['admin', 'owner', 'manager', 'accountant', 'bookkeeper', 'member'].includes(userRole);
     const isClient = userRole === 'viewer' || userRole === 'client';
     const isSupplier = userRole === 'supplier' || userRole === 'contractor' || userRole === 'consultant';
 

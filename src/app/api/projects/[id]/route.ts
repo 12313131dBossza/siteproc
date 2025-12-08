@@ -41,7 +41,7 @@ export async function GET(
       return NextResponse.json({ error: 'No company associated' }, { status: 400 })
     }
 
-    const isFullCompanyMember = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(profile.role || '')
+    const isFullCompanyMember = ['admin', 'owner', 'manager', 'accountant', 'bookkeeper', 'member'].includes(profile.role || '')
 
     // Get project
     const { data: project, error } = await serviceSb

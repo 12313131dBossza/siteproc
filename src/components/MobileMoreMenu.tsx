@@ -106,7 +106,7 @@ export function MobileMoreMenu({ isOpen, onClose, userRole = '' }: MobileMoreMen
   if (!isOpen) return null;
 
   // Filter menu items based on user role
-  const isInternalMember = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(userRole);
+  const isInternalMember = ['admin', 'owner', 'manager', 'accountant', 'bookkeeper', 'member'].includes(userRole);
   const isAdmin = ['admin', 'owner'].includes(userRole);
   
   const filteredMenuItems = moreMenuItems.filter(item => {

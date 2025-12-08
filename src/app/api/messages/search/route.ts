@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       .eq('id', user.id)
       .single();
 
-    const isCompanyMember = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(profile?.role || '');
+    const isCompanyMember = ['admin', 'owner', 'manager', 'accountant', 'bookkeeper', 'member'].includes(profile?.role || '');
 
     // Build search query
     let searchQuery = adminClient

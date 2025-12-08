@@ -59,7 +59,7 @@ export function MobileBottomNav() {
   }, []);
 
   // Filter navigation based on user role
-  const isInternalMember = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(userRole);
+  const isInternalMember = ['admin', 'owner', 'manager', 'accountant', 'bookkeeper', 'member'].includes(userRole);
   const isViewer = userRole === 'viewer';
   
   const filteredNavItems = mobileNavItems.filter(item => {

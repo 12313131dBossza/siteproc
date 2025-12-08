@@ -127,7 +127,7 @@ export function SidebarNav() {
           setUserRole(profile?.role || 'viewer');
 
           // Fetch subscription status for internal members
-          if (profile?.company_id && ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(profile?.role || '')) {
+          if (profile?.company_id && ['admin', 'owner', 'manager', 'accountant', 'bookkeeper', 'member'].includes(profile?.role || '')) {
             try {
               const { data: company } = await supabase
                 .from('companies')
@@ -173,8 +173,8 @@ export function SidebarNav() {
 
   // Filter navigation based on user role
   const filteredNavigation = navigation.filter(item => {
-    // Internal company members
-    const isInternalMember = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(userRole);
+    // Internal company members (includes accountant)
+    const isInternalMember = ['admin', 'owner', 'manager', 'accountant', 'bookkeeper', 'member'].includes(userRole);
     // Admin only items
     const isAdmin = ['admin', 'owner'].includes(userRole);
     // External viewer/client

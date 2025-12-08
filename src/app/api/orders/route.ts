@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     const deliveryProgress = searchParams.get('delivery_progress')
     
     // Check if user is internal company member or external viewer
-    const isInternalMember = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(profile.role || '')
+    const isInternalMember = ['admin', 'owner', 'manager', 'accountant', 'bookkeeper', 'member'].includes(profile.role || '')
     
     let orders: any[] = []
     
@@ -245,7 +245,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user is a full company member or has project-level permission
-    const isFullCompanyMember = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(profile.role || '')
+    const isFullCompanyMember = ['admin', 'owner', 'manager', 'accountant', 'bookkeeper', 'member'].includes(profile.role || '')
     
     if (!isFullCompanyMember) {
       // External user - check project_members for create_orders permission

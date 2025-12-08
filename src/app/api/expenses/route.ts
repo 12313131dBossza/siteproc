@@ -204,7 +204,7 @@ export async function POST(request: NextRequest) {
       baseData.project_id = body.project_id
       
       // Check if user is a full company member or has project-level permission
-      const isFullCompanyMember = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(profile.role || '')
+      const isFullCompanyMember = ['admin', 'owner', 'manager', 'accountant', 'bookkeeper', 'member'].includes(profile.role || '')
       
       if (!isFullCompanyMember) {
         // External user - check project_members for create_orders permission (expenses use same permission)

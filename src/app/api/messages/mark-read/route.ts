@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     const userRole = profile?.role || 'viewer';
-    const isCompanyMember = ['admin', 'owner', 'manager', 'bookkeeper', 'member'].includes(userRole);
+    const isCompanyMember = ['admin', 'owner', 'manager', 'accountant', 'bookkeeper', 'member'].includes(userRole);
     const isClient = userRole === 'viewer' || userRole === 'client';
     const isSupplier = userRole === 'supplier';
 
