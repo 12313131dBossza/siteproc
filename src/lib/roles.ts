@@ -10,7 +10,7 @@ export const ALL_ROLES = [
   'owner',
   'admin', 
   'manager',
-  'bookkeeper',
+  'accountant',
   'member',
   'client',
   'supplier',
@@ -23,7 +23,7 @@ export const ALL_ROLES = [
 export type Role = typeof ALL_ROLES[number];
 
 // Internal roles (company team members)
-export const INTERNAL_ROLES: Role[] = ['owner', 'admin', 'manager', 'bookkeeper', 'member'];
+export const INTERNAL_ROLES: Role[] = ['owner', 'admin', 'manager', 'accountant', 'member'];
 
 // External roles (clients, vendors, etc.)
 export const EXTERNAL_ROLES: Role[] = ['client', 'supplier', 'contractor', 'consultant', 'subcontractor', 'viewer'];
@@ -35,42 +35,42 @@ export const EXTERNAL_ROLES: Role[] = ['client', 'supplier', 'contractor', 'cons
 export const PERMISSIONS = {
   // Project management
   'project.create': ['owner', 'admin', 'manager'],
-  'project.edit': ['owner', 'admin', 'manager', 'bookkeeper'],
+  'project.edit': ['owner', 'admin', 'manager'],
   'project.delete': ['owner', 'admin'],
   'project.view': ALL_ROLES,
   
   // Milestone management
-  'milestone.create': ['owner', 'admin', 'manager', 'bookkeeper', 'member'],
-  'milestone.edit': ['owner', 'admin', 'manager', 'bookkeeper', 'member'],
+  'milestone.create': ['owner', 'admin', 'manager', 'member'],
+  'milestone.edit': ['owner', 'admin', 'manager', 'member'],
   'milestone.delete': ['owner', 'admin', 'manager'],
   'milestone.view': ALL_ROLES,
-  'milestone.complete': ['owner', 'admin', 'manager', 'bookkeeper', 'member'],
+  'milestone.complete': ['owner', 'admin', 'manager', 'member'],
   
   // Order management
-  'order.create': ['owner', 'admin', 'manager', 'bookkeeper', 'member'],
-  'order.edit': ['owner', 'admin', 'manager', 'bookkeeper'],
+  'order.create': ['owner', 'admin', 'manager', 'member'],
+  'order.edit': ['owner', 'admin', 'manager'],
   'order.delete': ['owner', 'admin'],
   'order.approve': ['owner', 'admin', 'manager'],
-  'order.view': ['owner', 'admin', 'manager', 'bookkeeper', 'member', 'supplier', 'contractor'],
+  'order.view': ['owner', 'admin', 'manager', 'accountant', 'member', 'supplier', 'contractor'],
   
-  // Expense management
-  'expense.create': ['owner', 'admin', 'manager', 'bookkeeper', 'member'],
-  'expense.edit': ['owner', 'admin', 'manager', 'bookkeeper'],
-  'expense.delete': ['owner', 'admin'],
-  'expense.approve': ['owner', 'admin', 'manager'],
-  'expense.view': ['owner', 'admin', 'manager', 'bookkeeper'],
+  // Expense management - Accountant has FULL access
+  'expense.create': ['owner', 'admin', 'manager', 'accountant', 'member'],
+  'expense.edit': ['owner', 'admin', 'manager', 'accountant'],
+  'expense.delete': ['owner', 'admin', 'accountant'],
+  'expense.approve': ['owner', 'admin', 'manager', 'accountant'],
+  'expense.view': ['owner', 'admin', 'manager', 'accountant'],
   
   // Delivery management
-  'delivery.create': ['owner', 'admin', 'manager', 'bookkeeper', 'member', 'supplier'],
-  'delivery.edit': ['owner', 'admin', 'manager', 'bookkeeper', 'member', 'supplier'],
+  'delivery.create': ['owner', 'admin', 'manager', 'member', 'supplier'],
+  'delivery.edit': ['owner', 'admin', 'manager', 'member', 'supplier'],
   'delivery.delete': ['owner', 'admin'],
-  'delivery.view': ['owner', 'admin', 'manager', 'bookkeeper', 'member', 'supplier', 'contractor', 'client'],
+  'delivery.view': ['owner', 'admin', 'manager', 'accountant', 'member', 'supplier', 'contractor', 'client'],
   
-  // Payment management
-  'payment.create': ['owner', 'admin', 'manager', 'bookkeeper'],
-  'payment.edit': ['owner', 'admin', 'bookkeeper'],
-  'payment.delete': ['owner', 'admin'],
-  'payment.view': ['owner', 'admin', 'manager', 'bookkeeper'],
+  // Payment management - Accountant has FULL access
+  'payment.create': ['owner', 'admin', 'manager', 'accountant'],
+  'payment.edit': ['owner', 'admin', 'accountant'],
+  'payment.delete': ['owner', 'admin', 'accountant'],
+  'payment.view': ['owner', 'admin', 'manager', 'accountant'],
   
   // User management
   'user.invite': ['owner', 'admin'],
@@ -83,12 +83,12 @@ export const PERMISSIONS = {
   'company.billing': ['owner', 'admin'],
   'company.integrations': ['owner', 'admin'],
   
-  // Reports & Analytics
-  'reports.view': ['owner', 'admin', 'manager', 'bookkeeper'],
-  'reports.export': ['owner', 'admin', 'manager', 'bookkeeper'],
+  // Reports & Analytics - Accountant can view/export
+  'reports.view': ['owner', 'admin', 'manager', 'accountant'],
+  'reports.export': ['owner', 'admin', 'manager', 'accountant'],
   
   // Documents
-  'document.upload': ['owner', 'admin', 'manager', 'bookkeeper', 'member'],
+  'document.upload': ['owner', 'admin', 'manager', 'accountant', 'member'],
   'document.delete': ['owner', 'admin', 'manager'],
   'document.view': ALL_ROLES,
 } as const;
@@ -150,7 +150,7 @@ export const ROLE_HIERARCHY: Record<string, number> = {
   'owner': 100,
   'admin': 90,
   'manager': 70,
-  'bookkeeper': 60,
+  'accountant': 60,
   'member': 50,
   'contractor': 30,
   'consultant': 30,
