@@ -8,15 +8,20 @@ import { sbServer } from './supabase-server';
 async function getWhiteLabelConfig(companyId?: string): Promise<{ from?: string; companyName: string }> {
   const defaultCompanyName = 'SiteProc';
   
-  if (!companyId) return { companyName: defaultCompanyName };
+  if (!companyId) {
+    console.log('[WhiteLabel] No companyId provided, using default');
+    return { companyName: defaultCompanyName };
+  }
   
   try {
     const supabase = await sbServer();
-    const { data: company } = await supabase
+    const { data: company, error } = await supabase
       .from('companies')
       .select('white_label_enabled, white_label_company_name, white_label_email_name')
       .eq('id', companyId)
       .single();
+    
+    console.log('[WhiteLabel] Company data:', { companyId, company, error });
     
     if (company?.white_label_enabled && company?.white_label_company_name) {
       const companyName = company.white_label_company_name;
@@ -26,6 +31,7 @@ async function getWhiteLabelConfig(companyId?: string): Promise<{ from?: string;
       if (company.white_label_email_name) {
         const baseEmail = getFromAddress();
         from = `${companyName} <${baseEmail}>`;
+        console.log('[WhiteLabel] Using custom from:', from);
       }
       
       return { from, companyName };
