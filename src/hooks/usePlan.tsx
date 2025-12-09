@@ -162,10 +162,30 @@ export function PlanProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// Default values for SSR/prerendering when provider isn't available
+const defaultPlanContext: PlanContextType = {
+  plan: 'free',
+  planName: 'Free',
+  isLoading: true,
+  features: PLANS.free.features,
+  hasFeature: () => false,
+  getUpgradeMessage: () => 'Upgrade your plan to access this feature',
+  canAddUser: () => true,
+  canAddProject: () => true,
+  internalUserCount: 0,
+  activeProjectCount: 0,
+  remainingUserSlots: 999,
+  remainingProjectSlots: 999,
+  userLimitBanner: null,
+  projectLimitBanner: null,
+  refresh: async () => {},
+};
+
 export function usePlan() {
   const context = useContext(PlanContext);
+  // Return defaults during SSR/prerendering when provider isn't available
   if (!context) {
-    throw new Error('usePlan must be used within a PlanProvider');
+    return defaultPlanContext;
   }
   return context;
 }

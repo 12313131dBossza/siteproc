@@ -8,6 +8,7 @@ import { ServiceWorkerRegistration } from '@/components/ServiceWorkerRegistratio
 import { OfflineSyncManager } from '@/components/OfflineSyncManager'
 import { CurrencyProvider } from '@/lib/CurrencyContext'
 import { WhiteLabelProvider } from '@/lib/WhiteLabelContext'
+import { PlanProvider } from '@/hooks/usePlan'
 import { DynamicTitle } from '@/components/DynamicTitle'
 
 // Root layout provides html/body structure and providers for all routes
@@ -31,10 +32,12 @@ export default function RootLayout({
           <NotificationProvider>
             <CurrencyProvider>
               <WhiteLabelProvider>
-                <DynamicTitle />
-                <Toaster position="top-right" />
-                {children}
-                <OfflineSyncManager />
+                <PlanProvider>
+                  <DynamicTitle />
+                  <Toaster position="top-right" />
+                  {children}
+                  <OfflineSyncManager />
+                </PlanProvider>
               </WhiteLabelProvider>
             </CurrencyProvider>
           </NotificationProvider>
