@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createBrowserClient } from '@supabase/ssr';
+import { usePlan } from '@/hooks/usePlan';
+import { PlanId } from '@/lib/plans';
 import {
   Users,
   FileText,
@@ -13,7 +15,21 @@ import {
   BarChart3,
   X,
   LogOut,
+  Package,
+  Truck,
+  Receipt,
+  FolderOpen,
+  Activity,
+  LineChart,
 } from "lucide-react";
+
+// Plan hierarchy for comparison
+const PLAN_LEVELS: Record<PlanId, number> = {
+  'free': 0,
+  'starter': 1,
+  'pro': 2,
+  'enterprise': 3,
+};
 
 interface MenuItem {
   name: string;
@@ -21,15 +37,42 @@ interface MenuItem {
   icon: React.ElementType;
   description: string;
   access: 'all' | 'internal' | 'admin';
+  minPlan: PlanId;
 }
 
 const moreMenuItems: MenuItem[] = [
+  // Starter features
+  {
+    name: "Expenses",
+    href: "/expenses",
+    icon: Receipt,
+    description: "Track project expenses",
+    access: 'internal',
+    minPlan: 'starter',
+  },
+  {
+    name: "Deliveries",
+    href: "/deliveries",
+    icon: Truck,
+    description: "Manage deliveries",
+    access: 'internal',
+    minPlan: 'starter',
+  },
+  {
+    name: "Documents",
+    href: "/documents",
+    icon: FolderOpen,
+    description: "Project documents",
+    access: 'internal',
+    minPlan: 'starter',
+  },
   {
     name: "Clients",
     href: "/clients",
     icon: Users,
     description: "Manage client relationships",
     access: 'internal',
+    minPlan: 'starter',
   },
   {
     name: "Contractors",
@@ -37,20 +80,7 @@ const moreMenuItems: MenuItem[] = [
     icon: HardHat,
     description: "Contractor directory",
     access: 'internal',
-  },
-  {
-    name: "Bids",
-    href: "/bids",
-    icon: FileText,
-    description: "View and manage bids",
-    access: 'internal',
-  },
-  {
-    name: "Change Orders",
-    href: "/change-orders",
-    icon: FileText,
-    description: "Track change orders",
-    access: 'internal',
+    minPlan: 'starter',
   },
   {
     name: "Payments",
@@ -58,20 +88,73 @@ const moreMenuItems: MenuItem[] = [
     icon: CreditCard,
     description: "Payment tracking",
     access: 'internal',
+    minPlan: 'starter',
+  },
+  {
+    name: "Activity Log",
+    href: "/activity",
+    icon: Activity,
+    description: "View activity history",
+    access: 'internal',
+    minPlan: 'starter',
+  },
+  {
+    name: "Users & Roles",
+    href: "/team",
+    icon: Users,
+    description: "Manage team members",
+    access: 'admin',
+    minPlan: 'starter',
+  },
+  // Pro features
+  {
+    name: "Analytics",
+    href: "/analytics",
+    icon: LineChart,
+    description: "Dashboard analytics",
+    access: 'internal',
+    minPlan: 'pro',
+  },
+  {
+    name: "Bids",
+    href: "/bids",
+    icon: FileText,
+    description: "View and manage bids",
+    access: 'internal',
+    minPlan: 'pro',
+  },
+  {
+    name: "Products",
+    href: "/products",
+    icon: Package,
+    description: "Product catalog",
+    access: 'internal',
+    minPlan: 'pro',
+  },
+  {
+    name: "Change Orders",
+    href: "/change-orders",
+    icon: FileText,
+    description: "Track change orders",
+    access: 'internal',
+    minPlan: 'pro',
   },
   {
     name: "Reports",
     href: "/reports",
     icon: BarChart3,
-    description: "Analytics and reports",
+    description: "Advanced reports",
     access: 'internal',
+    minPlan: 'pro',
   },
+  // Always available
   {
     name: "Settings",
     href: "/settings",
     icon: Settings,
     description: "App preferences",
     access: 'internal',
+    minPlan: 'starter',
   },
 ];
 
@@ -85,6 +168,14 @@ export function MobileMoreMenu({ isOpen, onClose, userRole = '' }: MobileMoreMen
   const pathname = usePathname();
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const { plan } = usePlan();
+
+  // Helper to check if user's plan meets minimum requirement
+  const meetsMinPlan = (minPlan: PlanId): boolean => {
+    const userPlanLevel = PLAN_LEVELS[plan] || 0;
+    const requiredLevel = PLAN_LEVELS[minPlan] || 0;
+    return userPlanLevel >= requiredLevel;
+  };
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -105,15 +196,23 @@ export function MobileMoreMenu({ isOpen, onClose, userRole = '' }: MobileMoreMen
 
   if (!isOpen) return null;
 
-  // Filter menu items based on user role
+  // Filter menu items based on user role AND plan level
   const isInternalMember = ['admin', 'owner', 'manager', 'accountant', 'bookkeeper', 'member'].includes(userRole);
   const isAdmin = ['admin', 'owner'].includes(userRole);
   
   const filteredMenuItems = moreMenuItems.filter(item => {
-    if (item.access === 'all') return true;
-    if (item.access === 'internal' && isInternalMember) return true;
-    if (item.access === 'admin' && isAdmin) return true;
-    return false;
+    // First check role-based access
+    let hasRoleAccess = false;
+    if (item.access === 'all') hasRoleAccess = true;
+    if (item.access === 'internal' && isInternalMember) hasRoleAccess = true;
+    if (item.access === 'admin' && isAdmin) hasRoleAccess = true;
+    
+    if (!hasRoleAccess) return false;
+    
+    // Then check plan-based access
+    if (!meetsMinPlan(item.minPlan)) return false;
+    
+    return true;
   });
 
   // If no items to show, don't render the menu
