@@ -809,48 +809,12 @@ function CostCodesTab() {
 }
 
 function IntegrationsTab() {
-  const [qbStatus, setQbStatus] = useState<'disconnected' | 'connected' | 'loading'>('loading')
-  const [qbCompany, setQbCompany] = useState<string | null>(null)
-  const [xeroStatus, setXeroStatus] = useState<'disconnected' | 'connected' | 'loading'>('loading')
-  const [xeroCompany, setXeroCompany] = useState<string | null>(null)
   const [zohoStatus, setZohoStatus] = useState<'disconnected' | 'connected' | 'loading'>('loading')
   const [zohoCompany, setZohoCompany] = useState<string | null>(null)
 
   useEffect(() => {
-    checkQuickBooksStatus()
-    checkXeroStatus()
     checkZohoStatus()
   }, [])
-
-  async function checkQuickBooksStatus() {
-    try {
-      const res = await fetch('/api/quickbooks/status')
-      const data = await res.json()
-      if (data.connected) {
-        setQbStatus('connected')
-        setQbCompany(data.companyName || 'Connected')
-      } else {
-        setQbStatus('disconnected')
-      }
-    } catch {
-      setQbStatus('disconnected')
-    }
-  }
-
-  async function checkXeroStatus() {
-    try {
-      const res = await fetch('/api/xero/status')
-      const data = await res.json()
-      if (data.connected) {
-        setXeroStatus('connected')
-        setXeroCompany(data.tenantName || 'Connected')
-      } else {
-        setXeroStatus('disconnected')
-      }
-    } catch {
-      setXeroStatus('disconnected')
-    }
-  }
 
   async function checkZohoStatus() {
     try {
@@ -864,36 +828,6 @@ function IntegrationsTab() {
       }
     } catch {
       setZohoStatus('disconnected')
-    }
-  }
-
-  async function connectQuickBooks() {
-    window.location.href = '/api/quickbooks/authorize'
-  }
-
-  async function disconnectQuickBooks() {
-    try {
-      await fetch('/api/quickbooks/disconnect', { method: 'POST' })
-      setQbStatus('disconnected')
-      setQbCompany(null)
-      toast.success('QuickBooks disconnected')
-    } catch {
-      toast.error('Failed to disconnect QuickBooks')
-    }
-  }
-
-  async function connectXero() {
-    window.location.href = '/api/xero/authorize'
-  }
-
-  async function disconnectXero() {
-    try {
-      await fetch('/api/xero/disconnect', { method: 'POST' })
-      setXeroStatus('disconnected')
-      setXeroCompany(null)
-      toast.success('Xero disconnected')
-    } catch {
-      toast.error('Failed to disconnect Xero')
     }
   }
 
@@ -963,121 +897,6 @@ function IntegrationsTab() {
 
         {zohoStatus === 'connected' && (
           <div className="mt-4 pt-4 border-t border-green-200">
-            <h5 className="text-sm font-medium text-gray-900 mb-2">Sync Settings</h5>
-            <div className="space-y-2 text-sm text-gray-600">
-              <div className="flex items-center justify-between">
-                <span>Auto-sync expenses</span>
-                <span className="text-green-600">Enabled</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Auto-sync invoices</span>
-                <span className="text-green-600">Enabled</span>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Xero Integration - Paid */}
-      <div className="border border-gray-200 rounded-lg p-6 opacity-75">
-        <div className="flex items-center gap-2 mb-4">
-          <span className="bg-gray-400 text-white text-xs font-semibold px-2 py-1 rounded">PAID SUBSCRIPTION</span>
-        </div>
-        <div className="flex items-start justify-between">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <svg className="w-8 h-8 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-              </svg>
-            </div>
-            <div>
-              <h4 className="font-semibold text-gray-900">Xero</h4>
-              <p className="text-sm text-gray-600 mt-1">
-                Sync expenses, invoices, and payments with Xero (requires paid Xero account)
-              </p>
-              {xeroStatus === 'connected' && xeroCompany && (
-                <div className="flex items-center gap-2 mt-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span className="text-sm text-green-600">Connected to {xeroCompany}</span>
-                </div>
-              )}
-            </div>
-          </div>
-          <div>
-            {xeroStatus === 'loading' ? (
-              <Button variant="ghost" disabled>
-                Checking...
-              </Button>
-            ) : xeroStatus === 'connected' ? (
-              <Button variant="ghost" onClick={disconnectXero}>
-                Disconnect
-              </Button>
-            ) : (
-              <Button onClick={connectXero}>
-                Connect
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {xeroStatus === 'connected' && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <h5 className="text-sm font-medium text-gray-900 mb-2">Sync Settings</h5>
-            <div className="space-y-2 text-sm text-gray-600">
-              <div className="flex items-center justify-between">
-                <span>Auto-sync expenses</span>
-                <span className="text-green-600">Enabled</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Auto-sync invoices</span>
-                <span className="text-green-600">Enabled</span>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* QuickBooks Integration */}
-      <div className="border border-gray-200 rounded-lg p-6">
-        <div className="flex items-start justify-between">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <svg className="w-8 h-8 text-green-600" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
-              </svg>
-            </div>
-            <div>
-              <h4 className="font-semibold text-gray-900">QuickBooks Online</h4>
-              <p className="text-sm text-gray-600 mt-1">
-                Sync expenses, invoices, and payments with QuickBooks
-              </p>
-              {qbStatus === 'connected' && qbCompany && (
-                <div className="flex items-center gap-2 mt-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span className="text-sm text-green-600">Connected to {qbCompany}</span>
-                </div>
-              )}
-            </div>
-          </div>
-          <div>
-            {qbStatus === 'loading' ? (
-              <Button variant="ghost" disabled>
-                Checking...
-              </Button>
-            ) : qbStatus === 'connected' ? (
-              <Button variant="ghost" onClick={disconnectQuickBooks}>
-                Disconnect
-              </Button>
-            ) : (
-              <Button onClick={connectQuickBooks}>
-                Connect
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {qbStatus === 'connected' && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
             <h5 className="text-sm font-medium text-gray-900 mb-2">Sync Settings</h5>
             <div className="space-y-2 text-sm text-gray-600">
               <div className="flex items-center justify-between">
