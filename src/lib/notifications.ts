@@ -1,5 +1,5 @@
 import { sendEmail, getFromAddress } from './email';
-import { sbServer } from './supabase-server';
+import { sbAdmin } from './supabase-server';
 
 /**
  * Get the email config for a company
@@ -11,11 +11,12 @@ async function getWhiteLabelConfig(companyId?: string): Promise<{ from?: string;
   
   if (!companyId) {
     console.log('[Email] No companyId provided, using default');
-    return { companyName: defaultCompanyName };
+    return { from: `${defaultCompanyName} <${baseEmail}>`, companyName: defaultCompanyName };
   }
   
   try {
-    const supabase = await sbServer();
+    // Use admin client to bypass RLS
+    const supabase = sbAdmin();
     const { data: company, error } = await supabase
       .from('companies')
       .select('name, white_label_enabled, white_label_company_name, white_label_email_name')
@@ -40,7 +41,7 @@ async function getWhiteLabelConfig(companyId?: string): Promise<{ from?: string;
     console.error('Error fetching company config:', error);
   }
   
-  return { companyName: defaultCompanyName };
+  return { from: `${defaultCompanyName} <${baseEmail}>`, companyName: defaultCompanyName };
 }
 
 // Email notification functions for expenses, orders, and deliveries
@@ -51,7 +52,7 @@ export async function sendExpenseNotifications(
   actionBy?: string
 ) {
   try {
-    const supabase = await sbServer();
+    const supabase = sbAdmin();
     
     // Get expense details - just get the expense data
     const { data: expense, error } = await supabase
@@ -148,7 +149,7 @@ export async function sendOrderNotifications(
   actionBy?: string
 ) {
   try {
-    const supabase = await sbServer();
+    const supabase = sbAdmin();
     
     // Get order details with user info
     const { data: order, error } = await supabase
@@ -439,7 +440,7 @@ export async function sendDeliveryNotifications(
   action: 'created' | 'order_completed'
 ) {
   try {
-    const supabase = await sbServer();
+    const supabase = sbAdmin();
     
     // Get delivery details with order and user info
     const { data: delivery, error } = await supabase
