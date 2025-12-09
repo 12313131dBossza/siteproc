@@ -25,34 +25,27 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'No company found for user' }, { status: 404 })
     }
     
-    // Use service role client to get company - select only known columns
+    // Use service role client to get company - use * to get all columns
     const admin = supabaseService()
     const { data: company, error: companyError } = await admin
       .from('companies')
-      .select('id, name, created_at, currency, units')
+      .select('*')
       .eq('id', profile.company_id)
       .single()
     
     if (companyError) {
-      // If currency/units columns don't exist in cache, try without them
-      const { data: basicCompany, error: basicError } = await admin
-        .from('companies')
-        .select('id, name, created_at')
-        .eq('id', profile.company_id)
-        .single()
-      
-      if (basicError) {
-        return NextResponse.json({ error: basicError.message }, { status: 500 })
-      }
-      
-      return NextResponse.json({
-        ...basicCompany,
-        currency: 'USD',
-        units: 'imperial'
-      })
+      console.error('GET company error:', companyError)
+      return NextResponse.json({ error: companyError.message }, { status: 500 })
     }
     
-    return NextResponse.json(company)
+    console.log('GET /api/companies - returning:', company)
+    
+    // Ensure currency and units have defaults if null
+    return NextResponse.json({
+      ...company,
+      currency: company.currency || 'USD',
+      units: company.units || 'imperial'
+    })
   } catch (error: any) {
     console.error('GET /api/companies error:', error)
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
@@ -83,38 +76,33 @@ export async function PATCH(req: NextRequest) {
     const body = await req.json().catch(() => ({}))
     const { name, currency, units } = body || {}
     
+    console.log('PATCH /api/companies - received:', { name, currency, units, company_id: profile.company_id })
+    
     // Use service role client for update
     const admin = supabaseService()
     
-    // Try updating all fields first
+    // Build update object - only include non-undefined values
+    const updateData: Record<string, any> = {}
+    if (name !== undefined && name !== null) updateData.name = name
+    if (currency !== undefined && currency !== null) updateData.currency = currency
+    if (units !== undefined && units !== null) updateData.units = units
+    
+    console.log('PATCH /api/companies - updating with:', updateData)
+    
+    // Try updating all fields
     const { data, error: updateError } = await admin
       .from('companies')
-      .update({ name, currency, units })
+      .update(updateData)
       .eq('id', profile.company_id)
-      .select('id, name, created_at, currency, units')
+      .select('*')
       .single()
     
     if (updateError) {
-      console.log('Full update failed:', updateError.message)
-      
-      // Fallback: update only name if schema cache is stale
-      const { data: nameData, error: nameError } = await admin
-        .from('companies')
-        .update({ name })
-        .eq('id', profile.company_id)
-        .select('id, name, created_at')
-        .single()
-      
-      if (nameError) {
-        return NextResponse.json({ error: nameError.message }, { status: 500 })
-      }
-      
-      return NextResponse.json({ 
-        ok: true, 
-        data: { ...nameData, currency: currency || 'USD', units: units || 'imperial' },
-        warning: 'Some settings could not be saved. The schema cache may need to refresh - go to Supabase Dashboard > Project Settings > API and click "Reload Schema".'
-      })
+      console.error('PATCH company error:', updateError)
+      return NextResponse.json({ error: updateError.message }, { status: 500 })
     }
+    
+    console.log('PATCH /api/companies - updated to:', data)
     
     return NextResponse.json({ ok: true, data })
   } catch (error: any) {

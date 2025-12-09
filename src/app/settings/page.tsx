@@ -123,10 +123,26 @@ function CompanyTab() {
         body: JSON.stringify({ name, currency, units })
       })
       
+      const data = await res.json().catch(() => ({}))
+      
       if (res.ok) {
-        toast.success('Company settings saved successfully')
+        // Re-fetch to confirm the save worked and update UI with actual DB values
+        const verifyRes = await fetch('/api/companies')
+        if (verifyRes.ok) {
+          const verifyData = await verifyRes.json()
+          setName(verifyData.name || '')
+          setCurrency(verifyData.currency || 'USD')
+          setUnits(verifyData.units || 'metric')
+          
+          if (data.warning) {
+            toast.success('Settings saved. Note: ' + data.warning)
+          } else {
+            toast.success('Company settings saved successfully')
+          }
+        } else {
+          toast.success('Settings saved successfully')
+        }
       } else {
-        const data = await res.json().catch(() => ({}))
         toast.error(data.error || 'Failed to save settings')
       }
     } catch (err) {
