@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { AppLayout } from '@/components/app-layout'
+import { PlanGate } from '@/components/PlanGate'
 import { KPICard } from '@/components/analytics/KPICard'
 import { LineChart } from '@/components/analytics/LineChart'
 import { BarChart } from '@/components/analytics/BarChart'
@@ -60,6 +61,14 @@ interface AnalyticsData {
 }
 
 export default function AnalyticsPage() {
+  return (
+    <PlanGate minPlan="pro" featureName="Analytics">
+      <AnalyticsContent />
+    </PlanGate>
+  );
+}
+
+function AnalyticsContent() {
   const { formatAmount } = useCurrency()
   const [data, setData] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)

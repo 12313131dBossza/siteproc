@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { CheckCircle, XCircle, Clock, AlertCircle, Eye, EyeOff, Plus, Filter, Trash2 } from 'lucide-react'
 import { AppLayout } from '@/components/app-layout'
+import { PlanGate } from '@/components/PlanGate'
 import { Button } from '@/components/ui/Button'
 import { format } from '@/lib/date-format'
 import { cn } from '@/lib/utils'
@@ -46,6 +47,14 @@ type Order = {
 }
 
 export default function ChangeOrdersPage() {
+  return (
+    <PlanGate minPlan="pro" featureName="Change Orders">
+      <ChangeOrdersContent />
+    </PlanGate>
+  );
+}
+
+function ChangeOrdersContent() {
   const { formatAmount } = useCurrency()
   const [pending, setPending] = useState<ChangeOrder[]>([])
   const [history, setHistory] = useState<ChangeOrder[]>([])

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/app-layout";
+import { PlanGate } from '@/components/PlanGate';
 import { Button } from "@/components/ui/Button";
 import { StatCard } from "@/components/StatCard";
 import {
@@ -56,6 +57,14 @@ interface ProductStats {
 }
 
 export default function ProductsPage() {
+  return (
+    <PlanGate minPlan="pro" featureName="Products">
+      <ProductsContent />
+    </PlanGate>
+  );
+}
+
+function ProductsContent() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);

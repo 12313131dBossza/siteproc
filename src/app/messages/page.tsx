@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback, DragEvent } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { AppLayout } from '@/components/app-layout';
-import { FeatureGate } from '@/components/FeatureGate';
+import { PlanGate } from '@/components/PlanGate';
 import {
   MessageCircle, Send, Search, Truck, Building2, FolderOpen, ChevronRight,
   X, Loader2, CheckCheck, Paperclip, ArrowLeft, Smile, Reply, 
@@ -95,6 +95,14 @@ const QUICK_TEMPLATES = [
 ];
 
 export default function MessagesPage() {
+  return (
+    <PlanGate minPlan="pro" featureName="Messages">
+      <MessagesContent />
+    </PlanGate>
+  );
+}
+
+function MessagesContent() {
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -943,7 +951,6 @@ export default function MessagesPage() {
 
   return (
     <AppLayout hideMobileNav={isInChat} hideMobileHeader={isInChat}>
-      <FeatureGate feature="inAppChat" mode="upgrade-prompt">
       {/* Messages Container - takes full height of AppLayout content area */}
       <div className="flex flex-col h-full bg-white">
         {/* Main Content */}
@@ -1837,7 +1844,6 @@ export default function MessagesPage() {
         </div>
       )}
       </div>
-      </FeatureGate>
     </AppLayout>
   );
 }

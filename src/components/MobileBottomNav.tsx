@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { createBrowserClient } from '@supabase/ssr';
 import { usePlan } from '@/hooks/usePlan';
-import { PlanFeatures } from '@/lib/plans';
+import { PlanId } from '@/lib/plans';
 import {
   LayoutDashboard,
   FolderOpen,
@@ -17,29 +17,34 @@ import {
 } from 'lucide-react';
 import { MobileMoreMenu } from './MobileMoreMenu';
 
-// Mobile nav items with access levels
-// 'all' = all users
-// 'internal' = internal company members only
-// 'viewer' = external viewers can see (project-scoped)
-// feature = optional plan feature required to see this item
+// Plan hierarchy for comparison
+const PLAN_LEVELS: Record<PlanId, number> = {
+  'free': 0,
+  'starter': 1,
+  'pro': 2,
+  'enterprise': 3,
+};
+
+// Mobile nav items with access levels and minimum plan
 const mobileNavItems: Array<{
   name: string;
   href: string;
   icon: any;
   access: 'all' | 'internal' | 'viewer';
-  feature?: keyof PlanFeatures;
+  minPlan: PlanId;
 }> = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, access: 'internal' },
-  { name: 'Projects', href: '/projects', icon: FolderOpen, access: 'all' },
-  { name: 'Messages', href: '/messages', icon: MessageCircle, access: 'all', feature: 'inAppChat' },
-  { name: 'Orders', href: '/orders', icon: ShoppingCart, access: 'viewer' },
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, access: 'internal', minPlan: 'starter' },
+  { name: 'Projects', href: '/projects', icon: FolderOpen, access: 'all', minPlan: 'starter' },
+  { name: 'Orders', href: '/orders', icon: ShoppingCart, access: 'viewer', minPlan: 'starter' },
+  // Messages requires Pro plan
+  { name: 'Messages', href: '/messages', icon: MessageCircle, access: 'all', minPlan: 'pro' },
 ];
 
 export function MobileBottomNav() {
   const pathname = usePathname();
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [userRole, setUserRole] = useState<string>('');
-  const { hasFeature } = usePlan();
+  const { plan } = usePlan();
   
   useEffect(() => {
     const loadUserRole = async () => {
@@ -68,7 +73,14 @@ export function MobileBottomNav() {
     loadUserRole();
   }, []);
 
-  // Filter navigation based on user role and plan features
+  // Helper to check if user's plan meets minimum requirement
+  const meetsMinPlan = (minPlan: PlanId): boolean => {
+    const userPlanLevel = PLAN_LEVELS[plan] || 0;
+    const requiredLevel = PLAN_LEVELS[minPlan] || 0;
+    return userPlanLevel >= requiredLevel;
+  };
+
+  // Filter navigation based on user role and plan level
   const isInternalMember = ['admin', 'owner', 'manager', 'accountant', 'bookkeeper', 'member'].includes(userRole);
   const isViewer = userRole === 'viewer';
   
@@ -83,8 +95,8 @@ export function MobileBottomNav() {
     // If no role access, reject
     if (!hasAccess) return false;
     
-    // Then check feature-based access (if required)
-    if (item.feature && !hasFeature(item.feature)) {
+    // Then check plan-based access
+    if (!meetsMinPlan(item.minPlan)) {
       return false;
     }
     

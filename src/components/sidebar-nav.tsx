@@ -33,51 +33,61 @@ import {
   Sparkles,
   Zap
 } from "lucide-react";
-import { PlanFeatures } from '@/lib/plans';
+import { PlanId } from '@/lib/plans';
 
-// Full navigation with required roles
+// Plan hierarchy for comparison
+const PLAN_LEVELS: Record<PlanId, number> = {
+  'free': 0,
+  'starter': 1,
+  'pro': 2,
+  'enterprise': 3,
+};
+
+// Full navigation with required roles and minimum plan
 // 'all' = all authenticated users can see
 // 'internal' = only internal company members (admin, owner, manager, bookkeeper, member)
 // 'admin' = only admin/owner
 // 'viewer' = external viewers/clients can see (project-scoped data)
 // 'supplier' = supplier portal only
-// 'all_except_supplier' = company + clients (not suppliers)
-// feature = optional plan feature required to see this item
+// minPlan = minimum plan required ('starter' | 'pro' | 'enterprise')
 const navigation: Array<{
   name: string;
   href: string;
   icon: any;
   access: 'all' | 'internal' | 'admin' | 'viewer' | 'supplier' | 'all_except_supplier';
-  feature?: keyof PlanFeatures;
+  minPlan: PlanId;
 }> = [
-  // === Company Internal Navigation ===
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, access: 'internal' },
-  { name: "Analytics", href: "/analytics", icon: BarChart3, access: 'internal' },
-  { name: "Projects", href: "/projects", icon: FolderOpen, access: 'all' }, // All users can see their projects
-  { name: "Messages", href: "/messages", icon: MessageCircle, access: 'all', feature: 'inAppChat' }, // Requires inAppChat feature
-  { name: "Orders", href: "/orders", icon: ShoppingCart, access: 'viewer' }, // Viewers see project-filtered orders
-  { name: "Expenses", href: "/expenses", icon: Receipt, access: 'viewer' }, // Viewers see project-filtered expenses
-  { name: "Deliveries", href: "/deliveries", icon: Package, access: 'viewer' }, // Viewers see project-filtered deliveries
-  { name: "Documents", href: "/documents", icon: Files, access: 'viewer' }, // Viewers see project-filtered documents
-  { name: "Change Orders", href: "/change-orders", icon: FileText, access: 'internal' },
-  { name: "Products", href: "/products", icon: PackageSearch, access: 'internal' },
-  { name: "Users & Roles", href: "/users", icon: Users, access: 'admin' },
-  { name: "Activity Log", href: "/activity", icon: Activity, access: 'internal' },
-  { name: "Bids", href: "/bids", icon: FileSignature, access: 'internal' },
-  { name: "Contractors", href: "/contractors", icon: Building2, access: 'internal' },
-  { name: "Clients", href: "/clients", icon: UserCheck, access: 'internal' },
-  { name: "Payments", href: "/payments", icon: CreditCard, access: 'internal' },
-  { name: "Reports", href: "/reports", icon: BarChart3, access: 'internal', feature: 'advancedReports' }, // Requires advancedReports feature
-  { name: "Settings", href: "/settings", icon: Settings, access: 'internal' },
-  // === Supplier Portal ===
-  { name: "Supplier Portal", href: "/supplier-portal", icon: Truck, access: 'supplier' },
+  // === STARTER PLAN - Core Features ===
+  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, access: 'internal', minPlan: 'starter' },
+  { name: "Projects", href: "/projects", icon: FolderOpen, access: 'all', minPlan: 'starter' },
+  { name: "Orders", href: "/orders", icon: ShoppingCart, access: 'viewer', minPlan: 'starter' },
+  { name: "Expenses", href: "/expenses", icon: Receipt, access: 'viewer', minPlan: 'starter' },
+  { name: "Deliveries", href: "/deliveries", icon: Package, access: 'viewer', minPlan: 'starter' },
+  { name: "Documents", href: "/documents", icon: Files, access: 'viewer', minPlan: 'starter' },
+  { name: "Users & Roles", href: "/users", icon: Users, access: 'admin', minPlan: 'starter' },
+  { name: "Activity Log", href: "/activity", icon: Activity, access: 'internal', minPlan: 'starter' },
+  { name: "Contractors", href: "/contractors", icon: Building2, access: 'internal', minPlan: 'starter' },
+  { name: "Clients", href: "/clients", icon: UserCheck, access: 'internal', minPlan: 'starter' },
+  { name: "Payments", href: "/payments", icon: CreditCard, access: 'internal', minPlan: 'starter' },
+  { name: "Settings", href: "/settings", icon: Settings, access: 'internal', minPlan: 'starter' },
+  
+  // === PRO PLAN - Advanced Features ===
+  { name: "Analytics", href: "/analytics", icon: BarChart3, access: 'internal', minPlan: 'pro' },
+  { name: "Change Orders", href: "/change-orders", icon: FileText, access: 'internal', minPlan: 'pro' },
+  { name: "Products", href: "/products", icon: PackageSearch, access: 'internal', minPlan: 'pro' },
+  { name: "Bids", href: "/bids", icon: FileSignature, access: 'internal', minPlan: 'pro' },
+  { name: "Messages", href: "/messages", icon: MessageCircle, access: 'all', minPlan: 'pro' },
+  { name: "Reports", href: "/reports", icon: BarChart3, access: 'internal', minPlan: 'pro' },
+  
+  // === Supplier Portal (all plans) ===
+  { name: "Supplier Portal", href: "/supplier-portal", icon: Truck, access: 'supplier', minPlan: 'starter' },
 ];
 
 export function SidebarNav() {
   const pathname = usePathname();
   const router = useRouter();
   const { displayName, logoUrl } = useWhiteLabel();
-  const { hasFeature } = usePlan();
+  const { plan } = usePlan();
   const [userEmail, setUserEmail] = useState<string>('');
   const [userName, setUserName] = useState<string>('User');
   const [userRole, setUserRole] = useState<string>('');
@@ -183,7 +193,14 @@ export function SidebarNav() {
     }
   };
 
-  // Filter navigation based on user role and plan features
+  // Helper to check if user's plan meets minimum requirement
+  const meetsMinPlan = (minPlan: PlanId): boolean => {
+    const userPlanLevel = PLAN_LEVELS[plan] || 0;
+    const requiredLevel = PLAN_LEVELS[minPlan] || 0;
+    return userPlanLevel >= requiredLevel;
+  };
+
+  // Filter navigation based on user role AND plan level
   const filteredNavigation = navigation.filter(item => {
     // Internal company members (includes accountant)
     const isInternalMember = ['admin', 'owner', 'manager', 'accountant', 'bookkeeper', 'member'].includes(userRole);
@@ -209,8 +226,8 @@ export function SidebarNav() {
     // If no role access, reject
     if (!hasAccess) return false;
     
-    // Then check feature-based access (if required)
-    if (item.feature && !hasFeature(item.feature)) {
+    // Then check plan-based access
+    if (!meetsMinPlan(item.minPlan)) {
       return false;
     }
     
