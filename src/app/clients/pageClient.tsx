@@ -265,44 +265,44 @@ export default function ClientsPageClient() {
         </Button>
       }
     >
-      <div className="space-y-6 p-6">
+      <div className="space-y-4 p-4 md:p-6">
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white border rounded-lg p-4">
-            <div className="text-sm text-gray-500 mb-1">Total Clients</div>
-            <div className="text-2xl font-bold text-gray-900">{clients.length}</div>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-white border rounded-lg p-3">
+            <div className="text-xs text-gray-500 mb-1">Total Clients</div>
+            <div className="text-xl font-bold text-gray-900">{clients.length}</div>
           </div>
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <div className="text-sm text-green-700 mb-1">Active</div>
-            <div className="text-2xl font-bold text-green-900">
+          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+            <div className="text-xs text-green-700 mb-1">Active</div>
+            <div className="text-xl font-bold text-green-900">
               {clients.filter(c => c.status === 'active').length}
             </div>
           </div>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="text-sm text-blue-700 mb-1">Total Projects</div>
-            <div className="text-2xl font-bold text-blue-900">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <div className="text-xs text-blue-700 mb-1">Total Projects</div>
+            <div className="text-xl font-bold text-blue-900">
               {clients.reduce((sum, c) => sum + (c.total_projects || 0), 0)}
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-white border rounded-lg p-4">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
+        <div className="bg-white border rounded-lg p-3">
+          <div className="flex flex-col gap-3">
+            <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search clients..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-4 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">All Status</option>
               <option value="active">Active</option>
@@ -339,48 +339,48 @@ export default function ClientsPageClient() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {filteredClients.map((client) => (
-              <div key={client.id} className="bg-white border rounded-lg p-6 hover:shadow-md transition-shadow">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-semibold text-gray-900">{client.name}</h3>
-                      <span className={cn('px-2 py-1 rounded-full text-xs font-medium border', getStatusBadge(client.status))}>
+              <div key={client.id} className="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <h3 className="font-semibold text-gray-900 text-sm">{client.name}</h3>
+                      <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap', getStatusBadge(client.status))}>
                         {client.status}
                       </span>
                     </div>
                     {client.company_name && (
-                      <p className="text-sm text-gray-600 flex items-center gap-1">
-                        <Building className="h-3 w-3" />
-                        {client.company_name}
+                      <p className="text-xs text-gray-600 flex items-center gap-1 truncate">
+                        <Building className="h-3 w-3 flex-shrink-0" />
+                        <span className="truncate">{client.company_name}</span>
                       </p>
                     )}
                   </div>
                 </div>
 
-                <div className="space-y-2 mb-4">
+                <div className="space-y-1.5 mb-3 text-xs">
                   {client.industry && (
-                    <p className="text-sm text-gray-600 flex items-center gap-1">
-                      <Briefcase className="h-3 w-3" />
+                    <p className="text-gray-600 flex items-center gap-1">
+                      <Briefcase className="h-3 w-3 flex-shrink-0" />
                       {client.industry}
                     </p>
                   )}
                   {client.email && (
-                    <p className="text-sm text-gray-600 flex items-center gap-1">
-                      <Mail className="h-3 w-3" />
-                      {client.email}
+                    <p className="text-gray-600 flex items-center gap-1 truncate">
+                      <Mail className="h-3 w-3 flex-shrink-0" />
+                      <span className="truncate">{client.email}</span>
                     </p>
                   )}
                   {client.phone && (
-                    <p className="text-sm text-gray-600 flex items-center gap-1">
-                      <Phone className="h-3 w-3" />
+                    <p className="text-gray-600 flex items-center gap-1">
+                      <Phone className="h-3 w-3 flex-shrink-0" />
                       {client.phone}
                     </p>
                   )}
                   {(client.city || client.state) && (
-                    <p className="text-sm text-gray-600 flex items-center gap-1">
-                      <MapPin className="h-3 w-3" />
+                    <p className="text-gray-600 flex items-center gap-1">
+                      <MapPin className="h-3 w-3 flex-shrink-0" />
                       {[client.city, client.state].filter(Boolean).join(', ')}
                     </p>
                   )}
@@ -389,15 +389,15 @@ export default function ClientsPageClient() {
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleEdit(client)}
-                    className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-center gap-1"
+                    className="flex-1 px-3 py-1.5 text-xs border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-center gap-1"
                   >
-                    <Edit className="h-3 w-3 text-gray-600" />
+                    <Edit className="h-3 w-3" />
                     Edit
                   </button>
                   <button
                     onClick={() => handleDelete(client.id)}
                     disabled={deleting === client.id}
-                    className="px-3 py-2 text-sm border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+                    className="px-3 py-1.5 text-xs border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
                   >
                     {deleting === client.id ? (
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
