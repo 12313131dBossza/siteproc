@@ -21,10 +21,14 @@ function CallbackContent() {
         const hashParams = new URLSearchParams(hash);
         const accessToken = hashParams.get('access_token');
         const refreshToken = hashParams.get('refresh_token');
+        const tokenType = hashParams.get('type'); // recovery, signup, etc.
         
         // Also check URL search params for tokens (some email clients strip hash)
         const urlAccessToken = searchParams.get('access_token');
         const urlRefreshToken = searchParams.get('refresh_token');
+        const urlType = searchParams.get('type');
+        
+        const isRecovery = tokenType === 'recovery' || urlType === 'recovery';
         
         if ((accessToken && refreshToken) || (urlAccessToken && urlRefreshToken)) {
           // Hash-based or URL param flow: extract tokens
@@ -34,6 +38,16 @@ function CallbackContent() {
           console.log('[callback] Using token flow');
           console.log('[callback] Hash params:', Object.fromEntries(hashParams.entries()));
           console.log('[callback] URL params:', Object.fromEntries(searchParams.entries()));
+          console.log('[callback] Is recovery flow:', isRecovery);
+          
+          // For recovery flow, redirect directly to reset-password with tokens in hash
+          // so the reset-password page can handle setting the session
+          if (isRecovery) {
+            console.log('[callback] Recovery flow - redirecting to reset-password with tokens');
+            const resetUrl = `/reset-password#access_token=${finalAccessToken}&refresh_token=${finalRefreshToken}&type=recovery`;
+            router.replace(resetUrl);
+            return;
+          }
 
           // Check for remember me preference
           const rememberMe = localStorage.getItem('rememberMe') === 'true';

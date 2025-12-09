@@ -36,8 +36,10 @@ function ForgotPasswordForm() {
       
       const appUrl = window.location.origin;
       
+      // Use auth/callback with a type parameter, then redirect to reset-password
+      // This ensures the tokens are properly handled
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${appUrl}/reset-password`,
+        redirectTo: `${appUrl}/auth/callback?type=recovery&redirectTo=${encodeURIComponent('/reset-password')}`,
       });
 
       if (error) {
