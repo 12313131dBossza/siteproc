@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Construction Project Management Software | SiteProc</title>
+    <meta name="description" content="SiteProc is the #1 construction project management software for mid-size builders. Track budgets, deliveries, change orders. Starts at $49/user.">
+    <meta name="keywords" content="construction project management software, construction daily log app, construction change order software, project tracking for builders">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://www.siteproc.com/construction-project-management-software">
+    
+    <meta property="og:title" content="Construction Project Management Software | SiteProc">
+    <meta property="og:description" content="Track budgets, deliveries, and change orders in one platform. Built for mid-size builders.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://www.siteproc.com/construction-project-management-software">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #1e40af;
+            --accent-color: #f59e0b;
+            --dark: #0f172a;
+            --dark-light: #1e293b;
+            --text-light: #e2e8f0;
+            --text-gray: #94a3b8;
+            --white: #ffffff;
+            --success: #10b981;
+        }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background-color: var(--dark); color: var(--text-light); line-height: 1.7; }
+        a { color: var(--primary-color); text-decoration: none; }
+        
+        .site-header { position: fixed; top: 0; left: 0; right: 0; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(20px); padding: 1rem 2rem; z-index: 1000; border-bottom: 1px solid rgba(37, 99, 235, 0.2); }
+        .nav-container { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+        .site-logo { font-size: 1.5rem; font-weight: 800; color: var(--white); display: flex; align-items: center; gap: 0.5rem; }
+        .logo-icon { width: 40px; height: 40px; background: linear-gradient(135deg, #2563eb, #1d4ed8); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        .nav-cta { background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: var(--white); padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; transition: all 0.3s ease; }
+        .nav-cta:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(37, 99, 235, 0.4); }
+
+        .hero-section { padding: 10rem 2rem 6rem; background: linear-gradient(135deg, rgba(15, 23, 42, 0.97), rgba(30, 41, 59, 0.95)); text-align: center; }
+        .hero-container { max-width: 900px; margin: 0 auto; }
+        h1 { font-size: 3rem; font-weight: 900; margin-bottom: 1.5rem; background: linear-gradient(135deg, var(--white), var(--text-gray)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .hero-subtitle { font-size: 1.25rem; color: var(--text-gray); margin-bottom: 2rem; max-width: 700px; margin-left: auto; margin-right: auto; }
+        .hero-cta { display: inline-block; background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: var(--white); padding: 1rem 2.5rem; border-radius: 10px; font-weight: 700; font-size: 1.1rem; transition: all 0.3s ease; margin-bottom: 3rem; }
+        .hero-cta:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(37, 99, 235, 0.5); }
+        .trust-badges { display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap; margin-top: 2rem; }
+        .trust-badge { display: flex; align-items: center; gap: 0.5rem; color: var(--text-gray); font-size: 0.9rem; }
+        .trust-badge .icon { color: var(--success); }
+
+        .content-section { padding: 5rem 2rem; max-width: 900px; margin: 0 auto; }
+        .content-section h2 { font-size: 2rem; font-weight: 800; margin-bottom: 1.5rem; color: var(--white); }
+        .content-section h3 { font-size: 1.5rem; font-weight: 700; margin: 2rem 0 1rem; color: var(--text-light); }
+        .content-section p { color: var(--text-gray); margin-bottom: 1.5rem; font-size: 1.05rem; }
+        .content-section ul { list-style: none; margin-bottom: 2rem; }
+        .content-section ul li { padding: 0.75rem 0; padding-left: 2rem; position: relative; color: var(--text-gray); }
+        .content-section ul li::before { content: '✓'; position: absolute; left: 0; color: var(--success); font-weight: bold; }
+
+        .comparison-section { padding: 5rem 2rem; background: rgba(30, 41, 59, 0.5); }
+        .comparison-container { max-width: 1100px; margin: 0 auto; }
+        .comparison-table { width: 100%; border-collapse: collapse; margin-top: 2rem; background: rgba(15, 23, 42, 0.8); border-radius: 12px; overflow: hidden; }
+        .comparison-table th, .comparison-table td { padding: 1rem; text-align: center; border-bottom: 1px solid rgba(37, 99, 235, 0.2); }
+        .comparison-table th { background: rgba(37, 99, 235, 0.2); font-weight: 700; color: var(--white); }
+        .comparison-table td:first-child { text-align: left; font-weight: 600; color: var(--text-light); }
+        .comparison-table .check { color: var(--success); font-size: 1.25rem; }
+        .comparison-table .cross { color: #ef4444; font-size: 1.25rem; }
+        .highlight-col { background: rgba(37, 99, 235, 0.1); }
+
+        .pricing-section { padding: 5rem 2rem; }
+        .pricing-container { max-width: 1100px; margin: 0 auto; text-align: center; }
+        .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; margin-top: 3rem; }
+        .pricing-card { background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 16px; padding: 2.5rem; transition: all 0.3s ease; }
+        .pricing-card:hover { border-color: var(--primary-color); transform: translateY(-5px); }
+        .pricing-card.featured { border-color: var(--primary-color); background: rgba(37, 99, 235, 0.1); position: relative; }
+        .pricing-card.featured::before { content: 'MOST POPULAR'; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--primary-color); color: white; padding: 0.25rem 1rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
+        .pricing-name { font-size: 1.5rem; font-weight: 700; color: var(--white); margin-bottom: 0.5rem; }
+        .pricing-price { font-size: 3rem; font-weight: 900; color: var(--primary-color); }
+        .pricing-price span { font-size: 1rem; color: var(--text-gray); font-weight: 500; }
+        .pricing-features { list-style: none; margin: 2rem 0; text-align: left; }
+        .pricing-features li { padding: 0.5rem 0; color: var(--text-gray); display: flex; align-items: center; gap: 0.5rem; }
+        .pricing-features li::before { content: '✓'; color: var(--success); font-weight: bold; }
+        .pricing-cta { display: block; width: 100%; padding: 1rem; background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: var(--white); border-radius: 8px; font-weight: 600; text-align: center; transition: all 0.3s ease; }
+        .pricing-cta:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(37, 99, 235, 0.4); }
+
+        .testimonials-section { padding: 5rem 2rem; background: rgba(30, 41, 59, 0.3); }
+        .testimonials-container { max-width: 1100px; margin: 0 auto; }
+        .testimonials-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin-top: 3rem; }
+        .testimonial-card { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 12px; padding: 2rem; }
+        .testimonial-quote { font-size: 1.1rem; color: var(--text-light); font-style: italic; margin-bottom: 1.5rem; line-height: 1.8; }
+        .testimonial-author { display: flex; align-items: center; gap: 1rem; }
+        .testimonial-avatar { width: 50px; height: 50px; background: linear-gradient(135deg, var(--primary-color), var(--accent-color)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; color: white; }
+        .testimonial-name { font-weight: 600; color: var(--white); }
+        .testimonial-title { font-size: 0.875rem; color: var(--text-gray); }
+
+        .faq-section { padding: 5rem 2rem; }
+        .faq-container { max-width: 800px; margin: 0 auto; }
+        .faq-item { border-bottom: 1px solid rgba(37, 99, 235, 0.2); padding: 1.5rem 0; }
+        .faq-question { font-size: 1.1rem; font-weight: 600; color: var(--white); margin-bottom: 0.75rem; }
+        .faq-answer { color: var(--text-gray); line-height: 1.8; }
+
+        .cta-section { padding: 5rem 2rem; background: linear-gradient(135deg, rgba(37, 99, 235, 0.2), rgba(30, 41, 59, 0.8)); text-align: center; }
+        .cta-container { max-width: 700px; margin: 0 auto; }
+        .cta-title { font-size: 2.5rem; font-weight: 800; color: var(--white); margin-bottom: 1rem; }
+        .cta-subtitle { color: var(--text-gray); font-size: 1.1rem; margin-bottom: 2rem; }
+        .cta-button { display: inline-block; background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: var(--white); padding: 1.25rem 3rem; border-radius: 10px; font-weight: 700; font-size: 1.2rem; transition: all 0.3s ease; }
+        .cta-button:hover { transform: translateY(-3px); box-shadow: 0 15px 40px rgba(37, 99, 235, 0.5); }
+
+        .site-footer { padding: 3rem 2rem; background: rgba(15, 23, 42, 0.95); border-top: 1px solid rgba(37, 99, 235, 0.2); text-align: center; }
+        .footer-links { display: flex; justify-content: center; gap: 2rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+        .footer-links a { color: var(--text-gray); transition: color 0.3s ease; }
+        .footer-links a:hover { color: var(--primary-color); }
+        .footer-copyright { color: var(--text-gray); font-size: 0.875rem; }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 2rem; }
+            .hero-section { padding: 8rem 1.5rem 4rem; }
+            .content-section { padding: 3rem 1.5rem; }
+            .comparison-table { font-size: 0.85rem; }
+            .comparison-table th, .comparison-table td { padding: 0.75rem 0.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <header class="site-header">
+        <nav class="nav-container">
+            <a href="/" class="site-logo">
+                <span class="logo-icon">🏗️</span>
+                <span>SiteProc</span>
+            </a>
+            <a href="/login" class="nav-cta">Book Private Demo →</a>
+        </nav>
+    </header>
+
+    <section class="hero-section">
+        <div class="hero-container">
+            <h1>Construction Project Management Software</h1>
+            <p class="hero-subtitle">
+                Stop juggling Excel spreadsheets, WhatsApp groups, and endless email chains. SiteProc gives mid-size builders one platform to track every project from bid to completion.
+            </p>
+            <a href="/login" class="hero-cta">Book Private Demo →</a>
+            <div class="trust-badges">
+                <span class="trust-badge"><span class="icon">✓</span> No credit card required</span>
+                <span class="trust-badge"><span class="icon">✓</span> 14-day free trial</span>
+                <span class="trust-badge"><span class="icon">✓</span> Setup in 15 minutes</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="content-section">
+        <h2>Project Management Built for How Construction Actually Works</h2>
+        <p>
+            Generic project management tools like Monday.com or Asana weren't built for construction. They don't understand that your "deliverables" are actual physical deliveries. They don't handle change orders. They can't capture proof of delivery photos when your crew is on a site with no cell service.
+        </p>
+        <p>
+            SiteProc is construction project management software designed from the ground up for builders. Every feature exists because a real construction company needed it—not because a product manager thought it sounded cool.
+        </p>
+
+        <h3>The Daily Reality of Construction Project Management</h3>
+        <p>
+            Let's be honest about what project management looks like for most builders:
+        </p>
+        <ul>
+            <li>Your project manager has 47 browser tabs open trying to track budgets across projects</li>
+            <li>Material deliveries arrive but no one documents them properly until there's a dispute</li>
+            <li>Change orders get approved verbally on-site and forgotten until the final invoice</li>
+            <li>Your foreman texts updates from job sites that get buried in message threads</li>
+            <li>End of month reconciliation takes days because data lives in five different systems</li>
+            <li>Clients call you directly because they have no visibility into their project</li>
+        </ul>
+
+        <h3>How SiteProc Changes Everything</h3>
+        <p>
+            Our construction project management software consolidates everything into one platform that your entire team—office and field—can access:
+        </p>
+        <ul>
+            <li><strong>Real-Time Budget Tracking:</strong> See budget vs. actual for every project instantly, not at month-end</li>
+            <li><strong>Construction Daily Log App:</strong> Your field team logs updates, photos, and issues from their phones</li>
+            <li><strong>Change Order Workflow:</strong> Create, approve, and track change orders digitally with full audit trails</li>
+            <li><strong>Delivery Documentation:</strong> Capture proof of delivery with photos, quantities, and timestamps</li>
+            <li><strong>Expense Tracking:</strong> Submit and approve expenses with receipt photos from the field</li>
+            <li><strong>Client Portal:</strong> Give clients real-time visibility without constant phone calls</li>
+            <li><strong>Offline Functionality:</strong> Works without internet on remote job sites</li>
+        </ul>
+
+        <h3>Built-In Construction Daily Log</h3>
+        <p>
+            Forget paper daily logs that get lost or never filled out. SiteProc's construction daily log app runs on any smartphone. Your foremen can document weather conditions, crew activities, deliveries received, and issues encountered—all with photos and GPS timestamps.
+        </p>
+        <p>
+            Logs sync automatically when your team has connectivity. Office staff see updates in real-time. Nothing gets lost. Nothing gets forgotten. When there's a dispute six months later, you have complete documentation.
+        </p>
+
+        <h3>Change Order Management That Actually Works</h3>
+        <p>
+            Change orders are profit killers when they're not tracked properly. How many times have you eaten costs because a scope change was approved on-site but never documented?
+        </p>
+        <p>
+            SiteProc's construction change order software lets you create change orders from anywhere, attach supporting documentation, calculate cost impacts, and get client approval digitally. Every change is tracked with timestamps and linked to the original scope. No more he-said-she-said disputes.
+        </p>
+    </section>
+
+    <section class="comparison-section">
+        <div class="comparison-container">
+            <h2 style="text-align: center; color: var(--white); font-size: 2rem; margin-bottom: 1rem;">Construction Project Management Software Comparison</h2>
+            <p style="text-align: center; color: var(--text-gray); max-width: 700px; margin: 0 auto 2rem;">
+                See how SiteProc compares to other project management solutions for construction.
+            </p>
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Feature</th>
+                        <th class="highlight-col">SiteProc</th>
+                        <th>Procore</th>
+                        <th>Buildertrend</th>
+                        <th>CoConstruct</th>
+                        <th>Monday.com</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Starting Price</td>
+                        <td class="highlight-col"><strong>$49/user</strong></td>
+                        <td>$500+/mo</td>
+                        <td>$499/mo</td>
+                        <td>$99/mo</td>
+                        <td>$10/user</td>
+                    </tr>
+                    <tr>
+                        <td>Built for Construction</td>
+                        <td class="highlight-col"><span class="check">✓</span></td>
+                        <td><span class="check">✓</span></td>
+                        <td><span class="check">✓</span></td>
+                        <td><span class="check">✓</span></td>
+                        <td><span class="cross">✗</span></td>
+                    </tr>
+                    <tr>
+                        <td>Daily Log App</td>
+                        <td class="highlight-col"><span class="check">✓</span></td>
+                        <td><span class="check">✓</span></td>
+                        <td><span class="check">✓</span></td>
+                        <td><span class="cross">✗</span></td>
+                        <td><span class="cross">✗</span></td>
+                    </tr>
+                    <tr>
+                        <td>Offline Mode</td>
+                        <td class="highlight-col"><span class="check">✓</span></td>
+                        <td><span class="cross">✗</span></td>
+                        <td><span class="cross">✗</span></td>
+                        <td><span class="cross">✗</span></td>
+                        <td><span class="cross">✗</span></td>
+                    </tr>
+                    <tr>
+                        <td>Change Order Management</td>
+                        <td class="highlight-col"><span class="check">✓</span></td>
+                        <td><span class="check">✓</span></td>
+                        <td><span class="check">✓</span></td>
+                        <td><span class="check">✓</span></td>
+                        <td><span class="cross">✗</span></td>
+                    </tr>
+                    <tr>
+                        <td>Accounting Sync</td>
+                        <td class="highlight-col"><span class="check">✓</span> Free</td>
+                        <td>Extra cost</td>
+                        <td>Extra cost</td>
+                        <td><span class="check">✓</span></td>
+                        <td><span class="cross">✗</span></td>
+                    </tr>
+                    <tr>
+                        <td>Client Portal</td>
+                        <td class="highlight-col"><span class="check">✓</span></td>
+                        <td><span class="check">✓</span></td>
+                        <td><span class="check">✓</span></td>
+                        <td><span class="check">✓</span></td>
+                        <td><span class="cross">✗</span></td>
+                    </tr>
+                    <tr>
+                        <td>Best For</td>
+                        <td class="highlight-col"><strong>$5M-$50M builders</strong></td>
+                        <td>Enterprise</td>
+                        <td>Residential</td>
+                        <td>Remodelers</td>
+                        <td>Tech companies</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="pricing-section">
+        <div class="pricing-container">
+            <h2 style="color: var(--white); font-size: 2rem; margin-bottom: 0.5rem;">Simple, Transparent Pricing</h2>
+            <p style="color: var(--text-gray);">No contracts. No hidden fees. Cancel anytime.</p>
+            
+            <div class="pricing-grid">
+                <div class="pricing-card">
+                    <div class="pricing-name">Starter</div>
+                    <div class="pricing-price">$49<span>/user/month</span></div>
+                    <ul class="pricing-features">
+                        <li>Up to 5 users</li>
+                        <li>10 active projects</li>
+                        <li>Daily log app</li>
+                        <li>Basic reporting</li>
+                        <li>Email support</li>
+                    </ul>
+                    <a href="/login" class="pricing-cta">Start Free Trial</a>
+                </div>
+                
+                <div class="pricing-card featured">
+                    <div class="pricing-name">Pro</div>
+                    <div class="pricing-price">$99<span>/user/month</span></div>
+                    <ul class="pricing-features">
+                        <li>Unlimited users</li>
+                        <li>Unlimited projects</li>
+                        <li>Change order management</li>
+                        <li>Offline mode</li>
+                        <li>Client portal</li>
+                        <li>Zoho Books sync</li>
+                        <li>Priority support</li>
+                    </ul>
+                    <a href="/login" class="pricing-cta">Start Free Trial</a>
+                </div>
+                
+                <div class="pricing-card">
+                    <div class="pricing-name">Enterprise</div>
+                    <div class="pricing-price">$149<span>/user/month</span></div>
+                    <ul class="pricing-features">
+                        <li>Everything in Pro</li>
+                        <li>White-label branding</li>
+                        <li>Custom integrations</li>
+                        <li>API access</li>
+                        <li>Dedicated success manager</li>
+                    </ul>
+                    <a href="/login" class="pricing-cta">Contact Sales</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="testimonials-section">
+        <div class="testimonials-container">
+            <h2 style="text-align: center; color: var(--white); font-size: 2rem; margin-bottom: 1rem;">What Builders Say About SiteProc</h2>
+            <div class="testimonials-grid">
+                <div class="testimonial-card">
+                    <p class="testimonial-quote">"We were using Buildertrend but it was overkill for our size. SiteProc gives us exactly what we need—project tracking, daily logs, and accounting sync—without the bloat."</p>
+                    <div class="testimonial-author">
+                        <div class="testimonial-avatar">JM</div>
+                        <div>
+                            <div class="testimonial-name">Jason Mitchell</div>
+                            <div class="testimonial-title">Owner, Mitchell Builders ($18M revenue)</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="testimonial-card">
+                    <p class="testimonial-quote">"The daily log app has transformed our documentation. My foremen actually use it because it's fast. When we have disputes, we have timestamped evidence."</p>
+                    <div class="testimonial-author">
+                        <div class="testimonial-avatar">LP</div>
+                        <div>
+                            <div class="testimonial-name">Lisa Parker</div>
+                            <div class="testimonial-title">Project Manager, Summit Construction ($35M revenue)</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="testimonial-card">
+                    <p class="testimonial-quote">"Change orders used to be our biggest profit leak. Now everything is documented and approved digitally. We've recovered at least $50K in scope creep this year alone."</p>
+                    <div class="testimonial-author">
+                        <div class="testimonial-avatar">RC</div>
+                        <div>
+                            <div class="testimonial-name">Robert Chen</div>
+                            <div class="testimonial-title">President, Pacific Builders ($22M revenue)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="faq-section">
+        <div class="faq-container">
+            <h2 style="text-align: center; color: var(--white); font-size: 2rem; margin-bottom: 2rem;">Frequently Asked Questions</h2>
+            
+            <div class="faq-item">
+                <h3 class="faq-question">How is SiteProc different from generic project management tools?</h3>
+                <p class="faq-answer">Generic tools like Monday.com or Asana weren't built for construction. They don't handle physical deliveries, change orders, daily logs, or work offline. SiteProc is built specifically for construction workflows—every feature exists because real builders needed it.</p>
+            </div>
+            
+            <div class="faq-item">
+                <h3 class="faq-question">Can my field team use this on job sites?</h3>
+                <p class="faq-answer">Absolutely. SiteProc works on any smartphone or tablet. The offline mode means your team can log activities, capture photos, and submit updates even without cell service. Everything syncs when they're back online.</p>
+            </div>
+            
+            <div class="faq-item">
+                <h3 class="faq-question">How does the daily log app work?</h3>
+                <p class="faq-answer">Your foremen open the app, select the project, and log weather, crew activities, deliveries, and issues. They can attach photos with GPS timestamps. Logs are immediately visible to office staff. It takes 2-3 minutes to complete a thorough daily log.</p>
+            </div>
+            
+            <div class="faq-item">
+                <h3 class="faq-question">What's included in change order management?</h3>
+                <p class="faq-answer">Create change orders from anywhere, attach documentation, calculate cost impacts, and route for approval. Clients can approve digitally. Everything is tracked with timestamps and linked to the original scope.</p>
+            </div>
+            
+            <div class="faq-item">
+                <h3 class="faq-question">Does SiteProc replace our accounting software?</h3>
+                <p class="faq-answer">No. SiteProc integrates with Zoho Books (free accounting software) to sync expenses, invoices, and payments. You keep your accounting workflow—we just eliminate double-entry.</p>
+            </div>
+            
+            <div class="faq-item">
+                <h3 class="faq-question">How long does implementation take?</h3>
+                <p class="faq-answer">Most teams are up and running in 15-30 minutes. No consultants required. Import your projects, invite your team, and start tracking immediately.</p>
+            </div>
+            
+            <div class="faq-item">
+                <h3 class="faq-question">Is there a contract?</h3>
+                <p class="faq-answer">No contracts. Pay month-to-month and cancel anytime. We don't lock you into annual commitments.</p>
+            </div>
+            
+            <div class="faq-item">
+                <h3 class="faq-question">What support is available?</h3>
+                <p class="faq-answer">Starter includes email support. Pro includes priority email and chat. Enterprise includes a dedicated success manager and phone support.</p>
+            </div>
+            
+            <div class="faq-item">
+                <h3 class="faq-question">Can clients see their project status?</h3>
+                <p class="faq-answer">Yes. The client portal (Pro plan) gives clients real-time visibility into progress, deliveries, change orders, and invoices. They stop calling you for updates.</p>
+            </div>
+            
+            <div class="faq-item">
+                <h3 class="faq-question">Is my data secure?</h3>
+                <p class="faq-answer">Yes. We use bank-level encryption, secure cloud hosting, and continuous backups. Enterprise plans include SOC 2 compliance documentation.</p>
+            </div>
+            
+            <div class="faq-item">
+                <h3 class="faq-question">Can I import existing project data?</h3>
+                <p class="faq-answer">Yes. We can import from Excel, QuickBooks, and most construction software. Our support team helps with migration at no extra cost.</p>
+            </div>
+            
+            <div class="faq-item">
+                <h3 class="faq-question">What's in the free trial?</h3>
+                <p class="faq-answer">Full access to Pro features for 14 days. No credit card required. Test with your real projects and team.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta-section">
+        <div class="cta-container">
+            <h2 class="cta-title">Ready to Manage Projects Like a Pro?</h2>
+            <p class="cta-subtitle">Join hundreds of builders who've simplified project management with SiteProc. 14-day free trial, no credit card required.</p>
+            <a href="/login" class="cta-button">Book Private Demo →</a>
+        </div>
+    </section>
+
+    <footer class="site-footer">
+        <div class="footer-links">
+            <a href="/construction-management-software">Construction Management</a>
+            <a href="/construction-project-management-software">Project Management</a>
+            <a href="/construction-accounting-software">Accounting Software</a>
+            <a href="/construction-delivery-tracking-software">Delivery Tracking</a>
+            <a href="/best-software-for-construction-companies">Best Software</a>
+        </div>
+        <p class="footer-copyright">© 2025 SiteProc. All rights reserved.</p>
+    </footer>
+</body>
+</html>

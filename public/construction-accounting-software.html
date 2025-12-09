@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Construction Accounting Software for Builders | SiteProc</title>
+    <meta name="description" content="SiteProc syncs expenses, invoices & payments with Zoho Books. Best construction accounting software for builders. Free accounting sync included.">
+    <meta name="keywords" content="construction accounting software, QuickBooks sync for construction, Xero sync for builders, construction payment application software">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://www.siteproc.com/construction-accounting-software">
+    
+    <meta property="og:title" content="Construction Accounting Software for Builders | SiteProc">
+    <meta property="og:description" content="Sync expenses, invoices & payments automatically. Free Zoho Books integration included.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://www.siteproc.com/construction-accounting-software">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --primary-color: #2563eb; --secondary-color: #1e40af; --accent-color: #f59e0b; --dark: #0f172a; --dark-light: #1e293b; --text-light: #e2e8f0; --text-gray: #94a3b8; --white: #ffffff; --success: #10b981; }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background-color: var(--dark); color: var(--text-light); line-height: 1.7; }
+        a { color: var(--primary-color); text-decoration: none; }
+        
+        .site-header { position: fixed; top: 0; left: 0; right: 0; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(20px); padding: 1rem 2rem; z-index: 1000; border-bottom: 1px solid rgba(37, 99, 235, 0.2); }
+        .nav-container { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+        .site-logo { font-size: 1.5rem; font-weight: 800; color: var(--white); display: flex; align-items: center; gap: 0.5rem; }
+        .logo-icon { width: 40px; height: 40px; background: linear-gradient(135deg, #2563eb, #1d4ed8); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        .nav-cta { background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: var(--white); padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; transition: all 0.3s ease; }
+        .nav-cta:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(37, 99, 235, 0.4); }
+
+        .hero-section { padding: 10rem 2rem 6rem; background: linear-gradient(135deg, rgba(15, 23, 42, 0.97), rgba(30, 41, 59, 0.95)); text-align: center; }
+        .hero-container { max-width: 900px; margin: 0 auto; }
+        h1 { font-size: 3rem; font-weight: 900; margin-bottom: 1.5rem; background: linear-gradient(135deg, var(--white), var(--text-gray)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .hero-subtitle { font-size: 1.25rem; color: var(--text-gray); margin-bottom: 2rem; max-width: 700px; margin-left: auto; margin-right: auto; }
+        .hero-cta { display: inline-block; background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: var(--white); padding: 1rem 2.5rem; border-radius: 10px; font-weight: 700; font-size: 1.1rem; transition: all 0.3s ease; margin-bottom: 3rem; }
+        .hero-cta:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(37, 99, 235, 0.5); }
+        .trust-badges { display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap; margin-top: 2rem; }
+        .trust-badge { display: flex; align-items: center; gap: 0.5rem; color: var(--text-gray); font-size: 0.9rem; }
+        .trust-badge .icon { color: var(--success); }
+
+        .content-section { padding: 5rem 2rem; max-width: 900px; margin: 0 auto; }
+        .content-section h2 { font-size: 2rem; font-weight: 800; margin-bottom: 1.5rem; color: var(--white); }
+        .content-section h3 { font-size: 1.5rem; font-weight: 700; margin: 2rem 0 1rem; color: var(--text-light); }
+        .content-section p { color: var(--text-gray); margin-bottom: 1.5rem; font-size: 1.05rem; }
+        .content-section ul { list-style: none; margin-bottom: 2rem; }
+        .content-section ul li { padding: 0.75rem 0; padding-left: 2rem; position: relative; color: var(--text-gray); }
+        .content-section ul li::before { content: '✓'; position: absolute; left: 0; color: var(--success); font-weight: bold; }
+
+        .comparison-section { padding: 5rem 2rem; background: rgba(30, 41, 59, 0.5); }
+        .comparison-container { max-width: 1100px; margin: 0 auto; }
+        .comparison-table { width: 100%; border-collapse: collapse; margin-top: 2rem; background: rgba(15, 23, 42, 0.8); border-radius: 12px; overflow: hidden; }
+        .comparison-table th, .comparison-table td { padding: 1rem; text-align: center; border-bottom: 1px solid rgba(37, 99, 235, 0.2); }
+        .comparison-table th { background: rgba(37, 99, 235, 0.2); font-weight: 700; color: var(--white); }
+        .comparison-table td:first-child { text-align: left; font-weight: 600; color: var(--text-light); }
+        .comparison-table .check { color: var(--success); font-size: 1.25rem; }
+        .comparison-table .cross { color: #ef4444; font-size: 1.25rem; }
+        .highlight-col { background: rgba(37, 99, 235, 0.1); }
+
+        .pricing-section { padding: 5rem 2rem; }
+        .pricing-container { max-width: 1100px; margin: 0 auto; text-align: center; }
+        .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; margin-top: 3rem; }
+        .pricing-card { background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 16px; padding: 2.5rem; transition: all 0.3s ease; }
+        .pricing-card:hover { border-color: var(--primary-color); transform: translateY(-5px); }
+        .pricing-card.featured { border-color: var(--primary-color); background: rgba(37, 99, 235, 0.1); position: relative; }
+        .pricing-card.featured::before { content: 'MOST POPULAR'; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--primary-color); color: white; padding: 0.25rem 1rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
+        .pricing-name { font-size: 1.5rem; font-weight: 700; color: var(--white); margin-bottom: 0.5rem; }
+        .pricing-price { font-size: 3rem; font-weight: 900; color: var(--primary-color); }
+        .pricing-price span { font-size: 1rem; color: var(--text-gray); font-weight: 500; }
+        .pricing-features { list-style: none; margin: 2rem 0; text-align: left; }
+        .pricing-features li { padding: 0.5rem 0; color: var(--text-gray); display: flex; align-items: center; gap: 0.5rem; }
+        .pricing-features li::before { content: '✓'; color: var(--success); font-weight: bold; }
+        .pricing-cta { display: block; width: 100%; padding: 1rem; background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: var(--white); border-radius: 8px; font-weight: 600; text-align: center; transition: all 0.3s ease; }
+        .pricing-cta:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(37, 99, 235, 0.4); }
+
+        .testimonials-section { padding: 5rem 2rem; background: rgba(30, 41, 59, 0.3); }
+        .testimonials-container { max-width: 1100px; margin: 0 auto; }
+        .testimonials-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin-top: 3rem; }
+        .testimonial-card { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 12px; padding: 2rem; }
+        .testimonial-quote { font-size: 1.1rem; color: var(--text-light); font-style: italic; margin-bottom: 1.5rem; line-height: 1.8; }
+        .testimonial-author { display: flex; align-items: center; gap: 1rem; }
+        .testimonial-avatar { width: 50px; height: 50px; background: linear-gradient(135deg, var(--primary-color), var(--accent-color)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; color: white; }
+        .testimonial-name { font-weight: 600; color: var(--white); }
+        .testimonial-title { font-size: 0.875rem; color: var(--text-gray); }
+
+        .faq-section { padding: 5rem 2rem; }
+        .faq-container { max-width: 800px; margin: 0 auto; }
+        .faq-item { border-bottom: 1px solid rgba(37, 99, 235, 0.2); padding: 1.5rem 0; }
+        .faq-question { font-size: 1.1rem; font-weight: 600; color: var(--white); margin-bottom: 0.75rem; }
+        .faq-answer { color: var(--text-gray); line-height: 1.8; }
+
+        .cta-section { padding: 5rem 2rem; background: linear-gradient(135deg, rgba(37, 99, 235, 0.2), rgba(30, 41, 59, 0.8)); text-align: center; }
+        .cta-container { max-width: 700px; margin: 0 auto; }
+        .cta-title { font-size: 2.5rem; font-weight: 800; color: var(--white); margin-bottom: 1rem; }
+        .cta-subtitle { color: var(--text-gray); font-size: 1.1rem; margin-bottom: 2rem; }
+        .cta-button { display: inline-block; background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: var(--white); padding: 1.25rem 3rem; border-radius: 10px; font-weight: 700; font-size: 1.2rem; transition: all 0.3s ease; }
+        .cta-button:hover { transform: translateY(-3px); box-shadow: 0 15px 40px rgba(37, 99, 235, 0.5); }
+
+        .site-footer { padding: 3rem 2rem; background: rgba(15, 23, 42, 0.95); border-top: 1px solid rgba(37, 99, 235, 0.2); text-align: center; }
+        .footer-links { display: flex; justify-content: center; gap: 2rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+        .footer-links a { color: var(--text-gray); transition: color 0.3s ease; }
+        .footer-links a:hover { color: var(--primary-color); }
+        .footer-copyright { color: var(--text-gray); font-size: 0.875rem; }
+
+        @media (max-width: 768px) { h1 { font-size: 2rem; } .hero-section { padding: 8rem 1.5rem 4rem; } .content-section { padding: 3rem 1.5rem; } .comparison-table { font-size: 0.85rem; } .comparison-table th, .comparison-table td { padding: 0.75rem 0.5rem; } }
+    </style>
+</head>
+<body>
+    <header class="site-header">
+        <nav class="nav-container">
+            <a href="/" class="site-logo"><span class="logo-icon">🏗️</span><span>SiteProc</span></a>
+            <a href="/login" class="nav-cta">Book Private Demo →</a>
+        </nav>
+    </header>
+
+    <section class="hero-section">
+        <div class="hero-container">
+            <h1>Construction Accounting Software</h1>
+            <p class="hero-subtitle">
+                Eliminate double-entry and month-end chaos. SiteProc syncs expenses, invoices, and payments directly with Zoho Books—free accounting software that rivals QuickBooks.
+            </p>
+            <a href="/login" class="hero-cta">Book Private Demo →</a>
+            <div class="trust-badges">
+                <span class="trust-badge"><span class="icon">✓</span> Free Zoho Books sync</span>
+                <span class="trust-badge"><span class="icon">✓</span> Two-way sync</span>
+                <span class="trust-badge"><span class="icon">✓</span> No extra cost</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="content-section">
+        <h2>The Construction Accounting Nightmare (And How to Fix It)</h2>
+        <p>
+            If you're like most builders, your bookkeeper spends 10-20 hours per week on data entry. Expenses from job sites get entered into spreadsheets, then re-entered into QuickBooks. Invoices live in one system, payments in another. Month-end close takes a week because nothing reconciles.
+        </p>
+        <p>
+            SiteProc's construction accounting software integration eliminates this chaos. We sync directly with Zoho Books—completely free accounting software—so your financial data flows automatically between systems.
+        </p>
+
+        <h3>Why We Chose Zoho Books Over QuickBooks</h3>
+        <p>
+            Most construction software charges extra for QuickBooks or Xero integration. And those integrations often break, cause sync issues, or require expensive add-ons.
+        </p>
+        <p>
+            We partnered with Zoho Books because:
+        </p>
+        <ul>
+            <li><strong>It's completely free</strong> for businesses under certain thresholds (no monthly subscription)</li>
+            <li><strong>Full-featured accounting:</strong> Invoicing, expenses, bank reconciliation, reports—everything you need</li>
+            <li><strong>Reliable sync:</strong> Two-way sync that actually works, built by our team</li>
+            <li><strong>No integration fees:</strong> The sync is included in every SiteProc plan</li>
+            <li><strong>Modern interface:</strong> Your team will actually use it</li>
+        </ul>
+
+        <h3>What Syncs Automatically</h3>
+        <p>
+            When your field team submits expenses or you approve a payment in SiteProc, it flows directly to Zoho Books:
+        </p>
+        <ul>
+            <li><strong>Expenses:</strong> Every expense with receipt photos, categories, and project allocations</li>
+            <li><strong>Invoices:</strong> Create invoices in SiteProc, send from Zoho Books</li>
+            <li><strong>Payments:</strong> Record payments once, see them everywhere</li>
+            <li><strong>Vendors:</strong> Sync your vendor list across both systems</li>
+            <li><strong>Projects:</strong> Allocate costs to projects for job costing</li>
+        </ul>
+
+        <h3>Construction Payment Application Software</h3>
+        <p>
+            Managing payment applications on large projects is painful. Progress billing, retainage, change order impacts—it's a mess of spreadsheets and manual calculations.
+        </p>
+        <p>
+            SiteProc's construction payment application software tracks:
+        </p>
+        <ul>
+            <li>Schedule of values with percentage complete</li>
+            <li>Previous billings and current application amounts</li>
+            <li>Retainage held and released</li>
+            <li>Change order impacts on contract value</li>
+            <li>Automatic G702/G703 format generation</li>
+        </ul>
+
+        <h3>Real-Time Job Costing</h3>
+        <p>
+            Stop waiting until month-end to know if a project is profitable. SiteProc shows you budget vs. actual in real-time:
+        </p>
+        <ul>
+            <li>Track costs by project, phase, or cost code</li>
+            <li>See variance alerts before they become problems</li>
+            <li>Compare estimated vs. actual labor and materials</li>
+            <li>Generate profit/loss reports by project instantly</li>
+        </ul>
+    </section>
+
+    <section class="comparison-section">
+        <div class="comparison-container">
+            <h2 style="text-align: center; color: var(--white); font-size: 2rem; margin-bottom: 1rem;">Construction Accounting Integration Comparison</h2>
+            <p style="text-align: center; color: var(--text-gray); max-width: 700px; margin: 0 auto 2rem;">
+                See how SiteProc's accounting integration compares to other construction software.
+            </p>
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Feature</th>
+                        <th class="highlight-col">SiteProc + Zoho</th>
+                        <th>Procore + QB</th>
+                        <th>Buildertrend + QB</th>
+                        <th>CoConstruct + QB</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Accounting Software Cost</td>
+                        <td class="highlight-col"><strong>FREE</strong></td>
+                        <td>$30-200/mo</td>
+                        <td>$30-200/mo</td>
+                        <td>$30-200/mo</td>
+                    </tr>
+                    <tr>
+                        <td>Integration Cost</td>
+                        <td class="highlight-col"><strong>Included</strong></td>
+                        <td>Extra</td>
+                        <td>Extra</td>
+                        <td>Included</td>
+                    </tr>
+                    <tr>
+                        <td>Two-Way Sync</td>
+                        <td class="highlight-col"><span class="check">✓</span></td>
+                        <td>Limited</td>
+                        <td>Limited</td>
+                        <td><span class="check">✓</span></td>
+                    </tr>
+                    <tr>
+                        <td>Expense Sync</td>
+                        <td class="highlight-col"><span class="check">✓</span></td>
+                        <td><span class="check">✓</span></td>
+                        <td><span class="check">✓</span></td>
+                        <td><span class="check">✓</span></td>
+                    </tr>
+                    <tr>
+                        <td>Invoice Sync</td>
+                        <td class="highlight-col"><span class="check">✓</span></td>
+                        <td><span class="check">✓</span></td>
+                        <td><span class="check">✓</span></td>
+                        <td><span class="check">✓</span></td>
+                    </tr>
+                    <tr>
+                        <td>Payment Applications</td>
+                        <td class="highlight-col"><span class="check">✓</span></td>
+                        <td><span class="check">✓</span></td>
+                        <td><span class="cross">✗</span></td>
+                        <td><span class="cross">✗</span></td>
+                    </tr>
+                    <tr>
+                        <td>Real-Time Job Costing</td>
+                        <td class="highlight-col"><span class="check">✓</span></td>
+                        <td><span class="check">✓</span></td>
+                        <td><span class="check">✓</span></td>
+                        <td><span class="check">✓</span></td>
+                    </tr>
+                    <tr>
+                        <td>Total Monthly Cost (5 users)</td>
+                        <td class="highlight-col"><strong>$245</strong></td>
+                        <td>$700+</td>
+                        <td>$600+</td>
+                        <td>$200+</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="pricing-section">
+        <div class="pricing-container">
+            <h2 style="color: var(--white); font-size: 2rem; margin-bottom: 0.5rem;">Simple, Transparent Pricing</h2>
+            <p style="color: var(--text-gray);">Zoho Books integration included in all plans. No extra fees.</p>
+            
+            <div class="pricing-grid">
+                <div class="pricing-card">
+                    <div class="pricing-name">Starter</div>
+                    <div class="pricing-price">$49<span>/user/month</span></div>
+                    <ul class="pricing-features">
+                        <li>Up to 5 users</li>
+                        <li>10 active projects</li>
+                        <li>Expense tracking</li>
+                        <li>Basic reporting</li>
+                        <li>Email support</li>
+                    </ul>
+                    <a href="/login" class="pricing-cta">Start Free Trial</a>
+                </div>
+                
+                <div class="pricing-card featured">
+                    <div class="pricing-name">Pro</div>
+                    <div class="pricing-price">$99<span>/user/month</span></div>
+                    <ul class="pricing-features">
+                        <li>Unlimited users</li>
+                        <li>Unlimited projects</li>
+                        <li>Zoho Books sync</li>
+                        <li>Payment applications</li>
+                        <li>Real-time job costing</li>
+                        <li>Advanced reports</li>
+                        <li>Priority support</li>
+                    </ul>
+                    <a href="/login" class="pricing-cta">Start Free Trial</a>
+                </div>
+                
+                <div class="pricing-card">
+                    <div class="pricing-name">Enterprise</div>
+                    <div class="pricing-price">$149<span>/user/month</span></div>
+                    <ul class="pricing-features">
+                        <li>Everything in Pro</li>
+                        <li>Custom integrations</li>
+                        <li>API access</li>
+                        <li>Multi-entity support</li>
+                        <li>Dedicated success manager</li>
+                    </ul>
+                    <a href="/login" class="pricing-cta">Contact Sales</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="testimonials-section">
+        <div class="testimonials-container">
+            <h2 style="text-align: center; color: var(--white); font-size: 2rem; margin-bottom: 1rem;">What Builders Say About Our Accounting Integration</h2>
+            <div class="testimonials-grid">
+                <div class="testimonial-card">
+                    <p class="testimonial-quote">"My bookkeeper was spending 15 hours a week entering data into QuickBooks. With SiteProc and Zoho Books, it's automatic. She now does actual analysis instead of data entry."</p>
+                    <div class="testimonial-author">
+                        <div class="testimonial-avatar">KW</div>
+                        <div>
+                            <div class="testimonial-name">Karen Williams</div>
+                            <div class="testimonial-title">CFO, Williams & Associates ($15M revenue)</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="testimonial-card">
+                    <p class="testimonial-quote">"Switching from QuickBooks to Zoho Books saved us $200/month. The SiteProc integration is actually better than what we had with QuickBooks. Win-win."</p>
+                    <div class="testimonial-author">
+                        <div class="testimonial-avatar">TH</div>
+                        <div>
+                            <div class="testimonial-name">Tom Henderson</div>
+                            <div class="testimonial-title">Owner, Henderson Construction ($9M revenue)</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="testimonial-card">
+                    <p class="testimonial-quote">"Month-end close used to take a week. Now it's 2 days because everything is already synced and reconciled. My accountant doesn't hate me anymore."</p>
+                    <div class="testimonial-author">
+                        <div class="testimonial-avatar">AM</div>
+                        <div>
+                            <div class="testimonial-name">Angela Martinez</div>
+                            <div class="testimonial-title">President, Martinez Builders ($32M revenue)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="faq-section">
+        <div class="faq-container">
+            <h2 style="text-align: center; color: var(--white); font-size: 2rem; margin-bottom: 2rem;">Frequently Asked Questions</h2>
+            
+            <div class="faq-item">
+                <h3 class="faq-question">Do I have to switch from QuickBooks to Zoho Books?</h3>
+                <p class="faq-answer">We recommend Zoho Books because it's free and our integration is seamless. However, if you're committed to QuickBooks, you can still use SiteProc for project management and export data for manual entry. We're working on direct QuickBooks integration for future releases.</p>
+            </div>
+            
+            <div class="faq-item">
+                <h3 class="faq-question">Is Zoho Books really free?</h3>
+                <p class="faq-answer">Yes. Zoho Books is free for businesses under certain revenue thresholds. Even for larger businesses, plans start at just $15/month—a fraction of QuickBooks. It includes invoicing, expenses, bank reconciliation, and all the features construction companies need.</p>
+            </div>
+            
+            <div class="faq-item">
+                <h3 class="faq-question">What exactly syncs between SiteProc and Zoho Books?</h3>
+                <p class="faq-answer">Expenses (with receipt photos), invoices, payments, vendors, and project allocations. The sync is two-way, so changes in either system are reflected in both.</p>
+            </div>
+            
+            <div class="faq-item">
+                <h3 class="faq-question">How does the sync work technically?</h3>
+                <p class="faq-answer">It's automatic. When you approve an expense in SiteProc, it appears in Zoho Books within minutes. No manual export/import, no CSV files, no double-entry.</p>
+            </div>
+            
+            <div class="faq-item">
+                <h3 class="faq-question">Can I do job costing by project?</h3>
+                <p class="faq-answer">Absolutely. Every expense and invoice can be allocated to a specific project. SiteProc shows real-time budget vs. actual, and Zoho Books provides the financial reports you need for taxes and analysis.</p>
+            </div>
+            
+            <div class="faq-item">
+                <h3 class="faq-question">What about payment applications for commercial projects?</h3>
+                <p class="faq-answer">SiteProc includes construction payment application software that tracks schedule of values, progress billing, retainage, and change order impacts. Generate G702/G703 format documents automatically.</p>
+            </div>
+            
+            <div class="faq-item">
+                <h3 class="faq-question">Will my accountant know how to use Zoho Books?</h3>
+                <p class="faq-answer">If they know QuickBooks, they'll pick up Zoho Books in an hour. The interface is similar. We also provide migration support and training resources.</p>
+            </div>
+            
+            <div class="faq-item">
+                <h3 class="faq-question">What if I have multiple companies or entities?</h3>
+                <p class="faq-answer">Enterprise plans support multi-entity configurations. Each entity can have its own Zoho Books organization while sharing project data in SiteProc.</p>
+            </div>
+            
+            <div class="faq-item">
+                <h3 class="faq-question">Is the integration secure?</h3>
+                <p class="faq-answer">Yes. We use bank-level encryption and OAuth authentication. Your accounting data is never stored on intermediate servers—it flows directly between SiteProc and Zoho Books.</p>
+            </div>
+            
+            <div class="faq-item">
+                <h3 class="faq-question">Can I try the integration before committing?</h3>
+                <p class="faq-answer">Yes. The 14-day free trial includes full access to the Zoho Books integration. Connect your accounts and test with real data.</p>
+            </div>
+            
+            <div class="faq-item">
+                <h3 class="faq-question">What support is available for accounting questions?</h3>
+                <p class="faq-answer">Our support team can help with integration setup and sync issues. For accounting questions, Zoho has excellent documentation and support. Enterprise plans include dedicated assistance.</p>
+            </div>
+            
+            <div class="faq-item">
+                <h3 class="faq-question">What happens if I outgrow Zoho Books?</h3>
+                <p class="faq-answer">Zoho Books scales with you—paid plans handle millions in revenue. If you ever need enterprise accounting (like NetSuite), our Enterprise plan includes custom integration development.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta-section">
+        <div class="cta-container">
+            <h2 class="cta-title">Ready to Simplify Construction Accounting?</h2>
+            <p class="cta-subtitle">Join builders who've eliminated double-entry and month-end chaos. Free Zoho Books integration included.</p>
+            <a href="/login" class="cta-button">Book Private Demo →</a>
+        </div>
+    </section>
+
+    <footer class="site-footer">
+        <div class="footer-links">
+            <a href="/construction-management-software">Construction Management</a>
+            <a href="/construction-project-management-software">Project Management</a>
+            <a href="/construction-accounting-software">Accounting Software</a>
+            <a href="/construction-delivery-tracking-software">Delivery Tracking</a>
+            <a href="/best-software-for-construction-companies">Best Software</a>
+        </div>
+        <p class="footer-copyright">© 2025 SiteProc. All rights reserved.</p>
+    </footer>
+</body>
+</html>
