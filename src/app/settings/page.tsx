@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react'
 import { AppLayout } from "@/components/app-layout"
 import { Button } from "@/components/ui/Button"
 import { Input, Select } from "@/components/ui"
-import { useCompanyId } from '@/lib/useCompanyId'
 import { 
   Building2, 
   Users, 
@@ -81,40 +80,44 @@ function CompanyTab() {
   const [name, setName] = useState('')
   const [currency, setCurrency] = useState('USD')
   const [units, setUnits] = useState('imperial')
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  
-  const companyId = useCompanyId()
+  const [error, setError] = useState<string | null>(null)
   
   useEffect(() => {
     const loadCompany = async () => {
-      if (!companyId) return
       setLoading(true)
+      setError(null)
       try {
-        const r = await fetch('/api/companies/' + companyId)
+        // Use the base /api/companies endpoint which gets the user's company automatically
+        const r = await fetch('/api/companies')
         const d = await r.json().catch(() => null)
+        
+        if (!r.ok) {
+          setError(d?.error || 'Failed to load company settings')
+          return
+        }
+        
         if (d) {
           setName(d.name || '')
           setCurrency(d.currency || 'USD')
           setUnits(d.units || 'imperial')
         }
-      } catch (error) {
-        console.error('Failed to load company:', error)
+      } catch (err) {
+        console.error('Failed to load company:', err)
+        setError('Failed to load company settings')
       } finally {
         setLoading(false)
       }
     }
     loadCompany()
-  }, [companyId])
+  }, [])
   
   async function save() {
-    if (!companyId) {
-      toast.error('No company ID found. Please log in again.')
-      return
-    }
     setSaving(true)
     try {
-      const res = await fetch('/api/companies/' + companyId, {
+      // Use the base /api/companies endpoint which updates the user's company automatically
+      const res = await fetch('/api/companies', {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ name, currency, units })
@@ -123,10 +126,11 @@ function CompanyTab() {
       if (res.ok) {
         toast.success('Company settings saved successfully')
       } else {
-        toast.error('Failed to save settings')
+        const data = await res.json().catch(() => ({}))
+        toast.error(data.error || 'Failed to save settings')
       }
-    } catch (error) {
-      console.error('Save error:', error)
+    } catch (err) {
+      console.error('Save error:', err)
       toast.error('Failed to save settings')
     } finally {
       setSaving(false)
@@ -144,13 +148,13 @@ function CompanyTab() {
     )
   }
 
-  if (!companyId) {
+  if (error) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
           <AlertCircle className="h-8 w-8 text-amber-500 mx-auto mb-4" />
-          <p className="text-gray-600 mb-2">No company found</p>
-          <p className="text-sm text-gray-500">Please visit the dashboard first to initialize your company settings.</p>
+          <p className="text-gray-600 mb-2">{error}</p>
+          <p className="text-sm text-gray-500">Please make sure you are logged in with a valid account.</p>
           <Link href="/dashboard" className="text-blue-600 hover:underline text-sm mt-2 inline-block">
             Go to Dashboard
           </Link>
