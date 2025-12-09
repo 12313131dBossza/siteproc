@@ -68,6 +68,7 @@ export default function ExpensesPage() {
   const [newExpense, setNewExpense] = useState({ vendor: '', category: '', amount: '', description: '', project_id: '', payment_method: '' } as any);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [projects, setProjects] = useState<Array<{ id: string; name: string }>>([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
@@ -291,6 +292,9 @@ export default function ExpensesPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Prevent double submission
+    if (submitting) return;
+    
     console.log('=== FRONTEND EXPENSE SUBMISSION ===');
     console.log('Form data:', newExpense);
     
@@ -304,6 +308,7 @@ export default function ExpensesPage() {
       return;
     }
 
+    setSubmitting(true);
     try {
       const requestBody = {
         vendor: newExpense.vendor,
@@ -385,6 +390,8 @@ export default function ExpensesPage() {
       
       const errorMessage = error instanceof Error ? error.message : 'Failed to create expense';
       toast.error(errorMessage);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -897,6 +904,7 @@ export default function ExpensesPage() {
                 setNewExpense({ vendor: '', category: '', amount: '', description: '', project_id: '', payment_method: '' });
               }}
               submitLabel={editingExpense ? "Update Expense" : "Add Expense"}
+              isSubmitting={submitting}
             />
           </form>
         </FormModal>

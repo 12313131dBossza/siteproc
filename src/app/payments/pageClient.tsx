@@ -39,6 +39,7 @@ export default function PaymentsPageClient() {
   const [showModal, setShowModal] = useState(false);
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   // Form state
   const [form, setForm] = useState({
@@ -82,7 +83,10 @@ export default function PaymentsPageClient() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    
+    // Prevent double submission
+    if (submitting) return;
+    setSubmitting(true);
 
     try {
       const payload = {
@@ -131,7 +135,7 @@ export default function PaymentsPageClient() {
       console.error('Error saving payment:', error);
       alert(error.message || 'Failed to save payment');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -408,17 +412,17 @@ export default function PaymentsPageClient() {
                 setEditingPayment(null);
               }}
               className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors text-sm"
-              disabled={loading}
+              disabled={submitting}
             >
               Cancel
             </button>
             <button
               type="submit"
               form="payment-form"
-              disabled={loading}
+              disabled={submitting}
               className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
             >
-              {loading ? (
+              {submitting ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                   Saving...

@@ -116,6 +116,7 @@ export default function UsersPage() {
   const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
   const [userToRemove, setUserToRemove] = useState<UserData | null>(null);
   const [isRemoving, setIsRemoving] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
@@ -252,10 +253,12 @@ export default function UsersPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
+    setSubmitting(true);
     
-    if (selectedUser) {
-      // Update existing user
-      try {
+    try {
+      if (selectedUser) {
+        // Update existing user
         const response = await fetch(`/api/users/${selectedUser.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -281,13 +284,8 @@ export default function UsersPage() {
         setFormData({ name: '', email: '', role: '', department: '', phone: '' });
         setSelectedUser(null);
         setIsModalOpen(false);
-      } catch (error: any) {
-        console.error('Error updating user:', error);
-        toast.error(error.message || 'Failed to update user');
-      }
-    } else {
-      // Create new user (invite) - Call the API to send invitation
-      try {
+      } else {
+        // Create new user (invite) - Call the API to send invitation
         const response = await fetch('/api/users', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -324,10 +322,12 @@ export default function UsersPage() {
         setFormData({ name: '', email: '', role: '', department: '', phone: '' });
         setIsModalOpen(false);
         toast.success('Invitation sent successfully!');
-      } catch (error: any) {
-        console.error('Error sending invitation:', error);
-        toast.error(error.message || 'Failed to send invitation');
       }
+    } catch (error: any) {
+      console.error('Error with user operation:', error);
+      toast.error(error.message || 'Operation failed');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -764,11 +764,12 @@ export default function UsersPage() {
                       setFormData({ name: '', email: '', role: '', department: '', phone: '' });
                     }}
                     className="flex-1"
+                    disabled={submitting}
                   >
                     Cancel
                   </Button>
-                  <Button type="submit" variant="primary" className="flex-1">
-                    {selectedUser ? 'Update User' : 'Send Invitation'}
+                  <Button type="submit" variant="primary" className="flex-1" disabled={submitting}>
+                    {submitting ? 'Saving...' : (selectedUser ? 'Update User' : 'Send Invitation')}
                   </Button>
                 </div>
               </form>

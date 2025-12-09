@@ -70,6 +70,8 @@ interface ProductStats {
 export default function TokoPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [adjusting, setAdjusting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTab, setSelectedTab] = useState<'all' | 'active' | 'low-stock' | 'inactive'>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -277,6 +279,9 @@ export default function TokoPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
+    setSubmitting(true);
+    
     const formData = new FormData(e.target as HTMLFormElement);
     
     const productData = {
@@ -319,12 +324,15 @@ export default function TokoPage() {
     } catch (error) {
       console.error('Error saving product:', error);
       toast.error('Failed to save product');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleInventoryAdjust = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedProduct) return;
+    if (!selectedProduct || adjusting) return;
+    setAdjusting(true);
 
     const formData = new FormData(e.target as HTMLFormElement);
     const transaction_type = formData.get('transaction_type') as string;
@@ -361,6 +369,8 @@ export default function TokoPage() {
     } catch (error: any) {
       console.error('Error adjusting inventory:', error);
       toast.error(error.message || 'Failed to adjust inventory');
+    } finally {
+      setAdjusting(false);
     }
   };
 
@@ -904,6 +914,7 @@ export default function TokoPage() {
                       setSelectedProduct(null);
                     }} 
                     className="flex-1"
+                    disabled={submitting}
                   >
                     Cancel
                   </Button>
@@ -911,9 +922,10 @@ export default function TokoPage() {
                     type="submit" 
                     variant="primary" 
                     className="flex-1"
-                    leftIcon={selectedProduct ? <Edit className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                    disabled={submitting}
+                    leftIcon={submitting ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> : (selectedProduct ? <Edit className="w-4 h-4" /> : <Plus className="w-4 h-4" />)}
                   >
-                    {selectedProduct ? 'Update Product' : 'Add Product'}
+                    {submitting ? 'Saving...' : (selectedProduct ? 'Update Product' : 'Add Product')}
                   </Button>
                 </div>
               </form>
@@ -1124,11 +1136,12 @@ export default function TokoPage() {
                       setSelectedProduct(null);
                     }} 
                     className="flex-1"
+                    disabled={adjusting}
                   >
                     Cancel
                   </Button>
-                  <Button type="submit" variant="primary" className="flex-1">
-                    Adjust Inventory
+                  <Button type="submit" variant="primary" className="flex-1" disabled={adjusting}>
+                    {adjusting ? 'Adjusting...' : 'Adjust Inventory'}
                   </Button>
                 </div>
               </form>
