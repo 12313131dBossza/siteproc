@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase-server'
+import { sbServer } from '@/lib/supabase-server'
 
 export const runtime = 'nodejs'
 
 // GET /api/companies - Get current user's company
 export async function GET(req: NextRequest) {
   try {
-    const supabase = await createClient()
+    const supabase = await sbServer()
     
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
 // PATCH /api/companies - Update current user's company
 export async function PATCH(req: NextRequest) {
   try {
-    const supabase = await createClient()
+    const supabase = await sbServer()
     
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
