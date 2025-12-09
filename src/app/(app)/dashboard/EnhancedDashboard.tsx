@@ -399,38 +399,40 @@ export default function EnhancedDashboard() {
             </Link>
           </div>
           {hasExpenseCategories ? (
-            <div className="flex flex-col lg:flex-row items-center gap-4">
-              <ResponsiveContainer width="100%" height={250}>
-                <PieChart>
-                  <Pie
-                    data={topExpenseCategories}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={90}
-                    fill="#8884d8"
-                    dataKey="amount"
-                    paddingAngle={2}
-                  >
-                    {topExpenseCategories.map((entry, index) => {
-                      const colors = [COLORS.primary, COLORS.success, COLORS.warning, COLORS.danger, COLORS.purple];
-                      return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
-                    })}
-                  </Pie>
-                  <Tooltip formatter={(value: any) => formatCurrency(value)} />
-                </PieChart>
-              </ResponsiveContainer>
+            <div className="flex flex-col lg:flex-row items-center gap-4 overflow-hidden">
+              <div className="flex-shrink-0 w-full lg:w-auto">
+                <ResponsiveContainer width="100%" height={250}>
+                  <PieChart>
+                    <Pie
+                      data={topExpenseCategories}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={50}
+                      outerRadius={90}
+                      fill="#8884d8"
+                      dataKey="amount"
+                      paddingAngle={2}
+                    >
+                      {topExpenseCategories.map((entry, index) => {
+                        const colors = [COLORS.primary, COLORS.success, COLORS.warning, COLORS.danger, COLORS.purple];
+                        return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
+                      })}
+                    </Pie>
+                    <Tooltip formatter={(value: any) => formatCurrency(value)} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
               {/* Legend */}
-              <div className="flex flex-wrap lg:flex-col gap-2 justify-center min-w-[140px]">
+              <div className="flex flex-wrap lg:flex-col gap-2 justify-center min-w-0 max-w-full lg:max-w-[160px] overflow-hidden">
                 {topExpenseCategories.map((entry: any, index) => {
                   const colors = [COLORS.primary, COLORS.success, COLORS.warning, COLORS.danger, COLORS.purple];
                   return (
-                    <div key={entry.category} className="flex items-center gap-2">
+                    <div key={entry.category} className="flex items-center gap-2 min-w-0 max-w-full">
                       <div 
                         className="w-3 h-3 rounded-full flex-shrink-0" 
                         style={{ backgroundColor: colors[index % colors.length] }}
                       />
-                      <span className="text-sm text-gray-600 truncate">
+                      <span className="text-sm text-gray-600 truncate" title={`${entry.category}: ${formatCurrency(entry.amount)}`}>
                         {entry.category}: {formatCurrency(entry.amount)}
                       </span>
                     </div>
