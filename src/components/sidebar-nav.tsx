@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { createBrowserClient } from '@supabase/ssr';
 import { useState, useEffect } from 'react';
 import { useWhiteLabel } from '@/lib/WhiteLabelContext';
+import { usePlan } from '@/hooks/usePlan';
 import {
   LayoutDashboard,
   Package,
@@ -32,6 +33,7 @@ import {
   Sparkles,
   Zap
 } from "lucide-react";
+import { PlanFeatures } from '@/lib/plans';
 
 // Full navigation with required roles
 // 'all' = all authenticated users can see
@@ -40,12 +42,19 @@ import {
 // 'viewer' = external viewers/clients can see (project-scoped data)
 // 'supplier' = supplier portal only
 // 'all_except_supplier' = company + clients (not suppliers)
-const navigation = [
+// feature = optional plan feature required to see this item
+const navigation: Array<{
+  name: string;
+  href: string;
+  icon: any;
+  access: 'all' | 'internal' | 'admin' | 'viewer' | 'supplier' | 'all_except_supplier';
+  feature?: keyof PlanFeatures;
+}> = [
   // === Company Internal Navigation ===
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, access: 'internal' },
   { name: "Analytics", href: "/analytics", icon: BarChart3, access: 'internal' },
   { name: "Projects", href: "/projects", icon: FolderOpen, access: 'all' }, // All users can see their projects
-  { name: "Messages", href: "/messages", icon: MessageCircle, access: 'all' }, // Everyone can message (supplier sees their channel)
+  { name: "Messages", href: "/messages", icon: MessageCircle, access: 'all', feature: 'inAppChat' }, // Requires inAppChat feature
   { name: "Orders", href: "/orders", icon: ShoppingCart, access: 'viewer' }, // Viewers see project-filtered orders
   { name: "Expenses", href: "/expenses", icon: Receipt, access: 'viewer' }, // Viewers see project-filtered expenses
   { name: "Deliveries", href: "/deliveries", icon: Package, access: 'viewer' }, // Viewers see project-filtered deliveries
@@ -58,7 +67,7 @@ const navigation = [
   { name: "Contractors", href: "/contractors", icon: Building2, access: 'internal' },
   { name: "Clients", href: "/clients", icon: UserCheck, access: 'internal' },
   { name: "Payments", href: "/payments", icon: CreditCard, access: 'internal' },
-  { name: "Reports", href: "/reports", icon: BarChart3, access: 'internal' },
+  { name: "Reports", href: "/reports", icon: BarChart3, access: 'internal', feature: 'advancedReports' }, // Requires advancedReports feature
   { name: "Settings", href: "/settings", icon: Settings, access: 'internal' },
   // === Supplier Portal ===
   { name: "Supplier Portal", href: "/supplier-portal", icon: Truck, access: 'supplier' },
@@ -68,6 +77,7 @@ export function SidebarNav() {
   const pathname = usePathname();
   const router = useRouter();
   const { displayName, logoUrl } = useWhiteLabel();
+  const { hasFeature } = usePlan();
   const [userEmail, setUserEmail] = useState<string>('');
   const [userName, setUserName] = useState<string>('User');
   const [userRole, setUserRole] = useState<string>('');
@@ -173,7 +183,7 @@ export function SidebarNav() {
     }
   };
 
-  // Filter navigation based on user role
+  // Filter navigation based on user role and plan features
   const filteredNavigation = navigation.filter(item => {
     // Internal company members (includes accountant)
     const isInternalMember = ['admin', 'owner', 'manager', 'accountant', 'bookkeeper', 'member'].includes(userRole);
@@ -184,17 +194,27 @@ export function SidebarNav() {
     // Supplier
     const isSupplier = userRole === 'supplier';
     
-    if (item.access === 'all') return true;
-    if (item.access === 'internal' && isInternalMember) return true;
-    if (item.access === 'admin' && isAdmin) return true;
+    // First check role-based access
+    let hasAccess = false;
+    if (item.access === 'all') hasAccess = true;
+    if (item.access === 'internal' && isInternalMember) hasAccess = true;
+    if (item.access === 'admin' && isAdmin) hasAccess = true;
     // Viewers/Clients can see 'viewer' access items (project-scoped data)
-    if (item.access === 'viewer' && (isViewer || isInternalMember)) return true;
+    if (item.access === 'viewer' && (isViewer || isInternalMember)) hasAccess = true;
     // All except suppliers (company + clients)
-    if (item.access === 'all_except_supplier' && !isSupplier) return true;
+    if (item.access === 'all_except_supplier' && !isSupplier) hasAccess = true;
     // Suppliers only see supplier portal
-    if (item.access === 'supplier' && isSupplier) return true;
+    if (item.access === 'supplier' && isSupplier) hasAccess = true;
     
-    return false;
+    // If no role access, reject
+    if (!hasAccess) return false;
+    
+    // Then check feature-based access (if required)
+    if (item.feature && !hasFeature(item.feature)) {
+      return false;
+    }
+    
+    return true;
   });
 
   // Don't render on mobile - bottom nav handles it

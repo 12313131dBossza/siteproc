@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { createBrowserClient } from '@supabase/ssr';
+import { usePlan } from '@/hooks/usePlan';
+import { PlanFeatures } from '@/lib/plans';
 import {
   LayoutDashboard,
   FolderOpen,
@@ -19,10 +21,17 @@ import { MobileMoreMenu } from './MobileMoreMenu';
 // 'all' = all users
 // 'internal' = internal company members only
 // 'viewer' = external viewers can see (project-scoped)
-const mobileNavItems = [
+// feature = optional plan feature required to see this item
+const mobileNavItems: Array<{
+  name: string;
+  href: string;
+  icon: any;
+  access: 'all' | 'internal' | 'viewer';
+  feature?: keyof PlanFeatures;
+}> = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, access: 'internal' },
   { name: 'Projects', href: '/projects', icon: FolderOpen, access: 'all' },
-  { name: 'Messages', href: '/messages', icon: MessageCircle, access: 'all' },
+  { name: 'Messages', href: '/messages', icon: MessageCircle, access: 'all', feature: 'inAppChat' },
   { name: 'Orders', href: '/orders', icon: ShoppingCart, access: 'viewer' },
 ];
 
@@ -30,6 +39,7 @@ export function MobileBottomNav() {
   const pathname = usePathname();
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [userRole, setUserRole] = useState<string>('');
+  const { hasFeature } = usePlan();
   
   useEffect(() => {
     const loadUserRole = async () => {
@@ -58,16 +68,27 @@ export function MobileBottomNav() {
     loadUserRole();
   }, []);
 
-  // Filter navigation based on user role
+  // Filter navigation based on user role and plan features
   const isInternalMember = ['admin', 'owner', 'manager', 'accountant', 'bookkeeper', 'member'].includes(userRole);
   const isViewer = userRole === 'viewer';
   
   const filteredNavItems = mobileNavItems.filter(item => {
-    if (item.access === 'all') return true;
-    if (item.access === 'internal' && isInternalMember) return true;
+    // First check role-based access
+    let hasAccess = false;
+    if (item.access === 'all') hasAccess = true;
+    if (item.access === 'internal' && isInternalMember) hasAccess = true;
     // Viewers can see 'viewer' items, internal members can too
-    if (item.access === 'viewer' && (isViewer || isInternalMember)) return true;
-    return false;
+    if (item.access === 'viewer' && (isViewer || isInternalMember)) hasAccess = true;
+    
+    // If no role access, reject
+    if (!hasAccess) return false;
+    
+    // Then check feature-based access (if required)
+    if (item.feature && !hasFeature(item.feature)) {
+      return false;
+    }
+    
+    return true;
   });
 
   // Only show More button for internal members

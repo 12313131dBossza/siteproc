@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { AppLayout } from "@/components/app-layout";
 import { Button } from "@/components/ui/Button";
+import { FeatureGate, UpgradeBanner } from "@/components/FeatureGate";
+import { usePlan } from "@/hooks/usePlan";
 import {
   BarChart3,
   Download,
@@ -16,12 +18,14 @@ import {
   CheckCircle,
   Clock,
   Truck,
-  User
+  User,
+  Lock
 } from 'lucide-react';
 import { format } from '@/lib/date-format';
 import { useCurrency } from '@/lib/CurrencyContext';
 import { useWhiteLabel } from '@/lib/WhiteLabelContext';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import { 
   exportProjectReportPDF, 
   exportPaymentReportPDF, 
@@ -81,6 +85,11 @@ export default function ReportsPage() {
   const [projectsData, setProjectsData] = useState<any>(null);
   const [paymentsData, setPaymentsData] = useState<any>(null);
   const [deliveriesData, setDeliveriesData] = useState<any>(null);
+  
+  // Plan feature check
+  const { hasFeature } = usePlan();
+  const hasAdvancedReports = hasFeature('advancedReports');
+  const hasCsvPdfExport = hasFeature('csvPdfExport');
 
   const fetchReport = async (type: ReportType) => {
     setLoading(true);
@@ -107,6 +116,10 @@ export default function ReportsPage() {
   }, [activeTab]);
 
   const exportToCSV = (type: ReportType) => {
+    if (!hasCsvPdfExport) {
+      toast.error('CSV export with logo is a Pro feature. Upgrade to access this feature.');
+      return;
+    }
     if (type === 'projects' && projectsData) {
       exportProjectReportCSV(projectsData);
     } else if (type === 'payments' && paymentsData) {
@@ -117,6 +130,10 @@ export default function ReportsPage() {
   };
 
   const exportToPDF = (type: ReportType) => {
+    if (!hasCsvPdfExport) {
+      toast.error('PDF export with logo is a Pro feature. Upgrade to access this feature.');
+      return;
+    }
     // Get company name for PDF (use white-label if enabled, otherwise 'SiteProc')
     const pdfCompanyName = whiteLabel.enabled && whiteLabel.companyName 
       ? whiteLabel.companyName 
@@ -139,6 +156,23 @@ export default function ReportsPage() {
   const { formatAmount: formatCurrency } = useCurrency();
   const { config: whiteLabel } = useWhiteLabel();
 
+  // If user doesn't have advanced reports feature, show upgrade prompt
+  if (!hasAdvancedReports) {
+    return (
+      <AppLayout>
+        <div className="space-y-4 md:space-y-6">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Reports</h1>
+            <p className="text-gray-500 text-sm md:text-base mt-1">Financial and operational insights</p>
+          </div>
+          <FeatureGate feature="advancedReports">
+            <div />
+          </FeatureGate>
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout>
       <div className="space-y-4 md:space-y-6">
@@ -151,24 +185,34 @@ export default function ReportsPage() {
           <div className="flex items-center gap-2">
             <Button
               onClick={() => exportToPDF(activeTab)}
-              disabled={loading}
-              className="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-sm px-3 py-2"
+              disabled={loading || !hasCsvPdfExport}
+              className={cn(
+                "flex items-center gap-1.5 text-sm px-3 py-2",
+                hasCsvPdfExport ? "bg-red-600 hover:bg-red-700" : "bg-gray-400 cursor-not-allowed"
+              )}
               size="sm"
+              title={!hasCsvPdfExport ? "PDF export is a Pro feature" : "Export to PDF"}
             >
-              <FileText className="h-4 w-4" />
+              {hasCsvPdfExport ? <FileText className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
               <span className="hidden sm:inline">Export</span> PDF
             </Button>
             <Button
               onClick={() => exportToCSV(activeTab)}
-              disabled={loading}
+              disabled={loading || !hasCsvPdfExport}
               className="flex items-center gap-1.5 text-sm px-3 py-2"
               size="sm"
+              title={!hasCsvPdfExport ? "CSV export is a Pro feature" : "Export to CSV"}
             >
-              <Download className="h-4 w-4" />
+              {hasCsvPdfExport ? <Download className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
               <span className="hidden sm:inline">Export</span> CSV
             </Button>
           </div>
         </div>
+
+        {/* Pro Feature Banner for exports */}
+        {!hasCsvPdfExport && (
+          <UpgradeBanner feature="csvPdfExport" />
+        )}
 
         {/* Tabs - Scrollable on mobile */}
         <div className="border-b border-gray-200 -mx-4 px-4 md:mx-0 md:px-0">

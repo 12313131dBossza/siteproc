@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { AppLayout } from "@/components/app-layout";
 import { Button } from "@/components/ui/Button";
 import { useRouter } from "next/navigation";
-import { FolderOpen, Plus, Search, DollarSign, Clock, CheckCircle, AlertCircle, TrendingUp, TrendingDown, BarChart3, Eye, Download } from "lucide-react";
+import { FolderOpen, Plus, Search, DollarSign, Clock, CheckCircle, AlertCircle, TrendingUp, TrendingDown, BarChart3, Eye, Download, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FormModal, FormModalActions, Input, Select, SearchBar } from '@/components/ui';
 import { ProjectsFilterPanel } from "@/components/ProjectsFilterPanel";
@@ -12,6 +12,9 @@ import { SortControl, sortArray } from "@/components/SortControl";
 import { exportToCSV, formatCurrencyForExport, formatDateForExport } from "@/lib/export-csv";
 import { createBrowserClient } from '@supabase/ssr';
 import { useCurrency } from "@/lib/CurrencyContext";
+import { usePlan } from "@/hooks/usePlan";
+import { LimitBanner } from "@/components/FeatureGate";
+import { toast } from "sonner";
 
 interface Project {
   id: string;
@@ -46,6 +49,21 @@ export default function ProjectsPage() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [userRole, setUserRole] = useState<string>('');
   const router = useRouter();
+  
+  // Plan limits
+  const { 
+    canAddProject, 
+    projectLimitBanner, 
+    remainingProjectSlots,
+    hasFeature,
+    refresh: refreshPlan 
+  } = usePlan();
+  
+  // Check if user can add more projects based on plan
+  const canCreateNewProject = canAddProject();
+  
+  // Check if CSV export is available
+  const canExportCSV = hasFeature('csvPdfExport');
 
   // Check if user can create projects (internal members only)
   const canCreateProject = ['admin', 'owner', 'manager'].includes(userRole);
@@ -234,22 +252,44 @@ export default function ProjectsPage() {
           </div>
           <div className="flex gap-2">
             <Button 
-              onClick={handleExportCSV} 
+              onClick={() => {
+                if (!canExportCSV) {
+                  toast.error('CSV export is available on Pro and Enterprise plans. Upgrade to export.');
+                  return;
+                }
+                handleExportCSV();
+              }} 
               variant="ghost" 
               className="flex items-center gap-2 text-sm"
               disabled={filteredProjects.length === 0}
+              title={!canExportCSV ? 'Upgrade to Pro for CSV export' : undefined}
             >
-              <Download className="h-4 w-4" />
+              {canExportCSV ? <Download className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
               Export CSV
             </Button>
             {canCreateProject && (
-              <Button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
+              <Button 
+                onClick={() => {
+                  if (!canCreateNewProject) {
+                    toast.error(`You've reached the project limit for your plan. Upgrade to Pro for unlimited projects.`);
+                    return;
+                  }
+                  setShowCreateModal(true);
+                }} 
+                className="flex items-center gap-2"
+                disabled={!canCreateNewProject}
+              >
+                {canCreateNewProject ? <Plus className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
                 New Project
               </Button>
             )}
           </div>
         </div>
+
+        {/* Project Limit Banner */}
+        {projectLimitBanner && (
+          <LimitBanner message={projectLimitBanner.message} type={projectLimitBanner.type} className="mb-4" />
+        )}
 
         {error && (<div className="mb-4 rounded border border-red-200 bg-red-50 text-red-700 p-3"><div className="font-medium mb-1">Couldn not load projects</div><div className="text-sm">{error}</div></div>)}
 

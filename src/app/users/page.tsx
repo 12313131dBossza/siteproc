@@ -4,6 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { AppLayout } from "@/components/app-layout";
 import { Button } from "@/components/ui/Button";
 import { StatCard } from "@/components/StatCard";
+import { LimitBanner } from "@/components/FeatureGate";
+import { usePlan } from "@/hooks/usePlan";
+import { BILLABLE_ROLES } from "@/lib/plans";
 import {
   Plus,
   UserPlus,
@@ -25,7 +28,8 @@ import {
   UserX,
   MoreVertical,
   Send,
-  AlertCircle
+  AlertCircle,
+  Lock
 } from 'lucide-react';
 import { format } from '@/lib/date-format';
 import { cn } from '@/lib/utils';
@@ -111,6 +115,14 @@ function useUsers() {
 export default function UsersPage() {
   const { users, loading, setUsers } = useUsers();
   const currentUser = useCurrentUser();
+  const { 
+    plan, 
+    canAddUser, 
+    userLimitBanner, 
+    internalUserCount,
+    remainingUserSlots,
+    refresh: refreshPlan 
+  } = usePlan();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
@@ -129,6 +141,14 @@ export default function UsersPage() {
     department: '',
     phone: ''
   });
+
+  // Check if user can invite more users based on plan limits
+  const canInviteUser = canAddUser();
+  
+  // Count internal (billable) users for display
+  const billableUserCount = users.filter(u => 
+    BILLABLE_ROLES.includes(u.role || '') && u.status !== 'inactive'
+  ).length;
 
   // Calculate current user's role level (use role directly, not from null check)
   const currentRoleLevel = ROLE_HIERARCHY[currentUser.role] || 0;
@@ -404,11 +424,21 @@ export default function UsersPage() {
             Export
           </Button>
           {canManageUsers && (
-            <Button variant="primary" leftIcon={<UserPlus className="h-4 w-4" />} onClick={() => {
-              setSelectedUser(null);
-              setFormData({ name: '', email: '', role: '', department: '', phone: '' });
-              setIsModalOpen(true);
-            }}>
+            <Button 
+              variant="primary" 
+              leftIcon={canInviteUser ? <UserPlus className="h-4 w-4" /> : <Lock className="h-4 w-4" />} 
+              onClick={() => {
+                if (!canInviteUser) {
+                  toast.error(`You've reached the user limit for your plan. Upgrade to Pro for unlimited users.`);
+                  return;
+                }
+                setSelectedUser(null);
+                setFormData({ name: '', email: '', role: '', department: '', phone: '' });
+                setIsModalOpen(true);
+              }}
+              disabled={!canInviteUser}
+              className={!canInviteUser ? 'opacity-60' : ''}
+            >
               Invite User
             </Button>
           )}
@@ -416,6 +446,11 @@ export default function UsersPage() {
       }
     >
       <div className="space-y-6">
+        {/* User Limit Banner */}
+        {userLimitBanner && (
+          <LimitBanner message={userLimitBanner.message} type={userLimitBanner.type} />
+        )}
+        
         {/* Stats Grid */}
   <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard
@@ -424,7 +459,7 @@ export default function UsersPage() {
             icon={Users}
             iconColor="text-blue-600"
             iconBgColor="bg-blue-50"
-            badge="+2"
+            badge={remainingUserSlots !== Infinity ? `${remainingUserSlots} left` : undefined}
             badgeColor="text-blue-600"
           />
 

@@ -9,6 +9,7 @@ import ProjectPhotoGallery from '@/components/ProjectPhotoGallery'
 import ProjectChat from '@/components/ProjectChat'
 import { hasPermission } from '@/lib/roles'
 import { useCurrency } from '@/lib/CurrencyContext'
+import { usePlan } from '@/hooks/usePlan'
 import { 
   Plus, 
   Users, 
@@ -47,6 +48,7 @@ export default function ProjectDetailPage() {
   const params = useParams() as { id: string }
   const id = params?.id
   const router = useRouter()
+  const { hasFeature } = usePlan()
   const [project, setProject] = useState<any>(null)
   const [rollup, setRollup] = useState<any>(null)
   const [tab, setTab] = useState<'overview'|'orders'|'expenses'|'deliveries'|'gallery'>('overview')
@@ -931,8 +933,8 @@ export default function ProjectDetailPage() {
         </div>
       )}
 
-      {/* Project Chat */}
-      {currentUserId && (
+      {/* Project Chat - Only available on Pro and above */}
+      {currentUserId && hasFeature('inAppChat') && (
         <ProjectChat
           projectId={id}
           currentUserId={currentUserId}
