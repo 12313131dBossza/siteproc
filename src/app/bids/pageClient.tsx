@@ -95,20 +95,71 @@ export default function BidsPageClient() {
     if (submitting) return;
     setSubmitting(true);
 
-    try {
-      const payload = {
-        ...form,
+    const payload = {
+      ...form,
+      quantity: parseFloat(form.quantity),
+      unit_price: parseFloat(form.unit_price),
+      total_amount: parseFloat(form.quantity) * parseFloat(form.unit_price)
+    };
+
+    // For new bids, use optimistic update
+    if (!editingBid) {
+      const tempId = `temp-${Date.now()}`;
+      const optimisticBid: Bid = {
+        id: tempId,
+        vendor_name: form.vendor_name,
+        vendor_email: form.vendor_email || undefined,
+        project_id: form.project_id || undefined,
+        item_description: form.item_description,
         quantity: parseFloat(form.quantity),
         unit_price: parseFloat(form.unit_price),
-        total_amount: parseFloat(form.quantity) * parseFloat(form.unit_price)
+        total_amount: parseFloat(form.quantity) * parseFloat(form.unit_price),
+        valid_until: form.valid_until,
+        status: form.status,
+        notes: form.notes || undefined,
+        submitted_at: new Date().toISOString(),
+        created_at: new Date().toISOString()
       };
 
-      const url = editingBid 
-        ? `/api/bids/${editingBid.id}`
-        : '/api/bids';
+      // Optimistically add and close modal immediately
+      setBids(prev => [optimisticBid, ...prev]);
+      setShowModal(false);
+      const savedForm = { ...form };
+      resetForm();
 
-      const res = await fetch(url, {
-        method: editingBid ? 'PUT' : 'POST',
+      try {
+        const res = await fetch('/api/bids', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.error || 'Failed to save bid');
+        }
+
+        const created = await res.json();
+        // Replace temp with real bid
+        setBids(prev => prev.map(b => 
+          b.id === tempId ? { ...created, id: created.id } : b
+        ));
+        toast.success('Bid created successfully');
+      } catch (error: any) {
+        console.error('Error saving bid:', error);
+        // Rollback optimistic update
+        setBids(prev => prev.filter(b => b.id !== tempId));
+        toast.error(error.message || 'Failed to save bid');
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
+    // For editing, use normal flow
+    try {
+      const res = await fetch(`/api/bids/${editingBid.id}`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
@@ -118,7 +169,7 @@ export default function BidsPageClient() {
         throw new Error(error.error || 'Failed to save bid');
       }
 
-      toast.success(`Bid ${editingBid ? 'updated' : 'created'} successfully`);
+      toast.success('Bid updated successfully');
       setShowModal(false);
       setEditingBid(null);
       resetForm();

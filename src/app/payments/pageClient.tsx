@@ -88,21 +88,85 @@ export default function PaymentsPageClient() {
     if (submitting) return;
     setSubmitting(true);
 
-    try {
-      const payload = {
-        ...form,
+    const payload = {
+      ...form,
+      amount: parseFloat(form.amount),
+      project_id: form.project_id || null,
+      order_id: form.order_id || null,
+      expense_id: form.expense_id || null,
+    };
+
+    // For new payments, use optimistic update
+    if (!editingPayment) {
+      const tempId = `temp-${Date.now()}`;
+      const optimisticPayment: Payment = {
+        id: tempId,
+        company_id: companyId,
+        vendor_name: form.vendor_name,
         amount: parseFloat(form.amount),
-        project_id: form.project_id || null,
-        order_id: form.order_id || null,
-        expense_id: form.expense_id || null,
+        payment_date: form.payment_date,
+        payment_method: form.payment_method,
+        reference_number: form.reference_number || undefined,
+        notes: form.notes || undefined,
+        status: form.status as 'paid' | 'unpaid' | 'partial',
+        project_id: form.project_id || undefined,
+        order_id: form.order_id || undefined,
+        expense_id: form.expense_id || undefined,
+        created_at: new Date().toISOString()
       };
 
-      const url = editingPayment 
-        ? `/api/payments/${editingPayment.id}`
-        : '/api/payments';
+      // Optimistically add and close modal immediately
+      setPayments(prev => [optimisticPayment, ...prev]);
+      setShowModal(false);
+      const savedForm = { ...form };
+      setForm({
+        vendor_name: '',
+        amount: '',
+        payment_date: new Date().toISOString().split('T')[0],
+        payment_method: '',
+        reference_number: '',
+        notes: '',
+        status: 'unpaid',
+        project_id: '',
+        order_id: '',
+        expense_id: ''
+      });
 
-      const res = await fetch(url, {
-        method: editingPayment ? 'PATCH' : 'POST',
+      try {
+        const res = await fetch('/api/payments', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-company-id': companyId
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.error || 'Failed to save payment');
+        }
+
+        const created = await res.json();
+        // Replace temp with real payment
+        setPayments(prev => prev.map(p => 
+          p.id === tempId ? { ...created, id: created.id } : p
+        ));
+      } catch (error: any) {
+        console.error('Error saving payment:', error);
+        // Rollback optimistic update
+        setPayments(prev => prev.filter(p => p.id !== tempId));
+        alert(error.message || 'Failed to save payment');
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
+    // For editing, use normal flow
+    try {
+      const res = await fetch(`/api/payments/${editingPayment.id}`, {
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'x-company-id': companyId
@@ -120,7 +184,7 @@ export default function PaymentsPageClient() {
         vendor_name: '',
         amount: '',
         payment_date: new Date().toISOString().split('T')[0],
-        payment_method: '',  // User must select
+        payment_method: '',
         reference_number: '',
         notes: '',
         status: 'unpaid',

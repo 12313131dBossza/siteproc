@@ -309,14 +309,41 @@ export default function ExpensesPage() {
     }
 
     setSubmitting(true);
+    
+    // Create optimistic expense with temp ID
+    const tempId = `temp-${Date.now()}`;
+    const optimisticExpense: Expense = {
+      id: tempId,
+      vendor: newExpense.vendor,
+      category: newExpense.category,
+      amount: parseFloat(newExpense.amount),
+      description: newExpense.description,
+      status: 'pending',
+      created_at: new Date().toISOString(),
+      project_id: newExpense.project_id
+    };
+    
+    // Optimistically add to list and close modal immediately
+    setExpenses(prev => [optimisticExpense, ...prev]);
+    setIsModalOpen(false);
+    const savedFormData = { ...newExpense };
+    setNewExpense({
+      vendor: '',
+      category: 'materials',
+      amount: '',
+      description: '',
+      project_id: '',
+      payment_method: ''
+    });
+    
     try {
       const requestBody = {
-        vendor: newExpense.vendor,
-        category: newExpense.category,
-        amount: parseFloat(newExpense.amount),
-        description: newExpense.description,
-        project_id: newExpense.project_id,
-        payment_method: newExpense.payment_method || undefined
+        vendor: savedFormData.vendor,
+        category: savedFormData.category,
+        amount: parseFloat(savedFormData.amount),
+        description: savedFormData.description,
+        project_id: savedFormData.project_id,
+        payment_method: savedFormData.payment_method || undefined
       };
       
       console.log('Sending request with body:', requestBody);
@@ -357,27 +384,20 @@ export default function ExpensesPage() {
       
       console.log('Created expense:', createdExpense);
       
-      // Add to expenses list
-      setExpenses([{
-        id: createdExpense.id,
-        vendor: createdExpense.vendor,
-        category: createdExpense.category,
-        amount: createdExpense.amount,
-        description: createdExpense.description,
-        status: createdExpense.status || 'pending',
-        created_at: createdExpense.created_at,
-        project_id: newExpense.project_id
-      }, ...expenses]);
+      // Replace temp expense with real one
+      setExpenses(prev => prev.map(exp => 
+        exp.id === tempId ? {
+          id: createdExpense.id,
+          vendor: createdExpense.vendor,
+          category: createdExpense.category,
+          amount: createdExpense.amount,
+          description: createdExpense.description,
+          status: createdExpense.status || 'pending',
+          created_at: createdExpense.created_at,
+          project_id: savedFormData.project_id
+        } : exp
+      ));
       
-      setIsModalOpen(false);
-      setNewExpense({
-        vendor: '',
-        category: 'materials',
-        amount: '',
-        description: '',
-        project_id: '',
-        payment_method: ''
-      });
       toast.success('Expense created successfully');
       console.log('=== EXPENSE SUBMISSION COMPLETE ===');
     } catch (error) {
@@ -387,6 +407,9 @@ export default function ExpensesPage() {
       console.error('Error message:', error instanceof Error ? error.message : String(error));
       console.error('Full error object:', error);
       console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
+      
+      // Rollback optimistic update
+      setExpenses(prev => prev.filter(exp => exp.id !== tempId));
       
       const errorMessage = error instanceof Error ? error.message : 'Failed to create expense';
       toast.error(errorMessage);

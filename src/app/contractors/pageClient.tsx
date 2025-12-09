@@ -79,13 +79,66 @@ export default function ContractorsPageClient() {
     if (submitting) return;
     setSubmitting(true);
 
-    try {
-      const url = editingContractor 
-        ? `/api/contractors/${editingContractor.id}`
-        : '/api/contractors';
+    // For new contractors, use optimistic update
+    if (!editingContractor) {
+      const tempId = `temp-${Date.now()}`;
+      const optimisticContractor: Contractor = {
+        id: tempId,
+        name: form.name,
+        company_name: form.company_name || undefined,
+        email: form.email || undefined,
+        phone: form.phone || undefined,
+        address: form.address || undefined,
+        city: form.city || undefined,
+        state: form.state || undefined,
+        zip: form.zip || undefined,
+        specialty: form.specialty || undefined,
+        status: form.status,
+        notes: form.notes || undefined,
+        created_at: new Date().toISOString(),
+        total_orders: 0,
+        total_spent: 0
+      };
 
-      const res = await fetch(url, {
-        method: editingContractor ? 'PUT' : 'POST',
+      // Optimistically add and close modal immediately
+      setContractors(prev => [optimisticContractor, ...prev]);
+      setShowModal(false);
+      const savedForm = { ...form };
+      resetForm();
+
+      try {
+        const res = await fetch('/api/contractors', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(savedForm)
+        });
+
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.error || 'Failed to save contractor');
+        }
+
+        const created = await res.json();
+        // Replace temp with real contractor
+        setContractors(prev => prev.map(c => 
+          c.id === tempId ? { ...created, id: created.id } : c
+        ));
+        toast.success('Contractor created successfully');
+      } catch (error: any) {
+        console.error('Error saving contractor:', error);
+        // Rollback optimistic update
+        setContractors(prev => prev.filter(c => c.id !== tempId));
+        toast.error(error.message || 'Failed to save contractor');
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
+    // For editing, use normal flow
+    try {
+      const res = await fetch(`/api/contractors/${editingContractor.id}`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form)
       });
@@ -95,7 +148,7 @@ export default function ContractorsPageClient() {
         throw new Error(error.error || 'Failed to save contractor');
       }
 
-      toast.success(`Contractor ${editingContractor ? 'updated' : 'created'} successfully`);
+      toast.success('Contractor updated successfully');
       setShowModal(false);
       setEditingContractor(null);
       resetForm();

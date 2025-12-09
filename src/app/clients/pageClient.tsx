@@ -80,13 +80,66 @@ export default function ClientsPageClient() {
     if (submitting) return;
     setSubmitting(true);
 
-    try {
-      const url = editingClient 
-        ? `/api/clients/${editingClient.id}`
-        : '/api/clients';
+    // For new clients, use optimistic update
+    if (!editingClient) {
+      const tempId = `temp-${Date.now()}`;
+      const optimisticClient: Client = {
+        id: tempId,
+        name: form.name,
+        company_name: form.company_name || undefined,
+        email: form.email || undefined,
+        phone: form.phone || undefined,
+        address: form.address || undefined,
+        city: form.city || undefined,
+        state: form.state || undefined,
+        zip: form.zip || undefined,
+        industry: form.industry || undefined,
+        status: form.status,
+        notes: form.notes || undefined,
+        created_at: new Date().toISOString(),
+        total_projects: 0,
+        total_value: 0
+      };
 
-      const res = await fetch(url, {
-        method: editingClient ? 'PUT' : 'POST',
+      // Optimistically add and close modal immediately
+      setClients(prev => [optimisticClient, ...prev]);
+      setShowModal(false);
+      const savedForm = { ...form };
+      resetForm();
+
+      try {
+        const res = await fetch('/api/clients', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(savedForm)
+        });
+
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.error || 'Failed to save client');
+        }
+
+        const created = await res.json();
+        // Replace temp with real client
+        setClients(prev => prev.map(c => 
+          c.id === tempId ? { ...created, id: created.id } : c
+        ));
+        toast.success('Client created successfully');
+      } catch (error: any) {
+        console.error('Error saving client:', error);
+        // Rollback optimistic update
+        setClients(prev => prev.filter(c => c.id !== tempId));
+        toast.error(error.message || 'Failed to save client');
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
+    // For editing, use normal flow
+    try {
+      const res = await fetch(`/api/clients/${editingClient.id}`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form)
       });
@@ -96,7 +149,7 @@ export default function ClientsPageClient() {
         throw new Error(error.error || 'Failed to save client');
       }
 
-      toast.success(`Client ${editingClient ? 'updated' : 'created'} successfully`);
+      toast.success('Client updated successfully');
       setShowModal(false);
       setEditingClient(null);
       resetForm();
