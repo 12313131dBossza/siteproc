@@ -57,20 +57,11 @@ async function sendViaResend(messages: BasicMessage[]) {
   const key = process.env.RESEND_API_KEY
   if (!key) return { skipped: true }
   const endpoint = 'https://api.resend.com/emails'
-  const ownerEmail = 'bossbcz@gmail.com'; // Verified email in Resend
   
   // Send one by one to keep it simple and avoid batching constraints
   for (const m of messages) {
-    // In testing mode, only send to verified email
-    // To fix: Verify a domain at resend.com/domains and update EMAIL_FROM in .env
-    const recipients = Array.isArray(m.to) ? m.to : [m.to];
-    const testMode = !recipients.some(email => email.includes('@') && !email.includes('resend.dev'));
-    
-    // Skip if trying to send to non-verified email in test mode
-    if (testMode && !recipients.includes(ownerEmail)) {
-      console.log(`[Resend] Skipping email to ${m.to} - verify domain to send to other recipients`);
-      continue;
-    }
+    const fromAddress = m.from || getFromEnv();
+    console.log(`[Resend] Sending email to ${m.to} from: ${fromAddress}`);
     
     const res = await fetch(endpoint, {
       method: 'POST',
@@ -79,7 +70,7 @@ async function sendViaResend(messages: BasicMessage[]) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: m.from || getFromEnv(),
+        from: fromAddress,
         to: m.to,
         subject: m.subject,
         text: m.text,
@@ -91,6 +82,9 @@ async function sendViaResend(messages: BasicMessage[]) {
       console.error(`[Resend] Error ${res.status}: ${text}`);
       // Don't throw - just log and continue
       console.log(`[Resend] Continuing despite error to avoid breaking approval flow`);
+    } else {
+      const result = await res.json().catch(() => ({}));
+      console.log(`[Resend] Email sent successfully:`, result);
     }
   }
   return { ok: true }

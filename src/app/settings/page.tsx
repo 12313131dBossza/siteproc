@@ -481,7 +481,7 @@ function CompanyTab() {
                     <div>
                       <span className="font-medium text-gray-900">Use company name in email notifications</span>
                       <p className="text-sm text-gray-500">
-                        Emails will be sent as "{whiteLabelCompanyName || 'Your Company'} &lt;notifications@siteproc.app&gt;"
+                        Emails will be sent as "{whiteLabelCompanyName || 'Your Company'} &lt;notifications@siteproc.com&gt;"
                       </p>
                     </div>
                   </label>
@@ -505,7 +505,7 @@ function CompanyTab() {
                       {whiteLabelEmailName && (
                         <div className="flex items-center gap-2">
                           <span className="text-gray-500 w-32">Email From:</span>
-                          <span className="font-medium">{whiteLabelCompanyName || 'Your Company'} &lt;notifications@siteproc.app&gt;</span>
+                          <span className="font-medium">{whiteLabelCompanyName || 'Your Company'} &lt;notifications@siteproc.com&gt;</span>
                         </div>
                       )}
                     </div>
