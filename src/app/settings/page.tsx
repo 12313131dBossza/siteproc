@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { AppLayout } from "@/components/app-layout"
 import { Button } from "@/components/ui/Button"
 import { Input, Select } from "@/components/ui"
+import { useCompanyId } from '@/lib/useCompanyId'
 import { 
   Building2, 
   Users, 
@@ -83,7 +84,7 @@ function CompanyTab() {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   
-  const companyId = (typeof window !== 'undefined' ? (localStorage.getItem('company_id') || '') : '') || process.env.NEXT_PUBLIC_COMPANY_ID || ''
+  const companyId = useCompanyId()
   
   useEffect(() => {
     const loadCompany = async () => {
@@ -107,6 +108,10 @@ function CompanyTab() {
   }, [companyId])
   
   async function save() {
+    if (!companyId) {
+      toast.error('No company ID found. Please log in again.')
+      return
+    }
     setSaving(true)
     try {
       const res = await fetch('/api/companies/' + companyId, {
@@ -134,6 +139,21 @@ function CompanyTab() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading company settings...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!companyId) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <AlertCircle className="h-8 w-8 text-amber-500 mx-auto mb-4" />
+          <p className="text-gray-600 mb-2">No company found</p>
+          <p className="text-sm text-gray-500">Please visit the dashboard first to initialize your company settings.</p>
+          <Link href="/dashboard" className="text-blue-600 hover:underline text-sm mt-2 inline-block">
+            Go to Dashboard
+          </Link>
         </div>
       </div>
     )
