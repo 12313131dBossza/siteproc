@@ -715,17 +715,43 @@ export default function OrdersPage() {
   const handleDecision = async () => {
     if (!selectedOrder) return;
 
+    const newStatus = decisionAction === 'approve' ? 'approved' : 'rejected';
+    const previousOrder = selectedOrder;
+    
+    // Optimistically update UI immediately
+    setOrders(prev => prev.map(order => 
+      order.id === selectedOrder.id ? {
+        ...order,
+        status: newStatus as any,
+        rejection_reason: decisionAction === 'reject' ? decisionNotes : undefined,
+        approved_at: new Date().toISOString(),
+      } : order
+    ));
+    
+    // Close modal immediately for instant feel
+    setDecisionModalOpen(false);
+    setSelectedOrder(null);
+    const savedNotes = decisionNotes;
+    setDecisionNotes('');
+    
+    toast.success(`Order ${decisionAction}d successfully!`, {
+      description: decisionAction === 'approve' 
+        ? 'The order has been approved.' 
+        : 'The order has been rejected.',
+      duration: 3000,
+    });
+
     try {
-      // Update order status via API
-      const response = await fetch(`/api/orders/${selectedOrder.id}`, {
+      // Update order status via API in background
+      const response = await fetch(`/api/orders/${previousOrder.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          status: decisionAction === 'approve' ? 'approved' : 'rejected',
-          rejection_reason: decisionAction === 'reject' ? decisionNotes : undefined,
-          notes: decisionNotes,
+          status: newStatus,
+          rejection_reason: decisionAction === 'reject' ? savedNotes : undefined,
+          notes: savedNotes,
         }),
       });
 
@@ -736,27 +762,18 @@ export default function OrdersPage() {
 
       const data = await response.json();
       
-      // Update local state
+      // Update with server response
       setOrders(prev => prev.map(order => 
-        order.id === selectedOrder.id ? data.order : order
+        order.id === previousOrder.id ? data.order : order
       ));
-
-      setDecisionModalOpen(false);
-      setSelectedOrder(null);
-      setDecisionNotes('');
-      
-      // Show success toast
-      toast.success(`Order ${decisionAction}d successfully!`, {
-        description: decisionAction === 'approve' 
-          ? 'The order has been approved.' 
-          : 'The order has been rejected.',
-        duration: 3000,
-      });
-
-      // Refresh orders list
-      fetchOrders();
     } catch (error) {
       console.error('Error updating order:', error);
+      
+      // Rollback on error
+      setOrders(prev => prev.map(order => 
+        order.id === previousOrder.id ? previousOrder : order
+      ));
+      
       toast.error('Failed to update order', {
         description: error instanceof Error ? error.message : 'An error occurred',
         duration: 5000,

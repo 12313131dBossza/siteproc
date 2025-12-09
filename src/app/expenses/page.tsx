@@ -247,16 +247,38 @@ export default function ExpensesPage() {
   const handleApproval = async () => {
     if (!selectedExpense) return;
     
+    const newStatus = approvalAction === 'approve' ? 'approved' : 'rejected';
+    const previousExpense = selectedExpense;
+    const savedNotes = approvalNotes;
+    
+    // Optimistically update UI immediately
+    setExpenses(prev => prev.map(expense => 
+      expense.id === selectedExpense.id ? {
+        ...expense,
+        status: newStatus as any,
+        approval_notes: savedNotes || expense.approval_notes,
+        approved_at: new Date().toISOString(),
+        approved_by: 'You'
+      } : expense
+    ));
+    
+    // Close modal immediately for instant feel
+    setIsApprovalModalOpen(false);
+    setSelectedExpense(null);
+    setApprovalNotes('');
+    
+    toast.success(`Expense ${approvalAction === 'approve' ? 'approved' : 'rejected'} successfully`);
+    
     try {
-      // Update expense status via API
-      const response = await fetch(`/api/expenses/${selectedExpense.id}/approve`, {
+      // Update expense status via API in background
+      const response = await fetch(`/api/expenses/${previousExpense.id}/approve`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           action: approvalAction === 'approve' ? 'approve' : 'reject',
-          notes: approvalNotes,
+          notes: savedNotes,
         }),
       });
 
@@ -267,24 +289,22 @@ export default function ExpensesPage() {
       const data = await response.json();
       const updated = data.expense || data.data || data;
       
-      // Update local state
+      // Update with server response
       setExpenses(prev => prev.map(expense => 
-        expense.id === selectedExpense.id ? {
+        expense.id === previousExpense.id ? {
           ...expense,
           ...updated,
-          status: approvalAction === 'approve' ? 'approved' : 'rejected',
-          approval_notes: approvalNotes || expense.approval_notes,
-          approved_at: updated?.approved_at || new Date().toISOString(),
-          approved_by: updated?.approved_by || 'You'
+          status: newStatus,
         } : expense
       ));
-      
-      toast.success(`Expense ${approvalAction === 'approve' ? 'approved' : 'rejected'} successfully`);
-      setIsApprovalModalOpen(false);
-      setSelectedExpense(null);
-      setApprovalNotes('');
     } catch (error) {
       console.error('Error updating expense:', error);
+      
+      // Rollback on error
+      setExpenses(prev => prev.map(expense => 
+        expense.id === previousExpense.id ? previousExpense : expense
+      ));
+      
       toast.error(`Failed to ${approvalAction} expense`);
     }
   };
