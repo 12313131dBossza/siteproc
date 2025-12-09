@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { format } from '@/lib/date-format';
 import { useCurrency } from '@/lib/CurrencyContext';
+import { useWhiteLabel } from '@/lib/WhiteLabelContext';
 import { cn } from '@/lib/utils';
 import { 
   exportProjectReportPDF, 
@@ -116,16 +117,27 @@ export default function ReportsPage() {
   };
 
   const exportToPDF = (type: ReportType) => {
+    // Get company name for PDF (use white-label if enabled, otherwise 'SiteProc')
+    const pdfCompanyName = whiteLabel.enabled && whiteLabel.companyName 
+      ? whiteLabel.companyName 
+      : 'SiteProc';
+    
+    const pdfOptions = {
+      companyName: pdfCompanyName,
+      formatCurrency: formatCurrency
+    };
+    
     if (type === 'projects' && projectsData) {
-      exportProjectReportPDF(projectsData);
+      exportProjectReportPDF(projectsData, pdfOptions);
     } else if (type === 'payments' && paymentsData) {
-      exportPaymentReportPDF(paymentsData);
+      exportPaymentReportPDF(paymentsData, pdfOptions);
     } else if (type === 'deliveries' && deliveriesData) {
-      exportDeliveryReportPDF(deliveriesData);
+      exportDeliveryReportPDF(deliveriesData, pdfOptions);
     }
   };
 
   const { formatAmount: formatCurrency } = useCurrency();
+  const { config: whiteLabel } = useWhiteLabel();
 
   return (
     <AppLayout>

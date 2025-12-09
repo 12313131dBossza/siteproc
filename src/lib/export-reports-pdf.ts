@@ -1,6 +1,19 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+// Options for PDF exports
+export interface PDFExportOptions {
+  companyName?: string;
+  formatCurrency?: (amount: number) => string;
+}
+
+const defaultFormatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(amount);
+};
+
 interface ProjectReportData {
   summary: {
     total_budget: number;
@@ -69,13 +82,6 @@ interface DeliveryReportData {
   }>;
 }
 
-const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(amount);
-};
-
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
   return date.toLocaleDateString('en-US', { 
@@ -85,11 +91,11 @@ const formatDate = (dateString: string): string => {
   });
 };
 
-const addHeader = (doc: jsPDF, title: string, subtitle: string) => {
+const addHeader = (doc: jsPDF, title: string, subtitle: string, companyName: string = 'SiteProc') => {
   // Company name
   doc.setFontSize(20);
   doc.setTextColor(37, 99, 235); // Blue color
-  doc.text('SiteProc', 14, 15);
+  doc.text(companyName, 14, 15);
   
   // Report title
   doc.setFontSize(16);
@@ -117,7 +123,7 @@ const addHeader = (doc: jsPDF, title: string, subtitle: string) => {
   return 45; // Return Y position for next content
 };
 
-const addFooter = (doc: jsPDF, pageNumber: number, totalPages: number) => {
+const addFooter = (doc: jsPDF, pageNumber: number, totalPages: number, companyName: string = 'SiteProc') => {
   const pageHeight = doc.internal.pageSize.height;
   doc.setFontSize(8);
   doc.setTextColor(107, 114, 128);
@@ -128,21 +134,24 @@ const addFooter = (doc: jsPDF, pageNumber: number, totalPages: number) => {
     { align: 'center' }
   );
   doc.text(
-    'SiteProc - Construction Management',
+    `${companyName} - Construction Management`,
     14,
     pageHeight - 10
   );
 };
 
-export const exportProjectReportPDF = (reportData: ProjectReportData): void => {
+export const exportProjectReportPDF = (reportData: ProjectReportData, options: PDFExportOptions = {}): void => {
   const doc = new jsPDF();
   const { summary, data } = reportData;
+  const companyName = options.companyName || 'SiteProc';
+  const formatCurrency = options.formatCurrency || defaultFormatCurrency;
   
   // Add header
   let yPos = addHeader(
     doc,
     'Project Financial Report',
-    'Comprehensive overview of project budgets and expenditures'
+    'Comprehensive overview of project budgets and expenditures',
+    companyName
   );
   
   // Summary section
@@ -246,22 +255,25 @@ export const exportProjectReportPDF = (reportData: ProjectReportData): void => {
   const totalPages = doc.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
-    addFooter(doc, i, totalPages);
+    addFooter(doc, i, totalPages, companyName);
   }
   
   // Save PDF
   doc.save(`project-financial-report-${new Date().toISOString().split('T')[0]}.pdf`);
 };
 
-export const exportPaymentReportPDF = (reportData: PaymentReportData): void => {
+export const exportPaymentReportPDF = (reportData: PaymentReportData, options: PDFExportOptions = {}): void => {
   const doc = new jsPDF();
   const { summary, data } = reportData;
+  const companyName = options.companyName || 'SiteProc';
+  const formatCurrency = options.formatCurrency || defaultFormatCurrency;
   
   // Add header
   let yPos = addHeader(
     doc,
     'Payment Summary Report',
-    'Overview of all payments, pending, and overdue items'
+    'Overview of all payments, pending, and overdue items',
+    companyName
   );
   
   // Summary section
@@ -379,22 +391,25 @@ export const exportPaymentReportPDF = (reportData: PaymentReportData): void => {
   const totalPages = doc.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
-    addFooter(doc, i, totalPages);
+    addFooter(doc, i, totalPages, companyName);
   }
   
   // Save PDF
   doc.save(`payment-summary-report-${new Date().toISOString().split('T')[0]}.pdf`);
 };
 
-export const exportDeliveryReportPDF = (reportData: DeliveryReportData): void => {
+export const exportDeliveryReportPDF = (reportData: DeliveryReportData, options: PDFExportOptions = {}): void => {
   const doc = new jsPDF();
   const { summary, data } = reportData;
+  const companyName = options.companyName || 'SiteProc';
+  const formatCurrency = options.formatCurrency || defaultFormatCurrency;
   
   // Add header
   let yPos = addHeader(
     doc,
     'Delivery Summary Report',
-    'Complete overview of delivery status and performance'
+    'Complete overview of delivery status and performance',
+    companyName
   );
   
   // Summary section
@@ -515,7 +530,7 @@ export const exportDeliveryReportPDF = (reportData: DeliveryReportData): void =>
   const totalPages = doc.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
-    addFooter(doc, i, totalPages);
+    addFooter(doc, i, totalPages, companyName);
   }
   
   // Save PDF
