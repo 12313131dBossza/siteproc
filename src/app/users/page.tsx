@@ -58,7 +58,7 @@ interface UserData {
 }
 
 function useCurrentUser() {
-  const [currentUser, setCurrentUser] = useState<{ role: string; loading: boolean }>({ role: 'viewer', loading: true });
+  const [currentUser, setCurrentUser] = useState<{ id: string | null; role: string; loading: boolean }>({ id: null, role: 'viewer', loading: true });
 
   useEffect(() => {
     async function fetchCurrentUser() {
@@ -67,16 +67,20 @@ function useCurrentUser() {
         if (response.ok) {
           const data = await response.json();
           if (data.authenticated && data.user?.profile?.role) {
-            setCurrentUser({ role: data.user.profile.role, loading: false });
+            setCurrentUser({ 
+              id: data.user.id || null,
+              role: data.user.profile.role, 
+              loading: false 
+            });
           } else {
-            setCurrentUser({ role: 'viewer', loading: false });
+            setCurrentUser({ id: null, role: 'viewer', loading: false });
           }
         } else {
-          setCurrentUser({ role: 'viewer', loading: false });
+          setCurrentUser({ id: null, role: 'viewer', loading: false });
         }
       } catch (error) {
         console.error('Error fetching current user:', error);
-        setCurrentUser({ role: 'viewer', loading: false });
+        setCurrentUser({ id: null, role: 'viewer', loading: false });
       }
     }
     fetchCurrentUser();
@@ -183,11 +187,20 @@ export default function UsersPage() {
   // Check if current user can edit a specific user
   const canEditUser = (targetUser: UserData) => {
     if (currentUser.loading) return false;
+    
+    // Users can always edit their own profile (name, phone, department)
+    if (currentUser.id && currentUser.id === targetUser.id) return true;
+    
     if (currentUser.role === 'owner') return true;
     if (!canManageUsers) return false;
     
     const targetRoleLevel = ROLE_HIERARCHY[targetUser.role || 'viewer'] || 0;
     return targetRoleLevel < currentRoleLevel;
+  };
+
+  // Check if current user is editing themselves (for restricting role changes)
+  const isEditingSelf = (targetUser: UserData) => {
+    return currentUser.id && currentUser.id === targetUser.id;
   };
 
   // Check if current user can remove a specific user (only owners)
@@ -720,7 +733,9 @@ export default function UsersPage() {
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-xl max-w-md w-full p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                {selectedUser ? 'Edit User' : 'Invite User'}
+                {selectedUser 
+                  ? (isEditingSelf(selectedUser) ? 'Edit Your Profile' : 'Edit User')
+                  : 'Invite User'}
               </h3>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
@@ -740,33 +755,52 @@ export default function UsersPage() {
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className={cn(
+                      "w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
+                      selectedUser && "bg-gray-100 cursor-not-allowed"
+                    )}
                     placeholder="john@company.com"
                     required
+                    disabled={!!selectedUser}
+                    title={selectedUser ? "Email cannot be changed" : undefined}
                   />
+                  {selectedUser && (
+                    <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                  <select
-                    value={formData.role}
-                    onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    required
-                    disabled={currentUser.loading}
-                  >
-                    <option value="">Select role</option>
-                    {getAvailableRoles().map(role => (
-                      <option key={role.value} value={role.value}>{role.label}</option>
-                    ))}
-                  </select>
-                  {!currentUser.loading && getAvailableRoles().length === 0 && (
-                    <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3" />
-                      You don&apos;t have permission to invite users
-                    </p>
-                  )}
-                  {currentUser.loading && (
-                    <p className="text-xs text-gray-400 mt-1">Loading permissions...</p>
+                  {selectedUser && isEditingSelf(selectedUser) ? (
+                    <>
+                      <div className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600">
+                        {getAvailableRoles().find(r => r.value === formData.role)?.label || formData.role || 'No role'}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">You cannot change your own role</p>
+                    </>
+                  ) : (
+                    <>
+                      <select
+                        value={formData.role}
+                        onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        required
+                        disabled={currentUser.loading}
+                      >
+                        <option value="">Select role</option>
+                        {getAvailableRoles().map(role => (
+                          <option key={role.value} value={role.value}>{role.label}</option>
+                        ))}
+                      </select>
+                      {!currentUser.loading && getAvailableRoles().length === 0 && (
+                        <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3" />
+                          You don&apos;t have permission to invite users
+                        </p>
+                      )}
+                      {currentUser.loading && (
+                        <p className="text-xs text-gray-400 mt-1">Loading permissions...</p>
+                      )}
+                    </>
                   )}
                 </div>
                 <div>
@@ -789,14 +823,16 @@ export default function UsersPage() {
                     placeholder="+1 (555) 123-4567"
                   />
                 </div>
-                <div className="rounded-lg bg-blue-50 p-3 text-sm text-blue-700">
-                  <div className="font-medium mb-1">What happens next:</div>
-                  <ul className="text-xs space-y-1">
-                    <li>• User will receive an invitation email</li>
-                    <li>• They can set up their account and password</li>
-                    <li>• Access will be granted based on selected role</li>
-                  </ul>
-                </div>
+                {!selectedUser && (
+                  <div className="rounded-lg bg-blue-50 p-3 text-sm text-blue-700">
+                    <div className="font-medium mb-1">What happens next:</div>
+                    <ul className="text-xs space-y-1">
+                      <li>• User will receive an invitation email</li>
+                      <li>• They can set up their account and password</li>
+                      <li>• Access will be granted based on selected role</li>
+                    </ul>
+                  </div>
+                )}
                 <div className="flex gap-2 pt-4">
                   <Button
                     type="button"
