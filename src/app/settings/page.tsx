@@ -20,6 +20,7 @@ import {
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { getCurrencyOptions } from '@/lib/currencies'
 
 const TABS = [
   { id: 'company', label: 'Company', icon: Building2 },
@@ -199,11 +200,10 @@ function CompanyTab() {
             <label className="block text-sm font-medium text-gray-700">
               Currency
             </label>
-            <Input
-              placeholder="USD"
+            <Select
               value={currency}
               onChange={(e) => setCurrency(e.target.value)}
-              fullWidth
+              options={getCurrencyOptions()}
             />
           </div>
 
