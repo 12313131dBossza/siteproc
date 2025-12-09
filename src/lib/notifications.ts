@@ -2,12 +2,13 @@ import { sendEmail, getFromAddress } from './email';
 import { sbServer } from './supabase-server';
 
 /**
- * Get the white-label "from" address for a company
- * Returns format: "Company Name <notifications@siteproc.app>" if white-label enabled
- * Otherwise returns the default from address
+ * Get the white-label config for a company
+ * Returns from address and company name for email branding
  */
-async function getWhiteLabelFrom(companyId?: string): Promise<string | undefined> {
-  if (!companyId) return undefined;
+async function getWhiteLabelConfig(companyId?: string): Promise<{ from?: string; companyName: string }> {
+  const defaultCompanyName = 'SiteProc';
+  
+  if (!companyId) return { companyName: defaultCompanyName };
   
   try {
     const supabase = await sbServer();
@@ -17,16 +18,23 @@ async function getWhiteLabelFrom(companyId?: string): Promise<string | undefined
       .eq('id', companyId)
       .single();
     
-    if (company?.white_label_enabled && company?.white_label_email_name && company?.white_label_company_name) {
-      // Format: "Company Name <email@domain.com>"
-      const baseEmail = getFromAddress();
-      return `${company.white_label_company_name} <${baseEmail}>`;
+    if (company?.white_label_enabled && company?.white_label_company_name) {
+      const companyName = company.white_label_company_name;
+      let from: string | undefined;
+      
+      // Only set custom "from" if email name is enabled
+      if (company.white_label_email_name) {
+        const baseEmail = getFromAddress();
+        from = `${companyName} <${baseEmail}>`;
+      }
+      
+      return { from, companyName };
     }
   } catch (error) {
     console.error('Error fetching white-label config:', error);
   }
   
-  return undefined;
+  return { companyName: defaultCompanyName };
 }
 
 // Email notification functions for expenses, orders, and deliveries
@@ -51,8 +59,8 @@ export async function sendExpenseNotifications(
       return;
     }
 
-    // Get white-label from address for this company
-    const whiteLabelFrom = await getWhiteLabelFrom(expense.company_id);
+    // Get white-label config for this company
+    const { from: whiteLabelFrom, companyName } = await getWhiteLabelConfig(expense.company_id);
 
     // Fetch creator profile if submitted_by exists
     let creatorEmail = null;
@@ -91,7 +99,8 @@ export async function sendExpenseNotifications(
                 action: 'created',
                 expense,
                 recipientName: adminProfile.full_name || 'Admin',
-                actionBy: creatorName || 'Unknown User'
+                actionBy: creatorName || 'Unknown User',
+                companyName
               }),
               ...(whiteLabelFrom && { from: whiteLabelFrom })
             });
@@ -108,7 +117,8 @@ export async function sendExpenseNotifications(
             action,
             expense,
             recipientName: creatorName || 'User',
-            actionBy: actionBy || 'Admin'
+            actionBy: actionBy || 'Admin',
+            companyName
           }),
           ...(whiteLabelFrom && { from: whiteLabelFrom })
         });
@@ -151,8 +161,8 @@ export async function sendOrderNotifications(
       return;
     }
 
-    // Get white-label from address for this company
-    const whiteLabelFrom = await getWhiteLabelFrom(order.company_id);
+    // Get white-label config for this company
+    const { from: whiteLabelFrom, companyName } = await getWhiteLabelConfig(order.company_id);
 
     const notifications: Array<{ to: string; subject: string; html: string; from?: string }> = [];
 
@@ -174,7 +184,8 @@ export async function sendOrderNotifications(
                 action: 'created',
                 order,
                 recipientName: adminProfile.full_name || 'Admin',
-                actionBy: order.profiles?.full_name || 'Unknown User'
+                actionBy: order.profiles?.full_name || 'Unknown User',
+                companyName
               }),
               ...(whiteLabelFrom && { from: whiteLabelFrom })
             });
@@ -191,7 +202,8 @@ export async function sendOrderNotifications(
             action,
             order,
             recipientName: order.profiles?.full_name || 'User',
-            actionBy: actionBy || 'Admin'
+            actionBy: actionBy || 'Admin',
+            companyName
           }),
           ...(whiteLabelFrom && { from: whiteLabelFrom })
         });
@@ -214,12 +226,14 @@ function createExpenseEmailHtml({
   action,
   expense,
   recipientName,
-  actionBy
+  actionBy,
+  companyName = 'SiteProc'
 }: {
   action: 'created' | 'approved' | 'rejected';
   expense: any;
   recipientName: string;
   actionBy: string;
+  companyName?: string;
 }) {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://your-app.vercel.app';
   
@@ -303,7 +317,7 @@ function createExpenseEmailHtml({
       </div>
 
       <div style="color: #64748b; font-size: 12px; text-align: center; margin-top: 32px;">
-        This is an automated message from SiteProc. Please do not reply to this email.
+        This is an automated message from ${companyName}. Please do not reply to this email.
       </div>
     </div>
   `;
@@ -314,12 +328,14 @@ function createOrderEmailHtml({
   action,
   order,
   recipientName,
-  actionBy
+  actionBy,
+  companyName = 'SiteProc'
 }: {
   action: 'created' | 'approved' | 'rejected';
   order: any;
   recipientName: string;
   actionBy: string;
+  companyName?: string;
 }) {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://your-app.vercel.app';
   
@@ -405,7 +421,7 @@ function createOrderEmailHtml({
       </div>
 
       <div style="color: #64748b; font-size: 12px; text-align: center; margin-top: 32px;">
-        This is an automated message from SiteProc. Please do not reply to this email.
+        This is an automated message from ${companyName}. Please do not reply to this email.
       </div>
     </div>
   `;
@@ -444,8 +460,8 @@ export async function sendDeliveryNotifications(
       return;
     }
 
-    // Get white-label from address for this company
-    const whiteLabelFrom = await getWhiteLabelFrom(delivery.company_id);
+    // Get white-label config for this company
+    const { from: whiteLabelFrom, companyName } = await getWhiteLabelConfig(delivery.company_id);
 
     const notifications: Array<{ to: string; subject: string; html: string; from?: string }> = [];
 
@@ -468,7 +484,8 @@ export async function sendDeliveryNotifications(
                 action: 'created',
                 delivery,
                 recipientName: adminProfile.full_name || 'Admin',
-                actionBy: delivery.profiles?.full_name || 'Unknown User'
+                actionBy: delivery.profiles?.full_name || 'Unknown User',
+                companyName
               }),
               ...(whiteLabelFrom && { from: whiteLabelFrom })
             });
@@ -487,7 +504,8 @@ export async function sendDeliveryNotifications(
               action: 'order_completed',
               delivery,
               recipientName: delivery.orders.profiles?.full_name || 'User',
-              actionBy: delivery.profiles?.full_name || 'System'
+              actionBy: delivery.profiles?.full_name || 'System',
+              companyName
             }),
             ...(whiteLabelFrom && { from: whiteLabelFrom })
           });
@@ -511,12 +529,14 @@ function createDeliveryEmailHtml({
   action,
   delivery,
   recipientName,
-  actionBy
+  actionBy,
+  companyName = 'SiteProc'
 }: {
   action: 'created' | 'order_completed';
   delivery: any;
   recipientName: string;
   actionBy: string;
+  companyName?: string;
 }) {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://your-app.vercel.app';
   const isCompleted = action === 'order_completed';
@@ -605,7 +625,7 @@ function createDeliveryEmailHtml({
       </div>
 
       <div style="color: #64748b; font-size: 12px; text-align: center; margin-top: 32px;">
-        This is an automated message from SiteProc. Please do not reply to this email.
+        This is an automated message from ${companyName}. Please do not reply to this email.
       </div>
     </div>
   `;
