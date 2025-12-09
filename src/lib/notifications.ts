@@ -2,14 +2,15 @@ import { sendEmail, getFromAddress } from './email';
 import { sbServer } from './supabase-server';
 
 /**
- * Get the white-label config for a company
- * Returns from address and company name for email branding
+ * Get the email config for a company
+ * Returns from address with company name if available
  */
 async function getWhiteLabelConfig(companyId?: string): Promise<{ from?: string; companyName: string }> {
   const defaultCompanyName = 'SiteProc';
+  const baseEmail = getFromAddress();
   
   if (!companyId) {
-    console.log('[WhiteLabel] No companyId provided, using default');
+    console.log('[Email] No companyId provided, using default');
     return { companyName: defaultCompanyName };
   }
   
@@ -17,27 +18,26 @@ async function getWhiteLabelConfig(companyId?: string): Promise<{ from?: string;
     const supabase = await sbServer();
     const { data: company, error } = await supabase
       .from('companies')
-      .select('white_label_enabled, white_label_company_name, white_label_email_name')
+      .select('name, white_label_enabled, white_label_company_name, white_label_email_name')
       .eq('id', companyId)
       .single();
     
-    console.log('[WhiteLabel] Company data:', { companyId, company, error });
+    console.log('[Email] Company data:', { companyId, company, error });
     
-    if (company?.white_label_enabled && company?.white_label_company_name) {
-      const companyName = company.white_label_company_name;
-      let from: string | undefined;
+    if (company) {
+      // Use white-label company name if enabled, otherwise use regular company name
+      const companyName = (company.white_label_enabled && company.white_label_company_name) 
+        ? company.white_label_company_name 
+        : (company.name || defaultCompanyName);
       
-      // Only set custom "from" if email name is enabled
-      if (company.white_label_email_name) {
-        const baseEmail = getFromAddress();
-        from = `${companyName} <${baseEmail}>`;
-        console.log('[WhiteLabel] Using custom from:', from);
-      }
+      // Always use company name in the "from" field for professional emails
+      const from = `${companyName} <${baseEmail}>`;
+      console.log('[Email] Using from address:', from);
       
       return { from, companyName };
     }
   } catch (error) {
-    console.error('Error fetching white-label config:', error);
+    console.error('Error fetching company config:', error);
   }
   
   return { companyName: defaultCompanyName };
