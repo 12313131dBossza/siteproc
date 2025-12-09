@@ -33,9 +33,9 @@ const mobileNavItems: Array<{
   access: 'all' | 'internal' | 'viewer';
   minPlan: PlanId;
 }> = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, access: 'internal', minPlan: 'starter' },
-  { name: 'Projects', href: '/projects', icon: FolderOpen, access: 'all', minPlan: 'starter' },
-  { name: 'Orders', href: '/orders', icon: ShoppingCart, access: 'viewer', minPlan: 'starter' },
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, access: 'internal', minPlan: 'free' },
+  { name: 'Projects', href: '/projects', icon: FolderOpen, access: 'all', minPlan: 'free' },
+  { name: 'Orders', href: '/orders', icon: ShoppingCart, access: 'viewer', minPlan: 'free' },
   // Messages requires Pro plan
   { name: 'Messages', href: '/messages', icon: MessageCircle, access: 'all', minPlan: 'pro' },
 ];
