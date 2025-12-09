@@ -182,9 +182,22 @@ export default function UsersPage() {
   const handleRemoveUser = async () => {
     if (!userToRemove) return;
     
-    setIsRemoving(true);
+    // Store previous state for rollback
+    const previousUser = users.find(u => u.id === userToRemove.id);
+    
+    // Optimistically update - set user to inactive immediately
+    setUsers(prev => prev.map(u => 
+      u.id === userToRemove.id ? { ...u, status: 'inactive' as const } : u
+    ));
+    
+    // Close modal immediately
+    setIsRemoveModalOpen(false);
+    toast.success(`${userToRemove.full_name || userToRemove.email} has been removed`);
+    const removedUser = userToRemove;
+    setUserToRemove(null);
+    
     try {
-      const response = await fetch(`/api/users/${userToRemove.id}`, {
+      const response = await fetch(`/api/users/${removedUser.id}`, {
         method: 'DELETE',
       });
 
@@ -192,20 +205,15 @@ export default function UsersPage() {
         const error = await response.json();
         throw new Error(error.error || 'Failed to remove user');
       }
-
-      // Update local state - set user to inactive
-      setUsers(prev => prev.map(u => 
-        u.id === userToRemove.id ? { ...u, status: 'inactive' as const } : u
-      ));
-      
-      toast.success(`${userToRemove.full_name || userToRemove.email} has been removed`);
-      setIsRemoveModalOpen(false);
-      setUserToRemove(null);
     } catch (error: any) {
       console.error('Error removing user:', error);
+      // Rollback on error
+      if (previousUser) {
+        setUsers(prev => prev.map(u => 
+          u.id === removedUser.id ? previousUser : u
+        ));
+      }
       toast.error(error.message || 'Failed to remove user');
-    } finally {
-      setIsRemoving(false);
     }
   };
 

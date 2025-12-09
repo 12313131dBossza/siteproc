@@ -377,17 +377,25 @@ export default function TokoPage() {
   const handleDelete = async (productId: string) => {
     if (!confirm('Are you sure you want to delete this product?')) return;
 
+    // Store for rollback
+    const deletedProduct = products.find(p => p.id === productId);
+    
+    // Optimistically remove from list immediately
+    setProducts(prev => prev.filter(p => p.id !== productId));
+    toast.success('Product deleted successfully');
+
     try {
       const response = await fetch(`/api/products/${productId}`, {
         method: 'DELETE'
       });
 
       if (!response.ok) throw new Error('Failed to delete product');
-
-      toast.success('Product deleted successfully');
-      fetchProducts();
     } catch (error) {
       console.error('Error deleting product:', error);
+      // Rollback on error
+      if (deletedProduct) {
+        setProducts(prev => [...prev, deletedProduct]);
+      }
       toast.error('Failed to delete product');
     }
   };

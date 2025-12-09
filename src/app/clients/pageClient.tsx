@@ -185,7 +185,13 @@ export default function ClientsPageClient() {
       return;
     }
 
-    setDeleting(id);
+    // Store for rollback
+    const deletedClient = clients.find(c => c.id === id);
+    
+    // Optimistically remove from list immediately
+    setClients(prev => prev.filter(c => c.id !== id));
+    toast.success('Client deleted successfully');
+
     try {
       const res = await fetch(`/api/clients/${id}`, {
         method: 'DELETE'
@@ -195,14 +201,13 @@ export default function ClientsPageClient() {
         const error = await res.json();
         throw new Error(error.error || 'Failed to delete client');
       }
-
-      toast.success('Client deleted successfully');
-      fetchClients();
     } catch (error: any) {
       console.error('Error deleting client:', error);
+      // Rollback on error
+      if (deletedClient) {
+        setClients(prev => [...prev, deletedClient]);
+      }
       toast.error(error.message || 'Failed to delete client');
-    } finally {
-      setDeleting(null);
     }
   };
 

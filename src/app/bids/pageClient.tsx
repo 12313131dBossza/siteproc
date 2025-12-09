@@ -203,7 +203,13 @@ export default function BidsPageClient() {
       return;
     }
 
-    setDeleting(id);
+    // Store for rollback
+    const deletedBid = bids.find(b => b.id === id);
+    
+    // Optimistically remove from list immediately
+    setBids(prev => prev.filter(b => b.id !== id));
+    toast.success('Bid deleted successfully');
+
     try {
       const res = await fetch(`/api/bids/${id}`, {
         method: 'DELETE'
@@ -213,18 +219,26 @@ export default function BidsPageClient() {
         const error = await res.json();
         throw new Error(error.error || 'Failed to delete bid');
       }
-
-      toast.success('Bid deleted successfully');
-      fetchBids();
     } catch (error: any) {
       console.error('Error deleting bid:', error);
+      // Rollback on error
+      if (deletedBid) {
+        setBids(prev => [...prev, deletedBid]);
+      }
       toast.error(error.message || 'Failed to delete bid');
-    } finally {
-      setDeleting(null);
     }
   };
 
   const handleApprove = async (id: string) => {
+    // Store for rollback
+    const previousBid = bids.find(b => b.id === id);
+    
+    // Optimistically update status immediately
+    setBids(prev => prev.map(b => 
+      b.id === id ? { ...b, status: 'approved' as const } : b
+    ));
+    toast.success('Bid approved successfully');
+
     try {
       const res = await fetch(`/api/bids/${id}/approve`, {
         method: 'POST'
@@ -234,16 +248,26 @@ export default function BidsPageClient() {
         const error = await res.json();
         throw new Error(error.error || 'Failed to approve bid');
       }
-
-      toast.success('Bid approved successfully');
-      fetchBids();
     } catch (error: any) {
       console.error('Error approving bid:', error);
+      // Rollback on error
+      if (previousBid) {
+        setBids(prev => prev.map(b => b.id === id ? previousBid : b));
+      }
       toast.error(error.message || 'Failed to approve bid');
     }
   };
 
   const handleReject = async (id: string) => {
+    // Store for rollback
+    const previousBid = bids.find(b => b.id === id);
+    
+    // Optimistically update status immediately
+    setBids(prev => prev.map(b => 
+      b.id === id ? { ...b, status: 'rejected' as const } : b
+    ));
+    toast.success('Bid rejected successfully');
+
     try {
       const res = await fetch(`/api/bids/${id}/reject`, {
         method: 'POST'
@@ -253,11 +277,12 @@ export default function BidsPageClient() {
         const error = await res.json();
         throw new Error(error.error || 'Failed to reject bid');
       }
-
-      toast.success('Bid rejected successfully');
-      fetchBids();
     } catch (error: any) {
       console.error('Error rejecting bid:', error);
+      // Rollback on error
+      if (previousBid) {
+        setBids(prev => prev.map(b => b.id === id ? previousBid : b));
+      }
       toast.error(error.message || 'Failed to reject bid');
     }
   };
@@ -267,7 +292,15 @@ export default function BidsPageClient() {
       return;
     }
 
-    setConverting(id);
+    // Store for rollback
+    const previousBid = bids.find(b => b.id === id);
+    
+    // Optimistically update status immediately
+    setBids(prev => prev.map(b => 
+      b.id === id ? { ...b, status: 'converted' as const } : b
+    ));
+    toast.success('Converting bid to order...');
+
     try {
       const res = await fetch(`/api/bids/${id}/convert`, {
         method: 'POST'
@@ -280,12 +313,13 @@ export default function BidsPageClient() {
 
       const data = await res.json();
       toast.success(`Bid converted to order successfully! Order ID: ${data.order_id}`);
-      fetchBids();
     } catch (error: any) {
       console.error('Error converting bid:', error);
+      // Rollback on error
+      if (previousBid) {
+        setBids(prev => prev.map(b => b.id === id ? previousBid : b));
+      }
       toast.error(error.message || 'Failed to convert bid to order');
-    } finally {
-      setConverting(null);
     }
   };
 

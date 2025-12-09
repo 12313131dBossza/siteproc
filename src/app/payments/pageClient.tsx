@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { format } from '@/lib/date-format';
 import { InvoiceGenerator } from '@/components/InvoiceGenerator';
 import { FormModal, FormModalActions, Input, Select, TextArea, SearchBar } from '@/components/ui';
+import { toast } from 'sonner';
 
 interface Payment {
   id: string;
@@ -225,7 +226,13 @@ export default function PaymentsPageClient() {
       return;
     }
 
-    setDeleting(id);
+    // Store for rollback
+    const deletedPayment = payments.find(p => p.id === id);
+    
+    // Optimistically remove from list immediately
+    setPayments(prev => prev.filter(p => p.id !== id));
+    toast.success('Payment deleted successfully');
+
     try {
       const res = await fetch(`/api/payments/${id}`, {
         method: 'DELETE',
@@ -236,13 +243,13 @@ export default function PaymentsPageClient() {
         const error = await res.json();
         throw new Error(error.error || 'Failed to delete payment');
       }
-
-      fetchPayments();
     } catch (error: any) {
       console.error('Error deleting payment:', error);
-      alert(error.message || 'Failed to delete payment');
-    } finally {
-      setDeleting(null);
+      // Rollback on error
+      if (deletedPayment) {
+        setPayments(prev => [...prev, deletedPayment]);
+      }
+      toast.error(error.message || 'Failed to delete payment');
     }
   };
 

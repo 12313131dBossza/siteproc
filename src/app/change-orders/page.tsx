@@ -131,27 +131,55 @@ export default function ChangeOrdersPage() {
   }, [newForm.project_id])
 
   async function approve(id: string) {
-    setProcessing(id)
-    const res = await fetch(`/api/change-orders/${id}/approve`, { method: 'POST' })
-    if (res.ok) {
-      await load()
-    } else {
-      const error = await res.json()
-      alert(`Failed to approve: ${error.error || 'Unknown error'}`)
+    // Store for rollback
+    const previousCO = pending.find(co => co.id === id);
+    
+    // Optimistically update - move to approved and remove from pending
+    setPending(prev => prev.filter(co => co.id !== id));
+    if (previousCO) {
+      setHistory(prev => [{ ...previousCO, status: 'approved' }, ...prev]);
     }
-    setProcessing(null)
+    
+    try {
+      const res = await fetch(`/api/change-orders/${id}/approve`, { method: 'POST' })
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Unknown error')
+      }
+    } catch (err: any) {
+      // Rollback on error
+      if (previousCO) {
+        setPending(prev => [...prev, previousCO]);
+        setHistory(prev => prev.filter(co => co.id !== id));
+      }
+      alert(`Failed to approve: ${err.message}`)
+    }
   }
 
   async function reject(id: string) {
-    setProcessing(id)
-    const res = await fetch(`/api/change-orders/${id}/reject`, { method: 'POST' })
-    if (res.ok) {
-      await load()
-    } else {
-      const error = await res.json()
-      alert(`Failed to reject: ${error.error || 'Unknown error'}`)
+    // Store for rollback
+    const previousCO = pending.find(co => co.id === id);
+    
+    // Optimistically update - move to rejected and remove from pending
+    setPending(prev => prev.filter(co => co.id !== id));
+    if (previousCO) {
+      setHistory(prev => [{ ...previousCO, status: 'rejected' }, ...prev]);
     }
-    setProcessing(null)
+    
+    try {
+      const res = await fetch(`/api/change-orders/${id}/reject`, { method: 'POST' })
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Unknown error')
+      }
+    } catch (err: any) {
+      // Rollback on error
+      if (previousCO) {
+        setPending(prev => [...prev, previousCO]);
+        setHistory(prev => prev.filter(co => co.id !== id));
+      }
+      alert(`Failed to reject: ${err.message}`)
+    }
   }
 
   async function deleteChangeOrder(id: string) {
@@ -159,19 +187,30 @@ export default function ChangeOrdersPage() {
       return
     }
     
-    setProcessing(id)
+    // Store for rollback
+    const deletedFromPending = pending.find(co => co.id === id);
+    const deletedFromHistory = history.find(co => co.id === id);
+    
+    // Optimistically remove from both lists
+    setPending(prev => prev.filter(co => co.id !== id));
+    setHistory(prev => prev.filter(co => co.id !== id));
+    
     try {
       const res = await fetch(`/api/change-orders/${id}`, { method: 'DELETE' })
-      if (res.ok) {
-        await load()
-      } else {
+      if (!res.ok) {
         const error = await res.json()
-        alert(`Failed to delete: ${error.error || 'Unknown error'}`)
+        throw new Error(error.error || 'Unknown error')
       }
-    } catch (err) {
-      alert('Failed to delete change order')
+    } catch (err: any) {
+      // Rollback on error
+      if (deletedFromPending) {
+        setPending(prev => [...prev, deletedFromPending]);
+      }
+      if (deletedFromHistory) {
+        setHistory(prev => [...prev, deletedFromHistory]);
+      }
+      alert(`Failed to delete: ${err.message}`)
     }
-    setProcessing(null)
   }
 
   async function createChangeOrder(e: React.FormEvent) {

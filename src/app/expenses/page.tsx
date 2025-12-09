@@ -498,7 +498,13 @@ export default function ExpensesPage() {
       return;
     }
 
-    setDeleting(id);
+    // Store for rollback
+    const deletedExpense = expenses.find(exp => exp.id === id);
+    
+    // Optimistically remove from list immediately
+    setExpenses(prev => prev.filter(exp => exp.id !== id));
+    toast.success('Expense deleted successfully');
+
     try {
       const response = await fetch(`/api/expenses/${id}`, {
         method: 'DELETE',
@@ -509,14 +515,13 @@ export default function ExpensesPage() {
         const error = await response.json();
         throw new Error(error.error || 'Failed to delete expense');
       }
-
-      setExpenses(prev => prev.filter(exp => exp.id !== id));
-      toast.success('Expense deleted successfully');
     } catch (error) {
       console.error('Failed to delete expense:', error);
+      // Rollback on error
+      if (deletedExpense) {
+        setExpenses(prev => [...prev, deletedExpense]);
+      }
       toast.error(error instanceof Error ? error.message : 'Failed to delete expense');
-    } finally {
-      setDeleting(null);
     }
   };
 

@@ -184,7 +184,13 @@ export default function ContractorsPageClient() {
       return;
     }
 
-    setDeleting(id);
+    // Store for rollback
+    const deletedContractor = contractors.find(c => c.id === id);
+    
+    // Optimistically remove from list immediately
+    setContractors(prev => prev.filter(c => c.id !== id));
+    toast.success('Contractor deleted successfully');
+
     try {
       const res = await fetch(`/api/contractors/${id}`, {
         method: 'DELETE'
@@ -194,14 +200,13 @@ export default function ContractorsPageClient() {
         const error = await res.json();
         throw new Error(error.error || 'Failed to delete contractor');
       }
-
-      toast.success('Contractor deleted successfully');
-      fetchContractors();
     } catch (error: any) {
       console.error('Error deleting contractor:', error);
+      // Rollback on error
+      if (deletedContractor) {
+        setContractors(prev => [...prev, deletedContractor]);
+      }
       toast.error(error.message || 'Failed to delete contractor');
-    } finally {
-      setDeleting(null);
     }
   };
 
