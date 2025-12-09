@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useCompanyId } from '@/lib/useCompanyId';
+import { useCurrency } from '@/lib/CurrencyContext';
 import { Plus, Search, DollarSign, Edit, Trash2 } from 'lucide-react';
 import { AppLayout } from '@/components/app-layout';
 import { Button } from '@/components/ui/Button';
@@ -177,12 +178,7 @@ export default function PaymentsPageClient() {
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
-  };
+  const { formatAmount: formatCurrency } = useCurrency();
 
   const getStatusBadge = (status: string) => {
     const styles = {

@@ -21,6 +21,7 @@ import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { getCurrencyOptions } from '@/lib/currencies'
+import { useCurrency } from '@/lib/CurrencyContext'
 
 const TABS = [
   { id: 'company', label: 'Company', icon: Building2 },
@@ -79,11 +80,12 @@ export default function SettingsPage() {
 
 function CompanyTab() {
   const [name, setName] = useState('')
-  const [currency, setCurrency] = useState('USD')
+  const [currency, setCurrencyState] = useState('USD')
   const [units, setUnits] = useState('imperial')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { setCurrency: setGlobalCurrency } = useCurrency()
   
   useEffect(() => {
     const loadCompany = async () => {
@@ -101,7 +103,7 @@ function CompanyTab() {
         
         if (d) {
           setName(d.name || '')
-          setCurrency(d.currency || 'USD')
+          setCurrencyState(d.currency || 'USD')
           setUnits(d.units || 'imperial')
         }
       } catch (err) {
@@ -113,6 +115,9 @@ function CompanyTab() {
     }
     loadCompany()
   }, [])
+  
+  // Alias for the local state setter
+  const setCurrency = (value: string) => setCurrencyState(value)
   
   async function save() {
     setSaving(true)
@@ -132,13 +137,16 @@ function CompanyTab() {
         if (verifyRes.ok) {
           const verifyData = await verifyRes.json()
           setName(verifyData.name || '')
-          setCurrency(verifyData.currency || 'USD')
+          setCurrencyState(verifyData.currency || 'USD')
           setUnits(verifyData.units || 'metric')
+          
+          // Update the global currency context so all pages show the new currency
+          setGlobalCurrency(verifyData.currency || 'USD')
           
           if (data.warning) {
             toast.success('Settings saved. Note: ' + data.warning)
           } else {
-            toast.success('Company settings saved successfully')
+            toast.success('Company settings saved successfully! Currency updated across the system.')
           }
         } else {
           toast.success('Settings saved successfully')

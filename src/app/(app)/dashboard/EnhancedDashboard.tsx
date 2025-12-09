@@ -17,7 +17,7 @@ import {
   Activity,
   Users
 } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { useCurrency } from "@/lib/CurrencyContext";
 import Link from "next/link";
 import { 
   LineChart, 
@@ -105,6 +105,7 @@ export default function EnhancedDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [rawResponse, setRawResponse] = useState<any>(null); // Debug
+  const { formatAmount } = useCurrency();
 
   useEffect(() => {
     fetchDashboardData();
@@ -197,13 +198,13 @@ export default function EnhancedDashboard() {
         {/* Budget Card */}
         <StatCard
           title="Total Budget"
-          value={formatCurrency(stats.projects.totalBudget)}
+          value={formatAmount(stats.projects.totalBudget)}
           icon={DollarSign}
           iconColor="text-green-600"
           iconBgColor="bg-green-50"
           badge={`${budgetUsagePercentage.toFixed(0)}%`}
           badgeColor="text-green-600"
-          subtitle={`${formatCurrency(stats.projects.totalSpent)} spent`}
+          subtitle={`${formatAmount(stats.projects.totalSpent)} spent`}
         />
 
         {/* Orders Card */}
@@ -255,7 +256,7 @@ export default function EnhancedDashboard() {
                   tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
                 />
                 <Tooltip 
-                  formatter={(value: any) => formatCurrency(value)}
+                  formatter={(value: any) => formatAmount(value)}
                   contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
                 />
                 <Legend />
@@ -369,7 +370,7 @@ export default function EnhancedDashboard() {
                   tick={{ fontSize: 12 }}
                 />
                 <Tooltip 
-                  formatter={(value: any) => formatCurrency(value)}
+                  formatter={(value: any) => formatAmount(value)}
                   labelFormatter={(label) => `Vendor: ${label}`}
                   contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
                 />
@@ -418,7 +419,7 @@ export default function EnhancedDashboard() {
                         return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
                       })}
                     </Pie>
-                    <Tooltip formatter={(value: any) => formatCurrency(value)} />
+                    <Tooltip formatter={(value: any) => formatAmount(value)} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
@@ -433,7 +434,7 @@ export default function EnhancedDashboard() {
                         style={{ backgroundColor: colors[index % colors.length] }}
                       />
                       <span className="text-sm text-gray-600 whitespace-nowrap">
-                        {entry.category}: {formatCurrency(entry.amount)}
+                        {entry.category}: {formatAmount(entry.amount)}
                       </span>
                     </div>
                   );
@@ -455,7 +456,7 @@ export default function EnhancedDashboard() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard
           title="Pending Payments"
-          value={formatCurrency(stats.payments.unpaid)}
+          value={formatAmount(stats.payments.unpaid)}
           icon={Receipt}
           iconColor="text-orange-400"
           iconBgColor="bg-orange-50"
@@ -479,7 +480,7 @@ export default function EnhancedDashboard() {
 
         <StatCard
           title="Budget Remaining"
-          value={formatCurrency(stats.projects.totalBudget - stats.projects.totalSpent)}
+          value={formatAmount(stats.projects.totalBudget - stats.projects.totalSpent)}
           icon={DollarSign}
           iconColor="text-green-400"
           iconBgColor="bg-green-50"

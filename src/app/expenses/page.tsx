@@ -26,7 +26,8 @@ import {
   Trash2
 } from "lucide-react";
 import { format } from "@/lib/date-format";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { useCurrency } from "@/lib/CurrencyContext";
 import { createClient } from '@/lib/supabase-client';
 import { toast } from 'sonner';
 import { DocumentManager } from "@/components/DocumentManager";
@@ -73,6 +74,8 @@ export default function ExpensesPage() {
   const [docManagerOpen, setDocManagerOpen] = useState(false);
   const [docManagerExpenseId, setDocManagerExpenseId] = useState<string>('');
   const [documentCounts, setDocumentCounts] = useState<Record<string, number>>({});
+
+  const { formatAmount: formatCurrency } = useCurrency();
 
   // Mock user for approval functionality
   const user = { email: 'admin@siteproc.com' };

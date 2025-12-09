@@ -6,6 +6,7 @@ import { NotificationProvider } from '@/contexts/NotificationContext'
 import { SentryInitializer } from '@/components/SentryInitializer'
 import { ServiceWorkerRegistration } from '@/components/ServiceWorkerRegistration'
 import { OfflineSyncManager } from '@/components/OfflineSyncManager'
+import { CurrencyProvider } from '@/lib/CurrencyContext'
 
 // Root layout provides html/body structure and providers for all routes
 export default function RootLayout({
@@ -26,9 +27,11 @@ export default function RootLayout({
         <ServiceWorkerRegistration />
         <ToastProvider>
           <NotificationProvider>
-            <Toaster position="top-right" />
-            {children}
-            <OfflineSyncManager />
+            <CurrencyProvider>
+              <Toaster position="top-right" />
+              {children}
+              <OfflineSyncManager />
+            </CurrencyProvider>
           </NotificationProvider>
         </ToastProvider>
       </body>

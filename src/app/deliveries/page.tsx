@@ -7,7 +7,8 @@ import { FormModal } from '@/components/ui/FormModal'
 import { StatCard } from "@/components/StatCard"
 import { Package, Truck, MapPin, Clock, CheckCircle, CheckCircle2, AlertCircle, Search, Filter, Eye, Calendar, Lock, Edit, X, Upload } from 'lucide-react'
 import { format } from '@/lib/date-format'
-import { cn, formatCurrency } from '@/lib/utils'
+import { cn } from '@/lib/utils'
+import { useCurrency } from '@/lib/CurrencyContext'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import RecordDeliveryForm from '@/components/RecordDeliveryForm'
@@ -80,6 +81,8 @@ export default function DeliveriesPage() {
   const [uploadingFile, setUploadingFile] = useState<string | null>(null)
   const [selectedDelivery, setSelectedDelivery] = useState<Delivery | null>(null)
   const [showDeliveryDetailModal, setShowDeliveryDetailModal] = useState(false)
+
+  const { formatAmount: formatCurrency } = useCurrency()
 
   // Check authentication first
   useEffect(() => {

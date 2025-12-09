@@ -30,7 +30,8 @@ import {
   Trash2
 } from "lucide-react";
 import { format } from "@/lib/date-format";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { useCurrency } from "@/lib/CurrencyContext";
 import { createClient } from "@/lib/supabase-client";
 import Link from "next/link";
 import { OrderForm } from "@/components/forms/OrderForm";
@@ -489,6 +490,8 @@ export default function OrdersPage() {
   const [showNewDeliveryModal, setShowNewDeliveryModal] = useState(false);
   const [orderDeliveries, setOrderDeliveries] = useState<any[]>([]);
   const [loadingDeliveries, setLoadingDeliveries] = useState(false);
+
+  const { formatAmount: formatCurrency } = useCurrency();
 
   useEffect(() => {
     fetchUserProfile();

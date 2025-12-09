@@ -11,6 +11,7 @@ import { ProjectsFilterPanel } from "@/components/ProjectsFilterPanel";
 import { SortControl, sortArray } from "@/components/SortControl";
 import { exportToCSV, formatCurrencyForExport, formatDateForExport } from "@/lib/export-csv";
 import { createBrowserClient } from '@supabase/ssr';
+import { useCurrency } from "@/lib/CurrencyContext";
 
 interface Project {
   id: string;
@@ -205,7 +206,7 @@ export default function ProjectsPage() {
     return { totalBudget, totalActual, totalVariance, activeCount, totalCount: projects.length };
   }, [projects]);
 
-  const formatCurrency = (amount: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount);
+  const { formatAmount: formatCurrency } = useCurrency();
 
   const handleExportCSV = () => {
     exportToCSV(
