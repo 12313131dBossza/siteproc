@@ -10,6 +10,7 @@ const securityHeaders = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'X-DNS-Prefetch-Control', value: 'off' },
   { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self)' },
+  { key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' },
 ]
 
 const nextConfig: NextConfig = {
