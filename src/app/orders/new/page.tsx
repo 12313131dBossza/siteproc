@@ -9,6 +9,7 @@ import { FormField } from '@/components/forms/FormField';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase-client';
 import { toast } from 'sonner';
+import { useCurrency } from '@/lib/CurrencyContext';
 
 interface Product {
   id: string;
@@ -21,6 +22,7 @@ interface Product {
 }
 
 function NewOrderForm() {
+  const { formatAmount } = useCurrency();
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -199,7 +201,7 @@ function NewOrderForm() {
                     { value: '', label: 'Select a product...' },
                     ...products.map(product => ({
                       value: product.id,
-                      label: `${product.name}${product.sku ? ` (${product.sku})` : ''} - $${product.price} - ${product.stock} in stock`
+                      label: `${product.name}${product.sku ? ` (${product.sku})` : ''} - ${formatAmount(product.price)} - ${product.stock} in stock`
                     }))
                   ]}
                 />

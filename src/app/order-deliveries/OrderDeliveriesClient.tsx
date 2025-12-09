@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { formatDistanceToNow } from '@/lib/date-format'
+import { useCurrency } from '@/lib/CurrencyContext'
 import { 
   Truck, 
   Eye, 
@@ -98,6 +99,7 @@ export default function OrderDeliveriesClient() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const companyId = useCompanyId()
+  const { formatAmount } = useCurrency()
 
   const [deliveries, setDeliveries] = useState<Delivery[]>([])
   const [loading, setLoading] = useState(true)
@@ -387,7 +389,7 @@ export default function OrderDeliveriesClient() {
           />
           <StatCard
             title="Total Value"
-            value={`$${summary.total_value.toLocaleString()}`}
+            value={formatAmount(summary.total_value)}
             icon={DollarSign}
             color="green"
             subtitle="Cumulative value"
@@ -550,7 +552,7 @@ export default function OrderDeliveriesClient() {
                       <div className="flex items-center space-x-2">
                         <div className="text-right">
                           <div className="text-lg font-semibold text-gray-900">
-                            ${delivery.total_amount.toLocaleString()}
+                            {formatAmount(delivery.total_amount)}
                           </div>
                           <div className="text-sm text-gray-500">
                             {itemsToRender.length} item{itemsToRender.length !== 1 ? 's' : ''}

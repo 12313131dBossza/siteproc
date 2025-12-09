@@ -2,6 +2,7 @@
 import DataTable from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
 import { useState, useEffect } from 'react';
+import { useCurrency } from '@/lib/CurrencyContext';
 
 export interface ProjectRow { 
   id: string; 
@@ -12,6 +13,7 @@ export interface ProjectRow {
 }
 
 export default function ProjectsPageClient({ rows, error }: { rows: ProjectRow[]; error?: string }){
+  const { formatAmount } = useCurrency();
   const [projects, setProjects] = useState<ProjectRow[]>(rows || [])
   const [loading, setLoading] = useState(false)
   const [apiError, setApiError] = useState<string>()
@@ -60,7 +62,7 @@ export default function ProjectsPageClient({ rows, error }: { rows: ProjectRow[]
             { key:'name', header:'Name', sortable:true },
             { key:'code', header:'Code', sortable:true },
             { key:'status', header:'Status', sortable:true },
-            { key:'budget', header:'Budget', render: (row: any) => row.budget ? `$${Number(row.budget).toFixed(2)}` : '—' }
+            { key:'budget', header:'Budget', render: (row: any) => row.budget ? formatAmount(Number(row.budget)) : '—' }
           ] as any} 
           rows={projects as any} 
           emptyMessage='No projects found. Try creating one or check if the projects migration has been applied.' 

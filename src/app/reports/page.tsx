@@ -19,6 +19,7 @@ import {
   User
 } from 'lucide-react';
 import { format } from '@/lib/date-format';
+import { useCurrency } from '@/lib/CurrencyContext';
 import { cn } from '@/lib/utils';
 import { 
   exportProjectReportPDF, 
@@ -124,12 +125,7 @@ export default function ReportsPage() {
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
-  };
+  const { formatAmount: formatCurrency } = useCurrency();
 
   return (
     <AppLayout>

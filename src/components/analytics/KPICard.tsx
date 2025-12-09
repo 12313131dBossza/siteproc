@@ -1,7 +1,7 @@
 'use client'
 
 import { LucideIcon, TrendingUp, TrendingDown, Minus } from 'lucide-react'
-import { formatCurrency } from '@/lib/utils'
+import { useCurrency } from '@/lib/CurrencyContext'
 
 interface KPICardProps {
   title: string
@@ -24,12 +24,13 @@ export function KPICard({
   description,
   color = 'blue'
 }: KPICardProps) {
+  const { formatAmount } = useCurrency();
   const formatValue = (val: number | string) => {
     if (typeof val === 'string') return val
     
     switch (format) {
       case 'currency':
-        return formatCurrency(val)
+        return formatAmount(val)
       case 'percentage':
         return `${val.toFixed(1)}%`
       default:

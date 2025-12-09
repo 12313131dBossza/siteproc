@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useCurrency } from '@/lib/CurrencyContext';
 
 interface ActivityItem {
   id: string;
@@ -196,12 +197,7 @@ export default function ActivityPage() {
     return colors[status as keyof typeof colors] || 'text-gray-600';
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
-  };
+  const { formatAmount: formatCurrency } = useCurrency();
 
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();

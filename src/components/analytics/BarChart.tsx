@@ -1,7 +1,7 @@
 'use client'
 
 import { BarChart as RechartsBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { formatCurrency } from '@/lib/utils'
+import { useCurrency } from '@/lib/CurrencyContext'
 
 interface BarChartProps {
   data: any[]
@@ -24,8 +24,9 @@ export function BarChart({
   height = 300,
   layout = 'horizontal'
 }: BarChartProps) {
+  const { formatAmount } = useCurrency();
   const valueFormatter = (value: number) => {
-    return formatValue === 'currency' ? formatCurrency(value) : value.toLocaleString()
+    return formatValue === 'currency' ? formatAmount(value) : value.toLocaleString()
   }
 
   return (

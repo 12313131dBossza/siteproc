@@ -7,6 +7,7 @@ import { DataTable } from '@/components/tables/DataTable';
 import { ModernModal } from '@/components/ui/ModernModal';
 import { FormField } from '@/components/forms/FormField';
 import RoleGate from '@/components/auth/RoleGate';
+import { useCurrency } from '@/lib/CurrencyContext';
 
 interface Expense {
   id: string;
@@ -38,6 +39,7 @@ function useExpenses() {
 
 function ExpensesContent() {
   const { expenses, loading, setExpenses } = useExpenses();
+  const { formatAmount } = useCurrency();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -93,7 +95,7 @@ function ExpensesContent() {
       key: 'amount', 
       header: 'Amount', 
       sortable: true,
-      render: (value: number) => `$${value.toLocaleString()}`
+      render: (value: number) => formatAmount(value)
     },
     { 
       key: 'status', 

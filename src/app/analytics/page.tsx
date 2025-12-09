@@ -6,6 +6,7 @@ import { KPICard } from '@/components/analytics/KPICard'
 import { LineChart } from '@/components/analytics/LineChart'
 import { BarChart } from '@/components/analytics/BarChart'
 import { PieChart } from '@/components/analytics/PieChart'
+import { useCurrency } from '@/lib/CurrencyContext'
 import { 
   DollarSign, 
   TrendingUp, 
@@ -59,6 +60,7 @@ interface AnalyticsData {
 }
 
 export default function AnalyticsPage() {
+  const { formatAmount } = useCurrency()
   const [data, setData] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [dateRange, setDateRange] = useState<'today' | 'week' | 'month' | 'year'>('month')
@@ -252,7 +254,7 @@ export default function AnalyticsPage() {
                 <div className="flex items-center justify-between text-sm mb-2">
                   <span className="text-gray-600">Used</span>
                   <span className="font-semibold text-gray-900">
-                    ${data.kpis.budgetUsed.toLocaleString()} / ${data.kpis.totalBudget.toLocaleString()}
+                    {formatAmount(data.kpis.budgetUsed)} / {formatAmount(data.kpis.totalBudget)}
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-3">
@@ -282,7 +284,7 @@ export default function AnalyticsPage() {
               <div className="flex items-center justify-between">
                 <span className="text-gray-600">Total Payments</span>
                 <span className="text-2xl font-bold text-gray-900">
-                  ${data.kpis.totalPayments.toLocaleString()}
+                  {formatAmount(data.kpis.totalPayments)}
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm">
@@ -367,14 +369,14 @@ export default function AnalyticsPage() {
                       </div>
                     </td>
                     <td className="px-2 sm:px-4 py-2 sm:py-3 text-right text-gray-900 text-xs sm:text-sm whitespace-nowrap">
-                      ${project.budget.toLocaleString()}
+                      {formatAmount(project.budget)}
                     </td>
                     <td className="px-2 sm:px-4 py-2 sm:py-3 text-right text-gray-900 text-xs sm:text-sm whitespace-nowrap">
-                      ${project.spent.toLocaleString()}
+                      {formatAmount(project.spent)}
                     </td>
                     <td className="px-2 sm:px-4 py-2 sm:py-3 text-right whitespace-nowrap">
                       <span className={cn("text-xs sm:text-sm", project.remaining < 0 ? 'text-red-600 font-medium' : 'text-gray-900')}>
-                        ${project.remaining.toLocaleString()}
+                        {formatAmount(project.remaining)}
                       </span>
                     </td>
                     <td className="px-2 sm:px-4 py-2 sm:py-3 text-right">

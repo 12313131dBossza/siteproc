@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { FormModal, FormModalActions } from '@/components/ui/FormModal';
 import { Plus, Search, Edit, Trash2, X, FileText, CheckCircle, XCircle, Clock, DollarSign, Calendar, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
+import { useCurrency } from '@/lib/CurrencyContext';
 import { cn } from '@/lib/utils';
 import { format } from '@/lib/date-format';
 
@@ -269,12 +270,7 @@ export default function BidsPageClient() {
     return icons[status as keyof typeof icons] || Clock;
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
-  };
+  const { formatAmount: formatCurrency } = useCurrency();
 
   // Filter bids
   const filteredBids = bids.filter(bid => {

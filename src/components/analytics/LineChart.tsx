@@ -1,7 +1,7 @@
 'use client'
 
 import { LineChart as RechartsLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { formatCurrency } from '@/lib/utils'
+import { useCurrency } from '@/lib/CurrencyContext'
 
 interface LineChartProps {
   data: any[]
@@ -16,8 +16,9 @@ interface LineChartProps {
 }
 
 export function LineChart({ data, lines, xAxisKey, formatValue = 'number', height = 300 }: LineChartProps) {
+  const { formatAmount } = useCurrency();
   const valueFormatter = (value: number) => {
-    return formatValue === 'currency' ? formatCurrency(value) : value.toLocaleString()
+    return formatValue === 'currency' ? formatAmount(value) : value.toLocaleString()
   }
 
   return (

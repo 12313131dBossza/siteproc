@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { FormModal } from '@/components/ui/FormModal';
 import { Plus, Search, Edit, Trash2, X, Users, Phone, Mail, MapPin, Building, Briefcase } from 'lucide-react';
 import { toast } from 'sonner';
+import { useCurrency } from '@/lib/CurrencyContext';
 import { cn } from '@/lib/utils';
 
 interface Client {
@@ -172,12 +173,7 @@ export default function ClientsPageClient() {
     return styles[status as keyof typeof styles] || styles.active;
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
-  };
+  const { formatAmount: formatCurrency } = useCurrency();
 
   // Filter clients
   const filteredClients = clients.filter(client => {

@@ -18,7 +18,8 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from '@/lib/date-format'
-import { formatCurrency } from '@/lib/utils'
+import { cn } from '@/lib/utils'
+import { useCurrency } from '@/lib/CurrencyContext'
 import { getStatusLabel, getStatusBadgeClasses } from '@/lib/orderSync'
 
 interface OrderItem {
@@ -56,6 +57,8 @@ export default function PurchaseOrdersPage() {
   const [selectedTab, setSelectedTab] = useState<'pending' | 'approved' | 'rejected'>('approved')
   const [authenticated, setAuthenticated] = useState<boolean | null>(null)
   const [syncingOrder, setSyncingOrder] = useState<string | null>(null)
+
+  const { formatAmount: formatCurrency } = useCurrency()
 
   useEffect(() => {
     checkAuth()

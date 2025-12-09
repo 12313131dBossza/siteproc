@@ -2,6 +2,7 @@
 
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { TrendingUp } from 'lucide-react';
+import { useCurrency } from '@/lib/CurrencyContext';
 
 interface BudgetTrendData {
   month: string;
@@ -14,14 +15,8 @@ interface BudgetTrendChartProps {
 }
 
 export function BudgetTrendChart({ data }: BudgetTrendChartProps) {
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
+  const { formatAmount } = useCurrency();
+  const formatCurrency = (value: number) => formatAmount(value);
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6 shadow-sm">

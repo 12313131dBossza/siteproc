@@ -5,6 +5,7 @@ import { Plus, Upload, X, Trash2, Truck, Package, Calendar, FileText } from 'luc
 import { sbBrowser } from '@/lib/supabase-browser'
 import { Input, Select, TextArea } from '@/components/ui'
 import { FormModal } from '@/components/ui/FormModal'
+import { useCurrency } from '@/lib/CurrencyContext'
 
 interface DeliveryItem {
   product_name: string
@@ -28,6 +29,7 @@ interface RecordDeliveryFormProps {
 }
 
 export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, deliveryId, isModal = false, preselectedOrderId }: RecordDeliveryFormProps) {
+  const { formatAmount } = useCurrency()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [images, setImages] = useState<File[]>([])
@@ -361,7 +363,7 @@ export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, d
             { value: '', label: loadingOrders ? 'Loading orders...' : 'Select an order...' },
             ...orders.map(order => ({ 
               value: order.id, 
-              label: `${order.description || 'Unnamed Order'} - $${order.amount || '0.00'} (${order.status || 'pending'})`
+              label: `${order.description || 'Unnamed Order'} - ${formatAmount(order.amount || 0)} (${order.status || 'pending'})`
             }))
           ]}
           helpText={orders.length === 0 && !loadingOrders ? 

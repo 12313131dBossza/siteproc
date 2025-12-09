@@ -8,6 +8,7 @@ import ProjectTimeline from '@/components/ProjectTimeline'
 import ProjectPhotoGallery from '@/components/ProjectPhotoGallery'
 import ProjectChat from '@/components/ProjectChat'
 import { hasPermission } from '@/lib/roles'
+import { useCurrency } from '@/lib/CurrencyContext'
 import { 
   Plus, 
   Users, 
@@ -279,7 +280,8 @@ export default function ProjectDetailPage() {
   }
 
   // Hooks must not appear after conditional returns; prepare memoized formatter early
-  const fmtCurrency = useMemo(() => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }), [])
+  const { formatAmount: fmtCurrencyFn } = useCurrency()
+  const fmtCurrency = useMemo(() => ({ format: fmtCurrencyFn }), [fmtCurrencyFn])
 
   if (!id) return null
   if (!project) return (

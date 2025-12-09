@@ -27,7 +27,8 @@ import {
   AlertTriangle
 } from "lucide-react";
 import { format } from "@/lib/date-format";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { useCurrency } from '@/lib/CurrencyContext';
 import { createClient } from '@/lib/supabase-client';
 import { toast } from 'sonner';
 
@@ -84,6 +85,8 @@ export default function TokoPage() {
     top_category: '',
     monthly_orders: 0
   });
+
+  const { formatAmount: formatCurrency } = useCurrency();
 
   useEffect(() => {
     fetchProducts();

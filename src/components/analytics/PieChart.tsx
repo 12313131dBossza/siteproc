@@ -1,7 +1,7 @@
 'use client'
 
 import { PieChart as RechartsPieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { formatCurrency } from '@/lib/utils'
+import { useCurrency } from '@/lib/CurrencyContext'
 
 interface PieChartProps {
   data: any[]
@@ -31,10 +31,11 @@ export function PieChart({
   height = 300,
   colors = DEFAULT_COLORS
 }: PieChartProps) {
+  const { formatAmount } = useCurrency();
   const valueFormatter = (value: number) => {
     switch (formatValue) {
       case 'currency':
-        return formatCurrency(value)
+        return formatAmount(value)
       case 'percentage':
         return `${value.toFixed(1)}%`
       default:

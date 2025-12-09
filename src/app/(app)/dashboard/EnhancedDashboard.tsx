@@ -105,7 +105,7 @@ export default function EnhancedDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [rawResponse, setRawResponse] = useState<any>(null); // Debug
-  const { formatAmount } = useCurrency();
+  const { formatAmount, currencyInfo } = useCurrency();
 
   useEffect(() => {
     fetchDashboardData();
@@ -253,7 +253,7 @@ export default function EnhancedDashboard() {
                 <YAxis 
                   tick={{ fontSize: 12 }}
                   stroke="#9ca3af"
-                  tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+                  tickFormatter={(value) => `${currencyInfo.symbol}${(value / 1000).toFixed(0)}k`}
                 />
                 <Tooltip 
                   formatter={(value: any) => formatAmount(value)}
@@ -361,7 +361,7 @@ export default function EnhancedDashboard() {
                 <XAxis 
                   type="number" 
                   tick={{ fontSize: 12 }}
-                  tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+                  tickFormatter={(value) => `${currencyInfo.symbol}${(value / 1000).toFixed(0)}k`}
                 />
                 <YAxis 
                   dataKey="name" 

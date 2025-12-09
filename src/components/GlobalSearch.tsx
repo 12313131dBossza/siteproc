@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Search, X, FileText, Building2, Package, DollarSign, CreditCard, Box } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { useCurrency } from '@/lib/CurrencyContext'
 
 export default function GlobalSearch() {
   const [isOpen, setIsOpen] = useState(false)
@@ -11,6 +12,7 @@ export default function GlobalSearch() {
   const [loading, setLoading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
+  const { formatAmount } = useCurrency()
 
   // Keyboard shortcut: Cmd+K or Ctrl+K
   useEffect(() => {
@@ -206,7 +208,7 @@ export default function GlobalSearch() {
                             </div>
                             <div className="text-sm text-gray-600 truncate">
                               {type === 'orders' && (item.vendor || item.product_name || item.category)}
-                              {type === 'projects' && (item.code || `Budget: $${parseFloat(item.budget || 0).toLocaleString()}`)}
+                              {type === 'projects' && (item.code || `Budget: ${formatAmount(parseFloat(item.budget || 0))}`)}
                               {type === 'deliveries' && item.purchase_orders?.projects?.name}
                               {type === 'expenses' && item.description}
                               {type === 'payments' && `${item.payment_method || 'Payment'} - ${item.reference_number || 'N/A'}`}
@@ -215,7 +217,7 @@ export default function GlobalSearch() {
                             <div className="flex items-center gap-3 mt-1">
                               {item.amount && (
                                 <span className="text-sm font-semibold text-green-600">
-                                  ${parseFloat(item.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  {formatAmount(parseFloat(item.amount))}
                                 </span>
                               )}
                               {item.status && (

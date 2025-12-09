@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/forms/FormField';
 import { createClient } from '@/lib/supabase-client';
 import { toast } from 'sonner';
+import { useCurrency } from '@/lib/CurrencyContext';
 
 interface Product {
   id: string;
@@ -24,6 +25,7 @@ interface OrderFormProps {
 }
 
 export function OrderForm({ isModal = false, onSuccess, onCancel }: OrderFormProps) {
+  const { formatAmount } = useCurrency();
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -197,7 +199,7 @@ export function OrderForm({ isModal = false, onSuccess, onCancel }: OrderFormPro
               { value: '', label: 'Select a product...' },
               ...products.map(product => ({
                 value: product.id,
-                label: `${product.name}${product.sku ? ` (${product.sku})` : ''} - $${product.price} - ${product.stock} in stock`
+                label: `${product.name}${product.sku ? ` (${product.sku})` : ''} - ${formatAmount(product.price)} - ${product.stock} in stock`
               }))
             ]}
           />

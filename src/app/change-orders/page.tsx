@@ -5,6 +5,7 @@ import { AppLayout } from '@/components/app-layout'
 import { Button } from '@/components/ui/Button'
 import { format } from '@/lib/date-format'
 import { cn } from '@/lib/utils'
+import { useCurrency } from '@/lib/CurrencyContext'
 
 type ChangeOrder = {
   id: string
@@ -45,6 +46,7 @@ type Order = {
 }
 
 export default function ChangeOrdersPage() {
+  const { formatAmount } = useCurrency()
   const [pending, setPending] = useState<ChangeOrder[]>([])
   const [history, setHistory] = useState<ChangeOrder[]>([])
   const [loading, setLoading] = useState(true)
@@ -234,17 +236,17 @@ export default function ChangeOrdersPage() {
             </div>
             {order.purchase_orders && (
               <div className="text-sm text-gray-600 mb-2">
-                <span className="font-medium">Original Cost:</span> ${(order.purchase_orders.amount || 0).toLocaleString()}
+                <span className="font-medium">Original Cost:</span> {formatAmount(order.purchase_orders.amount || 0)}
                 {order.status === 'approved' && (
                   <span className="ml-2">
-                    → <span className="font-medium text-green-600">${((order.purchase_orders.amount || 0) + order.cost_delta).toLocaleString()}</span>
+                    → <span className="font-medium text-green-600">{formatAmount((order.purchase_orders.amount || 0) + order.cost_delta)}</span>
                   </span>
                 )}
               </div>
             )}
             <div className="text-lg font-semibold text-gray-900 mb-1">
               Cost Change: <span className={order.cost_delta >= 0 ? 'text-red-600' : 'text-green-600'}>
-                {order.cost_delta >= 0 ? '+' : ''}${order.cost_delta.toLocaleString()}
+                {order.cost_delta >= 0 ? '+' : ''}{formatAmount(order.cost_delta)}
               </span>
             </div>
             {(order.description || order.reason) && (
@@ -452,7 +454,7 @@ export default function ChangeOrdersPage() {
                   </option>
                   {orders.map(order => (
                     <option key={order.id} value={order.id}>
-                      {order.product_name || order.vendor || 'Order'} - ${(order.amount || 0).toLocaleString()}
+                      {order.product_name || order.vendor || 'Order'} - {formatAmount(order.amount || 0)}
                     </option>
                   ))}
                 </select>

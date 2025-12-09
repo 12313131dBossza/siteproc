@@ -2,6 +2,7 @@
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { DollarSign } from 'lucide-react';
+import { useCurrency } from '@/lib/CurrencyContext';
 
 interface ExpenseData {
   name: string;
@@ -24,14 +25,8 @@ const COLORS = [
 ];
 
 export function ExpenseBreakdownChart({ data }: ExpenseBreakdownChartProps) {
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
+  const { formatAmount } = useCurrency();
+  const formatCurrency = (value: number) => formatAmount(value);
 
   const total = data.reduce((sum, item) => sum + item.value, 0);
 
