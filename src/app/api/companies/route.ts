@@ -66,15 +66,45 @@ export async function PATCH(req: NextRequest) {
     const body = await req.json().catch(() => ({}))
     const { name, currency, units } = body || {}
     
+    // Build update object with only provided fields
+    const updateData: Record<string, any> = {}
+    if (name !== undefined) updateData.name = name
+    if (currency !== undefined) updateData.currency = currency
+    if (units !== undefined) updateData.units = units
+    
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
+    }
+    
     // Update the company
     const { data, error: updateError } = await supabase
       .from('companies')
-      .update({ name, currency, units })
+      .update(updateData)
       .eq('id', profile.company_id)
       .select()
       .single()
     
     if (updateError) {
+      // Check if error is about missing columns
+      if (updateError.message.includes('column') && updateError.message.includes('does not exist')) {
+        // Try updating only the name field
+        const { data: nameData, error: nameError } = await supabase
+          .from('companies')
+          .update({ name })
+          .eq('id', profile.company_id)
+          .select()
+          .single()
+        
+        if (nameError) {
+          return NextResponse.json({ error: nameError.message }, { status: 500 })
+        }
+        
+        return NextResponse.json({ 
+          ok: true, 
+          data: nameData,
+          warning: 'Some settings columns are not available. Please run the migration: ADD-COMPANY-SETTINGS-COLUMNS.sql'
+        })
+      }
       return NextResponse.json({ error: updateError.message }, { status: 500 })
     }
     
