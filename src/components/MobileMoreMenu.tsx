@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createBrowserClient } from '@supabase/ssr';
 import { usePlan } from '@/hooks/usePlan';
+import { usePWAInstall } from '@/hooks/usePWAInstall';
 import { PlanId } from '@/lib/plans';
 import {
   Users,
@@ -21,6 +22,8 @@ import {
   FolderOpen,
   Activity,
   LineChart,
+  Download,
+  Share,
 } from "lucide-react";
 
 // Plan hierarchy for comparison
@@ -168,7 +171,9 @@ export function MobileMoreMenu({ isOpen, onClose, userRole = '' }: MobileMoreMen
   const pathname = usePathname();
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [showIOSInstructions, setShowIOSInstructions] = useState(false);
   const { plan } = usePlan();
+  const { canShowInstall, isIOS, promptInstall, isInstalled } = usePWAInstall();
 
   // Helper to check if user's plan meets minimum requirement
   const meetsMinPlan = (minPlan: PlanId): boolean => {
@@ -311,6 +316,32 @@ export function MobileMoreMenu({ isOpen, onClose, userRole = '' }: MobileMoreMen
               );
             })}
 
+            {/* Install App Button - Only show if installable */}
+            {canShowInstall && (
+              <button
+                onClick={() => {
+                  if (isIOS) {
+                    setShowIOSInstructions(true);
+                  } else {
+                    promptInstall();
+                  }
+                }}
+                className="w-full flex items-center gap-4 p-4 rounded-xl transition-all active:scale-95 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 hover:border-blue-300 mt-4"
+              >
+                <div className="p-2.5 rounded-lg flex-shrink-0 bg-blue-600">
+                  <Download className="h-5 w-5 text-white" strokeWidth={2.5} />
+                </div>
+                <div className="flex-1 min-w-0 text-left">
+                  <div className="font-semibold text-sm text-blue-900">
+                    Install App
+                  </div>
+                  <div className="text-xs mt-0.5 text-blue-600">
+                    Add to home screen for quick access
+                  </div>
+                </div>
+              </button>
+            )}
+
             {/* Logout Button */}
             <button
               onClick={handleLogout}
@@ -332,6 +363,58 @@ export function MobileMoreMenu({ isOpen, onClose, userRole = '' }: MobileMoreMen
           </div>
         </div>
       </div>
+
+      {/* iOS Install Instructions Modal */}
+      {showIOSInstructions && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/60 z-[60] backdrop-blur-sm"
+            onClick={() => setShowIOSInstructions(false)}
+          />
+          <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[70] bg-white rounded-2xl shadow-2xl p-6 max-w-sm mx-auto">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Share className="h-8 w-8 text-blue-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Install SiteProc</h3>
+              <p className="text-gray-600 text-sm mb-6">
+                To install the app on your iPhone or iPad:
+              </p>
+              
+              <div className="text-left space-y-4 mb-6">
+                <div className="flex items-start gap-3">
+                  <div className="w-7 h-7 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold">1</div>
+                  <div>
+                    <p className="text-gray-800 font-medium">Tap the Share button</p>
+                    <p className="text-gray-500 text-sm">Located at the bottom of Safari</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-7 h-7 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold">2</div>
+                  <div>
+                    <p className="text-gray-800 font-medium">Scroll down and tap</p>
+                    <p className="text-gray-500 text-sm">"Add to Home Screen"</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-7 h-7 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold">3</div>
+                  <div>
+                    <p className="text-gray-800 font-medium">Tap "Add"</p>
+                    <p className="text-gray-500 text-sm">The app will appear on your home screen</p>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowIOSInstructions(false)}
+                className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold active:scale-95 transition-all"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       <style jsx>{`
         @keyframes fadeIn {
