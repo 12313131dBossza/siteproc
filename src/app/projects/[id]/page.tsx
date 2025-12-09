@@ -360,7 +360,7 @@ export default function ProjectDetailPage() {
               id="project-status" 
               value={project.status} 
               onChange={e=>updateStatus(e.target.value)} 
-              className="h-10 border rounded-lg px-3 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 text-sm font-medium cursor-pointer"
+              className="h-10 border border-gray-200 rounded-lg px-3 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/40 text-sm font-medium cursor-pointer"
             >
               <option value="planning">◇ Planning</option>
               <option value="active">● Active</option>
@@ -388,27 +388,27 @@ export default function ProjectDetailPage() {
                 : project.status}
             </span>
           )}
-          <button onClick={()=>load()} className="h-10 px-4 rounded-lg border bg-white hover:bg-gray-50 text-sm shadow-sm flex items-center gap-2 font-medium transition-all hover:shadow-md">
-            <RefreshCw className="h-4 w-4" />
+          <button onClick={()=>load()} className="h-10 px-4 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-sm text-gray-700 shadow-sm flex items-center gap-2 font-medium transition-all hover:shadow-md">
+            <RefreshCw className="h-4 w-4 text-gray-600" />
             <span className="hidden sm:inline">Refresh</span>
           </button>
           {canEdit && (
             <button 
               onClick={openEditModal} 
-              className="h-10 px-4 rounded-lg border bg-white hover:bg-gray-50 text-sm shadow-sm flex items-center gap-2 font-medium transition-all hover:shadow-md"
+              className="h-10 px-4 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-sm text-gray-700 shadow-sm flex items-center gap-2 font-medium transition-all hover:shadow-md"
               title="Edit project details"
             >
-              <Pencil className="h-4 w-4" />
+              <Pencil className="h-4 w-4 text-gray-600" />
               <span className="hidden sm:inline">Edit</span>
             </button>
           )}
           {canInvite && (
             <button 
               onClick={() => setShowAccessModal(true)} 
-              className="h-10 px-4 rounded-lg border bg-white hover:bg-gray-50 text-sm shadow-sm flex items-center gap-2 font-medium transition-all hover:shadow-md"
+              className="h-10 px-4 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-sm text-gray-700 shadow-sm flex items-center gap-2 font-medium transition-all hover:shadow-md"
               title="Manage project access"
             >
-              <Users className="h-4 w-4" />
+              <Users className="h-4 w-4 text-gray-600" />
               <span className="hidden sm:inline">Access</span>
             </button>
           )}
