@@ -122,34 +122,3 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
   }
 }
-    
-    if (updateError) {
-      // Check if error is about missing columns
-      if (updateError.message.includes('column') && updateError.message.includes('does not exist')) {
-        // Try updating only the name field
-        const { data: nameData, error: nameError } = await supabase
-          .from('companies')
-          .update({ name })
-          .eq('id', profile.company_id)
-          .select()
-          .single()
-        
-        if (nameError) {
-          return NextResponse.json({ error: nameError.message }, { status: 500 })
-        }
-        
-        return NextResponse.json({ 
-          ok: true, 
-          data: nameData,
-          warning: 'Some settings columns are not available. Please run the migration: ADD-COMPANY-SETTINGS-COLUMNS.sql'
-        })
-      }
-      return NextResponse.json({ error: updateError.message }, { status: 500 })
-    }
-    
-    return NextResponse.json({ ok: true, data })
-  } catch (error: any) {
-    console.error('PATCH /api/companies error:', error)
-    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
-  }
-}
