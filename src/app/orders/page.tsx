@@ -784,6 +784,13 @@ export default function OrdersPage() {
   const handleDeleteOrder = async (orderId: string) => {
     if (!confirm('Are you sure you want to delete this order? This action cannot be undone.')) return;
 
+    // Store previous state for rollback
+    const previousOrder = orders.find(order => order.id === orderId);
+    
+    // Optimistically remove from UI immediately
+    setOrders(prev => prev.filter(order => order.id !== orderId));
+    toast.success('Order deleted successfully');
+
     try {
       const response = await fetch(`/api/orders/${orderId}`, {
         method: 'DELETE',
@@ -793,13 +800,12 @@ export default function OrdersPage() {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || 'Failed to delete order');
       }
-
-      // Update local state
-      setOrders(prev => prev.filter(order => order.id !== orderId));
-      
-      toast.success('Order deleted successfully');
     } catch (error) {
       console.error('Error deleting order:', error);
+      // Rollback on error
+      if (previousOrder) {
+        setOrders(prev => [...prev, previousOrder]);
+      }
       toast.error('Failed to delete order', {
         description: error instanceof Error ? error.message : 'An error occurred',
       });
@@ -1264,8 +1270,19 @@ export default function OrdersPage() {
           projects={projects}
           onClose={() => setEditingOrder(null)}
           onSave={async (updates) => {
+            const previousOrder = editingOrder;
+            
+            // Optimistically update UI immediately
+            setOrders(prev => prev.map(order => 
+              order.id === editingOrder.id 
+                ? { ...order, ...updates }
+                : order
+            ));
+            setEditingOrder(null);
+            toast.success('Order updated successfully!');
+
             try {
-              const response = await fetch(`/api/orders/${editingOrder.id}`, {
+              const response = await fetch(`/api/orders/${previousOrder.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(updates),
@@ -1276,10 +1293,16 @@ export default function OrdersPage() {
                 throw new Error(error.error || 'Failed to update order');
               }
               
-              setEditingOrder(null);
-              fetchOrders();
-              toast.success('Order updated successfully!');
+              const updatedOrder = await response.json();
+              // Update with server response
+              setOrders(prev => prev.map(order => 
+                order.id === previousOrder.id ? updatedOrder : order
+              ));
             } catch (error) {
+              // Rollback on error
+              setOrders(prev => prev.map(order => 
+                order.id === previousOrder.id ? previousOrder : order
+              ));
               toast.error(error instanceof Error ? error.message : 'Failed to update order');
             }
           }}

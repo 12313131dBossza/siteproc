@@ -242,7 +242,24 @@ export default function DeliveriesPage() {
       return
     }
 
-    setUpdatingDelivery(deliveryId)
+    // Store previous state for rollback
+    const previousDelivery = deliveries.find(d => d.id === deliveryId)
+    
+    // Optimistically update UI immediately
+    setDeliveries(prev => prev.map(delivery => 
+      delivery.id === deliveryId 
+        ? { ...delivery, status: 'partial' as const }
+        : delivery
+    ))
+    
+    // Switch tab and show success immediately
+    setSelectedTab('partial')
+    setUpdatingDelivery(null)
+    toast.success('Delivery marked as In Transit', {
+      description: 'Status updated successfully.',
+      duration: 3000,
+    })
+
     try {
       const response = await fetch(`/api/order-deliveries/${deliveryId}`, {
         method: 'PATCH',
@@ -258,31 +275,19 @@ export default function DeliveriesPage() {
         const error = await response.json()
         throw new Error(error.message || 'Failed to update delivery status')
       }
-
-      // Update the local state
-      setDeliveries(prev => prev.map(delivery => 
-        delivery.id === deliveryId 
-          ? { ...delivery, status: 'partial' as const }
-          : delivery
-      ))
-
-      // Switch to In Transit (partial) tab
-      setSelectedTab('partial')
-      
-      // Show success toast
-      toast.success('Delivery marked as In Transit', {
-        description: 'Status updated successfully.',
-        duration: 3000,
-      })
       
     } catch (error) {
       console.error('Error updating delivery status:', error)
+      // Rollback on error
+      if (previousDelivery) {
+        setDeliveries(prev => prev.map(delivery => 
+          delivery.id === deliveryId ? previousDelivery : delivery
+        ))
+      }
       toast.error('Failed to update delivery status', {
         description: 'Please try again or contact support if the issue persists.',
         duration: 4000,
       })
-    } finally {
-      setUpdatingDelivery(null)
     }
   }
 
@@ -295,7 +300,24 @@ export default function DeliveriesPage() {
       return
     }
 
-    setUpdatingDelivery(deliveryId)
+    // Store previous state for rollback
+    const previousDelivery = deliveries.find(d => d.id === deliveryId)
+    
+    // Optimistically update UI immediately
+    setDeliveries(prev => prev.map(delivery => 
+      delivery.id === deliveryId 
+        ? { ...delivery, status: 'delivered' as const, notes: notes || delivery.notes }
+        : delivery
+    ))
+    
+    // Switch tab and show success immediately
+    setSelectedTab('delivered')
+    setUpdatingDelivery(null)
+    toast.success('Delivery marked as delivered', {
+      description: 'Status updated successfully.',
+      duration: 3000,
+    })
+
     try {
       const response = await fetch(`/api/order-deliveries/${deliveryId}/mark-delivered`, {
         method: 'PATCH',
@@ -312,40 +334,19 @@ export default function DeliveriesPage() {
         const error = await response.json()
         throw new Error(error.message || 'Failed to mark delivery as delivered')
       }
-
-      const result = await response.json()
-      
-      // Update the local state
-      setDeliveries(prev => prev.map(delivery => 
-        delivery.id === deliveryId 
-          ? { ...delivery, status: 'delivered' as const, notes: notes || delivery.notes }
-          : delivery
-      ))
-
-      // Switch to delivered tab to show the updated delivery
-      setSelectedTab('delivered')
-      
-      // Show success toast with order sync info
-      if (result.orderSync) {
-        toast.success('Delivery marked as delivered', {
-          description: `Order status: ${result.orderSync.status.toUpperCase()} (${result.orderSync.percentComplete.toFixed(0)}% complete)`,
-          duration: 4000,
-        })
-      } else {
-        toast.success('Delivery marked as delivered', {
-          description: 'Status updated successfully. Order and project actuals have been updated.',
-          duration: 3000,
-        })
-      }
       
     } catch (error) {
       console.error('Error marking delivery as delivered:', error)
+      // Rollback on error
+      if (previousDelivery) {
+        setDeliveries(prev => prev.map(delivery => 
+          delivery.id === deliveryId ? previousDelivery : delivery
+        ))
+      }
       toast.error('Failed to mark delivery as delivered', {
         description: 'Please try again or contact support if the issue persists.',
         duration: 4000,
       })
-    } finally {
-      setUpdatingDelivery(null)
     }
   }
 
