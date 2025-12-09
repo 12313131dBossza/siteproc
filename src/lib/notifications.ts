@@ -1,5 +1,33 @@
-import { sendEmail } from './email';
+import { sendEmail, getFromAddress } from './email';
 import { sbServer } from './supabase-server';
+
+/**
+ * Get the white-label "from" address for a company
+ * Returns format: "Company Name <notifications@siteproc.app>" if white-label enabled
+ * Otherwise returns the default from address
+ */
+async function getWhiteLabelFrom(companyId?: string): Promise<string | undefined> {
+  if (!companyId) return undefined;
+  
+  try {
+    const supabase = await sbServer();
+    const { data: company } = await supabase
+      .from('companies')
+      .select('white_label_enabled, white_label_company_name, white_label_email_name')
+      .eq('id', companyId)
+      .single();
+    
+    if (company?.white_label_enabled && company?.white_label_email_name && company?.white_label_company_name) {
+      // Format: "Company Name <email@domain.com>"
+      const baseEmail = getFromAddress();
+      return `${company.white_label_company_name} <${baseEmail}>`;
+    }
+  } catch (error) {
+    console.error('Error fetching white-label config:', error);
+  }
+  
+  return undefined;
+}
 
 // Email notification functions for expenses, orders, and deliveries
 
@@ -23,6 +51,9 @@ export async function sendExpenseNotifications(
       return;
     }
 
+    // Get white-label from address for this company
+    const whiteLabelFrom = await getWhiteLabelFrom(expense.company_id);
+
     // Fetch creator profile if submitted_by exists
     let creatorEmail = null;
     let creatorName = null;
@@ -40,7 +71,7 @@ export async function sendExpenseNotifications(
       }
     }
 
-    const notifications = [];
+    const notifications: Array<{ to: string; subject: string; html: string; from?: string }> = [];
 
     if (action === 'created') {
       // Notify all admins when expense is created
@@ -61,7 +92,8 @@ export async function sendExpenseNotifications(
                 expense,
                 recipientName: adminProfile.full_name || 'Admin',
                 actionBy: creatorName || 'Unknown User'
-              })
+              }),
+              ...(whiteLabelFrom && { from: whiteLabelFrom })
             });
           }
         }
@@ -77,7 +109,8 @@ export async function sendExpenseNotifications(
             expense,
             recipientName: creatorName || 'User',
             actionBy: actionBy || 'Admin'
-          })
+          }),
+          ...(whiteLabelFrom && { from: whiteLabelFrom })
         });
       }
     }
@@ -118,7 +151,10 @@ export async function sendOrderNotifications(
       return;
     }
 
-    const notifications = [];
+    // Get white-label from address for this company
+    const whiteLabelFrom = await getWhiteLabelFrom(order.company_id);
+
+    const notifications: Array<{ to: string; subject: string; html: string; from?: string }> = [];
 
     if (action === 'created') {
       // Notify all admins when order is created
@@ -139,7 +175,8 @@ export async function sendOrderNotifications(
                 order,
                 recipientName: adminProfile.full_name || 'Admin',
                 actionBy: order.profiles?.full_name || 'Unknown User'
-              })
+              }),
+              ...(whiteLabelFrom && { from: whiteLabelFrom })
             });
           }
         }
@@ -155,7 +192,8 @@ export async function sendOrderNotifications(
             order,
             recipientName: order.profiles?.full_name || 'User',
             actionBy: actionBy || 'Admin'
-          })
+          }),
+          ...(whiteLabelFrom && { from: whiteLabelFrom })
         });
       }
     }
@@ -406,7 +444,10 @@ export async function sendDeliveryNotifications(
       return;
     }
 
-    const notifications = [];
+    // Get white-label from address for this company
+    const whiteLabelFrom = await getWhiteLabelFrom(delivery.company_id);
+
+    const notifications: Array<{ to: string; subject: string; html: string; from?: string }> = [];
 
     if (action === 'created') {
       // Notify all admins when delivery is recorded
@@ -428,7 +469,8 @@ export async function sendDeliveryNotifications(
                 delivery,
                 recipientName: adminProfile.full_name || 'Admin',
                 actionBy: delivery.profiles?.full_name || 'Unknown User'
-              })
+              }),
+              ...(whiteLabelFrom && { from: whiteLabelFrom })
             });
           }
         }
@@ -446,7 +488,8 @@ export async function sendDeliveryNotifications(
               delivery,
               recipientName: delivery.orders.profiles?.full_name || 'User',
               actionBy: delivery.profiles?.full_name || 'System'
-            })
+            }),
+            ...(whiteLabelFrom && { from: whiteLabelFrom })
           });
         }
       }

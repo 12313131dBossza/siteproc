@@ -7,6 +7,8 @@ import { SentryInitializer } from '@/components/SentryInitializer'
 import { ServiceWorkerRegistration } from '@/components/ServiceWorkerRegistration'
 import { OfflineSyncManager } from '@/components/OfflineSyncManager'
 import { CurrencyProvider } from '@/lib/CurrencyContext'
+import { WhiteLabelProvider } from '@/lib/WhiteLabelContext'
+import { DynamicTitle } from '@/components/DynamicTitle'
 
 // Root layout provides html/body structure and providers for all routes
 export default function RootLayout({
@@ -28,9 +30,12 @@ export default function RootLayout({
         <ToastProvider>
           <NotificationProvider>
             <CurrencyProvider>
-              <Toaster position="top-right" />
-              {children}
-              <OfflineSyncManager />
+              <WhiteLabelProvider>
+                <DynamicTitle />
+                <Toaster position="top-right" />
+                {children}
+                <OfflineSyncManager />
+              </WhiteLabelProvider>
             </CurrencyProvider>
           </NotificationProvider>
         </ToastProvider>

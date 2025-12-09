@@ -7,6 +7,13 @@ import Link from 'next/link';
 
 const isDevelopment = process.env.NODE_ENV === 'development';
 
+// Simple white-label state for login page (loaded separately since user not authenticated)
+interface LoginWhiteLabel {
+  enabled: boolean;
+  logoUrl: string | null;
+  companyName: string | null;
+}
+
 function LoginForm() {
   const [emailOrUsername, setEmailOrUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -15,6 +22,7 @@ function LoginForm() {
   const [mounted, setMounted] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [whiteLabel, setWhiteLabel] = useState<LoginWhiteLabel>({ enabled: false, logoUrl: null, companyName: null });
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -29,6 +37,17 @@ function LoginForm() {
       const savedCredential = localStorage.getItem('savedCredential');
       if (savedCredential) {
         setEmailOrUsername(savedCredential);
+      }
+    }
+    
+    // Load white-label config from localStorage (saved after last successful login)
+    const savedWhiteLabel = localStorage.getItem('whiteLabel');
+    if (savedWhiteLabel) {
+      try {
+        const parsed = JSON.parse(savedWhiteLabel);
+        setWhiteLabel(parsed);
+      } catch (e) {
+        // Ignore parse errors
       }
     }
   }, []);
@@ -95,12 +114,41 @@ function LoginForm() {
 
       console.log('Login successful!');
       
-      // Update last_login timestamp in profiles
+      // Update last_login timestamp in profiles and get company info
       if (data.user) {
         await supabase
           .from('profiles')
           .update({ last_login: new Date().toISOString() })
           .eq('id', data.user.id);
+        
+        // Fetch company white-label settings and save for next login
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('company_id')
+          .eq('id', data.user.id)
+          .single();
+        
+        if (profile?.company_id) {
+          const { data: company } = await supabase
+            .from('companies')
+            .select('white_label_enabled, white_label_logo_url, white_label_company_name, plan')
+            .eq('id', profile.company_id)
+            .single();
+          
+          if (company) {
+            // Only save if enterprise plan and white-label enabled
+            const isEnterprise = ['enterprise', 'enterprise_plus', 'custom'].includes(company.plan?.toLowerCase() || '');
+            if (isEnterprise && company.white_label_enabled) {
+              localStorage.setItem('whiteLabel', JSON.stringify({
+                enabled: true,
+                logoUrl: company.white_label_logo_url,
+                companyName: company.white_label_company_name
+              }));
+            } else {
+              localStorage.removeItem('whiteLabel');
+            }
+          }
+        }
       }
       
       // Get redirect URL
@@ -133,10 +181,32 @@ function LoginForm() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Sign in to your account
+        <div className="text-center">
+          {/* Logo - White-label or SiteProc default */}
+          {whiteLabel.enabled && whiteLabel.logoUrl ? (
+            <img 
+              src={whiteLabel.logoUrl} 
+              alt={whiteLabel.companyName || 'Company Logo'} 
+              className="mx-auto h-16 w-auto max-w-[250px] object-contain mb-4"
+            />
+          ) : (
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
+                <span className="text-white font-bold text-xl">SP</span>
+              </div>
+            </div>
+          )}
+          <h2 className="text-3xl font-extrabold text-gray-900">
+            {whiteLabel.enabled && whiteLabel.companyName 
+              ? `Welcome back to ${whiteLabel.companyName}`
+              : 'Sign in to your account'
+            }
           </h2>
+          {!whiteLabel.enabled && (
+            <p className="mt-2 text-sm text-gray-600">
+              Construction management made simple
+            </p>
+          )}
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleLogin}>
           <div className="space-y-4">

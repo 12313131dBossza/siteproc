@@ -74,9 +74,17 @@ export async function PATCH(req: NextRequest) {
     }
     
     const body = await req.json().catch(() => ({}))
-    const { name, currency, units } = body || {}
+    const { 
+      name, 
+      currency, 
+      units,
+      white_label_enabled,
+      white_label_logo_url,
+      white_label_company_name,
+      white_label_email_name
+    } = body || {}
     
-    console.log('PATCH /api/companies - received:', { name, currency, units, company_id: profile.company_id })
+    console.log('PATCH /api/companies - received:', { name, currency, units, white_label_enabled, company_id: profile.company_id })
     
     // Use service role client for update
     const admin = supabaseService()
@@ -86,6 +94,11 @@ export async function PATCH(req: NextRequest) {
     if (name !== undefined && name !== null) updateData.name = name
     if (currency !== undefined && currency !== null) updateData.currency = currency
     if (units !== undefined && units !== null) updateData.units = units
+    // White-label fields
+    if (white_label_enabled !== undefined) updateData.white_label_enabled = white_label_enabled
+    if (white_label_logo_url !== undefined) updateData.white_label_logo_url = white_label_logo_url
+    if (white_label_company_name !== undefined) updateData.white_label_company_name = white_label_company_name
+    if (white_label_email_name !== undefined) updateData.white_label_email_name = white_label_email_name
     
     console.log('PATCH /api/companies - updating with:', updateData)
     

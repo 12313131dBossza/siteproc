@@ -5,6 +5,7 @@ import { Bell, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NotificationBell } from "./NotificationBell";
 import { MobileBottomNav } from "./MobileBottomNav";
+import { useWhiteLabel } from "@/lib/WhiteLabelContext";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -16,6 +17,8 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children, title, description, actions, hideMobileNav, hideMobileHeader }: AppLayoutProps) {
+  const { displayName, logoUrl } = useWhiteLabel();
+  
   return (
     <div className="flex bg-gray-50 fixed inset-0 overflow-hidden" style={{ height: '100dvh' }}>
       {/* Desktop Sidebar - Hidden on mobile */}
@@ -31,9 +34,15 @@ export function AppLayout({ children, title, description, actions, hideMobileNav
           hideMobileHeader && "hidden md:block"
         )}>
           <div className="flex h-11 md:h-14 items-center gap-2 md:gap-4 px-3 md:px-6">
-            {/* Logo/Brand for mobile - smaller */}
-            <div className="md:hidden font-bold text-base bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              SiteProc
+            {/* Logo/Brand for mobile - with white-label support */}
+            <div className="md:hidden">
+              {logoUrl ? (
+                <img src={logoUrl} alt={displayName} className="h-7 w-auto max-w-[120px] object-contain" />
+              ) : (
+                <div className="font-bold text-base bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  {displayName}
+                </div>
+              )}
             </div>
 
             {/* Search - Desktop only */}

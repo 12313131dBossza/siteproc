@@ -5,6 +5,7 @@ import { FileText, Download, Eye, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { downloadInvoice, previewInvoice, type InvoiceData } from '@/lib/pdf-invoice';
 import { toast } from 'sonner';
+import { useWhiteLabel } from '@/lib/WhiteLabelContext';
 
 interface Payment {
   id: string;
@@ -38,6 +39,15 @@ interface InvoiceGeneratorProps {
 
 export function InvoiceGenerator({ payment, companyName = 'SiteProc', companyDetails }: InvoiceGeneratorProps) {
   const [generating, setGenerating] = useState(false);
+  const { config: whiteLabel } = useWhiteLabel();
+  
+  // Use white-label branding if enabled, otherwise use props or defaults
+  const effectiveCompanyName = whiteLabel.enabled && whiteLabel.companyName 
+    ? whiteLabel.companyName 
+    : companyName;
+  const effectiveLogo = whiteLabel.enabled && whiteLabel.logoUrl 
+    ? whiteLabel.logoUrl 
+    : companyDetails?.logo;
 
   const generateInvoiceData = (): InvoiceData => {
     // Generate invoice number from payment ID
@@ -77,8 +87,8 @@ export function InvoiceGenerator({ payment, companyName = 'SiteProc', companyDet
       invoiceDate,
       dueDate,
       
-      // Company details
-      companyName,
+      // Company details - use white-label values if enabled
+      companyName: effectiveCompanyName,
       companyAddress: companyDetails?.address,
       companyCity: companyDetails?.city,
       companyState: companyDetails?.state,
@@ -86,7 +96,7 @@ export function InvoiceGenerator({ payment, companyName = 'SiteProc', companyDet
       companyPhone: companyDetails?.phone,
       companyEmail: companyDetails?.email,
       companyWebsite: companyDetails?.website,
-      companyLogo: companyDetails?.logo,
+      companyLogo: effectiveLogo,
       
       // Client details
       clientName,
@@ -119,7 +129,7 @@ export function InvoiceGenerator({ payment, companyName = 'SiteProc', companyDet
     try {
       setGenerating(true);
       const invoiceData = generateInvoiceData();
-      downloadInvoice(invoiceData, `Invoice-${payment.id.substring(0, 8)}.pdf`);
+      await downloadInvoice(invoiceData, `Invoice-${payment.id.substring(0, 8)}.pdf`);
       toast.success('Invoice downloaded successfully!');
       
       // Log to activity log
@@ -154,7 +164,7 @@ export function InvoiceGenerator({ payment, companyName = 'SiteProc', companyDet
     try {
       setGenerating(true);
       const invoiceData = generateInvoiceData();
-      previewInvoice(invoiceData);
+      await previewInvoice(invoiceData);
     } catch (error) {
       console.error('Error previewing invoice:', error);
       toast.error('Failed to preview invoice');

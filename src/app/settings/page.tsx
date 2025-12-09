@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { AppLayout } from "@/components/app-layout"
 import { Button } from "@/components/ui/Button"
 import { Input, Select } from "@/components/ui"
@@ -15,13 +15,18 @@ import {
   CheckCircle,
   AlertCircle,
   Link2,
-  CreditCard
+  CreditCard,
+  Upload,
+  Crown,
+  Image as ImageIcon,
+  Lock
 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { getCurrencyOptions } from '@/lib/currencies'
 import { useCurrency } from '@/lib/CurrencyContext'
+import { useWhiteLabel } from '@/lib/WhiteLabelContext'
 
 const TABS = [
   { id: 'company', label: 'Company', icon: Building2 },
@@ -86,6 +91,16 @@ function CompanyTab() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { setCurrency: setGlobalCurrency } = useCurrency()
+  const { config: whiteLabelConfig, canUseWhiteLabel, isEnterprise, refresh: refreshWhiteLabel } = useWhiteLabel()
+  
+  // White-label state
+  const [whiteLabelEnabled, setWhiteLabelEnabled] = useState(false)
+  const [whiteLabelLogoUrl, setWhiteLabelLogoUrl] = useState('')
+  const [whiteLabelCompanyName, setWhiteLabelCompanyName] = useState('')
+  const [whiteLabelEmailName, setWhiteLabelEmailName] = useState(false)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+  const [plan, setPlan] = useState('free')
+  const logoInputRef = useRef<HTMLInputElement>(null)
   
   useEffect(() => {
     const loadCompany = async () => {
@@ -105,6 +120,12 @@ function CompanyTab() {
           setName(d.name || '')
           setCurrencyState(d.currency || 'USD')
           setUnits(d.units || 'imperial')
+          // Load white-label settings
+          setPlan(d.plan || 'free')
+          setWhiteLabelEnabled(d.white_label_enabled || false)
+          setWhiteLabelLogoUrl(d.white_label_logo_url || '')
+          setWhiteLabelCompanyName(d.white_label_company_name || '')
+          setWhiteLabelEmailName(d.white_label_email_name || false)
         }
       } catch (err) {
         console.error('Failed to load company:', err)
@@ -126,7 +147,16 @@ function CompanyTab() {
       const res = await fetch('/api/companies', {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ name, currency, units })
+        body: JSON.stringify({ 
+          name, 
+          currency, 
+          units,
+          // White-label settings (only save if enterprise)
+          white_label_enabled: isEnterprise ? whiteLabelEnabled : false,
+          white_label_logo_url: isEnterprise ? whiteLabelLogoUrl : null,
+          white_label_company_name: isEnterprise ? whiteLabelCompanyName : null,
+          white_label_email_name: isEnterprise ? whiteLabelEmailName : false,
+        })
       })
       
       const data = await res.json().catch(() => ({}))
@@ -140,13 +170,22 @@ function CompanyTab() {
           setCurrencyState(verifyData.currency || 'USD')
           setUnits(verifyData.units || 'metric')
           
+          // Update white-label state
+          setWhiteLabelEnabled(verifyData.white_label_enabled || false)
+          setWhiteLabelLogoUrl(verifyData.white_label_logo_url || '')
+          setWhiteLabelCompanyName(verifyData.white_label_company_name || '')
+          setWhiteLabelEmailName(verifyData.white_label_email_name || false)
+          
           // Update the global currency context so all pages show the new currency
           setGlobalCurrency(verifyData.currency || 'USD')
+          
+          // Refresh white-label context so all pages update
+          await refreshWhiteLabel()
           
           if (data.warning) {
             toast.success('Settings saved. Note: ' + data.warning)
           } else {
-            toast.success('Company settings saved successfully! Currency updated across the system.')
+            toast.success('Company settings saved successfully!')
           }
         } else {
           toast.success('Settings saved successfully')
@@ -159,6 +198,52 @@ function CompanyTab() {
       toast.error('Failed to save settings')
     } finally {
       setSaving(false)
+    }
+  }
+  
+  // Logo upload handler
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file')
+      return
+    }
+    
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Logo must be less than 2MB')
+      return
+    }
+    
+    setUploadingLogo(true)
+    try {
+      // Create form data
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('type', 'white-label-logo')
+      
+      // Upload to our upload endpoint
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      })
+      
+      const data = await res.json()
+      
+      if (res.ok && data.url) {
+        setWhiteLabelLogoUrl(data.url)
+        toast.success('Logo uploaded successfully')
+      } else {
+        toast.error(data.error || 'Failed to upload logo')
+      }
+    } catch (err) {
+      console.error('Logo upload error:', err)
+      toast.error('Failed to upload logo')
+    } finally {
+      setUploadingLogo(false)
     }
   }
   
@@ -228,6 +313,207 @@ function CompanyTab() {
               ]}
             />
           </div>
+        </div>
+
+        {/* White-Label Branding Section */}
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <div className="flex items-center gap-2 mb-4">
+            <Crown className="h-5 w-5 text-amber-500" />
+            <h3 className="text-lg font-semibold text-gray-900">White-Label Branding</h3>
+            {isEnterprise ? (
+              <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-medium">
+                Enterprise
+              </span>
+            ) : (
+              <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                <Lock className="h-3 w-3" />
+                Enterprise Only
+              </span>
+            )}
+          </div>
+          
+          {!isEnterprise ? (
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-6">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-amber-100 rounded-lg">
+                  <Crown className="h-8 w-8 text-amber-600" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-semibold text-gray-900 mb-1">Upgrade to Enterprise</h4>
+                  <p className="text-sm text-gray-600 mb-3">
+                    White-label branding is available for Enterprise customers ($149+/month). 
+                    Make SiteProc feel like your own private app with your logo, company name, 
+                    and branded emails.
+                  </p>
+                  <ul className="text-sm text-gray-600 space-y-1 mb-4">
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      Your logo in the app & login screen
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      Your company name in browser tab & headers
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      Branded PDF reports & invoices
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      Custom email notification sender name
+                    </li>
+                  </ul>
+                  <Link href="/settings/billing">
+                    <Button variant="primary" size="sm">
+                      Upgrade to Enterprise
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Enable White-Label */}
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={whiteLabelEnabled}
+                  onChange={(e) => setWhiteLabelEnabled(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <div>
+                  <span className="font-medium text-gray-900">Enable white-label branding</span>
+                  <p className="text-sm text-gray-500">
+                    Replace SiteProc branding with your company's logo and name throughout the app
+                  </p>
+                </div>
+              </label>
+              
+              {whiteLabelEnabled && (
+                <div className="ml-7 space-y-4 pt-2">
+                  {/* Company Name for Branding */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Company Name (for branding)
+                    </label>
+                    <Input
+                      placeholder="e.g., Acme Builders"
+                      value={whiteLabelCompanyName}
+                      onChange={(e) => setWhiteLabelCompanyName(e.target.value)}
+                      fullWidth
+                    />
+                    <p className="text-xs text-gray-500">
+                      This name will appear in the browser tab, dashboard header, and login screen
+                    </p>
+                  </div>
+                  
+                  {/* Logo Upload */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Company Logo
+                    </label>
+                    <div className="flex items-start gap-4">
+                      {whiteLabelLogoUrl ? (
+                        <div className="relative">
+                          <img 
+                            src={whiteLabelLogoUrl} 
+                            alt="Company logo" 
+                            className="h-16 w-auto max-w-[200px] object-contain rounded-lg border border-gray-200 bg-white p-2"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setWhiteLabelLogoUrl('')}
+                            className="absolute -top-2 -right-2 p-1 bg-red-100 text-red-600 rounded-full hover:bg-red-200"
+                          >
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      ) : (
+                        <div 
+                          onClick={() => logoInputRef.current?.click()}
+                          className="flex items-center justify-center h-16 w-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors"
+                        >
+                          {uploadingLogo ? (
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                          ) : (
+                            <div className="text-center">
+                              <ImageIcon className="h-6 w-6 text-gray-400 mx-auto" />
+                              <span className="text-xs text-gray-500">Upload</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      <input
+                        ref={logoInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoUpload}
+                        className="hidden"
+                      />
+                      {!whiteLabelLogoUrl && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => logoInputRef.current?.click()}
+                          disabled={uploadingLogo}
+                          leftIcon={<Upload className="h-4 w-4" />}
+                        >
+                          {uploadingLogo ? 'Uploading...' : 'Choose File'}
+                        </Button>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      PNG or JPG, max 2MB. Recommended: transparent background, 400x100px
+                    </p>
+                  </div>
+                  
+                  {/* Use Company Name in Emails */}
+                  <label className="flex items-start gap-3 cursor-pointer pt-2">
+                    <input
+                      type="checkbox"
+                      checked={whiteLabelEmailName}
+                      onChange={(e) => setWhiteLabelEmailName(e.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <div>
+                      <span className="font-medium text-gray-900">Use company name in email notifications</span>
+                      <p className="text-sm text-gray-500">
+                        Emails will be sent as "{whiteLabelCompanyName || 'Your Company'} &lt;notifications@siteproc.app&gt;"
+                      </p>
+                    </div>
+                  </label>
+                  
+                  {/* Preview */}
+                  <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <p className="text-sm font-medium text-gray-700 mb-3">Preview</p>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-500 w-32">Browser Tab:</span>
+                        <span className="font-medium">{whiteLabelCompanyName || 'Your Company'}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-500 w-32">Dashboard:</span>
+                        <span className="font-medium">{whiteLabelCompanyName || 'Your Company'} Dashboard</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-500 w-32">Login Screen:</span>
+                        <span className="font-medium">Welcome back to {whiteLabelCompanyName || 'Your Company'}</span>
+                      </div>
+                      {whiteLabelEmailName && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-500 w-32">Email From:</span>
+                          <span className="font-medium">{whiteLabelCompanyName || 'Your Company'} &lt;notifications@siteproc.app&gt;</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex gap-3 pt-3 border-t border-gray-200">

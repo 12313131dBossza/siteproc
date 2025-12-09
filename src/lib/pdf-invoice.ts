@@ -69,6 +69,20 @@ export function generateInvoicePDF(data: InvoiceData): jsPDF {
   let yPos = 20;
   
   // ============================================================================
+  // COMPANY LOGO (if provided) - Top left corner
+  // ============================================================================
+  // Note: Logo will be added asynchronously if URL provided
+  // For now, we'll add space for it and show company name prominently
+  
+  // Company name at top left (always show as header)
+  doc.setFontSize(14);
+  doc.setTextColor(0, 0, 0);
+  doc.setFont('helvetica', 'bold');
+  doc.text(data.companyName, margin, yPos);
+  
+  yPos += 8;
+  
+  // ============================================================================
   // TOP LINE - Darker for visibility
   // ============================================================================
   doc.setDrawColor(100, 100, 100);
@@ -279,10 +293,60 @@ export function generateInvoicePDF(data: InvoiceData): jsPDF {
 }
 
 /**
+ * Load image from URL and convert to base64
+ */
+async function loadImageAsBase64(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    console.warn('Failed to load logo image:', url);
+    return null;
+  }
+}
+
+/**
+ * Generate invoice with logo (async version)
+ */
+export async function generateInvoicePDFWithLogo(data: InvoiceData): Promise<jsPDF> {
+  const doc = generateInvoicePDF(data);
+  
+  // If logo URL provided, try to add it
+  if (data.companyLogo) {
+    const base64Logo = await loadImageAsBase64(data.companyLogo);
+    if (base64Logo) {
+      try {
+        // Add logo in top-left corner (before company name)
+        // Logo positioned at x=20, y=8, with max width=35, auto height
+        doc.addImage(base64Logo, 'AUTO', 20, 5, 35, 12);
+      } catch (e) {
+        console.warn('Failed to add logo to PDF:', e);
+      }
+    }
+  }
+  
+  return doc;
+}
+
+/**
  * Download invoice as PDF
  */
-export function downloadInvoice(data: InvoiceData, filename?: string) {
-  const doc = generateInvoicePDF(data);
+export async function downloadInvoice(data: InvoiceData, filename?: string) {
+  let doc: jsPDF;
+  
+  // If logo provided, use async version
+  if (data.companyLogo) {
+    doc = await generateInvoicePDFWithLogo(data);
+  } else {
+    doc = generateInvoicePDF(data);
+  }
+  
   const fileName = filename || `Invoice-${data.invoiceNumber}.pdf`;
   doc.save(fileName);
 }
@@ -290,16 +354,30 @@ export function downloadInvoice(data: InvoiceData, filename?: string) {
 /**
  * Get invoice as blob (for API upload)
  */
-export function getInvoiceBlob(data: InvoiceData): Blob {
-  const doc = generateInvoicePDF(data);
+export async function getInvoiceBlob(data: InvoiceData): Promise<Blob> {
+  let doc: jsPDF;
+  
+  if (data.companyLogo) {
+    doc = await generateInvoicePDFWithLogo(data);
+  } else {
+    doc = generateInvoicePDF(data);
+  }
+  
   return doc.output('blob');
 }
 
 /**
  * Preview invoice in new window
  */
-export function previewInvoice(data: InvoiceData) {
-  const doc = generateInvoicePDF(data);
+export async function previewInvoice(data: InvoiceData) {
+  let doc: jsPDF;
+  
+  if (data.companyLogo) {
+    doc = await generateInvoicePDFWithLogo(data);
+  } else {
+    doc = generateInvoicePDF(data);
+  }
+  
   const blob = doc.output('blob');
   const url = URL.createObjectURL(blob);
   window.open(url, '_blank');
