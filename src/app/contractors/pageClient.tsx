@@ -264,38 +264,38 @@ export default function ContractorsPageClient() {
         </Button>
       }
     >
-      <div className="space-y-6 p-6">
+      <div className="space-y-4 p-4 md:p-6">
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white border rounded-lg p-4">
-            <div className="text-sm text-gray-500 mb-1">Total Contractors</div>
-            <div className="text-2xl font-bold text-gray-900">{contractors.length}</div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-white border rounded-lg p-3">
+            <div className="text-xs text-gray-500 mb-1">Total Contractors</div>
+            <div className="text-xl font-bold text-gray-900">{contractors.length}</div>
           </div>
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <div className="text-sm text-green-700 mb-1">Active</div>
-            <div className="text-2xl font-bold text-green-900">
+          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+            <div className="text-xs text-green-700 mb-1">Active</div>
+            <div className="text-xl font-bold text-green-900">
               {contractors.filter(c => c.status === 'active').length}
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-white border rounded-lg p-4">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
+        <div className="bg-white border rounded-lg p-3">
+          <div className="flex flex-col gap-3">
+            <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search contractors..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-4 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">All Status</option>
               <option value="active">Active</option>
@@ -332,88 +332,77 @@ export default function ContractorsPageClient() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {filteredContractors.map((contractor) => (
-              <div key={contractor.id} className="bg-white border rounded-lg p-6 hover:shadow-md transition-shadow">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-semibold text-gray-900">{contractor.name}</h3>
-                      <span className={cn('px-2 py-1 rounded-full text-xs font-medium border', getStatusBadge(contractor.status))}>
+              <div key={contractor.id} className="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <h3 className="font-semibold text-gray-900 text-sm truncate">{contractor.name}</h3>
+                      <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap', getStatusBadge(contractor.status))}>
                         {contractor.status}
                       </span>
+                      {contractor.rating && (
+                        <span className="text-yellow-500 text-xs flex items-center gap-0.5">
+                          <Star className="h-3 w-3 fill-current" />
+                          {contractor.rating.toFixed(1)}
+                        </span>
+                      )}
                     </div>
                     {contractor.company_name && (
-                      <p className="text-sm text-gray-600 flex items-center gap-1">
-                        <Building className="h-3 w-3" />
-                        {contractor.company_name}
+                      <p className="text-xs text-gray-600 flex items-center gap-1 truncate">
+                        <Building className="h-3 w-3 flex-shrink-0" />
+                        <span className="truncate">{contractor.company_name}</span>
                       </p>
                     )}
                   </div>
-                  {contractor.rating && (
-                    <div className="flex items-center gap-1 text-yellow-500">
-                      <Star className="h-4 w-4 fill-current" />
-                      <span className="text-sm font-medium">{contractor.rating.toFixed(1)}</span>
-                    </div>
-                  )}
                 </div>
 
-                <div className="space-y-2 mb-4">
+                <div className="space-y-1.5 mb-3 text-xs">
                   {contractor.specialty && (
-                    <p className="text-sm text-gray-600">
+                    <p className="text-gray-600">
                       <span className="font-medium">Specialty:</span> {contractor.specialty}
                     </p>
                   )}
                   {contractor.email && (
-                    <p className="text-sm text-gray-600 flex items-center gap-1">
-                      <Mail className="h-3 w-3" />
-                      {contractor.email}
+                    <p className="text-gray-600 flex items-center gap-1 truncate">
+                      <Mail className="h-3 w-3 flex-shrink-0" />
+                      <span className="truncate">{contractor.email}</span>
                     </p>
                   )}
                   {contractor.phone && (
-                    <p className="text-sm text-gray-600 flex items-center gap-1">
-                      <Phone className="h-3 w-3" />
+                    <p className="text-gray-600 flex items-center gap-1">
+                      <Phone className="h-3 w-3 flex-shrink-0" />
                       {contractor.phone}
                     </p>
                   )}
                   {(contractor.city || contractor.state) && (
-                    <p className="text-sm text-gray-600 flex items-center gap-1">
-                      <MapPin className="h-3 w-3" />
+                    <p className="text-gray-600 flex items-center gap-1">
+                      <MapPin className="h-3 w-3 flex-shrink-0" />
                       {[contractor.city, contractor.state].filter(Boolean).join(', ')}
                     </p>
                   )}
                 </div>
 
-                {(contractor.total_orders || contractor.total_spent) && (
-                  <div className="flex gap-4 mb-4 pt-4 border-t">
-                    {contractor.total_orders !== undefined && (
-                      <div className="text-xs text-gray-500">
-                        <span className="font-medium text-gray-700">{contractor.total_orders}</span> orders
-                      </div>
-                    )}
-                    {contractor.total_spent !== undefined && (
-                      <div className="text-xs text-gray-500">
-                        <span className="font-medium text-gray-700">{formatCurrency(contractor.total_spent)}</span> spent
-                      </div>
-                    )}
-                  </div>
-                )}
+                <div className="text-xs text-gray-500 mb-3">
+                  {contractor.total_orders !== undefined && contractor.total_orders > 0 ? contractor.total_orders : 0}
+                </div>
 
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleEdit(contractor)}
-                    className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-center gap-1"
+                    className="flex-1 px-3 py-1.5 text-xs border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-center gap-1"
                   >
-                    <Edit className="h-3 w-3 text-gray-600" />
+                    <Edit className="h-3 w-3" />
                     Edit
                   </button>
                   <button
                     onClick={() => handleDelete(contractor.id)}
                     disabled={deleting === contractor.id}
-                    className="px-3 py-2 text-sm border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+                    className="px-3 py-1.5 text-xs border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
                   >
                     {deleting === contractor.id ? (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600"></div>
                     ) : (
                       <Trash2 className="h-3 w-3" />
                     )}
