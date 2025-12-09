@@ -221,16 +221,26 @@ export async function GET() {
       }).length,
     };
 
-    // Transform monthly data for charts (reverse to show oldest first)
-    const monthlyTrends = Array.from(monthlyData.values())
-      .sort((a, b) => a.month.localeCompare(b.month))
-      .map((month: any) => ({
-        month: new Date(month.month + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-        expenses: month.expenses,
-        payments: month.payments,
+    // Generate last 6 months including current month
+    const last6Months: string[] = [];
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      last6Months.push(monthKey);
+    }
+
+    // Transform monthly data for charts - ensure all 6 months are included
+    const monthlyTrends = last6Months.map((monthKey) => {
+      const data = monthlyData.get(monthKey) || { expenses: 0, payments: 0 };
+      return {
+        month: new Date(monthKey + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+        expenses: data.expenses || 0,
+        payments: data.payments || 0,
         orders: 0,
         deliveries: 0,
-      }));
+      };
+    });
 
     // Top 5 vendors
     const topVendors = Array.from(vendorData.values())
