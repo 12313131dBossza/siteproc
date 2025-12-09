@@ -85,7 +85,6 @@ function CompanyTab() {
   const [whiteLabelEnabled, setWhiteLabelEnabled] = useState(false)
   const [whiteLabelLogoUrl, setWhiteLabelLogoUrl] = useState('')
   const [whiteLabelCompanyName, setWhiteLabelCompanyName] = useState('')
-  const [whiteLabelEmailName, setWhiteLabelEmailName] = useState(false)
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const [plan, setPlan] = useState('free')
   const logoInputRef = useRef<HTMLInputElement>(null)
@@ -113,7 +112,7 @@ function CompanyTab() {
           setWhiteLabelEnabled(d.white_label_enabled || false)
           setWhiteLabelLogoUrl(d.white_label_logo_url || '')
           setWhiteLabelCompanyName(d.white_label_company_name || '')
-          setWhiteLabelEmailName(d.white_label_email_name || false)
+          // white_label_email_name removed - no longer needed
         }
       } catch (err) {
         console.error('Failed to load company:', err)
@@ -143,7 +142,7 @@ function CompanyTab() {
           white_label_enabled: isEnterprise ? whiteLabelEnabled : false,
           white_label_logo_url: isEnterprise ? whiteLabelLogoUrl : null,
           white_label_company_name: isEnterprise ? whiteLabelCompanyName : null,
-          white_label_email_name: isEnterprise ? whiteLabelEmailName : false,
+
         })
       })
       
@@ -162,7 +161,7 @@ function CompanyTab() {
           setWhiteLabelEnabled(verifyData.white_label_enabled || false)
           setWhiteLabelLogoUrl(verifyData.white_label_logo_url || '')
           setWhiteLabelCompanyName(verifyData.white_label_company_name || '')
-          setWhiteLabelEmailName(verifyData.white_label_email_name || false)
+          // white_label_email_name removed - no longer needed
           
           // Update the global currency context so all pages show the new currency
           setGlobalCurrency(verifyData.currency || 'USD')
@@ -458,22 +457,6 @@ function CompanyTab() {
                     </p>
                   </div>
                   
-                  {/* Use Company Name in Emails */}
-                  <label className="flex items-start gap-3 cursor-pointer pt-2">
-                    <input
-                      type="checkbox"
-                      checked={whiteLabelEmailName}
-                      onChange={(e) => setWhiteLabelEmailName(e.target.checked)}
-                      className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <div>
-                      <span className="font-medium text-gray-900">Use company name in email notifications</span>
-                      <p className="text-sm text-gray-500">
-                        Emails will be sent as "{whiteLabelCompanyName || 'Your Company'} &lt;notifications@siteproc.com&gt;"
-                      </p>
-                    </div>
-                  </label>
-                  
                   {/* Preview */}
                   <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
                     <p className="text-sm font-medium text-gray-700 mb-3">Preview</p>
@@ -490,12 +473,6 @@ function CompanyTab() {
                         <span className="text-gray-500 w-32">Login Screen:</span>
                         <span className="font-medium">Welcome back to {whiteLabelCompanyName || 'Your Company'}</span>
                       </div>
-                      {whiteLabelEmailName && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-gray-500 w-32">Email From:</span>
-                          <span className="font-medium">{whiteLabelCompanyName || 'Your Company'} &lt;notifications@siteproc.com&gt;</span>
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>

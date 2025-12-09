@@ -69,21 +69,31 @@ export async function sendExpenseNotifications(
     // Get white-label config for this company
     const { from: whiteLabelFrom, companyName } = await getWhiteLabelConfig(expense.company_id);
 
-    // Fetch creator profile if submitted_by exists
+    // Fetch creator profile and email if submitted_by exists
     let creatorEmail = null;
     let creatorName = null;
     if (expense.submitted_by || expense.user_id) {
       const userId = expense.submitted_by || expense.user_id;
+      
+      // Get profile for name
       const { data: creatorProfile } = await supabase
         .from('profiles')
-        .select('email, full_name')
+        .select('full_name, email')
         .eq('id', userId)
         .single();
       
       if (creatorProfile) {
-        creatorEmail = creatorProfile.email;
         creatorName = creatorProfile.full_name;
+        creatorEmail = creatorProfile.email;
       }
+      
+      // If no email in profile, get from auth.users
+      if (!creatorEmail) {
+        const { data: userData } = await supabase.auth.admin.getUserById(userId);
+        creatorEmail = userData?.user?.email || null;
+      }
+      
+      console.log('[Expense Notification] Creator:', { userId, creatorEmail, creatorName });
     }
 
     const notifications: Array<{ to: string; subject: string; html: string; from?: string }> = [];

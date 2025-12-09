@@ -82,7 +82,7 @@ const PLANS = [
       'Unlimited scale & multi-company support',
       'Dedicated onboarding & training',
       'Custom API & integrations (50+ endpoints)',
-      'White-label (your logo, colors, domain)',
+
       '24/7 phone support',
       'SOC 2 compliance / SLAs / on-premise option',
     ],
