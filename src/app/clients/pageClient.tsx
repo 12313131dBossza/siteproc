@@ -331,9 +331,9 @@ export default function ClientsPageClient() {
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleEdit(client)}
-                    className="flex-1 px-3 py-2 text-sm border rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-1"
+                    className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-center gap-1"
                   >
-                    <Edit className="h-3 w-3" />
+                    <Edit className="h-3 w-3 text-gray-600" />
                     Edit
                   </button>
                   <button
@@ -372,7 +372,7 @@ export default function ClientsPageClient() {
                   setShowModal(false);
                   setEditingClient(null);
                 }}
-                className="flex-1 px-3 py-2 border rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors text-sm"
                 disabled={loading}
               >
                 Cancel

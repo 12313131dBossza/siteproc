@@ -320,7 +320,7 @@ export function OrderForm({ isModal = false, onSuccess, onCancel }: OrderFormPro
             <button
               type="button"
               onClick={onCancel}
-              className="flex-1 rounded-xl border border-zinc-200 px-4 py-2 text-sm font-medium text-center hover:bg-zinc-50"
+              className="flex-1 rounded-xl border border-zinc-200 px-4 py-2 text-sm font-medium text-gray-700 text-center hover:bg-zinc-50"
             >
               Cancel
             </button>
