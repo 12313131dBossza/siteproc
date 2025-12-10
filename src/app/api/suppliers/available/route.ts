@@ -46,14 +46,14 @@ export async function GET(req: NextRequest) {
         profiles:user_id (id, email, full_name)
       `)
       .eq('external_type', 'supplier')
-      .eq('status', 'active')
+      .eq('status', 'active') as { data: Array<{ user_id: string; profiles: any }> | null }
 
     // Get unique suppliers
     const supplierMap = new Map<string, { id: string; email: string; full_name: string }>()
     
     if (supplierMembers) {
       for (const member of supplierMembers) {
-        const profile = member.profiles as any
+        const profile = member.profiles
         if (profile && profile.id) {
           supplierMap.set(profile.id, {
             id: profile.id,
@@ -71,16 +71,35 @@ export async function GET(req: NextRequest) {
         supplier_id,
         profiles:supplier_id (id, email, full_name)
       `)
-      .not('supplier_id', 'is', null)
+      .not('supplier_id', 'is', null) as { data: Array<{ supplier_id: string; profiles: any }> | null }
 
     if (previousAssignments) {
       for (const assignment of previousAssignments) {
-        const profile = assignment.profiles as any
+        const profile = assignment.profiles
         if (profile && profile.id && !supplierMap.has(profile.id)) {
           supplierMap.set(profile.id, {
             id: profile.id,
             email: profile.email || '',
             full_name: profile.full_name || profile.email || 'Unknown'
+          })
+        }
+      }
+    }
+
+    // Also include all viewer role users as potential suppliers
+    // This allows assigning any external user (viewers) to deliveries
+    const { data: viewerUsers } = await sb
+      .from('profiles')
+      .select('id, email, full_name')
+      .eq('role', 'viewer') as { data: Array<{ id: string; email: string; full_name: string }> | null }
+
+    if (viewerUsers) {
+      for (const viewer of viewerUsers) {
+        if (viewer.id && !supplierMap.has(viewer.id)) {
+          supplierMap.set(viewer.id, {
+            id: viewer.id,
+            email: viewer.email || '',
+            full_name: viewer.full_name || viewer.email || 'Unknown'
           })
         }
       }

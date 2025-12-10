@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Plus, Upload, X, Trash2, Truck, Package, Calendar, FileText } from 'lucide-react'
+import { Plus, Upload, X, Trash2, Truck, Package, Calendar, FileText, UserPlus } from 'lucide-react'
 import { sbBrowser } from '@/lib/supabase-browser'
 import { Input, Select, TextArea } from '@/components/ui'
 import { FormModal } from '@/components/ui/FormModal'
@@ -17,6 +17,12 @@ interface DeliveryItem {
 interface Project {
   id: string
   name: string
+}
+
+interface Supplier {
+  id: string
+  email: string
+  full_name: string
 }
 
 interface RecordDeliveryFormProps {
@@ -38,6 +44,8 @@ export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, d
   const [orders, setOrders] = useState<any[]>([])
   const [loadingOrders, setLoadingOrders] = useState(true)
   const [loadingProjects, setLoadingProjects] = useState(true)
+  const [suppliers, setSuppliers] = useState<Supplier[]>([])
+  const [loadingSuppliers, setLoadingSuppliers] = useState(false)
   
   const [formData, setFormData] = useState({
     order_uuid: preselectedOrderId || '',
@@ -48,6 +56,7 @@ export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, d
     status: 'pending' as 'pending' | 'partial' | 'delivered',
     notes: '',
     projectId: '',
+    supplierId: '',
     items: [
       {
         product_name: '',
@@ -57,6 +66,30 @@ export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, d
       }
     ] as DeliveryItem[]
   })
+
+  // Fetch suppliers when project is selected
+  const fetchProjectSuppliers = async (projectId: string) => {
+    if (!projectId) {
+      setSuppliers([])
+      return
+    }
+    
+    try {
+      setLoadingSuppliers(true)
+      const response = await fetch(`/api/projects/${projectId}/suppliers`)
+      if (response.ok) {
+        const data = await response.json()
+        setSuppliers(data.suppliers || [])
+      } else {
+        setSuppliers([])
+      }
+    } catch (error) {
+      console.error('Error fetching project suppliers:', error)
+      setSuppliers([])
+    } finally {
+      setLoadingSuppliers(false)
+    }
+  }
 
   // Fetch projects for dropdown
   const fetchProjects = async () => {
@@ -140,6 +173,7 @@ export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, d
         status: initialData.status || 'pending',
         notes: initialData.notes || '',
         projectId: '',
+        supplierId: '',
         items: initialData.items && initialData.items.length > 0 
           ? initialData.items.map((item: any) => ({
               product_name: item.product_name || '',
@@ -287,6 +321,27 @@ export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, d
           // Don't throw error here, delivery was created successfully
         }
       }
+
+      // If a supplier is selected, assign the supplier to this delivery
+      if (formData.supplierId && result.delivery) {
+        try {
+          const assignSupplierResponse = await fetch(`/api/deliveries/${result.delivery.id}/assign-supplier`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              supplier_id: formData.supplierId
+            })
+          });
+
+          if (!assignSupplierResponse.ok) {
+            console.error('Failed to assign supplier to delivery');
+            // Don't throw error here, delivery was created successfully
+          }
+        } catch (error) {
+          console.error('Error assigning supplier to delivery:', error);
+          // Don't throw error here, delivery was created successfully
+        }
+      }
       
       // Reset form
       setFormData({
@@ -298,6 +353,7 @@ export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, d
         status: 'pending',
         notes: '',
         projectId: '',
+        supplierId: '',
         items: [{
           product_name: '',
           quantity: 1,
@@ -307,6 +363,7 @@ export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, d
       })
   setImages([])
   setImagePreviews([])
+  setSuppliers([])
 
       if (onSuccess) {
         onSuccess(result.delivery)
@@ -425,7 +482,11 @@ export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, d
         <Select
           label="Project (Optional)"
           value={formData.projectId}
-          onChange={(e) => setFormData(prev => ({ ...prev, projectId: e.target.value }))}
+          onChange={(e) => {
+            const projectId = e.target.value
+            setFormData(prev => ({ ...prev, projectId, supplierId: '' }))
+            fetchProjectSuppliers(projectId)
+          }}
           options={[
             { value: '', label: loadingProjects ? 'Loading projects...' : 'Select a project (optional)...' },
             ...projects.map(project => ({ value: project.id, label: project.name }))
@@ -433,6 +494,28 @@ export default function RecordDeliveryForm({ onSuccess, onCancel, initialData, d
           helpText={!formData.projectId ? "Link this delivery to a project for tracking" : undefined}
           fullWidth
         />
+
+        {/* Supplier Selection - only show when project is selected */}
+        {formData.projectId && (
+          <Select
+            label="Assign Supplier (Optional)"
+            value={formData.supplierId}
+            onChange={(e) => setFormData(prev => ({ ...prev, supplierId: e.target.value }))}
+            options={[
+              { value: '', label: loadingSuppliers ? 'Loading suppliers...' : 'Select a supplier (optional)...' },
+              ...suppliers.map(supplier => ({ 
+                value: supplier.id, 
+                label: supplier.full_name || supplier.email 
+              }))
+            ]}
+            helpText={
+              suppliers.length === 0 && !loadingSuppliers 
+                ? "No suppliers found for this project. Add suppliers via Project Access first." 
+                : "Assign a supplier to this delivery for tracking"
+            }
+            fullWidth
+          />
+        )}
       </div>
 
       {/* Delivery Items Section */}
