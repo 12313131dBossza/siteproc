@@ -444,32 +444,51 @@ export default function DocumentsPage() {
       {/* Preview Modal */}
       {selectedDoc && previewUrl && (
         <div 
-          className="fixed inset-0 bg-black/70 flex items-center justify-center p-2 sm:p-4 z-50"
+          className="fixed inset-0 bg-black/80 flex items-center justify-center p-3 sm:p-6 z-50"
           onClick={() => { setSelectedDoc(null); setPreviewUrl(null); }}
         >
+          {/* Close button - always visible in corner */}
+          <button
+            onClick={() => { setSelectedDoc(null); setPreviewUrl(null); }}
+            className="absolute top-3 right-3 sm:top-4 sm:right-4 p-2.5 bg-white/90 hover:bg-white rounded-full shadow-lg z-10"
+          >
+            <X className="h-5 w-5 sm:h-6 sm:w-6 text-gray-800" />
+          </button>
+          
           <div 
-            className="bg-white rounded-lg w-full max-w-4xl max-h-[85vh] sm:max-h-[90vh] overflow-hidden flex flex-col"
+            className="bg-white rounded-xl w-full max-w-3xl max-h-[80vh] overflow-hidden flex flex-col shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between p-3 sm:p-4 border-b bg-white flex-shrink-0">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-900 truncate pr-4">{selectedDoc.title || selectedDoc.file_name}</h3>
+            {/* Header */}
+            <div className="flex items-center justify-between p-3 sm:p-4 border-b bg-gray-50 flex-shrink-0">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                {getFileIcon(selectedDoc.file_type)}
+                <div className="min-w-0">
+                  <h3 className="text-sm sm:text-base font-semibold text-gray-900 truncate">{selectedDoc.title || selectedDoc.file_name}</h3>
+                  <p className="text-xs text-gray-500">{formatFileSize(selectedDoc.file_size)}</p>
+                </div>
+              </div>
               <button
-                onClick={() => {
-                  setSelectedDoc(null);
-                  setPreviewUrl(null);
-                }}
-                className="p-2 hover:bg-gray-100 rounded-full bg-gray-50 flex-shrink-0"
+                onClick={() => handleDownload(selectedDoc)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 flex-shrink-0"
               >
-                <X className="h-5 w-5 text-gray-700" />
+                <Download className="h-4 w-4" />
+                <span className="hidden sm:inline">Download</span>
               </button>
             </div>
-            <div className="flex-1 overflow-auto p-2 sm:p-4 bg-gray-50">
+            
+            {/* Content - properly constrained */}
+            <div className="flex-1 overflow-auto p-3 sm:p-4 bg-gray-100 flex items-center justify-center min-h-0">
               {selectedDoc.file_type.startsWith('image/') ? (
-                <img src={previewUrl} alt={selectedDoc.file_name} className="max-w-full h-auto mx-auto rounded" />
+                <img 
+                  src={previewUrl} 
+                  alt={selectedDoc.file_name} 
+                  className="max-w-full max-h-[55vh] sm:max-h-[60vh] w-auto h-auto object-contain rounded shadow-sm" 
+                />
               ) : selectedDoc.file_type === 'application/pdf' ? (
-                <iframe src={previewUrl} className="w-full h-[60vh] sm:h-[70vh] rounded border" />
+                <iframe src={previewUrl} className="w-full h-[55vh] sm:h-[65vh] rounded border bg-white" />
               ) : (
-                <div className="text-center py-12">
+                <div className="text-center py-8 sm:py-12">
                   <File className="mx-auto h-12 w-12 text-gray-400 mb-4" />
                   <p className="text-gray-600 mb-4">Preview not available for this file type</p>
                   <button
@@ -481,6 +500,7 @@ export default function DocumentsPage() {
                 </div>
               )}
             </div>
+            
             {/* Mobile close button at bottom */}
             <div className="p-3 border-t bg-white flex-shrink-0 sm:hidden">
               <button
