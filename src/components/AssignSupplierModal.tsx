@@ -1,13 +1,18 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { UserPlus, X, Check, Loader2, Truck } from 'lucide-react'
+import { UserPlus, X, Check, Loader2, Truck, FolderOpen } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface Supplier {
   id: string
   email: string
   full_name: string
+}
+
+interface Project {
+  id: string
+  name: string
 }
 
 interface AssignSupplierModalProps {
@@ -26,30 +31,64 @@ export function AssignSupplierModal({
   currentSupplier
 }: AssignSupplierModalProps) {
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
+  const [projects, setProjects] = useState<Project[]>([])
+  const [selectedProject, setSelectedProject] = useState<string>('')
   const [loading, setLoading] = useState(false)
+  const [loadingSuppliers, setLoadingSuppliers] = useState(false)
   const [assigning, setAssigning] = useState(false)
   const [selectedSupplier, setSelectedSupplier] = useState<string>(currentSupplier?.id || '')
 
   useEffect(() => {
     if (isOpen) {
-      fetchSuppliers()
+      fetchProjects()
       setSelectedSupplier(currentSupplier?.id || '')
+      setSelectedProject('')
+      setSuppliers([])
     }
   }, [isOpen, currentSupplier])
 
-  const fetchSuppliers = async () => {
+  // Fetch suppliers when project is selected
+  useEffect(() => {
+    if (selectedProject) {
+      fetchProjectSuppliers(selectedProject)
+    } else {
+      setSuppliers([])
+    }
+  }, [selectedProject])
+
+  const fetchProjects = async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/suppliers/available')
+      const res = await fetch('/api/projects')
+      const data = await res.json()
+      if (data.data) {
+        setProjects(data.data)
+      } else if (Array.isArray(data)) {
+        setProjects(data)
+      }
+    } catch (error) {
+      console.error('Error fetching projects:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchProjectSuppliers = async (projectId: string) => {
+    setLoadingSuppliers(true)
+    try {
+      const res = await fetch(`/api/projects/${projectId}/suppliers`)
       const data = await res.json()
       if (data.suppliers) {
         setSuppliers(data.suppliers)
+      } else {
+        setSuppliers([])
       }
     } catch (error) {
       console.error('Error fetching suppliers:', error)
       toast.error('Failed to load suppliers')
+      setSuppliers([])
     } finally {
-      setLoading(false)
+      setLoadingSuppliers(false)
     }
   }
 
@@ -140,14 +179,6 @@ export function AssignSupplierModal({
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
             </div>
-          ) : suppliers.length === 0 ? (
-            <div className="text-center py-8">
-              <UserPlus className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500 mb-2">No suppliers found</p>
-              <p className="text-sm text-gray-400">
-                Add suppliers via Project Access first
-              </p>
-            </div>
           ) : (
             <div className="space-y-4">
               {/* Current Assignment */}
@@ -159,29 +190,73 @@ export function AssignSupplierModal({
                 </div>
               )}
 
-              {/* Supplier Selection */}
+              {/* Project Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Select Supplier
+                  <FolderOpen className="h-4 w-4 inline mr-1" />
+                  Select Project First
                 </label>
                 <select
-                  value={selectedSupplier}
-                  onChange={(e) => setSelectedSupplier(e.target.value)}
+                  value={selectedProject}
+                  onChange={(e) => {
+                    setSelectedProject(e.target.value)
+                    setSelectedSupplier('')
+                  }}
                   className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                 >
-                  <option value="">-- Choose a supplier --</option>
-                  {suppliers.map((supplier) => (
-                    <option key={supplier.id} value={supplier.id}>
-                      {supplier.full_name} ({supplier.email})
+                  <option value="">-- Choose a project --</option>
+                  {projects.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.name}
                     </option>
                   ))}
                 </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Select a project to see its assigned suppliers
+                </p>
               </div>
 
+              {/* Supplier Selection - only show when project is selected */}
+              {selectedProject && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Select Supplier
+                  </label>
+                  {loadingSuppliers ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+                    </div>
+                  ) : suppliers.length === 0 ? (
+                    <div className="text-center py-4 bg-gray-50 rounded-lg">
+                      <UserPlus className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                      <p className="text-sm text-gray-500">No suppliers in this project</p>
+                      <p className="text-xs text-gray-400">
+                        Add suppliers via Project Access first
+                      </p>
+                    </div>
+                  ) : (
+                    <select
+                      value={selectedSupplier}
+                      onChange={(e) => setSelectedSupplier(e.target.value)}
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    >
+                      <option value="">-- Choose a supplier --</option>
+                      {suppliers.map((supplier) => (
+                        <option key={supplier.id} value={supplier.id}>
+                          {supplier.full_name} ({supplier.email})
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              )}
+
               {/* Info */}
-              <p className="text-xs text-gray-500">
-                Only the assigned supplier will see this delivery in their Deliveries page.
-              </p>
+              {selectedSupplier && (
+                <p className="text-xs text-gray-500">
+                  Only the assigned supplier will see this delivery in their Deliveries page.
+                </p>
+              )}
             </div>
           )}
         </div>

@@ -711,8 +711,9 @@ export default function DeliveriesPage() {
                             <Button 
                               variant={delivery.assigned_supplier ? "outline" : "ghost"}
                               size="sm" 
-                              leftIcon={<UserPlus className="h-4 w-4" />}
+                              leftIcon={<UserPlus className={`h-4 w-4 ${delivery.assigned_supplier ? 'text-blue-600' : ''}`} />}
                               onClick={() => setAssignSupplierModal({ open: true, deliveryId: delivery.id })}
+                              className={delivery.assigned_supplier ? 'text-blue-600 border-blue-300 hover:bg-blue-50' : ''}
                             >
                               {delivery.assigned_supplier ? 'Change Supplier' : 'Assign Supplier'}
                             </Button>

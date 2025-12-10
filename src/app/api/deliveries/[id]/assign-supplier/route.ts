@@ -109,12 +109,17 @@ export async function POST(
 
     const sb = supabaseService()
 
-    // Deactivate any existing assignment for this delivery
-    await sb
+    // Deactivate ALL existing assignments for this delivery (not just active ones to be safe)
+    const { error: deactivateError } = await sb
       .from('supplier_assignments')
       .update({ status: 'inactive' })
       .eq('delivery_id', deliveryId)
-      .eq('status', 'active')
+
+    if (deactivateError) {
+      console.error('Error deactivating old assignments:', deactivateError)
+    } else {
+      console.log(`Deactivated all previous assignments for delivery ${deliveryId}`)
+    }
 
     // Create new assignment
     const { data: assignment, error } = await sb
@@ -132,6 +137,8 @@ export async function POST(
       console.error('Error creating assignment:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+
+    console.log(`Created new assignment: supplier ${supplier_id} -> delivery ${deliveryId}`)
 
     // Get supplier profile
     const { data: supplierProfile } = await sb
