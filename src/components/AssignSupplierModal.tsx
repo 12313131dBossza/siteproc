@@ -100,6 +100,7 @@ export function AssignSupplierModal({
 
     setAssigning(true)
     try {
+      console.log('Assigning supplier:', selectedSupplier, 'to delivery:', deliveryId)
       const res = await fetch(`/api/deliveries/${deliveryId}/assign-supplier`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -107,9 +108,15 @@ export function AssignSupplierModal({
       })
 
       const data = await res.json()
-      if (res.ok) {
+      console.log('Assignment response:', res.status, data)
+      
+      if (res.ok && data.success) {
         toast.success('Supplier assigned successfully')
-        onAssigned?.()
+        // Call onAssigned callback to refresh the list
+        if (onAssigned) {
+          console.log('Calling onAssigned callback to refresh deliveries...')
+          onAssigned()
+        }
         onClose()
       } else {
         toast.error(data.error || 'Failed to assign supplier')

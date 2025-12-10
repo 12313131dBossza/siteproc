@@ -35,7 +35,6 @@ export async function GET(
       .select('id, supplier_id, delivery_id, status')
       .eq('delivery_id', deliveryId)
       .eq('status', 'active')
-      .order('created_at', { ascending: false })
       .limit(1)
 
     if (error) {
