@@ -41,6 +41,12 @@ interface Delivery {
   // Supplier info inherited from the linked order
   supplier_name?: string
   order_vendor?: string
+  // Assigned supplier info
+  assigned_supplier?: {
+    id: string
+    full_name: string
+    email: string
+  } | null
 }
 
 const statusConfig = {
@@ -164,8 +170,11 @@ export default function DeliveriesPage() {
       console.log('Fetched deliveries data:', data)
       const fetchedDeliveries: Delivery[] = data.deliveries || [];
       
-      setDeliveries(fetchedDeliveries);
-      console.log('Set deliveries:', fetchedDeliveries.length, 'items')
+      // Fetch supplier assignments for all deliveries
+      const deliveriesWithSuppliers = await fetchSupplierAssignments(fetchedDeliveries)
+      
+      setDeliveries(deliveriesWithSuppliers);
+      console.log('Set deliveries:', deliveriesWithSuppliers.length, 'items')
       
       // Update user role from API response (includes external_type detection)
       if (data.user_info?.role) {
@@ -185,6 +194,32 @@ export default function DeliveriesPage() {
       }
     } finally {
       setLoading(false);
+    }
+  }
+
+  // Fetch supplier assignments for deliveries
+  const fetchSupplierAssignments = async (deliveryList: Delivery[]): Promise<Delivery[]> => {
+    try {
+      // Fetch assignments for all deliveries in parallel
+      const assignmentPromises = deliveryList.map(async (delivery) => {
+        try {
+          const res = await fetch(`/api/deliveries/${delivery.id}/assign-supplier`)
+          if (res.ok) {
+            const data = await res.json()
+            if (data.assignment?.supplier) {
+              return { ...delivery, assigned_supplier: data.assignment.supplier }
+            }
+          }
+        } catch (e) {
+          console.error(`Error fetching assignment for delivery ${delivery.id}:`, e)
+        }
+        return delivery
+      })
+      
+      return Promise.all(assignmentPromises)
+    } catch (error) {
+      console.error('Error fetching supplier assignments:', error)
+      return deliveryList
     }
   }
 
@@ -617,6 +652,13 @@ export default function DeliveriesPage() {
                               <span>Vehicle: {delivery.vehicle_number}</span>
                             </div>
                           )}
+                          {/* Show assigned supplier */}
+                          {delivery.assigned_supplier && (
+                            <div className="flex items-center gap-2 text-sm text-purple-600 mb-2">
+                              <UserPlus className="h-4 w-4" />
+                              <span>Assigned to: <span className="font-medium">{delivery.assigned_supplier.full_name || delivery.assigned_supplier.email}</span></span>
+                            </div>
+                          )}
                           {delivery.notes && (
                             <div className="text-sm text-gray-600 mb-2">
                               <span className="font-medium">Notes:</span> {delivery.notes}
@@ -667,12 +709,12 @@ export default function DeliveriesPage() {
                           {/* Assign Supplier button - only for admin/manager/owner */}
                           {['admin', 'owner', 'manager'].includes(userRole || '') && (
                             <Button 
-                              variant="ghost" 
+                              variant={delivery.assigned_supplier ? "outline" : "ghost"}
                               size="sm" 
                               leftIcon={<UserPlus className="h-4 w-4" />}
                               onClick={() => setAssignSupplierModal({ open: true, deliveryId: delivery.id })}
                             >
-                              Assign Supplier
+                              {delivery.assigned_supplier ? 'Change Supplier' : 'Assign Supplier'}
                             </Button>
                           )}
                           
