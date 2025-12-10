@@ -73,7 +73,7 @@ const navigation: Array<{
   // === STARTER PLAN - Core Features ===
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, access: 'internal', minPlan: 'starter' },
   { name: "Projects", href: "/projects", icon: FolderOpen, access: 'all_except_supplier', minPlan: 'starter' },
-  { name: "Orders", href: "/orders", icon: ShoppingCart, access: 'internal', minPlan: 'starter' },
+  { name: "Orders", href: "/orders", icon: ShoppingCart, access: 'contractor', minPlan: 'starter' },
   { name: "Expenses", href: "/expenses", icon: Receipt, access: 'internal', minPlan: 'starter' },
   { name: "Deliveries", href: "/deliveries", icon: Package, access: 'contractor', minPlan: 'starter' },
   { name: "Documents", href: "/documents", icon: Files, access: 'all_except_supplier', minPlan: 'starter' },

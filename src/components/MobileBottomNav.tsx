@@ -44,6 +44,7 @@ const mobileNavItems: Array<{
 }> = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, access: 'internal', minPlan: 'free' },
   { name: 'Projects', href: '/projects', icon: FolderOpen, access: 'all_except_supplier', minPlan: 'free' },
+  { name: 'Orders', href: '/orders', icon: ShoppingCart, access: 'contractor', minPlan: 'free' },
   { name: 'Deliveries', href: '/deliveries', icon: Package, access: 'contractor', minPlan: 'free' },
   { name: 'Documents', href: '/documents', icon: Files, access: 'all_except_supplier', minPlan: 'free' },
   // Messages requires Pro plan
