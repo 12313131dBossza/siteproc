@@ -848,14 +848,14 @@ export function ProjectAccessModal({ projectId, projectName, isOpen, onClose }: 
                                 member.external_email || member.external_company ? 'bg-gradient-to-br from-gray-500 to-gray-600' :
                                 'bg-gradient-to-br from-green-500 to-green-600'
                               }`}>
-                                {(member.profiles?.full_name?.[0] || member.profiles?.username?.[0] || member.external_name?.[0] || member.profiles?.email?.[0] || member.external_email?.[0] || '?').toUpperCase()}
+                                {(member.profiles?.full_name?.[0] || member.external_name?.[0] || member.profiles?.email?.[0] || member.external_email?.[0] || '?').toUpperCase()}
                               </div>
                               
                               {/* Info */}
                               <div className="min-w-0 flex-1">
                                 <div className="flex flex-wrap items-center gap-1.5">
                                   <span className="font-medium text-gray-900 text-sm">
-                                    {member.profiles?.full_name || member.profiles?.username || member.external_name || member.profiles?.email?.split('@')[0] || member.external_email?.split('@')[0] || 'Unknown'}
+                                    {member.profiles?.full_name || member.external_name || member.profiles?.email?.split('@')[0] || member.external_email?.split('@')[0] || 'Unknown'}
                                   </span>
                                   {/* Member Type Label */}
                                   {(() => {
