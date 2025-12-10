@@ -94,7 +94,7 @@ export async function GET(
       // External viewers - check project_members for access
       const { data: membership } = await serviceSb
         .from('project_members')
-        .select('role, permissions, status')
+        .select('role, permissions, status, external_type')
         .eq('project_id', params.id)
         .eq('user_id', user.id)
         .eq('status', 'active')
@@ -104,21 +104,105 @@ export async function GET(
         return NextResponse.json({ error: 'You do not have access to this project' }, { status: 403 })
       }
 
-      userPermissions = membership.permissions || {
-        view_project: true,
-        view_orders: true,
-        view_expenses: false,
-        view_payments: false,
-        view_documents: true,
-        edit_project: false,
-        create_orders: false,
-        upload_documents: false,
-        invite_others: false,
-        view_team: false,
-        view_suppliers: false,
-        view_deliveries: true,
-        manage_deliveries: false,
+      // Get default permissions based on external_type if no stored permissions
+      const getDefaultPermissions = (externalType: string) => {
+        switch (externalType) {
+          case 'client':
+            // Client: Only Overview + Photos + Documents - NO Orders, Expenses, Deliveries
+            return {
+              view_project: true,
+              view_orders: false,
+              view_expenses: false,
+              view_payments: false,
+              view_documents: true,
+              edit_project: false,
+              create_orders: false,
+              upload_documents: false,
+              invite_others: false,
+              view_team: false,
+              view_suppliers: false,
+              view_deliveries: false,
+              manage_deliveries: false,
+              view_photos: true,
+            }
+          case 'contractor':
+            // Contractor: Only Photos + Deliveries - NO Orders, Expenses
+            return {
+              view_project: true,
+              view_orders: false,
+              view_expenses: false,
+              view_payments: false,
+              view_documents: true,
+              edit_project: false,
+              create_orders: false,
+              upload_documents: false,
+              invite_others: false,
+              view_team: false,
+              view_suppliers: false,
+              view_deliveries: true,
+              manage_deliveries: true,
+              view_photos: true,
+            }
+          case 'consultant':
+          case 'other':
+            // Consultant/Other: Only Photos + Documents - NO Orders, Expenses
+            return {
+              view_project: true,
+              view_orders: false,
+              view_expenses: false,
+              view_payments: false,
+              view_documents: true,
+              edit_project: false,
+              create_orders: false,
+              upload_documents: true,
+              invite_others: false,
+              view_team: false,
+              view_suppliers: false,
+              view_deliveries: false,
+              manage_deliveries: false,
+              view_photos: true,
+            }
+          case 'supplier':
+            // Supplier: Handled by supplier portal
+            return {
+              view_project: false,
+              view_orders: false,
+              view_expenses: false,
+              view_payments: false,
+              view_documents: false,
+              edit_project: false,
+              create_orders: false,
+              upload_documents: false,
+              invite_others: false,
+              view_team: false,
+              view_suppliers: false,
+              view_deliveries: true,
+              manage_deliveries: true,
+              view_photos: true,
+            }
+          default:
+            // Default viewer - minimal access
+            return {
+              view_project: true,
+              view_orders: false,
+              view_expenses: false,
+              view_payments: false,
+              view_documents: true,
+              edit_project: false,
+              create_orders: false,
+              upload_documents: false,
+              invite_others: false,
+              view_team: false,
+              view_suppliers: false,
+              view_deliveries: false,
+              manage_deliveries: false,
+              view_photos: true,
+            }
+        }
       }
+
+      // Use stored permissions if available, otherwise use defaults based on external_type
+      userPermissions = membership.permissions || getDefaultPermissions(membership.external_type || 'viewer')
       projectRole = membership.role
     }
 

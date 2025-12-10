@@ -103,25 +103,25 @@ const VISIBILITY_OPTIONS = [
 ];
 
 // Default permissions for clients (based on requirements table)
-// Client: Read-only portal - sees progress %, timeline, deliveries + photos, documents.
-// Cannot see financial details, internal team, supplier names, or create anything.
+// Client: ONLY sees Overview + Photos + Documents + Messages tabs
+// MUST HIDE: Orders, Expenses, Deliveries tabs
 const CLIENT_DEFAULT_PERMISSIONS = {
-  view_project: true,      // Can see project dashboard, progress %, timeline, milestones
+  view_project: true,      // Can see project Overview tab (progress %, timeline, milestones)
   edit_project: false,     // Cannot edit anything
-  view_orders: true,       // Can see deliveries/orders (items, dates, status) but NOT prices
+  view_orders: false,      // NO - Orders tab MUST BE HIDDEN
   create_orders: false,    // Cannot create orders or deliveries - BLOCKED
-  view_expenses: false,    // NO - Financial details hidden (prices, expenses hidden)
-  view_payments: false,    // NO - Financial details hidden (payments hidden)
-  view_documents: true,    // Can view & download every uploaded file / PDF
+  view_expenses: false,    // NO - Expenses tab MUST BE HIDDEN
+  view_payments: false,    // NO - Financial details hidden
+  view_documents: true,    // Can view & download documents (Documents tab visible)
   upload_documents: false, // Cannot upload or delete
-  view_timeline: true,     // Can see timeline
-  view_photos: true,       // Can see full photo gallery with dates and captions
-  use_chat: true,          // Can read & write in their private project thread (with company only)
-  view_deliveries: true,   // Can see every item, date, status, and all proof photos
+  view_timeline: true,     // Can see timeline on Overview
+  view_photos: true,       // Can see Photos tab
+  use_chat: true,          // Can read & write in Messages
+  view_deliveries: false,  // NO - Deliveries tab MUST BE HIDDEN
   manage_deliveries: false, // Cannot create/edit deliveries - BLOCKED
   invite_others: false,    // Cannot invite others
   view_team: false,        // NO - Internal team list hidden
-  view_suppliers: false,   // NO - Supplier names hidden (can enable if you want)
+  view_suppliers: false,   // NO - Supplier names hidden
 };
 
 // Supplier: Delivery-only view - sees only their assigned deliveries/orders, upload proof photos,
@@ -143,21 +143,21 @@ const SUPPLIER_DEFAULT_PERMISSIONS = {
   invite_others: false,    // Cannot invite others
 };
 
-// Contractor: Can see only their assigned deliveries/orders, upload proof photos,
-// mark items complete, chat with team. Cannot see pricing, other suppliers, or create/edit orders.
+// Contractor: Only Photos tab (and maybe Deliveries if you allow)
+// MUST HIDE: Orders & Expenses tabs
 const CONTRACTOR_DEFAULT_PERMISSIONS = {
-  view_project: true,      // Can see only their assigned projects
+  view_project: true,      // Can see Overview tab (limited)
   edit_project: false,     // Cannot edit anything
-  view_orders: true,       // Can see only their assigned orders/deliveries (NO prices)
+  view_orders: false,      // NO - Orders tab MUST BE HIDDEN
   create_orders: false,    // Cannot create orders - BLOCKED
-  view_expenses: false,    // NO - Cannot see any pricing/expenses
+  view_expenses: false,    // NO - Expenses tab MUST BE HIDDEN
   view_payments: false,    // NO - Cannot see any payments
   view_documents: true,    // Can view documents shared with them
   upload_documents: false, // Cannot upload general documents
   view_timeline: false,    // Limited timeline view
-  view_photos: true,       // Can upload proof photos for their deliveries
+  view_photos: true,       // Can see Photos tab and upload proof photos
   use_chat: true,          // Can chat with team only
-  view_deliveries: true,   // Can see their assigned deliveries
+  view_deliveries: true,   // Can see Deliveries tab (their assigned items)
   manage_deliveries: true, // Can upload proof photos, mark items delivered
   invite_others: false,    // Cannot invite others
   view_team: false,        // NO - Cannot see team list
