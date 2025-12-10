@@ -374,8 +374,12 @@ export default function DocumentsPage() {
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
                       <div className="text-xs space-y-0.5 sm:space-y-1">
+                        {/* Show document name on mobile since Document column is hidden */}
+                        <div className="sm:hidden font-medium text-gray-900 truncate max-w-[140px] mb-1">
+                          {doc.title || doc.file_name}
+                        </div>
                         {doc.projects && (
-                          <div className="text-blue-600 truncate max-w-[100px] sm:max-w-none">
+                          <div className="text-blue-600 truncate max-w-[140px] sm:max-w-none">
                             Project: {doc.projects.name}
                           </div>
                         )}
@@ -385,9 +389,15 @@ export default function DocumentsPage() {
                           </div>
                         )}
                         {doc.expenses && (
-                          <div className="text-purple-600 truncate max-w-[100px] sm:max-w-none">
+                          <div className="text-purple-600 truncate max-w-[140px] sm:max-w-none">
                             Expense: {doc.expenses.description}
                           </div>
+                        )}
+                        {/* Show category on mobile */}
+                        {doc.category && (
+                          <span className={`sm:hidden inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getCategoryBadgeColor(doc.category)}`}>
+                            {doc.category}
+                          </span>
                         )}
                       </div>
                     </td>
@@ -433,25 +443,31 @@ export default function DocumentsPage() {
 
       {/* Preview Modal */}
       {selectedDoc && previewUrl && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b">
-              <h3 className="text-lg font-semibold">{selectedDoc.title || selectedDoc.file_name}</h3>
+        <div 
+          className="fixed inset-0 bg-black/70 flex items-center justify-center p-2 sm:p-4 z-50"
+          onClick={() => { setSelectedDoc(null); setPreviewUrl(null); }}
+        >
+          <div 
+            className="bg-white rounded-lg w-full max-w-4xl max-h-[85vh] sm:max-h-[90vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-3 sm:p-4 border-b bg-white flex-shrink-0">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 truncate pr-4">{selectedDoc.title || selectedDoc.file_name}</h3>
               <button
                 onClick={() => {
                   setSelectedDoc(null);
                   setPreviewUrl(null);
                 }}
-                className="p-1 hover:bg-gray-100 rounded"
+                className="p-2 hover:bg-gray-100 rounded-full bg-gray-50 flex-shrink-0"
               >
-                <X className="h-5 w-5" />
+                <X className="h-5 w-5 text-gray-700" />
               </button>
             </div>
-            <div className="p-4 overflow-auto max-h-[calc(90vh-80px)]">
+            <div className="flex-1 overflow-auto p-2 sm:p-4 bg-gray-50">
               {selectedDoc.file_type.startsWith('image/') ? (
-                <img src={previewUrl} alt={selectedDoc.file_name} className="max-w-full h-auto" />
+                <img src={previewUrl} alt={selectedDoc.file_name} className="max-w-full h-auto mx-auto rounded" />
               ) : selectedDoc.file_type === 'application/pdf' ? (
-                <iframe src={previewUrl} className="w-full h-[600px]" />
+                <iframe src={previewUrl} className="w-full h-[60vh] sm:h-[70vh] rounded border" />
               ) : (
                 <div className="text-center py-12">
                   <File className="mx-auto h-12 w-12 text-gray-400 mb-4" />
@@ -465,15 +481,24 @@ export default function DocumentsPage() {
                 </div>
               )}
             </div>
+            {/* Mobile close button at bottom */}
+            <div className="p-3 border-t bg-white flex-shrink-0 sm:hidden">
+              <button
+                onClick={() => { setSelectedDoc(null); setPreviewUrl(null); }}
+                className="w-full py-2.5 bg-gray-900 text-white rounded-lg font-medium"
+              >
+                Close Preview
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {/* Edit Modal */}
       {editingDoc && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-lg w-full p-6">
-            <h3 className="text-lg font-semibold mb-4">Edit Document</h3>
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-3 sm:p-4 z-50">
+          <div className="bg-white rounded-lg max-w-lg w-full p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Edit Document</h3>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
@@ -481,7 +506,7 @@ export default function DocumentsPage() {
                   type="text"
                   defaultValue={editingDoc.title || editingDoc.file_name}
                   id="edit-title"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div>
@@ -490,7 +515,7 @@ export default function DocumentsPage() {
                   defaultValue={editingDoc.description || ''}
                   id="edit-description"
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div>
@@ -498,7 +523,7 @@ export default function DocumentsPage() {
                 <select
                   defaultValue={editingDoc.category || ''}
                   id="edit-category"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">Select category</option>
                   <option value="invoice">Invoice</option>
@@ -518,11 +543,11 @@ export default function DocumentsPage() {
                   type="text"
                   defaultValue={editingDoc.tags?.join(', ') || ''}
                   id="edit-tags"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
             </div>
-            <div className="flex gap-2 mt-6">
+            <div className="flex gap-3 mt-6">
               <button
                 onClick={() => {
                   const title = (document.getElementById('edit-title') as HTMLInputElement).value;
@@ -537,13 +562,13 @@ export default function DocumentsPage() {
                     tags: tags.split(',').map(t => t.trim()).filter(Boolean),
                   });
                 }}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                className="flex-1 px-4 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700"
               >
                 Save Changes
               </button>
               <button
                 onClick={() => setEditingDoc(null)}
-                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-md"
+                className="px-4 py-2.5 bg-gray-200 text-gray-800 font-medium rounded-lg hover:bg-gray-300"
               >
                 Cancel
               </button>
