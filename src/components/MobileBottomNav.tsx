@@ -73,7 +73,25 @@ export function MobileBottomNav() {
             .eq('id', user.id)
             .single();
           
-          setUserRole(profile?.role || 'viewer');
+          let effectiveRole = profile?.role || 'viewer';
+          
+          // Check project_members for external_type if profile role is viewer
+          if (effectiveRole === 'viewer') {
+            const { data: membership } = await supabase
+              .from('project_members')
+              .select('external_type')
+              .eq('user_id', user.id)
+              .eq('status', 'active')
+              .limit(1)
+              .maybeSingle();
+            
+            if (membership?.external_type) {
+              effectiveRole = membership.external_type;
+              console.log('MobileNav: User external_type detected:', effectiveRole);
+            }
+          }
+          
+          setUserRole(effectiveRole);
         }
       } catch (error) {
         console.error('Error loading user role:', error);

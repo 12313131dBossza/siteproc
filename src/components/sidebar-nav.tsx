@@ -159,8 +159,28 @@ export function SidebarNav() {
             setUserName(user.email.split('@')[0]);
           }
           
-          // Set user role
-          setUserRole(profile?.role || 'viewer');
+          // Determine effective role - check project_members for external_type if profile role is viewer
+          let effectiveRole = profile?.role || 'viewer';
+          
+          if (effectiveRole === 'viewer') {
+            // Check project_members to see if user is actually a contractor, consultant, supplier, or client
+            const { data: membership } = await supabase
+              .from('project_members')
+              .select('external_type')
+              .eq('user_id', user.id)
+              .eq('status', 'active')
+              .limit(1)
+              .maybeSingle();
+            
+            if (membership?.external_type) {
+              // Map external_type to effective role for navigation
+              effectiveRole = membership.external_type; // contractor, consultant, supplier, client, other
+              console.log('Sidebar: User external_type detected:', effectiveRole);
+            }
+          }
+          
+          // Set user role (may be contractor, consultant, etc.)
+          setUserRole(effectiveRole);
 
           // Fetch subscription status for internal members
           if (profile?.company_id && ['admin', 'owner', 'manager', 'accountant', 'bookkeeper', 'member'].includes(profile?.role || '')) {
