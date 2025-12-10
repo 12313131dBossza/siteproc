@@ -32,11 +32,7 @@ export async function GET(
     const sb = supabaseService()
     const { data: assignment, error } = await sb
       .from('supplier_assignments')
-      .select(`
-        id,
-        supplier_id,
-        profiles:supplier_id (id, email, full_name)
-      `)
+      .select('id, supplier_id, delivery_id, status')
       .eq('delivery_id', deliveryId)
       .eq('status', 'active')
       .maybeSingle()
@@ -46,7 +42,23 @@ export async function GET(
       return NextResponse.json({ assignment: null })
     }
 
-    return NextResponse.json({ assignment })
+    // If we have an assignment, get the supplier profile
+    if (assignment && assignment.supplier_id) {
+      const { data: profile } = await sb
+        .from('profiles')
+        .select('id, email, full_name')
+        .eq('id', assignment.supplier_id)
+        .single()
+
+      return NextResponse.json({ 
+        assignment: {
+          ...assignment,
+          supplier: profile
+        }
+      })
+    }
+
+    return NextResponse.json({ assignment: null })
   } catch (error: any) {
     console.error('Error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
@@ -87,7 +99,7 @@ export async function POST(
     // Check user role - only admin/manager/owner can assign
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, company_id')
       .eq('id', user.id)
       .single()
 
@@ -110,13 +122,10 @@ export async function POST(
       .insert({
         supplier_id,
         delivery_id: deliveryId,
-        status: 'active'
+        status: 'active',
+        company_id: profile?.company_id
       })
-      .select(`
-        id,
-        supplier_id,
-        profiles:supplier_id (id, email, full_name)
-      `)
+      .select('id, supplier_id, delivery_id, status')
       .single()
 
     if (error) {
@@ -124,9 +133,19 @@ export async function POST(
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    // Get supplier profile
+    const { data: supplierProfile } = await sb
+      .from('profiles')
+      .select('id, email, full_name')
+      .eq('id', supplier_id)
+      .single()
+
     return NextResponse.json({ 
       success: true, 
-      assignment,
+      assignment: {
+        ...assignment,
+        supplier: supplierProfile
+      },
       message: 'Supplier assigned successfully'
     })
   } catch (error: any) {

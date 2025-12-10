@@ -37,76 +37,60 @@ export async function GET(req: NextRequest) {
     }
 
     const sb = supabaseService()
+    const supplierIds = new Set<string>()
 
-    // Get suppliers from project_members with external_type='supplier'
+    // Get supplier user_ids from project_members with external_type='supplier'
     const { data: supplierMembers } = await sb
       .from('project_members')
-      .select(`
-        user_id,
-        profiles:user_id (id, email, full_name)
-      `)
+      .select('user_id')
       .eq('external_type', 'supplier')
-      .eq('status', 'active') as { data: Array<{ user_id: string; profiles: any }> | null }
+      .eq('status', 'active')
 
-    // Get unique suppliers
-    const supplierMap = new Map<string, { id: string; email: string; full_name: string }>()
-    
     if (supplierMembers) {
-      for (const member of supplierMembers) {
-        const profile = member.profiles
-        if (profile && profile.id) {
-          supplierMap.set(profile.id, {
-            id: profile.id,
-            email: profile.email || '',
-            full_name: profile.full_name || profile.email || 'Unknown'
-          })
-        }
-      }
+      supplierMembers.forEach(m => supplierIds.add(m.user_id))
     }
 
-    // Also get suppliers from previous assignments (in case they're not in project_members)
+    // Also get supplier_ids from previous assignments
     const { data: previousAssignments } = await sb
       .from('supplier_assignments')
-      .select(`
-        supplier_id,
-        profiles:supplier_id (id, email, full_name)
-      `)
-      .not('supplier_id', 'is', null) as { data: Array<{ supplier_id: string; profiles: any }> | null }
+      .select('supplier_id')
+      .not('supplier_id', 'is', null)
 
     if (previousAssignments) {
-      for (const assignment of previousAssignments) {
-        const profile = assignment.profiles
-        if (profile && profile.id && !supplierMap.has(profile.id)) {
-          supplierMap.set(profile.id, {
-            id: profile.id,
-            email: profile.email || '',
-            full_name: profile.full_name || profile.email || 'Unknown'
-          })
-        }
-      }
+      previousAssignments.forEach(a => {
+        if (a.supplier_id) supplierIds.add(a.supplier_id)
+      })
     }
 
     // Also include all viewer role users as potential suppliers
-    // This allows assigning any external user (viewers) to deliveries
     const { data: viewerUsers } = await sb
       .from('profiles')
-      .select('id, email, full_name')
-      .eq('role', 'viewer') as { data: Array<{ id: string; email: string; full_name: string }> | null }
+      .select('id')
+      .eq('role', 'viewer')
 
     if (viewerUsers) {
-      for (const viewer of viewerUsers) {
-        if (viewer.id && !supplierMap.has(viewer.id)) {
-          supplierMap.set(viewer.id, {
-            id: viewer.id,
-            email: viewer.email || '',
-            full_name: viewer.full_name || viewer.email || 'Unknown'
-          })
-        }
-      }
+      viewerUsers.forEach(v => supplierIds.add(v.id))
     }
 
-    const suppliers = Array.from(supplierMap.values())
-      .sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''))
+    // If no suppliers found, return empty
+    if (supplierIds.size === 0) {
+      return NextResponse.json({ suppliers: [] })
+    }
+
+    // Get profiles for all supplier IDs
+    const { data: profiles } = await sb
+      .from('profiles')
+      .select('id, email, full_name')
+      .in('id', Array.from(supplierIds))
+
+    const suppliers = (profiles || []).map(p => ({
+      id: p.id,
+      email: p.email || '',
+      full_name: p.full_name || p.email || 'Unknown'
+    }))
+
+    // Sort by name
+    suppliers.sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''))
 
     return NextResponse.json({ suppliers })
   } catch (error: any) {

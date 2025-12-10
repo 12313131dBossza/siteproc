@@ -41,37 +41,35 @@ export async function GET(
 
     const sb = supabaseService()
 
-    // Get suppliers from project_members with external_type='supplier' for this project
+    // Get supplier user_ids from project_members with external_type='supplier' for this project
     const { data: supplierMembers, error } = await sb
       .from('project_members')
-      .select(`
-        user_id,
-        profiles:user_id (id, email, full_name)
-      `)
+      .select('user_id')
       .eq('project_id', projectId)
       .eq('external_type', 'supplier')
-      .eq('status', 'active') as { data: Array<{ user_id: string; profiles: { id: string; email: string; full_name: string } | null }> | null; error: any }
+      .eq('status', 'active')
 
     if (error) {
       console.error('Error fetching project suppliers:', error)
       return NextResponse.json({ suppliers: [] })
     }
 
-    // Build unique supplier list
-    const suppliers: Array<{ id: string; email: string; full_name: string }> = []
-    
-    if (supplierMembers) {
-      for (const member of supplierMembers) {
-        const profile = member.profiles as any
-        if (profile && profile.id) {
-          suppliers.push({
-            id: profile.id,
-            email: profile.email || '',
-            full_name: profile.full_name || profile.email || 'Unknown'
-          })
-        }
-      }
+    if (!supplierMembers || supplierMembers.length === 0) {
+      return NextResponse.json({ suppliers: [] })
     }
+
+    // Get profiles for these user_ids
+    const userIds = supplierMembers.map(m => m.user_id)
+    const { data: profiles } = await sb
+      .from('profiles')
+      .select('id, email, full_name')
+      .in('id', userIds)
+
+    const suppliers = (profiles || []).map(p => ({
+      id: p.id,
+      email: p.email || '',
+      full_name: p.full_name || p.email || 'Unknown'
+    }))
 
     // Sort by name
     suppliers.sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''))
