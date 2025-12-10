@@ -86,6 +86,9 @@ export default function ProjectDetailPage() {
   }
   const userRole = project?.userRole || 'viewer'
   
+  // Check if user is internal team member (not an external role)
+  const isInternalRole = ['admin', 'owner', 'manager', 'accountant', 'bookkeeper', 'member'].includes(userRole)
+  
   // Use centralized role-based permissions
   const canEdit = hasPermission(userRole, 'project.edit')
   const canCreate = hasPermission(userRole, 'order.create')
@@ -450,7 +453,6 @@ export default function ProjectDetailPage() {
           // Check permission
           if (!permissions[t.permission as keyof typeof permissions]) return false;
           // Hide Orders/Expenses/Deliveries for external roles (non-internal)
-          const isInternalRole = ['admin', 'owner', 'manager', 'accountant', 'bookkeeper', 'member'].includes(userRole);
           if (t.internalOnly && !isInternalRole) return false;
           return true;
         }).map(t => {
@@ -485,7 +487,8 @@ export default function ProjectDetailPage() {
 
       {tab==='overview' && (
         <div className="space-y-6">
-          {/* Budget Hero Card */}
+          {/* Budget Hero Card - Only visible to internal team */}
+          {isInternalRole && (
           <div className={`relative overflow-hidden rounded-2xl p-6 ${
             variance < 0 
               ? 'bg-gradient-to-br from-red-500 to-red-600' 
@@ -584,8 +587,10 @@ export default function ProjectDetailPage() {
               </div>
             </div>
           </div>
+          )}
 
-          {/* Quick Stats */}
+          {/* Quick Stats - Only visible to internal team */}
+          {isInternalRole && (
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900">Project Activity</h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -612,6 +617,7 @@ export default function ProjectDetailPage() {
               />
             </div>
           </div>
+          )}
 
           {/* Timeline */}
           <ProjectTimeline 
