@@ -14,6 +14,7 @@ import {
   Receipt,
   MessageCircle,
   MoreHorizontal,
+  Files,
 } from 'lucide-react';
 import { MobileMoreMenu } from './MobileMoreMenu';
 
@@ -26,6 +27,7 @@ const PLAN_LEVELS: Record<PlanId, number> = {
 };
 
 // Mobile nav items with access levels and minimum plan
+// Clients should only see: Projects, Documents, Messages
 const mobileNavItems: Array<{
   name: string;
   href: string;
@@ -35,9 +37,9 @@ const mobileNavItems: Array<{
 }> = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, access: 'internal', minPlan: 'free' },
   { name: 'Projects', href: '/projects', icon: FolderOpen, access: 'all_except_supplier', minPlan: 'free' },
-  { name: 'Orders', href: '/orders', icon: ShoppingCart, access: 'viewer', minPlan: 'free' },
+  { name: 'Documents', href: '/documents', icon: Files, access: 'all_except_supplier', minPlan: 'free' },
   // Messages requires Pro plan
-  { name: 'Messages', href: '/messages', icon: MessageCircle, access: 'all', minPlan: 'pro' },
+  { name: 'Messages', href: '/messages', icon: MessageCircle, access: 'all_except_supplier', minPlan: 'pro' },
 ];
 
 export function MobileBottomNav() {
@@ -84,6 +86,7 @@ export function MobileBottomNav() {
   const isInternalMember = ['admin', 'owner', 'manager', 'accountant', 'bookkeeper', 'member'].includes(userRole);
   const isViewer = userRole === 'viewer';
   const isSupplier = userRole === 'supplier';
+  const isClient = userRole === 'client' || isViewer;
   
   const filteredNavItems = mobileNavItems.filter(item => {
     // First check role-based access
@@ -94,6 +97,8 @@ export function MobileBottomNav() {
     if (item.access === 'viewer' && (isViewer || isInternalMember)) hasAccess = true;
     // All except suppliers
     if (item.access === 'all_except_supplier' && !isSupplier) hasAccess = true;
+    // Client only items - accessible to clients, viewers, and internal members
+    if (item.access === 'client_only' && (isClient || isInternalMember)) hasAccess = true;
     
     // If no role access, reject
     if (!hasAccess) return false;

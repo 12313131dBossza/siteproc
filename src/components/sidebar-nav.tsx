@@ -51,21 +51,22 @@ const PLAN_LEVELS: Record<PlanId, number> = {
 // 'admin' = only admin/owner
 // 'viewer' = external viewers/clients can see (project-scoped data)
 // 'supplier' = supplier portal only
+// 'client' = clients only (projects + documents + messages)
 // minPlan = minimum plan required ('starter' | 'pro' | 'enterprise')
 const navigation: Array<{
   name: string;
   href: string;
   icon: any;
-  access: 'all' | 'internal' | 'admin' | 'viewer' | 'supplier' | 'all_except_supplier';
+  access: 'all' | 'internal' | 'admin' | 'viewer' | 'supplier' | 'all_except_supplier' | 'client';
   minPlan: PlanId;
 }> = [
   // === STARTER PLAN - Core Features ===
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, access: 'internal', minPlan: 'starter' },
   { name: "Projects", href: "/projects", icon: FolderOpen, access: 'all_except_supplier', minPlan: 'starter' },
-  { name: "Orders", href: "/orders", icon: ShoppingCart, access: 'viewer', minPlan: 'starter' },
-  { name: "Expenses", href: "/expenses", icon: Receipt, access: 'viewer', minPlan: 'starter' },
-  { name: "Deliveries", href: "/deliveries", icon: Package, access: 'viewer', minPlan: 'starter' },
-  { name: "Documents", href: "/documents", icon: Files, access: 'viewer', minPlan: 'starter' },
+  { name: "Orders", href: "/orders", icon: ShoppingCart, access: 'internal', minPlan: 'starter' },
+  { name: "Expenses", href: "/expenses", icon: Receipt, access: 'internal', minPlan: 'starter' },
+  { name: "Deliveries", href: "/deliveries", icon: Package, access: 'internal', minPlan: 'starter' },
+  { name: "Documents", href: "/documents", icon: Files, access: 'all_except_supplier', minPlan: 'starter' },
   { name: "Users & Roles", href: "/users", icon: Users, access: 'admin', minPlan: 'starter' },
   { name: "Activity Log", href: "/activity", icon: Activity, access: 'internal', minPlan: 'starter' },
   { name: "Contractors", href: "/contractors", icon: Building2, access: 'internal', minPlan: 'starter' },
@@ -78,7 +79,7 @@ const navigation: Array<{
   { name: "Change Orders", href: "/change-orders", icon: FileText, access: 'internal', minPlan: 'pro' },
   { name: "Products", href: "/products", icon: PackageSearch, access: 'internal', minPlan: 'pro' },
   { name: "Bids", href: "/bids", icon: FileSignature, access: 'internal', minPlan: 'pro' },
-  { name: "Messages", href: "/messages", icon: MessageCircle, access: 'all', minPlan: 'pro' },
+  { name: "Messages", href: "/messages", icon: MessageCircle, access: 'all_except_supplier', minPlan: 'pro' },
   { name: "Reports", href: "/reports", icon: BarChart3, access: 'internal', minPlan: 'pro' },
   
   // === Supplier Portal (all plans) ===
@@ -225,6 +226,8 @@ export function SidebarNav() {
     if (item.access === 'all_except_supplier' && !isSupplier) hasAccess = true;
     // Suppliers only see supplier portal
     if (item.access === 'supplier' && isSupplier) hasAccess = true;
+    // Client only items - accessible to clients, viewers, and internal members
+    if (item.access === 'client_only' && (isViewer || isInternalMember)) hasAccess = true;
     
     // If no role access, reject
     if (!hasAccess) return false;
