@@ -441,12 +441,19 @@ export default function ProjectDetailPage() {
       {/* Tabs */}
       <div className="flex gap-1 border-b border-gray-200 overflow-x-auto scrollbar-none -mx-6 px-6 sticky top-0 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 z-10">
         {([
-          { key: 'overview', label: 'Overview', icon: BarChart3, count: null, permission: 'view_project' },
-          { key: 'orders', label: 'Orders', icon: Package, count: rollup?.counts?.orders || 0, permission: 'view_orders' },
-          { key: 'expenses', label: 'Expenses', icon: Receipt, count: rollup?.counts?.expenses || 0, permission: 'view_expenses' },
-          { key: 'deliveries', label: 'Deliveries', icon: Truck, count: rollup?.counts?.deliveries || 0, permission: 'view_orders' },
-          { key: 'gallery', label: 'Photos', icon: ImageIcon, count: null, permission: 'view_documents' },
-        ] as const).filter(t => permissions[t.permission as keyof typeof permissions]).map(t => {
+          { key: 'overview', label: 'Overview', icon: BarChart3, count: null, permission: 'view_project', internalOnly: false },
+          { key: 'orders', label: 'Orders', icon: Package, count: rollup?.counts?.orders || 0, permission: 'view_orders', internalOnly: true },
+          { key: 'expenses', label: 'Expenses', icon: Receipt, count: rollup?.counts?.expenses || 0, permission: 'view_expenses', internalOnly: true },
+          { key: 'deliveries', label: 'Deliveries', icon: Truck, count: rollup?.counts?.deliveries || 0, permission: 'view_orders', internalOnly: true },
+          { key: 'gallery', label: 'Photos', icon: ImageIcon, count: null, permission: 'view_photos', internalOnly: false },
+        ] as const).filter(t => {
+          // Check permission
+          if (!permissions[t.permission as keyof typeof permissions]) return false;
+          // Hide Orders/Expenses/Deliveries for external roles (non-internal)
+          const isInternalRole = ['admin', 'owner', 'manager', 'accountant', 'bookkeeper', 'member'].includes(userRole);
+          if (t.internalOnly && !isInternalRole) return false;
+          return true;
+        }).map(t => {
           const active = tab === t.key
           const Icon = t.icon
           return (

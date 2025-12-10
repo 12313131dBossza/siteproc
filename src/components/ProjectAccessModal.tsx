@@ -102,92 +102,59 @@ const VISIBILITY_OPTIONS = [
   },
 ];
 
-// Default permissions for clients (based on requirements table)
-// Client: ONLY sees Overview + Photos + Documents + Messages tabs
-// MUST HIDE: Orders, Expenses, Deliveries tabs
-const CLIENT_DEFAULT_PERMISSIONS = {
-  view_project: true,      // Can see project Overview tab (progress %, timeline, milestones)
-  edit_project: false,     // Cannot edit anything
-  view_orders: false,      // NO - Orders tab MUST BE HIDDEN
-  create_orders: false,    // Cannot create orders or deliveries - BLOCKED
-  view_expenses: false,    // NO - Expenses tab MUST BE HIDDEN
-  view_payments: false,    // NO - Financial details hidden
-  view_documents: true,    // Can view & download documents (Documents tab visible)
-  upload_documents: false, // Cannot upload or delete
+// =============================================================================
+// ALL EXTERNAL ROLES: Only see Overview · Photos · Documents · Messages
+// NO Orders, Expenses, Deliveries tabs for any external role (100% privacy-safe)
+// =============================================================================
+
+// Base permissions for all external roles
+const BASE_EXTERNAL_PERMISSIONS = {
+  view_project: true,      // Overview tab visible
+  edit_project: false,     // Cannot edit
+  view_orders: false,      // NO - Orders tab HIDDEN
+  create_orders: false,    // Cannot create
+  view_expenses: false,    // NO - Expenses tab HIDDEN
+  view_payments: false,    // NO - Financial data hidden
+  view_documents: true,    // Documents tab visible
+  upload_documents: false, // Cannot upload by default
   view_timeline: true,     // Can see timeline on Overview
-  view_photos: true,       // Can see Photos tab
-  use_chat: true,          // Can read & write in Messages
-  view_deliveries: false,  // NO - Deliveries tab MUST BE HIDDEN
-  manage_deliveries: false, // Cannot create/edit deliveries - BLOCKED
-  invite_others: false,    // Cannot invite others
-  view_team: false,        // NO - Internal team list hidden
-  view_suppliers: false,   // NO - Supplier names hidden
+  view_photos: true,       // Photos tab visible
+  use_chat: true,          // Messages visible
+  view_deliveries: false,  // NO - Deliveries tab HIDDEN
+  manage_deliveries: false,// Cannot manage
+  invite_others: false,    // Cannot invite
+  view_team: false,        // Team list hidden
+  view_suppliers: false,   // Supplier names hidden
 };
 
-// Supplier: Delivery-only view - sees only their assigned deliveries/orders, upload proof photos,
-// chat with company only. Cannot see other suppliers, other projects, or any money.
+// Client: Overview + Photos + Documents + Messages
+const CLIENT_DEFAULT_PERMISSIONS = {
+  ...BASE_EXTERNAL_PERMISSIONS,
+};
+
+// Supplier: Uses supplier portal, minimal project access
 const SUPPLIER_DEFAULT_PERMISSIONS = {
-  view_project: false,     // Cannot see full project dashboard
-  edit_project: false,     // Cannot edit anything
-  view_orders: true,       // Can see only their assigned orders/deliveries
-  create_orders: false,    // Cannot create orders
-  view_expenses: false,    // Cannot see any financial data
-  view_payments: false,    // Cannot see any financial data
-  view_documents: false,   // Cannot see general documents
-  upload_documents: false, // Cannot upload general documents
-  view_timeline: false,    // Cannot see timeline
-  view_photos: true,       // Can upload proof photos for their deliveries
-  use_chat: true,          // Can chat with company only
-  view_deliveries: true,   // Can see their assigned deliveries
-  manage_deliveries: true, // Can upload proof photos, mark items delivered
-  invite_others: false,    // Cannot invite others
+  ...BASE_EXTERNAL_PERMISSIONS,
+  view_project: false,     // Use supplier portal instead
+  view_documents: false,   // No documents in project view
+  manage_deliveries: true, // Can upload POD photos via supplier portal
 };
 
-// Contractor: Only Photos tab (and maybe Deliveries if you allow)
-// MUST HIDE: Orders & Expenses tabs
+// Contractor: Overview + Photos + Documents + Messages (can manage deliveries via separate page)
 const CONTRACTOR_DEFAULT_PERMISSIONS = {
-  view_project: true,      // Can see Overview tab (limited)
-  edit_project: false,     // Cannot edit anything
-  view_orders: false,      // NO - Orders tab MUST BE HIDDEN
-  create_orders: false,    // Cannot create orders - BLOCKED
-  view_expenses: false,    // NO - Expenses tab MUST BE HIDDEN
-  view_payments: false,    // NO - Cannot see any payments
-  view_documents: true,    // Can view documents shared with them
-  upload_documents: false, // Cannot upload general documents
-  view_timeline: false,    // Limited timeline view
-  view_photos: true,       // Can see Photos tab and upload proof photos
-  use_chat: true,          // Can chat with team only
-  view_deliveries: true,   // Can see Deliveries tab (their assigned items)
-  manage_deliveries: true, // Can upload proof photos, mark items delivered
-  invite_others: false,    // Cannot invite others
-  view_team: false,        // NO - Cannot see team list
-  view_suppliers: false,   // NO - Cannot see other subcontractors/suppliers
+  ...BASE_EXTERNAL_PERMISSIONS,
+  manage_deliveries: true, // Can upload POD photos via deliveries page
 };
 
-// Consultant (architect, engineer, designer): View & comment on documents/plans,
-// see progress & timeline, chat with team. Cannot see pricing, payments, deliveries, or change status.
+// Consultant: Overview + Photos + Documents + Messages (can upload document comments)
 const CONSULTANT_DEFAULT_PERMISSIONS = {
-  view_project: true,      // Can see assigned projects
-  edit_project: false,     // Cannot edit anything
-  view_orders: false,      // NO - Cannot see orders
-  create_orders: false,    // Cannot create orders
-  view_expenses: false,    // NO - Cannot see pricing/expenses
-  view_payments: false,    // NO - Cannot see payments
-  view_documents: true,    // Can view & download documents (plans, drawings)
-  upload_documents: true,  // Can upload documents (reviews, comments) - view & comment
-  view_timeline: true,     // Can see progress & timeline
-  view_photos: true,       // Can see photos (but not upload POD photos)
-  use_chat: true,          // Can chat with team only
-  view_deliveries: false,  // NO - Cannot see deliveries
-  manage_deliveries: false, // Cannot manage deliveries or upload POD photos
-  invite_others: false,    // Cannot invite others
-  view_team: false,        // Cannot see full team list
-  view_suppliers: false,   // Cannot see supplier names
+  ...BASE_EXTERNAL_PERMISSIONS,
+  upload_documents: true,  // Can upload document reviews/comments
 };
 
-// Other: Same restrictions as Consultant by default, manual adjustments per person
+// Other: Same as base external permissions
 const OTHER_DEFAULT_PERMISSIONS = {
-  ...CONSULTANT_DEFAULT_PERMISSIONS,
+  ...BASE_EXTERNAL_PERMISSIONS,
 };
 
 // Get default permissions based on external type

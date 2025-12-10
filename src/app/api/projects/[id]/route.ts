@@ -105,99 +105,51 @@ export async function GET(
       }
 
       // Get default permissions based on external_type if no stored permissions
+      // ALL EXTERNAL ROLES: Only see Overview + Photos + Documents + Messages
+      // NO Orders, Expenses, Deliveries tabs for any external role
       const getDefaultPermissions = (externalType: string) => {
+        // Base external permissions - same for all external types
+        const baseExternalPermissions = {
+          view_project: true,      // Overview tab
+          view_orders: false,      // NO Orders tab
+          view_expenses: false,    // NO Expenses tab  
+          view_payments: false,    // NO payment data
+          view_documents: true,    // Documents tab visible
+          edit_project: false,     // Cannot edit
+          create_orders: false,    // Cannot create
+          upload_documents: false, // Cannot upload by default
+          invite_others: false,    // Cannot invite
+          view_team: false,        // Cannot see team
+          view_suppliers: false,   // Cannot see suppliers
+          view_deliveries: false,  // NO Deliveries tab
+          manage_deliveries: false,// Cannot manage
+          view_photos: true,       // Photos tab visible
+        };
+
         switch (externalType) {
           case 'client':
-            // Client: Only Overview + Photos + Documents - NO Orders, Expenses, Deliveries
-            return {
-              view_project: true,
-              view_orders: false,
-              view_expenses: false,
-              view_payments: false,
-              view_documents: true,
-              edit_project: false,
-              create_orders: false,
-              upload_documents: false,
-              invite_others: false,
-              view_team: false,
-              view_suppliers: false,
-              view_deliveries: false,
-              manage_deliveries: false,
-              view_photos: true,
-            }
+            return { ...baseExternalPermissions };
           case 'contractor':
-            // Contractor: Only Photos + Deliveries - NO Orders, Expenses
-            return {
-              view_project: true,
-              view_orders: false,
-              view_expenses: false,
-              view_payments: false,
-              view_documents: true,
-              edit_project: false,
-              create_orders: false,
-              upload_documents: false,
-              invite_others: false,
-              view_team: false,
-              view_suppliers: false,
-              view_deliveries: true,
-              manage_deliveries: true,
-              view_photos: true,
-            }
+            // Contractor: can manage their own deliveries but tab hidden in project view
+            return { 
+              ...baseExternalPermissions,
+              manage_deliveries: true, // Can upload POD photos via deliveries page
+            };
           case 'consultant':
-          case 'other':
-            // Consultant/Other: Only Photos + Documents - NO Orders, Expenses
-            return {
-              view_project: true,
-              view_orders: false,
-              view_expenses: false,
-              view_payments: false,
-              view_documents: true,
-              edit_project: false,
-              create_orders: false,
-              upload_documents: true,
-              invite_others: false,
-              view_team: false,
-              view_suppliers: false,
-              view_deliveries: false,
-              manage_deliveries: false,
-              view_photos: true,
-            }
+            return { 
+              ...baseExternalPermissions,
+              upload_documents: true, // Can upload document reviews/comments
+            };
           case 'supplier':
-            // Supplier: Handled by supplier portal
-            return {
-              view_project: false,
-              view_orders: false,
-              view_expenses: false,
-              view_payments: false,
+            return { 
+              ...baseExternalPermissions,
+              view_project: false,    // Use supplier portal instead
               view_documents: false,
-              edit_project: false,
-              create_orders: false,
-              upload_documents: false,
-              invite_others: false,
-              view_team: false,
-              view_suppliers: false,
-              view_deliveries: true,
               manage_deliveries: true,
-              view_photos: true,
-            }
+            };
+          case 'other':
           default:
-            // Default viewer - minimal access
-            return {
-              view_project: true,
-              view_orders: false,
-              view_expenses: false,
-              view_payments: false,
-              view_documents: true,
-              edit_project: false,
-              create_orders: false,
-              upload_documents: false,
-              invite_others: false,
-              view_team: false,
-              view_suppliers: false,
-              view_deliveries: false,
-              manage_deliveries: false,
-              view_photos: true,
-            }
+            return { ...baseExternalPermissions };
         }
       }
 
