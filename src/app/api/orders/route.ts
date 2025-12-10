@@ -165,16 +165,25 @@ export async function GET(request: NextRequest) {
         return perms?.view_expenses === true
       })
       
-      if (!hasViewExpenses) {
-        // Strip financial details for clients without view_expenses
+      // Check if user has view_suppliers permission - if not, strip vendor names
+      const hasViewSuppliers = memberProjects.some(m => {
+        const perms = m.permissions as { view_suppliers?: boolean } | null
+        return perms?.view_suppliers === true
+      })
+      
+      if (!hasViewExpenses || !hasViewSuppliers) {
+        // Strip financial details and/or vendor names based on permissions
         orders = (data || []).map(order => ({
           ...order,
-          amount: null,
-          unit_price: null,
-          total: null,
-          // Keep non-financial info
+          // Strip financial data if no view_expenses permission
+          amount: hasViewExpenses ? order.amount : null,
+          unit_price: hasViewExpenses ? order.unit_price : null,
+          total: hasViewExpenses ? order.total : null,
+          delivered_value: hasViewExpenses ? order.delivered_value : null,
+          // Strip vendor name if no view_suppliers permission
+          vendor: hasViewSuppliers ? order.vendor : null,
         }))
-        console.log('Stripped financial data from orders for client without view_expenses')
+        console.log('Stripped data from orders - hasViewExpenses:', hasViewExpenses, 'hasViewSuppliers:', hasViewSuppliers)
       } else {
         orders = data || []
       }

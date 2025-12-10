@@ -60,9 +60,9 @@ export const PERMISSIONS = {
   'expense.approve': ['owner', 'admin', 'manager', 'accountant'],
   'expense.view': ['owner', 'admin', 'manager', 'accountant'],
   
-  // Delivery management
+  // Delivery management - Consultants cannot view deliveries
   'delivery.create': ['owner', 'admin', 'manager', 'member', 'supplier'],
-  'delivery.edit': ['owner', 'admin', 'manager', 'member', 'supplier'],
+  'delivery.edit': ['owner', 'admin', 'manager', 'member', 'supplier', 'contractor'],
   'delivery.delete': ['owner', 'admin'],
   'delivery.view': ['owner', 'admin', 'manager', 'accountant', 'member', 'supplier', 'contractor', 'client'],
   

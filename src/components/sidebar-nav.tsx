@@ -53,11 +53,21 @@ const PLAN_LEVELS: Record<PlanId, number> = {
 // 'supplier' = supplier portal only
 // 'client' = clients only (projects + documents + messages)
 // minPlan = minimum plan required ('starter' | 'pro' | 'enterprise')
+// Access types:
+// - 'all': Everyone can see
+// - 'internal': Only company members
+// - 'admin': Only admin/owner
+// - 'viewer': External viewers/clients
+// - 'supplier': Supplier portal only
+// - 'all_except_supplier': Everyone except suppliers
+// - 'client': Clients only
+// - 'client_only': Clients, viewers, consultants (read-only external)
+// - 'contractor': Contractors and internal members (for deliveries)
 const navigation: Array<{
   name: string;
   href: string;
   icon: any;
-  access: 'all' | 'internal' | 'admin' | 'viewer' | 'supplier' | 'all_except_supplier' | 'client';
+  access: 'all' | 'internal' | 'admin' | 'viewer' | 'supplier' | 'all_except_supplier' | 'client' | 'client_only' | 'contractor';
   minPlan: PlanId;
 }> = [
   // === STARTER PLAN - Core Features ===
@@ -65,7 +75,7 @@ const navigation: Array<{
   { name: "Projects", href: "/projects", icon: FolderOpen, access: 'all_except_supplier', minPlan: 'starter' },
   { name: "Orders", href: "/orders", icon: ShoppingCart, access: 'internal', minPlan: 'starter' },
   { name: "Expenses", href: "/expenses", icon: Receipt, access: 'internal', minPlan: 'starter' },
-  { name: "Deliveries", href: "/deliveries", icon: Package, access: 'internal', minPlan: 'starter' },
+  { name: "Deliveries", href: "/deliveries", icon: Package, access: 'contractor', minPlan: 'starter' },
   { name: "Documents", href: "/documents", icon: Files, access: 'all_except_supplier', minPlan: 'starter' },
   { name: "Users & Roles", href: "/users", icon: Users, access: 'admin', minPlan: 'starter' },
   { name: "Activity Log", href: "/activity", icon: Activity, access: 'internal', minPlan: 'starter' },
@@ -210,10 +220,12 @@ export function SidebarNav() {
     const isInternalMember = ['admin', 'owner', 'manager', 'accountant', 'bookkeeper', 'member'].includes(userRole);
     // Admin only items
     const isAdmin = ['admin', 'owner'].includes(userRole);
-    // External viewer/client
-    const isViewer = userRole === 'viewer' || userRole === 'client';
+    // External viewer/client/consultant
+    const isViewer = userRole === 'viewer' || userRole === 'client' || userRole === 'consultant';
     // Supplier
     const isSupplier = userRole === 'supplier';
+    // Contractor (can see deliveries)
+    const isContractor = userRole === 'contractor';
     
     // First check role-based access
     let hasAccess = false;
@@ -222,12 +234,14 @@ export function SidebarNav() {
     if (item.access === 'admin' && isAdmin) hasAccess = true;
     // Viewers/Clients can see 'viewer' access items (project-scoped data)
     if (item.access === 'viewer' && (isViewer || isInternalMember)) hasAccess = true;
-    // All except suppliers (company + clients)
+    // All except suppliers (company + clients + contractors + consultants)
     if (item.access === 'all_except_supplier' && !isSupplier) hasAccess = true;
     // Suppliers only see supplier portal
     if (item.access === 'supplier' && isSupplier) hasAccess = true;
-    // Client only items - accessible to clients, viewers, and internal members
+    // Client only items - accessible to clients, viewers, and internal members (NOT contractors)
     if (item.access === 'client_only' && (isViewer || isInternalMember)) hasAccess = true;
+    // Contractor access - contractors and internal members (for deliveries page)
+    if (item.access === 'contractor' && (isContractor || isInternalMember)) hasAccess = true;
     
     // If no role access, reject
     if (!hasAccess) return false;

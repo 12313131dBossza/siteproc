@@ -19,6 +19,8 @@ function getRolePermissions(role: string): UserPermissions {
   const roleMap: Record<string, UserPermissions> = {
     'viewer': { canView: true, canCreate: false, canUpdate: false, canDelete: false },
     'client': { canView: true, canCreate: false, canUpdate: false, canDelete: false },
+    // Consultants cannot view deliveries or change any status
+    'consultant': { canView: false, canCreate: false, canUpdate: false, canDelete: false },
     'member': { canView: true, canCreate: true, canUpdate: false, canDelete: false },
     // Suppliers and contractors can view and update (mark deliveries) but not create or delete
     'supplier': { canView: true, canCreate: false, canUpdate: true, canDelete: false },
@@ -78,6 +80,10 @@ async function getAuthenticatedUser() {
       effectiveRole = 'contractor'
     } else if (externalType === 'client') {
       effectiveRole = 'client'
+    } else if (externalType === 'consultant') {
+      effectiveRole = 'consultant'
+    } else if (externalType === 'other') {
+      effectiveRole = 'consultant' // Other has same restrictions as consultant
     }
     
     console.log('[getAuthenticatedUser] Profile role is viewer, checked project_members. Effective role:', effectiveRole)

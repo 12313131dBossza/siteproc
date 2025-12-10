@@ -15,6 +15,7 @@ import {
   MessageCircle,
   MoreHorizontal,
   Files,
+  Package,
 } from 'lucide-react';
 import { MobileMoreMenu } from './MobileMoreMenu';
 
@@ -27,16 +28,23 @@ const PLAN_LEVELS: Record<PlanId, number> = {
 };
 
 // Mobile nav items with access levels and minimum plan
-// Clients should only see: Projects, Documents, Messages
+// Access types:
+// - 'all': Everyone can see
+// - 'internal': Only company members
+// - 'viewer': External viewers
+// - 'all_except_supplier': Everyone except suppliers
+// - 'client_only': Clients, viewers, consultants (read-only)
+// - 'contractor': Contractors and internal members
 const mobileNavItems: Array<{
   name: string;
   href: string;
   icon: any;
-  access: 'all' | 'internal' | 'viewer' | 'all_except_supplier';
+  access: 'all' | 'internal' | 'viewer' | 'all_except_supplier' | 'client_only' | 'contractor';
   minPlan: PlanId;
 }> = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, access: 'internal', minPlan: 'free' },
   { name: 'Projects', href: '/projects', icon: FolderOpen, access: 'all_except_supplier', minPlan: 'free' },
+  { name: 'Deliveries', href: '/deliveries', icon: Package, access: 'contractor', minPlan: 'free' },
   { name: 'Documents', href: '/documents', icon: Files, access: 'all_except_supplier', minPlan: 'free' },
   // Messages requires Pro plan
   { name: 'Messages', href: '/messages', icon: MessageCircle, access: 'all_except_supplier', minPlan: 'pro' },
@@ -86,7 +94,9 @@ export function MobileBottomNav() {
   const isInternalMember = ['admin', 'owner', 'manager', 'accountant', 'bookkeeper', 'member'].includes(userRole);
   const isViewer = userRole === 'viewer';
   const isSupplier = userRole === 'supplier';
-  const isClient = userRole === 'client' || isViewer;
+  const isContractor = userRole === 'contractor';
+  const isConsultant = userRole === 'consultant';
+  const isClient = userRole === 'client' || isViewer || isConsultant;
   
   const filteredNavItems = mobileNavItems.filter(item => {
     // First check role-based access
@@ -95,10 +105,12 @@ export function MobileBottomNav() {
     if (item.access === 'internal' && isInternalMember) hasAccess = true;
     // Viewers can see 'viewer' items, internal members can too
     if (item.access === 'viewer' && (isViewer || isInternalMember)) hasAccess = true;
-    // All except suppliers
+    // All except suppliers (includes contractors, consultants, clients)
     if (item.access === 'all_except_supplier' && !isSupplier) hasAccess = true;
-    // Client only items - accessible to clients, viewers, and internal members
+    // Client only items - accessible to clients, viewers, consultants, and internal members
     if (item.access === 'client_only' && (isClient || isInternalMember)) hasAccess = true;
+    // Contractor access - for deliveries page
+    if (item.access === 'contractor' && (isContractor || isInternalMember)) hasAccess = true;
     
     // If no role access, reject
     if (!hasAccess) return false;

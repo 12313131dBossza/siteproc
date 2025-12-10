@@ -143,32 +143,51 @@ const SUPPLIER_DEFAULT_PERMISSIONS = {
   invite_others: false,    // Cannot invite others
 };
 
-// Contractor: Same as Supplier for now (can add schedule/punch list later)
+// Contractor: Can see only their assigned deliveries/orders, upload proof photos,
+// mark items complete, chat with team. Cannot see pricing, other suppliers, or create/edit orders.
 const CONTRACTOR_DEFAULT_PERMISSIONS = {
-  ...SUPPLIER_DEFAULT_PERMISSIONS,
-};
-
-// Consultant: Slightly more than Client - can view plans/documents and sometimes comment
-const CONSULTANT_DEFAULT_PERMISSIONS = {
-  view_project: true,      // Can see project dashboard
-  edit_project: false,     // Cannot edit (maybe light comments later)
-  view_orders: true,       // Can view orders
-  create_orders: false,    // Cannot create orders
-  view_expenses: false,    // Cannot see financial data
-  view_payments: false,    // Cannot see financial data
-  view_documents: true,    // Can view & download documents (plans, drawings)
-  upload_documents: true,  // Can upload documents (reviews, comments)
-  view_timeline: true,     // Can see timeline
-  view_photos: true,       // Can see photos
-  use_chat: true,          // Can chat with company
-  view_deliveries: true,   // Can see deliveries
-  manage_deliveries: false, // Cannot manage deliveries
+  view_project: true,      // Can see only their assigned projects
+  edit_project: false,     // Cannot edit anything
+  view_orders: true,       // Can see only their assigned orders/deliveries (NO prices)
+  create_orders: false,    // Cannot create orders - BLOCKED
+  view_expenses: false,    // NO - Cannot see any pricing/expenses
+  view_payments: false,    // NO - Cannot see any payments
+  view_documents: true,    // Can view documents shared with them
+  upload_documents: false, // Cannot upload general documents
+  view_timeline: false,    // Limited timeline view
+  view_photos: true,       // Can upload proof photos for their deliveries
+  use_chat: true,          // Can chat with team only
+  view_deliveries: true,   // Can see their assigned deliveries
+  manage_deliveries: true, // Can upload proof photos, mark items delivered
   invite_others: false,    // Cannot invite others
+  view_team: false,        // NO - Cannot see team list
+  view_suppliers: false,   // NO - Cannot see other subcontractors/suppliers
 };
 
-// Other: Catch-all, usually same as Client or Consultant - manual customization
+// Consultant (architect, engineer, designer): View & comment on documents/plans,
+// see progress & timeline, chat with team. Cannot see pricing, payments, deliveries, or change status.
+const CONSULTANT_DEFAULT_PERMISSIONS = {
+  view_project: true,      // Can see assigned projects
+  edit_project: false,     // Cannot edit anything
+  view_orders: false,      // NO - Cannot see orders
+  create_orders: false,    // Cannot create orders
+  view_expenses: false,    // NO - Cannot see pricing/expenses
+  view_payments: false,    // NO - Cannot see payments
+  view_documents: true,    // Can view & download documents (plans, drawings)
+  upload_documents: true,  // Can upload documents (reviews, comments) - view & comment
+  view_timeline: true,     // Can see progress & timeline
+  view_photos: true,       // Can see photos (but not upload POD photos)
+  use_chat: true,          // Can chat with team only
+  view_deliveries: false,  // NO - Cannot see deliveries
+  manage_deliveries: false, // Cannot manage deliveries or upload POD photos
+  invite_others: false,    // Cannot invite others
+  view_team: false,        // Cannot see full team list
+  view_suppliers: false,   // Cannot see supplier names
+};
+
+// Other: Same restrictions as Consultant by default, manual adjustments per person
 const OTHER_DEFAULT_PERMISSIONS = {
-  ...CLIENT_DEFAULT_PERMISSIONS,
+  ...CONSULTANT_DEFAULT_PERMISSIONS,
 };
 
 // Get default permissions based on external type
