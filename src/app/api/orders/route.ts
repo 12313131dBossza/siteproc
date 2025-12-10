@@ -159,7 +159,25 @@ export async function GET(request: NextRequest) {
         return response.error('Failed to fetch orders', 500)
       }
       
-      orders = data || []
+      // Check if user has view_expenses permission - if not, strip financial data
+      const hasViewExpenses = memberProjects.some(m => {
+        const perms = m.permissions as { view_expenses?: boolean } | null
+        return perms?.view_expenses === true
+      })
+      
+      if (!hasViewExpenses) {
+        // Strip financial details for clients without view_expenses
+        orders = (data || []).map(order => ({
+          ...order,
+          amount: null,
+          unit_price: null,
+          total: null,
+          // Keep non-financial info
+        }))
+        console.log('Stripped financial data from orders for client without view_expenses')
+      } else {
+        orders = data || []
+      }
     }
 
     return NextResponse.json({ success: true, data: orders })
@@ -177,6 +195,13 @@ export async function POST(request: NextRequest) {
     if (profileError || !profile) {
       console.error('Profile error:', profileError)
       return response.error(profileError || 'Unauthorized', 401)
+    }
+    
+    // Check if user is an external client/viewer - they cannot create orders
+    const isExternalUser = ['viewer', 'client'].includes(profile.role || '')
+    if (isExternalUser) {
+      console.log('🚫 External client/viewer attempted to create order - blocked')
+      return response.error('You do not have permission to create orders', 403)
     }
     
     const body = await request.json()

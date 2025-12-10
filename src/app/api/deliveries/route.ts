@@ -356,7 +356,32 @@ export async function GET(req: NextRequest) {
       
       const { data, error } = await query
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-      return NextResponse.json({ success: true, data: data || [] })
+      
+      // Check if user has view_expenses permission - if not, strip financial data
+      const hasViewExpenses = projectsWithAccess.some((p: any) => {
+        const perms = p.permissions as Record<string, boolean> | null
+        return perms?.view_expenses === true
+      })
+      
+      // Check if user can see supplier names
+      const canViewSuppliers = projectsWithAccess.some((p: any) => {
+        const perms = p.permissions as Record<string, boolean> | null
+        return perms?.view_suppliers === true
+      })
+      
+      let deliveries = data || []
+      if (!hasViewExpenses || !canViewSuppliers) {
+        deliveries = deliveries.map((d: any) => ({
+          ...d,
+          // Strip financial data if no view_expenses permission
+          ...(!hasViewExpenses && { unit_cost: null, total_cost: null, amount: null }),
+          // Strip supplier info if no view_suppliers permission
+          ...(!canViewSuppliers && { supplier_id: null, supplier_name: null, assigned_to: null }),
+        }))
+        console.log('Stripped sensitive data from deliveries for client')
+      }
+      
+      return NextResponse.json({ success: true, data: deliveries })
     }
     
     // For suppliers/contractors: show deliveries from their assigned projects

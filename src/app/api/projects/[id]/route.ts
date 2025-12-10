@@ -114,6 +114,10 @@ export async function GET(
         create_orders: false,
         upload_documents: false,
         invite_others: false,
+        view_team: false,
+        view_suppliers: false,
+        view_deliveries: true,
+        manage_deliveries: false,
       }
       projectRole = membership.role
     }

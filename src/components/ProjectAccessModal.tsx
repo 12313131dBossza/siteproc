@@ -103,23 +103,25 @@ const VISIBILITY_OPTIONS = [
 ];
 
 // Default permissions for clients (based on requirements table)
-// Client: Read-only portal - sees progress %, timeline, deliveries + photos, documents, 
-// high-level financial summary, chat with company only. Cannot edit anything or see supplier costs.
+// Client: Read-only portal - sees progress %, timeline, deliveries + photos, documents.
+// Cannot see financial details, internal team, supplier names, or create anything.
 const CLIENT_DEFAULT_PERMISSIONS = {
   view_project: true,      // Can see project dashboard, progress %, timeline, milestones
   edit_project: false,     // Cannot edit anything
-  view_orders: true,       // Can see every item, date, status
-  create_orders: false,    // Cannot assign, edit, or change status
-  view_expenses: true,     // Can see total spent vs budget (high-level summary only, not individual supplier costs)
-  view_payments: true,     // Can see total invoiced / paid / remaining + PDF invoices
+  view_orders: true,       // Can see deliveries/orders (items, dates, status) but NOT prices
+  create_orders: false,    // Cannot create orders or deliveries - BLOCKED
+  view_expenses: false,    // NO - Financial details hidden (prices, expenses hidden)
+  view_payments: false,    // NO - Financial details hidden (payments hidden)
   view_documents: true,    // Can view & download every uploaded file / PDF
   upload_documents: false, // Cannot upload or delete
   view_timeline: true,     // Can see timeline
   view_photos: true,       // Can see full photo gallery with dates and captions
   use_chat: true,          // Can read & write in their private project thread (with company only)
   view_deliveries: true,   // Can see every item, date, status, and all proof photos
-  manage_deliveries: false, // Cannot assign, edit, or change status
+  manage_deliveries: false, // Cannot create/edit deliveries - BLOCKED
   invite_others: false,    // Cannot invite others
+  view_team: false,        // NO - Internal team list hidden
+  view_suppliers: false,   // NO - Supplier names hidden (can enable if you want)
 };
 
 // Supplier: Delivery-only view - sees only their assigned deliveries/orders, upload proof photos,
@@ -198,9 +200,11 @@ const DEFAULT_PERMISSIONS = {
   view_timeline: true,
   view_photos: true,
   use_chat: true,
-  view_deliveries: false,
+  view_deliveries: true,
   manage_deliveries: false,
   invite_others: false,
+  view_team: false,
+  view_suppliers: false,
 };
 
 // Permission display names for better readability
@@ -209,13 +213,15 @@ const PERMISSION_LABELS: Record<string, string> = {
   edit_project: 'Edit Project',
   view_orders: 'View Orders',
   create_orders: 'Create Orders',
-  view_expenses: 'View Expenses',
+  view_expenses: 'View Expenses (Prices)',
   view_payments: 'View Payments',
   view_documents: 'View Documents',
   upload_documents: 'Upload Documents',
   view_timeline: 'View Timeline',
   view_photos: 'View Photos',
   use_chat: 'Use Chat',
+  view_team: 'View Internal Team',
+  view_suppliers: 'View Supplier Names',
   view_deliveries: 'View Deliveries',
   manage_deliveries: 'Manage Deliveries',
   invite_others: 'Invite Others',
