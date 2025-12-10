@@ -158,6 +158,9 @@ function MessagesContent() {
   // Mobile chat menu state
   const [showMobileChatMenu, setShowMobileChatMenu] = useState(false);
   
+  // Mobile message action menu
+  const [mobileMessageMenu, setMobileMessageMenu] = useState<string | null>(null);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -951,8 +954,8 @@ function MessagesContent() {
 
   return (
     <AppLayout hideMobileNav={isInChat} hideMobileHeader={isInChat}>
-      {/* Messages Container - takes full height of AppLayout content area */}
-      <div className="flex flex-col h-full bg-white">
+      {/* Messages Container - uses fixed positioning on mobile when in chat */}
+      <div className={`flex flex-col bg-white ${isInChat ? 'fixed inset-0 z-40 md:relative md:h-full' : 'h-full'}`}>
         {/* Main Content */}
         <div className="flex flex-1 min-h-0 overflow-hidden">
           {/* Left Panel - Projects */}
@@ -1124,19 +1127,19 @@ function MessagesContent() {
         <div className={`flex-1 flex flex-col min-h-0 ${selectedProject && selectedChannel ? 'flex' : 'hidden md:flex'}`}>
           {selectedProject && selectedChannel ? (
             <>
-              {/* Header */}
-              <div className={`flex-shrink-0 p-4 border-b border-gray-200 ${selectedChannel === 'company_supplier' ? 'bg-gradient-to-r from-purple-50 to-white' : 'bg-gradient-to-r from-blue-50 to-white'}`}>
-                <div className="flex items-center gap-3">
-                  <button onClick={() => { setSelectedProject(null); setSelectedChannel(null); setSelectedParticipant(null); setMessages([]); }} className="p-1.5 hover:bg-gray-100 rounded-lg md:hidden">
+              {/* Header - safe area padding for notched devices */}
+              <div className={`flex-shrink-0 p-3 md:p-4 border-b border-gray-200 pt-[max(0.75rem,env(safe-area-inset-top))] md:pt-4 ${selectedChannel === 'company_supplier' ? 'bg-gradient-to-r from-purple-50 to-white' : 'bg-gradient-to-r from-blue-50 to-white'}`}>
+                <div className="flex items-center gap-2 md:gap-3">
+                  <button onClick={() => { setSelectedProject(null); setSelectedChannel(null); setSelectedParticipant(null); setMessages([]); }} className="p-2 hover:bg-gray-100 rounded-lg md:hidden flex-shrink-0">
                     <ArrowLeft className="w-5 h-5" />
                   </button>
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${selectedChannel === 'company_supplier' ? 'bg-purple-200 text-purple-700' : 'bg-blue-200 text-blue-700'}`}>
-                    {selectedChannel === 'company_supplier' ? <Truck className="w-6 h-6" /> : <Building2 className="w-6 h-6" />}
+                  <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${selectedChannel === 'company_supplier' ? 'bg-purple-200 text-purple-700' : 'bg-blue-200 text-blue-700'}`}>
+                    {selectedChannel === 'company_supplier' ? <Truck className="w-5 h-5 md:w-6 md:h-6" /> : <Building2 className="w-5 h-5 md:w-6 md:h-6" />}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h2 className="font-bold text-gray-900">{selectedParticipant?.name || 'Project Team'}</h2>
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                      <FolderOpen className="w-3.5 h-3.5" />
+                  <div className="flex-1 min-w-0 overflow-hidden">
+                    <h2 className="font-bold text-gray-900 text-sm md:text-base truncate">{selectedParticipant?.name || 'Project Team'}</h2>
+                    <div className="flex items-center gap-1.5 md:gap-2 text-xs md:text-sm text-gray-500">
+                      <FolderOpen className="w-3 h-3 md:w-3.5 md:h-3.5 flex-shrink-0" />
                       <span className="truncate">{selectedProject.name}</span>
                     </div>
                   </div>
@@ -1223,10 +1226,11 @@ function MessagesContent() {
               {/* Messages */}
               <div 
                 ref={chatContainerRef}
-                className={`flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 relative ${isDragging ? 'ring-4 ring-blue-400 ring-inset bg-blue-50' : ''}`}
+                className={`flex-1 overflow-y-auto p-3 md:p-4 space-y-3 bg-gray-50 relative ${isDragging ? 'ring-4 ring-blue-400 ring-inset bg-blue-50' : ''}`}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
+                onClick={() => { setMobileMessageMenu(null); setShowEmojiPicker(null); }}
               >
                 {/* Drag & Drop overlay */}
                 {isDragging && (
@@ -1254,8 +1258,8 @@ function MessagesContent() {
                       const isBookmarked = bookmarkedMessages.has(msg.id);
 
                       return (
-                        <div key={msg.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'} group`}>
-                          <div className={`max-w-[75%] ${isOwn ? 'order-2' : 'order-1'}`}>
+                        <div key={msg.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'} group w-full`}>
+                          <div className={`max-w-[85%] sm:max-w-[75%] md:max-w-[70%] ${isOwn ? 'order-2' : 'order-1'}`}>
                             {!isOwn && (
                               <p className="text-xs text-gray-500 mb-1 ml-1">
                                 {msg.sender_name}
@@ -1410,7 +1414,7 @@ function MessagesContent() {
                                   <img 
                                     src={msg.attachment_url} 
                                     alt={msg.attachment_name || 'Image'} 
-                                    className="max-w-[280px] max-h-[200px] rounded-lg object-cover hover:opacity-90 transition-opacity"
+                                    className="max-w-full sm:max-w-[280px] max-h-[200px] rounded-lg object-cover hover:opacity-90 transition-opacity"
                                   />
                                 </div>
                               )}
@@ -1424,35 +1428,89 @@ function MessagesContent() {
                               )}
 
                               {!isDeleted && (
-                                <div className={`absolute ${isOwn ? '-left-28' : '-right-28'} top-0 hidden group-hover:flex items-center gap-1 bg-white rounded-lg shadow-lg border p-1`}>
-                                  <button onClick={() => setShowEmojiPicker(showEmojiPicker === msg.id ? null : msg.id)} className="p-1 hover:bg-gray-100 rounded" title="React">
-                                    <Smile className="w-4 h-4 text-gray-500" />
-                                  </button>
-                                  <button onClick={() => setReplyTo(msg)} className="p-1 hover:bg-gray-100 rounded" title="Reply">
-                                    <Reply className="w-4 h-4 text-gray-500" />
-                                  </button>
-                                  <button onClick={() => handleBookmark(msg.id)} className="p-1 hover:bg-gray-100 rounded" title={isBookmarked ? 'Remove bookmark' : 'Bookmark'}>
-                                    <Bookmark className={`w-4 h-4 ${isBookmarked ? 'text-amber-500 fill-amber-500' : 'text-gray-500'}`} />
-                                  </button>
-                                  <button onClick={() => setForwardingMessage(msg)} className="p-1 hover:bg-gray-100 rounded" title="Forward">
-                                    <Forward className="w-4 h-4 text-gray-500" />
-                                  </button>
-                                  {isOwn && (
-                                    <>
-                                      <button onClick={() => { setEditingMessage(msg); setNewMessage(msg.message); }} className="p-1 hover:bg-gray-100 rounded" title="Edit">
-                                        <Edit2 className="w-4 h-4 text-gray-500" />
-                                      </button>
-                                      <button onClick={() => handleDeleteMessage(msg.id)} className="p-1 hover:bg-gray-100 rounded" title="Delete">
-                                        <Trash2 className="w-4 h-4 text-red-500" />
-                                      </button>
-                                    </>
-                                  )}
-                                  {isCompanyMember && (
-                                    <button onClick={() => handlePinMessage(msg.id)} className="p-1 hover:bg-gray-100 rounded" title={msg.is_pinned ? 'Unpin' : 'Pin'}>
-                                      <Pin className={`w-4 h-4 ${msg.is_pinned ? 'text-amber-500' : 'text-gray-500'}`} />
+                                <>
+                                  {/* Desktop: hover to show actions */}
+                                  <div className={`absolute ${isOwn ? '-left-28' : '-right-28'} top-0 hidden md:group-hover:flex items-center gap-1 bg-white rounded-lg shadow-lg border p-1`}>
+                                    <button onClick={() => setShowEmojiPicker(showEmojiPicker === msg.id ? null : msg.id)} className="p-1 hover:bg-gray-100 rounded" title="React">
+                                      <Smile className="w-4 h-4 text-gray-500" />
                                     </button>
+                                    <button onClick={() => setReplyTo(msg)} className="p-1 hover:bg-gray-100 rounded" title="Reply">
+                                      <Reply className="w-4 h-4 text-gray-500" />
+                                    </button>
+                                    <button onClick={() => handleBookmark(msg.id)} className="p-1 hover:bg-gray-100 rounded" title={isBookmarked ? 'Remove bookmark' : 'Bookmark'}>
+                                      <Bookmark className={`w-4 h-4 ${isBookmarked ? 'text-amber-500 fill-amber-500' : 'text-gray-500'}`} />
+                                    </button>
+                                    <button onClick={() => setForwardingMessage(msg)} className="p-1 hover:bg-gray-100 rounded" title="Forward">
+                                      <Forward className="w-4 h-4 text-gray-500" />
+                                    </button>
+                                    {isOwn && (
+                                      <>
+                                        <button onClick={() => { setEditingMessage(msg); setNewMessage(msg.message); }} className="p-1 hover:bg-gray-100 rounded" title="Edit">
+                                          <Edit2 className="w-4 h-4 text-gray-500" />
+                                        </button>
+                                        <button onClick={() => handleDeleteMessage(msg.id)} className="p-1 hover:bg-gray-100 rounded" title="Delete">
+                                          <Trash2 className="w-4 h-4 text-red-500" />
+                                        </button>
+                                      </>
+                                    )}
+                                    {isCompanyMember && (
+                                      <button onClick={() => handlePinMessage(msg.id)} className="p-1 hover:bg-gray-100 rounded" title={msg.is_pinned ? 'Unpin' : 'Pin'}>
+                                        <Pin className={`w-4 h-4 ${msg.is_pinned ? 'text-amber-500' : 'text-gray-500'}`} />
+                                      </button>
+                                    )}
+                                  </div>
+                                  
+                                  {/* Mobile: tap to show actions menu */}
+                                  <button 
+                                    onClick={(e) => { e.stopPropagation(); setMobileMessageMenu(mobileMessageMenu === msg.id ? null : msg.id); }}
+                                    className={`absolute ${isOwn ? '-left-8' : '-right-8'} top-1/2 -translate-y-1/2 md:hidden p-1.5 rounded-full ${mobileMessageMenu === msg.id ? 'bg-gray-200' : 'bg-gray-100'}`}
+                                  >
+                                    <MoreVertical className="w-4 h-4 text-gray-500" />
+                                  </button>
+                                  
+                                  {/* Mobile action menu */}
+                                  {mobileMessageMenu === msg.id && (
+                                    <div 
+                                      className={`absolute ${isOwn ? 'right-0' : 'left-0'} top-full mt-1 bg-white rounded-xl shadow-xl border py-2 z-20 min-w-[180px] md:hidden`}
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <button onClick={() => { setShowEmojiPicker(msg.id); setMobileMessageMenu(null); }} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50">
+                                        <Smile className="w-4 h-4 text-gray-500" />
+                                        <span className="text-sm">React</span>
+                                      </button>
+                                      <button onClick={() => { setReplyTo(msg); setMobileMessageMenu(null); }} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50">
+                                        <Reply className="w-4 h-4 text-gray-500" />
+                                        <span className="text-sm">Reply</span>
+                                      </button>
+                                      <button onClick={() => { handleBookmark(msg.id); setMobileMessageMenu(null); }} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50">
+                                        <Bookmark className={`w-4 h-4 ${isBookmarked ? 'text-amber-500 fill-amber-500' : 'text-gray-500'}`} />
+                                        <span className="text-sm">{isBookmarked ? 'Remove Bookmark' : 'Bookmark'}</span>
+                                      </button>
+                                      <button onClick={() => { setForwardingMessage(msg); setMobileMessageMenu(null); }} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50">
+                                        <Forward className="w-4 h-4 text-gray-500" />
+                                        <span className="text-sm">Forward</span>
+                                      </button>
+                                      {isOwn && (
+                                        <>
+                                          <button onClick={() => { setEditingMessage(msg); setNewMessage(msg.message); setMobileMessageMenu(null); }} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50">
+                                            <Edit2 className="w-4 h-4 text-gray-500" />
+                                            <span className="text-sm">Edit</span>
+                                          </button>
+                                          <button onClick={() => { handleDeleteMessage(msg.id); setMobileMessageMenu(null); }} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50">
+                                            <Trash2 className="w-4 h-4 text-red-500" />
+                                            <span className="text-sm text-red-500">Delete</span>
+                                          </button>
+                                        </>
+                                      )}
+                                      {isCompanyMember && (
+                                        <button onClick={() => { handlePinMessage(msg.id); setMobileMessageMenu(null); }} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50">
+                                          <Pin className={`w-4 h-4 ${msg.is_pinned ? 'text-amber-500' : 'text-gray-500'}`} />
+                                          <span className="text-sm">{msg.is_pinned ? 'Unpin' : 'Pin'}</span>
+                                        </button>
+                                      )}
+                                    </div>
                                   )}
-                                </div>
+                                </>
                               )}
 
                               {showEmojiPicker === msg.id && (
@@ -1523,8 +1581,8 @@ function MessagesContent() {
                 </div>
               )}
 
-              {/* Input Area - flex-shrink-0 ensures it stays visible */}
-              <div className="flex-shrink-0 p-2 border-t border-gray-200 bg-white relative">
+              {/* Input Area - safe area for bottom notch/home bar */}
+              <div className="flex-shrink-0 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:pb-2 border-t border-gray-200 bg-white relative">
                 {/* @ Mentions dropdown */}
                 {showMentions && getMentionableUsers().length > 0 && (
                   <div className="absolute bottom-full left-4 mb-2 bg-white rounded-lg shadow-lg border max-h-40 overflow-y-auto w-64 z-20">
@@ -1730,7 +1788,7 @@ function MessagesContent() {
                         }}
                         onFocus={() => setShowMobileChatMenu(false)}
                         placeholder={editingMessage ? 'Edit message...' : 'Type a message...'}
-                        className="w-full px-4 py-3 md:py-2.5 border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder:text-gray-400 text-base bg-white"
+                        className="w-full px-3 md:px-4 py-2.5 md:py-2.5 border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder:text-gray-400 text-sm md:text-base bg-white"
                         disabled={sending}
                         style={{ fontSize: '16px' }}
                       />
