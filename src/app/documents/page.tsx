@@ -218,31 +218,31 @@ export default function DocumentsPage() {
 
   return (
     <AppLayout>
-      <div className="p-6 max-w-7xl mx-auto">
+      <div className="p-3 sm:p-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Documents</h1>
-        <p className="text-gray-600">Manage and organize your project documents</p>
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">Documents</h1>
+        <p className="text-sm sm:text-base text-gray-600">Manage and organize your project documents</p>
       </div>
 
       {/* Actions Bar */}
-      <div className="mb-6 flex flex-col sm:flex-row gap-4">
+      <div className="mb-4 sm:mb-6 flex flex-col gap-2 sm:gap-4 sm:flex-row">
         {/* Search */}
         <div className="flex-1 flex gap-2">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
             <input
               type="text"
               placeholder="Search documents..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
           <button
             onClick={handleSearch}
-            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg"
+            className="px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg"
           >
             Search
           </button>
@@ -252,7 +252,7 @@ export default function DocumentsPage() {
         <select
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          className="px-3 sm:px-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
         >
           <option value="">All Categories</option>
           <option value="invoice">Invoice</option>
@@ -269,9 +269,9 @@ export default function DocumentsPage() {
         {/* Upload Button */}
         <button
           onClick={() => setShowUpload(!showUpload)}
-          className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 font-medium"
+          className="px-4 sm:px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center gap-2 font-medium text-sm sm:text-base"
         >
-          <UploadIcon className="h-5 w-5" />
+          <UploadIcon className="h-4 w-4 sm:h-5 sm:w-5" />
           Upload
         </button>
       </div>
@@ -318,22 +318,22 @@ export default function DocumentsPage() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="hidden sm:table-cell px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Document
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="hidden md:table-cell px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Category
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="hidden lg:table-cell px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Size
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="hidden lg:table-cell px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Uploaded
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Associations
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -341,53 +341,41 @@ export default function DocumentsPage() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {documents.map((doc) => (
                   <tr key={doc.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
+                    <td className="hidden sm:table-cell px-3 sm:px-6 py-3 sm:py-4">
+                      <div className="flex items-center gap-2 sm:gap-3">
                         {getFileIcon(doc.file_type)}
                         <div className="min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">
+                          <p className="text-xs sm:text-sm font-medium text-gray-900 truncate max-w-[120px] sm:max-w-none">
                             {doc.title || doc.file_name}
                           </p>
                           {doc.description && (
-                            <p className="text-xs text-gray-500 truncate">
+                            <p className="text-xs text-gray-500 truncate hidden sm:block">
                               {doc.description}
                             </p>
-                          )}
-                          {doc.tags && doc.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {doc.tags.slice(0, 3).map(tag => (
-                                <span
-                                  key={tag}
-                                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800"
-                                >
-                                  {tag}
-                                </span>
-                              ))}
-                            </div>
                           )}
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="hidden md:table-cell px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                       {doc.category && (
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryBadgeColor(doc.category)}`}>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getCategoryBadgeColor(doc.category)}`}>
                           {doc.category}
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="hidden lg:table-cell px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500">
                       {formatFileSize(doc.file_size)}
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm">
-                        <p className="text-gray-900">{doc.profiles?.full_name}</p>
+                    <td className="hidden lg:table-cell px-3 sm:px-6 py-3 sm:py-4">
+                      <div className="text-xs sm:text-sm">
+                        <p className="text-gray-900 truncate">{doc.profiles?.full_name}</p>
                         <p className="text-gray-500">{formatDate(doc.created_at)}</p>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="text-xs space-y-1">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4">
+                      <div className="text-xs space-y-0.5 sm:space-y-1">
                         {doc.projects && (
-                          <div className="text-blue-600">
+                          <div className="text-blue-600 truncate max-w-[100px] sm:max-w-none">
                             Project: {doc.projects.name}
                           </div>
                         )}
@@ -397,38 +385,38 @@ export default function DocumentsPage() {
                           </div>
                         )}
                         {doc.expenses && (
-                          <div className="text-purple-600">
+                          <div className="text-purple-600 truncate max-w-[100px] sm:max-w-none">
                             Expense: {doc.expenses.description}
                           </div>
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end gap-2">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex items-center justify-end gap-1 sm:gap-2">
                         <button
                           onClick={() => handlePreview(doc)}
-                          className="p-1 hover:bg-gray-100 rounded"
+                          className="p-1.5 sm:p-1 hover:bg-gray-100 rounded"
                           title="Preview"
                         >
                           <Eye className="h-4 w-4 text-gray-600" />
                         </button>
                         <button
                           onClick={() => handleDownload(doc)}
-                          className="p-1 hover:bg-gray-100 rounded"
+                          className="p-1.5 sm:p-1 hover:bg-gray-100 rounded"
                           title="Download"
                         >
                           <Download className="h-4 w-4 text-gray-600" />
                         </button>
                         <button
                           onClick={() => setEditingDoc(doc)}
-                          className="p-1 hover:bg-gray-100 rounded"
+                          className="p-1.5 sm:p-1 hover:bg-gray-100 rounded"
                           title="Edit"
                         >
                           <Edit className="h-4 w-4 text-gray-600" />
                         </button>
                         <button
                           onClick={() => handleDelete(doc)}
-                          className="p-1 hover:bg-red-50 rounded"
+                          className="p-1.5 sm:p-1 hover:bg-red-50 rounded"
                           title="Delete"
                         >
                           <Trash2 className="h-4 w-4 text-red-600" />

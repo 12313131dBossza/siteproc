@@ -179,19 +179,19 @@ function AnalyticsContent() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6 p-1 sm:p-0">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Analytics Dashboard</h1>
-            <p className="text-gray-500 mt-1">Track your business performance and insights</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Analytics Dashboard</h1>
+            <p className="text-sm sm:text-base text-gray-500 mt-0.5 sm:mt-1">Track your business performance and insights</p>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
             <select
               value={dateRange}
               onChange={(e) => setDateRange(e.target.value as any)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="px-3 sm:px-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="today">Today</option>
               <option value="week">This Week</option>
@@ -199,20 +199,20 @@ function AnalyticsContent() {
               <option value="year">This Year</option>
             </select>
             
-            <Button variant="ghost" onClick={fetchAnalytics}>
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Refresh
+            <Button variant="ghost" onClick={fetchAnalytics} className="px-2 sm:px-3">
+              <RefreshCw className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Refresh</span>
             </Button>
             
-            <Button onClick={handleExport}>
-              <Download className="w-4 h-4 mr-2" />
-              Export Report
+            <Button onClick={handleExport} className="px-2 sm:px-3">
+              <Download className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Export Report</span>
             </Button>
           </div>
         </div>
 
         {/* KPI Cards */}
-  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
           <KPICard
             title="Total Revenue"
             value={data.kpis.totalRevenue}

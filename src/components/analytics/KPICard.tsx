@@ -62,24 +62,24 @@ export function KPICard({
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex-1">
-          <p className="text-sm font-medium text-gray-600">{title}</p>
-          <div className="mt-2 flex items-center gap-3">
-            <div className="inline-flex items-baseline px-3 py-2 bg-gray-50 border border-gray-100 rounded-md">
-              <p className="text-lg sm:text-2xl font-bold text-gray-900 leading-none">
+    <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4 hover:shadow-md transition-shadow">
+      <div className="flex items-center justify-between gap-2 sm:gap-4">
+        <div className="flex-1 min-w-0">
+          <p className="text-xs sm:text-sm font-medium text-gray-600">{title}</p>
+          <div className="mt-1.5 sm:mt-2 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+            <div className="inline-flex items-baseline px-2 sm:px-3 py-1.5 sm:py-2 bg-gray-50 border border-gray-100 rounded-md">
+              <p className="text-base sm:text-2xl font-bold text-gray-900 leading-none truncate">
                 {formatValue(value)}
               </p>
             </div>
             {description && (
-              <span className="text-sm text-gray-500">{description}</span>
+              <span className="text-xs sm:text-sm text-gray-500">{description}</span>
             )}
           </div>
 
           {(trend !== undefined) && (
-            <div className="mt-3 flex items-center gap-2">
-              <span className={`flex items-center gap-1 text-sm font-medium ${getTrendColor()}`}>
+            <div className="mt-2 sm:mt-3 flex items-center gap-2">
+              <span className={`flex items-center gap-1 text-xs sm:text-sm font-medium ${getTrendColor()}`}>
                 {getTrendIcon()}
                 {Math.abs(trend).toFixed(1)}%
                 {trendLabel && <span className="text-gray-500 font-normal">{trendLabel}</span>}
@@ -88,8 +88,8 @@ export function KPICard({
           )}
         </div>
 
-        <div className={`flex-shrink-0 p-3 rounded-lg ${colorClasses[color]}`}>
-          <Icon className="w-6 h-6" />
+        <div className={`flex-shrink-0 p-2 sm:p-3 rounded-lg ${colorClasses[color]}`}>
+          <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
         </div>
       </div>
     </div>
