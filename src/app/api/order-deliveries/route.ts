@@ -249,12 +249,32 @@ export async function GET(req: NextRequest) {
     
     // ═══════════════════════════════════════════════════════════════════════════════
     // SUPPLIER-SPECIFIC FILTERING: Only show deliveries assigned to the supplier
+    // Suppliers can be assigned via:
+    //   1. project_members table (external_type = 'supplier') - via Project Access UI
+    //   2. supplier_assignments table - for specific delivery/order assignments
     // ═══════════════════════════════════════════════════════════════════════════════
     if (user.role === 'supplier') {
       console.log(`🚚 Supplier ${user.email}: Filtering to only assigned deliveries`)
       
-      // Get supplier's assigned project IDs and delivery IDs from supplier_assignments
       const sb = supabaseService()
+      const projectIds: string[] = []
+      const deliveryIds: string[] = []
+      const orderIds: string[] = []
+      
+      // Method 1: Get projects from project_members (added via Project Access UI)
+      const { data: memberProjects } = await sb
+        .from('project_members')
+        .select('project_id')
+        .eq('user_id', user.id)
+        .eq('external_type', 'supplier')
+        .eq('status', 'active') as { data: Array<{ project_id: string }> | null }
+      
+      if (memberProjects && memberProjects.length > 0) {
+        projectIds.push(...memberProjects.map(m => m.project_id))
+        console.log(`🚚 Supplier projects from project_members:`, projectIds)
+      }
+      
+      // Method 2: Get specific assignments from supplier_assignments table
       const { data: assignments } = await sb
         .from('supplier_assignments')
         .select('project_id, delivery_id, order_id')
@@ -262,13 +282,16 @@ export async function GET(req: NextRequest) {
         .eq('status', 'active') as { data: Array<{ project_id?: string; delivery_id?: string; order_id?: string }> | null }
       
       if (assignments && assignments.length > 0) {
-        const deliveryIds = assignments.filter(a => a.delivery_id).map(a => a.delivery_id as string)
-        const projectIds = assignments.filter(a => a.project_id).map(a => a.project_id as string)
-        const orderIds = assignments.filter(a => a.order_id).map(a => a.order_id as string)
-        
+        assignments.forEach(a => {
+          if (a.project_id && !projectIds.includes(a.project_id)) projectIds.push(a.project_id)
+          if (a.delivery_id) deliveryIds.push(a.delivery_id)
+          if (a.order_id) orderIds.push(a.order_id)
+        })
         console.log(`🚚 Supplier assignments found:`, { deliveryIds, projectIds, orderIds })
-        
-        // Build OR filter for delivery_id, project_id, or order_id
+      }
+      
+      // Build filter if any assignments exist
+      if (projectIds.length > 0 || deliveryIds.length > 0 || orderIds.length > 0) {
         const filters: string[] = []
         if (deliveryIds.length > 0) filters.push(`id.in.(${deliveryIds.join(',')})`)
         if (projectIds.length > 0) filters.push(`project_id.in.(${projectIds.join(',')})`)
@@ -276,15 +299,6 @@ export async function GET(req: NextRequest) {
         
         if (filters.length > 0) {
           query = query.or(filters.join(','))
-        } else {
-          // No valid filters, return empty
-          return NextResponse.json({
-            success: true,
-            deliveries: [],
-            pagination: { current_page: 1, per_page: limit, total: 0, total_pages: 0, has_next: false, has_prev: false },
-            summary: { total_deliveries: 0, pending: 0, partial: 0, delivered: 0, cancelled: 0, total_value: 0 },
-            user_info: { role: user.role, permissions: user.permissions }
-          })
         }
       } else {
         console.log(`🚚 Supplier ${user.email}: No assignments found, returning empty`)
