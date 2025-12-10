@@ -111,16 +111,24 @@ export async function POST(
 
     const sb = supabaseService()
 
-    // Deactivate ALL existing assignments for this delivery (not just active ones to be safe)
-    const { error: deactivateError } = await sb
+    // First, check how many existing assignments there are
+    const { data: existingAssignments } = await sb
       .from('supplier_assignments')
-      .update({ status: 'inactive' })
+      .select('id, supplier_id, status')
+      .eq('delivery_id', deliveryId)
+    
+    console.log(`Found ${existingAssignments?.length || 0} existing assignments for delivery ${deliveryId}:`, existingAssignments)
+
+    // DELETE all existing assignments for this delivery (more reliable than UPDATE)
+    const { error: deleteError, count: deletedCount } = await sb
+      .from('supplier_assignments')
+      .delete()
       .eq('delivery_id', deliveryId)
 
-    if (deactivateError) {
-      console.error('Error deactivating old assignments:', deactivateError)
+    if (deleteError) {
+      console.error('Error deleting old assignments:', deleteError)
     } else {
-      console.log(`Deactivated all previous assignments for delivery ${deliveryId}`)
+      console.log(`Deleted ${deletedCount || 'all'} previous assignments for delivery ${deliveryId}`)
     }
 
     // Create new assignment
