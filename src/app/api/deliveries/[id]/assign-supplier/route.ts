@@ -28,19 +28,22 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get current assignment
+    // Get current assignment - use limit(1) to handle any duplicate active assignments
     const sb = supabaseService()
-    const { data: assignment, error } = await sb
+    const { data: assignments, error } = await sb
       .from('supplier_assignments')
       .select('id, supplier_id, delivery_id, status')
       .eq('delivery_id', deliveryId)
       .eq('status', 'active')
-      .maybeSingle()
+      .order('created_at', { ascending: false })
+      .limit(1)
 
     if (error) {
       console.error('Error fetching assignment:', error)
       return NextResponse.json({ assignment: null })
     }
+
+    const assignment = assignments && assignments.length > 0 ? assignments[0] : null
 
     // If we have an assignment, get the supplier profile
     if (assignment && assignment.supplier_id) {
