@@ -110,17 +110,17 @@ async function getAuthenticatedUser() {
         .eq('user_id', user.id)
         .eq('status', 'active')
         .limit(1)
-        .maybeSingle()
+        .maybeSingle() as { data: { external_type?: string } | null }
       
-      if (membership && membership.external_type === 'supplier') {
+      if (membership?.external_type === 'supplier') {
         effectiveRole = 'supplier'
-      } else if (membership && membership.external_type === 'contractor') {
+      } else if (membership?.external_type === 'contractor') {
         effectiveRole = 'contractor'
-      } else if (membership && membership.external_type === 'client') {
+      } else if (membership?.external_type === 'client') {
         effectiveRole = 'client'
-      } else if (membership && membership.external_type === 'consultant') {
+      } else if (membership?.external_type === 'consultant') {
         effectiveRole = 'consultant'
-      } else if (membership && membership.external_type === 'other') {
+      } else if (membership?.external_type === 'other') {
         effectiveRole = 'consultant' // Other has same restrictions as consultant
       }
       
@@ -247,18 +247,73 @@ export async function GET(req: NextRequest) {
       .select(`*, delivery_items (*), purchase_orders:order_id (id, vendor, description, product_name)`)
       .order('created_at', { ascending: false })
     
-    // Company filtering - ensures users only see their company's deliveries when available
-    const filterByCompany = supportsCompany && !!user.company_id
-    if (filterByCompany) {
-      // Include deliveries with matching company OR those created by the user (regardless of company_id)
-      // This ensures users always see what they created, even if company assignment was missing/mismatched
-      const orExpr = `company_id.eq.${user.company_id},created_by.eq.${user.id}`
-      query = query.or(orExpr)
-      console.log(`🔍 Fetching deliveries for company: ${user.company_id} OR created_by=${user.id}`)
-    } else {
-      // Fallback: show deliveries created by the current user if company_id is unavailable
-      query = query.eq('created_by', user.id)
-      console.log(`🔍 Fetching deliveries by creator fallback: ${user.id} (email: ${user.email})`)
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // SUPPLIER-SPECIFIC FILTERING: Only show deliveries assigned to the supplier
+    // ═══════════════════════════════════════════════════════════════════════════════
+    if (user.role === 'supplier') {
+      console.log(`🚚 Supplier ${user.email}: Filtering to only assigned deliveries`)
+      
+      // Get supplier's assigned project IDs and delivery IDs from supplier_assignments
+      const sb = supabaseService()
+      const { data: assignments } = await sb
+        .from('supplier_assignments')
+        .select('project_id, delivery_id, order_id')
+        .eq('supplier_id', user.id)
+        .eq('status', 'active') as { data: Array<{ project_id?: string; delivery_id?: string; order_id?: string }> | null }
+      
+      if (assignments && assignments.length > 0) {
+        const deliveryIds = assignments.filter(a => a.delivery_id).map(a => a.delivery_id as string)
+        const projectIds = assignments.filter(a => a.project_id).map(a => a.project_id as string)
+        const orderIds = assignments.filter(a => a.order_id).map(a => a.order_id as string)
+        
+        console.log(`🚚 Supplier assignments found:`, { deliveryIds, projectIds, orderIds })
+        
+        // Build OR filter for delivery_id, project_id, or order_id
+        const filters: string[] = []
+        if (deliveryIds.length > 0) filters.push(`id.in.(${deliveryIds.join(',')})`)
+        if (projectIds.length > 0) filters.push(`project_id.in.(${projectIds.join(',')})`)
+        if (orderIds.length > 0) filters.push(`order_id.in.(${orderIds.join(',')})`)
+        
+        if (filters.length > 0) {
+          query = query.or(filters.join(','))
+        } else {
+          // No valid filters, return empty
+          return NextResponse.json({
+            success: true,
+            deliveries: [],
+            pagination: { current_page: 1, per_page: limit, total: 0, total_pages: 0, has_next: false, has_prev: false },
+            summary: { total_deliveries: 0, pending: 0, partial: 0, delivered: 0, cancelled: 0, total_value: 0 },
+            user_info: { role: user.role, permissions: user.permissions }
+          })
+        }
+      } else {
+        console.log(`🚚 Supplier ${user.email}: No assignments found, returning empty`)
+        return NextResponse.json({
+          success: true,
+          deliveries: [],
+          pagination: { current_page: 1, per_page: limit, total: 0, total_pages: 0, has_next: false, has_prev: false },
+          summary: { total_deliveries: 0, pending: 0, partial: 0, delivered: 0, cancelled: 0, total_value: 0 },
+          user_info: { role: user.role, permissions: user.permissions }
+        })
+      }
+    }
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // END SUPPLIER FILTERING
+    // ═══════════════════════════════════════════════════════════════════════════════
+    else {
+      // Company filtering for non-suppliers - ensures users only see their company's deliveries
+      const filterByCompany = supportsCompany && !!user.company_id
+      if (filterByCompany) {
+        // Include deliveries with matching company OR those created by the user (regardless of company_id)
+        // This ensures users always see what they created, even if company assignment was missing/mismatched
+        const orExpr = `company_id.eq.${user.company_id},created_by.eq.${user.id}`
+        query = query.or(orExpr)
+        console.log(`🔍 Fetching deliveries for company: ${user.company_id} OR created_by=${user.id}`)
+      } else {
+        // Fallback: show deliveries created by the current user if company_id is unavailable
+        query = query.eq('created_by', user.id)
+        console.log(`🔍 Fetching deliveries by creator fallback: ${user.id} (email: ${user.email})`)
+      }
     }
 
     // Apply status filter
@@ -271,26 +326,29 @@ export async function GET(req: NextRequest) {
       query = query.or(`driver_name.ilike.%${search}%,vehicle_number.ilike.%${search}%,notes.ilike.%${search}%,order_id.ilike.%${search}%`)
     }
 
-    // Get total count for pagination
+    // Get total count for pagination (skip for suppliers since we already filtered above)
     let totalCount = 0
-    try {
-      if (filterByCompany) {
-        const orExpr = `company_id.eq.${user.company_id},created_by.eq.${user.id}`
-        const c2 = await supabase
-          .from('deliveries')
-          .select('*', { count: 'exact', head: true })
-          .or(orExpr)
-        totalCount = c2.count ?? 0
-      } else {
-        const c3 = await supabase
-          .from('deliveries')
-          .select('*', { count: 'exact', head: true })
-          .eq('created_by', user.id)
-        totalCount = c3.count || 0
+    if (user.role !== 'supplier') {
+      try {
+        const filterByCompany = supportsCompany && !!user.company_id
+        if (filterByCompany) {
+          const orExpr = `company_id.eq.${user.company_id},created_by.eq.${user.id}`
+          const c2 = await supabase
+            .from('deliveries')
+            .select('*', { count: 'exact', head: true })
+            .or(orExpr)
+          totalCount = c2.count ?? 0
+        } else {
+          const c3 = await supabase
+            .from('deliveries')
+            .select('*', { count: 'exact', head: true })
+            .eq('created_by', user.id)
+          totalCount = c3.count || 0
+        }
+      } catch {
+        // Best effort; will compute from page data
+        totalCount = 0
       }
-    } catch {
-      // Best effort; will compute from page data
-      totalCount = 0
     }
 
     // Apply pagination
@@ -568,9 +626,9 @@ export async function POST(req: NextRequest) {
         .from('purchase_orders')
         .select('company_id')
         .eq('id', body.order_uuid)
-        .single()
-      if (orderData && 'company_id' in orderData && orderData.company_id) {
-        companyId = (orderData as { company_id: string }).company_id
+        .single() as { data: { company_id?: string } | null }
+      if (orderData?.company_id) {
+        companyId = orderData.company_id
         console.log('📦 Got company_id from order:', companyId)
       }
     }
