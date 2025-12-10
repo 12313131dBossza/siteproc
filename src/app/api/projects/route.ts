@@ -41,11 +41,14 @@ export async function GET(request: NextRequest) {
     const isFullCompanyMember = ['admin', 'owner', 'manager', 'accountant', 'bookkeeper', 'member'].includes(profile.role || '')
     
     let projects: any[] = []
+    const serviceSb = createServiceClient()
     
     if (isFullCompanyMember) {
-      // Full company members can see all company projects
-      console.log('🔍 Fetching ALL projects for company member, company_id:', profile.company_id)
-      let query = supabase
+      // Full company members - need to check visibility settings
+      console.log('🔍 Fetching projects for company member, company_id:', profile.company_id)
+      
+      // First get all company projects
+      let query = serviceSb
         .from('projects')
         .select('*')
         .or(`company_id.eq.${profile.company_id},created_by.eq.${user.id}`)
@@ -58,34 +61,66 @@ export async function GET(request: NextRequest) {
       if (startDate) query = query.gte('created_at', startDate)
       if (endDate) query = query.lte('created_at', endDate)
 
-      const { data, error } = await query
+      const { data: allProjects, error } = await query
       
       if (error) {
         console.error('❌ Projects fetch error:', error)
-        // Fallback to service role
-        const serviceSb = createServiceClient()
-        let fallbackQuery = serviceSb
-          .from('projects')
-          .select('*')
-          .eq('company_id', profile.company_id)
-          .order('created_at', { ascending: false })
-
-        if (status) fallbackQuery = fallbackQuery.eq('status', status)
-        if (minBudget) fallbackQuery = fallbackQuery.gte('budget', Number(minBudget))
-        if (maxBudget) fallbackQuery = fallbackQuery.lte('budget', Number(maxBudget))
-        if (startDate) fallbackQuery = fallbackQuery.gte('created_at', startDate)
-        if (endDate) fallbackQuery = fallbackQuery.lte('created_at', endDate)
-
-        const { data: fallbackData } = await fallbackQuery
-        projects = fallbackData || []
-      } else {
-        projects = data || []
+        return NextResponse.json({ error: 'Failed to fetch projects' }, { status: 500 })
       }
+
+      if (!allProjects || allProjects.length === 0) {
+        return NextResponse.json({ success: true, data: [] })
+      }
+
+      // Get project settings for visibility
+      const projectIds = allProjects.map(p => p.id)
+      const { data: settingsData } = await serviceSb
+        .from('project_settings')
+        .select('project_id, visibility')
+        .in('project_id', projectIds)
+
+      const settingsMap = new Map(settingsData?.map(s => [s.project_id, s.visibility]) || [])
+
+      // Get projects where user is a member (for team/private visibility)
+      const { data: memberProjects } = await serviceSb
+        .from('project_members')
+        .select('project_id')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+
+      const memberProjectIds = new Set(memberProjects?.map(m => m.project_id) || [])
+
+      // Filter projects based on visibility
+      projects = allProjects.filter(project => {
+        const visibility = settingsMap.get(project.id) || 'company' // Default to company
+
+        // Owner/admin always see all projects
+        if (['admin', 'owner'].includes(profile.role || '')) {
+          return true
+        }
+
+        // Project creator always sees their project
+        if (project.created_by === user.id) {
+          return true
+        }
+
+        switch (visibility) {
+          case 'company':
+            // All company members can see
+            return true
+          case 'team':
+            // Only assigned team members can see
+            return memberProjectIds.has(project.id)
+          case 'private':
+            // Only owner and invited members can see
+            return memberProjectIds.has(project.id)
+          default:
+            return true
+        }
+      })
     } else {
       // External users (viewers) only see projects they're members of
       console.log('🔍 Fetching projects for external viewer, user_id:', user.id)
-      
-      const serviceSb = createServiceClient()
       
       // First get project IDs the user has access to
       const { data: memberProjects, error: memberError } = await serviceSb

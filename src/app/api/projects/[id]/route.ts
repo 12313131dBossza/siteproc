@@ -55,12 +55,39 @@ export async function GET(
       return NextResponse.json({ error: 'Project not found' }, { status: 404 })
     }
 
-    // Check access permission
+    // Check access permission based on visibility settings
     let userPermissions = FULL_PERMISSIONS
     let projectRole = 'owner'
     
+    // Get project settings to check visibility
+    const { data: settings } = await serviceSb
+      .from('project_settings')
+      .select('visibility')
+      .eq('project_id', params.id)
+      .single()
+    
+    const visibility = settings?.visibility || 'company'
+    
     if (isFullCompanyMember && project.company_id === profile.company_id) {
-      // Full company members have full access to their company's projects
+      // Check visibility for non-admin users
+      if (!['admin', 'owner'].includes(profile.role || '') && project.created_by !== user.id) {
+        // Check if user needs to be a member for team/private visibility
+        if (visibility === 'team' || visibility === 'private') {
+          const { data: membership } = await serviceSb
+            .from('project_members')
+            .select('role, permissions, status')
+            .eq('project_id', params.id)
+            .eq('user_id', user.id)
+            .eq('status', 'active')
+            .single()
+
+          if (!membership) {
+            return NextResponse.json({ error: 'You do not have access to this project' }, { status: 403 })
+          }
+        }
+      }
+      
+      // Full company members have full access if they pass visibility check
       userPermissions = FULL_PERMISSIONS
       projectRole = profile.role || 'member'
     } else {
