@@ -45,55 +45,65 @@ const PLAN_LEVELS: Record<PlanId, number> = {
   'enterprise': 3,
 };
 
-// Full navigation with required roles and minimum plan
-// 'all' = all authenticated users can see
-// 'internal' = only internal company members (admin, owner, manager, bookkeeper, member)
-// 'admin' = only admin/owner
-// 'viewer' = external viewers/clients can see (project-scoped data)
-// 'supplier' = supplier portal only
-// 'client' = clients only (projects + documents + messages)
-// minPlan = minimum plan required ('starter' | 'pro' | 'enterprise')
-// Access types:
-// - 'all': Everyone can see
-// - 'internal': Only company members
+// ═══════════════════════════════════════════════════════════════════════════════
+// FINAL SIDEBAR PERMISSIONS TABLE (DO NOT MODIFY)
+// ═══════════════════════════════════════════════════════════════════════════════
+// Sidebar Item          | Internal | Client | Supplier | Contractor | Consultant
+// ──────────────────────|----------|--------|----------|------------|───────────
+// Dashboard             | YES      | NO     | NO       | NO         | NO
+// Analytics             | YES      | NO     | NO       | NO         | NO
+// Projects              | YES      | YES*   | NO       | NO         | NO
+// Orders                | YES      | NO     | NO       | NO         | NO
+// Expenses              | YES      | NO     | NO       | NO         | NO
+// Deliveries            | YES      | NO     | YES*     | NO         | NO
+// Documents             | YES      | YES    | NO       | YES*       | YES*
+// Change Orders         | YES      | NO     | NO       | NO         | NO
+// Products              | YES      | NO     | NO       | NO         | NO
+// Users & Roles         | YES      | NO     | NO       | NO         | NO
+// Activity Log          | YES      | NO     | NO       | NO         | NO
+// Bids                  | YES      | NO     | NO       | NO         | NO
+// Contractors           | YES      | NO     | NO       | NO         | NO
+// Clients               | YES      | NO     | NO       | NO         | NO
+// Payments              | YES      | NO     | NO       | NO         | NO
+// Settings              | YES      | NO     | NO       | NO         | NO
+// Messages              | YES      | YES    | YES      | YES        | YES
+// ──────────────────────|----------|--------|----------|------------|───────────
+// * = filtered to only their data
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Access types for FINAL sidebar permissions:
+// - 'internal': Only internal team (admin, owner, manager, accountant, bookkeeper, member)
 // - 'admin': Only admin/owner
-// - 'viewer': External viewers/clients
-// - 'supplier': Supplier portal only
-// - 'all_except_supplier': Everyone except suppliers
-// - 'client': Clients only
-// - 'client_only': Clients, viewers, consultants (read-only external)
-// - 'contractor': Contractors and internal members (for deliveries)
+// - 'client': Clients only (filtered to their projects)
+// - 'supplier': Suppliers only (filtered to their deliveries)
+// - 'contractor_consultant': Contractors + Consultants + Other (filtered to assigned docs)
+// - 'all_external_messages': All roles including external (for Messages)
 const navigation: Array<{
   name: string;
   href: string;
   icon: any;
-  access: 'all' | 'internal' | 'admin' | 'viewer' | 'supplier' | 'all_except_supplier' | 'client' | 'client_only' | 'contractor';
+  access: 'internal' | 'admin' | 'client' | 'supplier' | 'contractor_consultant' | 'all_external_messages';
   minPlan: PlanId;
 }> = [
-  // === STARTER PLAN - Core Features ===
+  // === INTERNAL ONLY - Full sidebar for company team ===
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, access: 'internal', minPlan: 'starter' },
-  { name: "Projects", href: "/projects", icon: FolderOpen, access: 'all_except_supplier', minPlan: 'starter' },
+  { name: "Analytics", href: "/analytics", icon: BarChart3, access: 'internal', minPlan: 'pro' },
+  { name: "Projects", href: "/projects", icon: FolderOpen, access: 'client', minPlan: 'starter' }, // Internal + Clients
   { name: "Orders", href: "/orders", icon: ShoppingCart, access: 'internal', minPlan: 'starter' },
   { name: "Expenses", href: "/expenses", icon: Receipt, access: 'internal', minPlan: 'starter' },
-  { name: "Deliveries", href: "/deliveries", icon: Package, access: 'contractor', minPlan: 'starter' },
-  { name: "Documents", href: "/documents", icon: Files, access: 'all_except_supplier', minPlan: 'starter' },
+  { name: "Deliveries", href: "/deliveries", icon: Truck, access: 'supplier', minPlan: 'starter' }, // Internal + Suppliers
+  { name: "Documents", href: "/documents", icon: Files, access: 'contractor_consultant', minPlan: 'starter' }, // Internal + Clients + Contractors + Consultants
+  { name: "Change Orders", href: "/change-orders", icon: FileText, access: 'internal', minPlan: 'pro' },
+  { name: "Products", href: "/products", icon: PackageSearch, access: 'internal', minPlan: 'pro' },
   { name: "Users & Roles", href: "/users", icon: Users, access: 'admin', minPlan: 'starter' },
   { name: "Activity Log", href: "/activity", icon: Activity, access: 'internal', minPlan: 'starter' },
+  { name: "Bids", href: "/bids", icon: FileSignature, access: 'internal', minPlan: 'pro' },
   { name: "Contractors", href: "/contractors", icon: Building2, access: 'internal', minPlan: 'starter' },
   { name: "Clients", href: "/clients", icon: UserCheck, access: 'internal', minPlan: 'starter' },
   { name: "Payments", href: "/payments", icon: CreditCard, access: 'internal', minPlan: 'starter' },
   { name: "Settings", href: "/settings", icon: Settings, access: 'internal', minPlan: 'starter' },
-  
-  // === PRO PLAN - Advanced Features ===
-  { name: "Analytics", href: "/analytics", icon: BarChart3, access: 'internal', minPlan: 'pro' },
-  { name: "Change Orders", href: "/change-orders", icon: FileText, access: 'internal', minPlan: 'pro' },
-  { name: "Products", href: "/products", icon: PackageSearch, access: 'internal', minPlan: 'pro' },
-  { name: "Bids", href: "/bids", icon: FileSignature, access: 'internal', minPlan: 'pro' },
-  { name: "Messages", href: "/messages", icon: MessageCircle, access: 'all_except_supplier', minPlan: 'pro' },
+  { name: "Messages", href: "/messages", icon: MessageCircle, access: 'all_external_messages', minPlan: 'pro' }, // Everyone
   { name: "Reports", href: "/reports", icon: BarChart3, access: 'internal', minPlan: 'pro' },
-  
-  // === Supplier Portal (all plans) ===
-  { name: "Supplier Portal", href: "/supplier-portal", icon: Truck, access: 'supplier', minPlan: 'starter' },
 ];
 
 export function SidebarNav() {
@@ -234,34 +244,53 @@ export function SidebarNav() {
     return userPlanLevel >= requiredLevel;
   };
 
-  // Filter navigation based on user role AND plan level
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // FINAL ROLE-BASED FILTERING (DO NOT MODIFY)
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // Internal: admin, owner, manager, accountant, bookkeeper, member → full sidebar
+  // Client: Projects + Documents + Messages only
+  // Supplier: Deliveries + Messages only
+  // Contractor/Sub: Documents + Messages only
+  // Consultant/Other: Documents + Messages only
+  // ═══════════════════════════════════════════════════════════════════════════════
   const filteredNavigation = navigation.filter(item => {
-    // Internal company members (includes accountant)
+    // Define role types
     const isInternalMember = ['admin', 'owner', 'manager', 'accountant', 'bookkeeper', 'member'].includes(userRole);
-    // Admin only items
     const isAdmin = ['admin', 'owner'].includes(userRole);
-    // External viewer/client/consultant
-    const isViewer = userRole === 'viewer' || userRole === 'client' || userRole === 'consultant';
-    // Supplier
+    const isClient = userRole === 'client' || userRole === 'viewer'; // viewers treated as clients
     const isSupplier = userRole === 'supplier';
-    // Contractor (can see deliveries)
     const isContractor = userRole === 'contractor';
+    const isConsultant = userRole === 'consultant' || userRole === 'other';
     
-    // First check role-based access
+    // Role-based access check
     let hasAccess = false;
-    if (item.access === 'all') hasAccess = true;
-    if (item.access === 'internal' && isInternalMember) hasAccess = true;
-    if (item.access === 'admin' && isAdmin) hasAccess = true;
-    // Viewers/Clients can see 'viewer' access items (project-scoped data)
-    if (item.access === 'viewer' && (isViewer || isInternalMember)) hasAccess = true;
-    // All except suppliers (company + clients + contractors + consultants)
-    if (item.access === 'all_except_supplier' && !isSupplier) hasAccess = true;
-    // Suppliers only see supplier portal
-    if (item.access === 'supplier' && isSupplier) hasAccess = true;
-    // Client only items - accessible to clients, viewers, and internal members (NOT contractors)
-    if (item.access === 'client_only' && (isViewer || isInternalMember)) hasAccess = true;
-    // Contractor access - contractors and internal members (for deliveries page)
-    if (item.access === 'contractor' && (isContractor || isInternalMember)) hasAccess = true;
+    
+    switch (item.access) {
+      case 'internal':
+        // Only internal team members
+        hasAccess = isInternalMember;
+        break;
+      case 'admin':
+        // Only admin/owner
+        hasAccess = isAdmin;
+        break;
+      case 'client':
+        // Internal + Clients (for Projects)
+        hasAccess = isInternalMember || isClient;
+        break;
+      case 'supplier':
+        // Internal + Suppliers (for Deliveries)
+        hasAccess = isInternalMember || isSupplier;
+        break;
+      case 'contractor_consultant':
+        // Internal + Clients + Contractors + Consultants (for Documents)
+        hasAccess = isInternalMember || isClient || isContractor || isConsultant;
+        break;
+      case 'all_external_messages':
+        // Everyone can see Messages
+        hasAccess = true;
+        break;
+    }
     
     // If no role access, reject
     if (!hasAccess) return false;

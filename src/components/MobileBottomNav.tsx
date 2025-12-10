@@ -27,27 +27,34 @@ const PLAN_LEVELS: Record<PlanId, number> = {
   'enterprise': 3,
 };
 
-// Mobile nav items with access levels and minimum plan
-// Access types:
-// - 'all': Everyone can see
-// - 'internal': Only company members
-// - 'viewer': External viewers
-// - 'all_except_supplier': Everyone except suppliers
-// - 'client_only': Clients, viewers, consultants (read-only)
-// - 'contractor': Contractors and internal members
+// ═══════════════════════════════════════════════════════════════════════════════
+// FINAL MOBILE NAV PERMISSIONS (MATCHES SIDEBAR - DO NOT MODIFY)
+// ═══════════════════════════════════════════════════════════════════════════════
+// Internal: Dashboard + Projects + Documents + Messages + More
+// Client: Projects + Documents + Messages
+// Supplier: Deliveries + Messages
+// Contractor: Documents + Messages
+// Consultant/Other: Documents + Messages
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Access types for mobile nav (matches sidebar):
+// - 'internal': Only internal team
+// - 'client': Internal + Clients (for Projects)
+// - 'supplier': Internal + Suppliers (for Deliveries)
+// - 'contractor_consultant': Internal + Clients + Contractors + Consultants (for Documents)
+// - 'all_external_messages': Everyone (for Messages)
 const mobileNavItems: Array<{
   name: string;
   href: string;
   icon: any;
-  access: 'all' | 'internal' | 'viewer' | 'all_except_supplier' | 'client_only' | 'contractor';
+  access: 'internal' | 'client' | 'supplier' | 'contractor_consultant' | 'all_external_messages';
   minPlan: PlanId;
 }> = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, access: 'internal', minPlan: 'free' },
-  { name: 'Projects', href: '/projects', icon: FolderOpen, access: 'all_except_supplier', minPlan: 'free' },
-  { name: 'Deliveries', href: '/deliveries', icon: Package, access: 'contractor', minPlan: 'free' },
-  { name: 'Documents', href: '/documents', icon: Files, access: 'all_except_supplier', minPlan: 'free' },
-  // Messages requires Pro plan
-  { name: 'Messages', href: '/messages', icon: MessageCircle, access: 'all_except_supplier', minPlan: 'pro' },
+  { name: 'Projects', href: '/projects', icon: FolderOpen, access: 'client', minPlan: 'free' },
+  { name: 'Deliveries', href: '/deliveries', icon: Package, access: 'supplier', minPlan: 'free' },
+  { name: 'Documents', href: '/documents', icon: Files, access: 'contractor_consultant', minPlan: 'free' },
+  { name: 'Messages', href: '/messages', icon: MessageCircle, access: 'all_external_messages', minPlan: 'pro' },
 ];
 
 export function MobileBottomNav() {
@@ -108,27 +115,40 @@ export function MobileBottomNav() {
     return userPlanLevel >= requiredLevel;
   };
 
-  // Filter navigation based on user role and plan level
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // FINAL ROLE-BASED FILTERING (MATCHES SIDEBAR - DO NOT MODIFY)
+  // ═══════════════════════════════════════════════════════════════════════════════
   const isInternalMember = ['admin', 'owner', 'manager', 'accountant', 'bookkeeper', 'member'].includes(userRole);
-  const isViewer = userRole === 'viewer';
+  const isClient = userRole === 'client' || userRole === 'viewer';
   const isSupplier = userRole === 'supplier';
   const isContractor = userRole === 'contractor';
-  const isConsultant = userRole === 'consultant';
-  const isClient = userRole === 'client' || isViewer || isConsultant;
+  const isConsultant = userRole === 'consultant' || userRole === 'other';
   
   const filteredNavItems = mobileNavItems.filter(item => {
-    // First check role-based access
+    // Role-based access check
     let hasAccess = false;
-    if (item.access === 'all') hasAccess = true;
-    if (item.access === 'internal' && isInternalMember) hasAccess = true;
-    // Viewers can see 'viewer' items, internal members can too
-    if (item.access === 'viewer' && (isViewer || isInternalMember)) hasAccess = true;
-    // All except suppliers (includes contractors, consultants, clients)
-    if (item.access === 'all_except_supplier' && !isSupplier) hasAccess = true;
-    // Client only items - accessible to clients, viewers, consultants, and internal members
-    if (item.access === 'client_only' && (isClient || isInternalMember)) hasAccess = true;
-    // Contractor access - for deliveries page
-    if (item.access === 'contractor' && (isContractor || isInternalMember)) hasAccess = true;
+    
+    switch (item.access) {
+      case 'internal':
+        hasAccess = isInternalMember;
+        break;
+      case 'client':
+        // Internal + Clients (for Projects)
+        hasAccess = isInternalMember || isClient;
+        break;
+      case 'supplier':
+        // Internal + Suppliers (for Deliveries)
+        hasAccess = isInternalMember || isSupplier;
+        break;
+      case 'contractor_consultant':
+        // Internal + Clients + Contractors + Consultants (for Documents)
+        hasAccess = isInternalMember || isClient || isContractor || isConsultant;
+        break;
+      case 'all_external_messages':
+        // Everyone can see Messages
+        hasAccess = true;
+        break;
+    }
     
     // If no role access, reject
     if (!hasAccess) return false;
