@@ -6,7 +6,6 @@ import { AddItemModal } from '@/components/AddItemModal'
 import { ProjectAccessModal } from '@/components/ProjectAccessModal'
 import ProjectTimeline from '@/components/ProjectTimeline'
 import ProjectPhotoGallery from '@/components/ProjectPhotoGallery'
-import ProjectChat from '@/components/ProjectChat'
 import { hasPermission } from '@/lib/roles'
 import { useCurrency } from '@/lib/CurrencyContext'
 import { usePlan } from '@/hooks/usePlan'
@@ -59,8 +58,6 @@ export default function ProjectDetailPage() {
   // Modal state for editing project
   const [showEditModal, setShowEditModal] = useState(false)
   const [editForm, setEditForm] = useState({ name: '', budget: '', project_number: '' })
-  // Chat state
-  const [showChat, setShowChat] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string>('')
   // Assignment textarea state (kept for fallback bulk paste modal later)
   const [assign, setAssign] = useState({ orders: '', expenses: '', deliveries: '' })
@@ -944,16 +941,6 @@ export default function ProjectDetailPage() {
             </form>
           </div>
         </div>
-      )}
-
-      {/* Project Chat - Only available on Pro and above */}
-      {currentUserId && hasFeature('inAppChat') && (
-        <ProjectChat
-          projectId={id}
-          currentUserId={currentUserId}
-          isExpanded={showChat}
-          onToggle={() => setShowChat(!showChat)}
-        />
       )}
     </AppLayout>
   )
