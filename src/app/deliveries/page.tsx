@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/Button"
 import { SearchBar, FilterPanel, useFilters } from "@/components/ui"
 import { FormModal } from '@/components/ui/FormModal'
 import { StatCard } from "@/components/StatCard"
-import { Package, Truck, MapPin, Clock, CheckCircle, CheckCircle2, AlertCircle, Search, Filter, Eye, Calendar, Lock, Edit, X, Upload } from 'lucide-react'
+import { Package, Truck, MapPin, Clock, CheckCircle, CheckCircle2, AlertCircle, Search, Filter, Eye, Calendar, Lock, Edit, X, Upload, UserPlus } from 'lucide-react'
 import { format } from '@/lib/date-format'
 import { cn } from '@/lib/utils'
 import { useCurrency } from '@/lib/CurrencyContext'
@@ -16,6 +16,7 @@ import { DeliveryStatusTransitionModal } from '@/components/DeliveryStatusTransi
 import { useToast } from '@/components/ui/Toast'
 import { DeliveriesFilterPanel } from '@/components/DeliveriesFilterPanel'
 import { SortControl, sortArray } from "@/components/SortControl"
+import { AssignSupplierModal } from '@/components/AssignSupplierModal'
 
 interface Delivery {
   id: string
@@ -81,6 +82,7 @@ export default function DeliveriesPage() {
   const [uploadingFile, setUploadingFile] = useState<string | null>(null)
   const [selectedDelivery, setSelectedDelivery] = useState<Delivery | null>(null)
   const [showDeliveryDetailModal, setShowDeliveryDetailModal] = useState(false)
+  const [assignSupplierModal, setAssignSupplierModal] = useState<{ open: boolean; deliveryId?: string }>({ open: false })
 
   const { formatAmount: formatCurrency } = useCurrency()
 
@@ -649,7 +651,7 @@ export default function DeliveriesPage() {
                             </div>
                           )}
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap">
                           <Button 
                             variant="ghost" 
                             size="sm" 
@@ -661,6 +663,18 @@ export default function DeliveriesPage() {
                           >
                             View Details
                           </Button>
+                          
+                          {/* Assign Supplier button - only for admin/manager/owner */}
+                          {['admin', 'owner', 'manager'].includes(userRole || '') && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              leftIcon={<UserPlus className="h-4 w-4" />}
+                              onClick={() => setAssignSupplierModal({ open: true, deliveryId: delivery.id })}
+                            >
+                              Assign Supplier
+                            </Button>
+                          )}
                           
                           {/* POD Upload button for delivered deliveries */}
                           {delivery.status === 'delivered' && canChangeStatus() && (
@@ -947,6 +961,19 @@ export default function DeliveriesPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Assign Supplier Modal */}
+      {assignSupplierModal.open && assignSupplierModal.deliveryId && (
+        <AssignSupplierModal
+          isOpen={assignSupplierModal.open}
+          deliveryId={assignSupplierModal.deliveryId}
+          onClose={() => setAssignSupplierModal({ open: false })}
+          onAssigned={() => {
+            fetchDeliveries()
+            setAssignSupplierModal({ open: false })
+          }}
+        />
       )}
     </AppLayout>
   )
