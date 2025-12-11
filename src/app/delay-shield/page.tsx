@@ -276,100 +276,102 @@ export default function DelayShieldPage() {
           </Button>
         </div>
 
-        {/* Premium Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {/* Premium Stats Cards - 1 col mobile, 2 col tablet, 4 col desktop */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
           {/* Active Alerts */}
-          <div className="relative overflow-hidden bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition-all group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-500/5 to-purple-500/5 rounded-full -mr-16 -mt-16" />
-            <div className="relative">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
-                  <Shield className="h-6 w-6 text-white" />
+          <div className="relative overflow-hidden bg-white rounded-xl border border-gray-200 p-4 hover:shadow-lg transition-all group">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-blue-500/5 to-purple-500/5 rounded-full -mr-12 -mt-12" />
+            <div className="relative flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-md shadow-blue-500/20 flex-shrink-0">
+                <Shield className="h-5 w-5 text-white" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-2xl font-bold text-gray-900 leading-tight">
+                  {summary?.active_alerts || 0}
                 </div>
+                <div className="text-xs text-gray-500 font-medium">Active Alerts</div>
               </div>
-              <div className="text-3xl font-bold text-gray-900 mb-1">
-                {summary?.active_alerts || 0}
-              </div>
-              <div className="text-sm text-gray-500 font-medium">Active Alerts</div>
             </div>
           </div>
 
           {/* High/Critical */}
-          <div className="relative overflow-hidden bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition-all group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-red-500/5 to-orange-500/5 rounded-full -mr-16 -mt-16" />
-            <div className="relative">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center shadow-lg shadow-red-500/20">
-                  <AlertTriangle className="h-6 w-6 text-white" />
+          <div className="relative overflow-hidden bg-white rounded-xl border border-gray-200 p-4 hover:shadow-lg transition-all group">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-red-500/5 to-orange-500/5 rounded-full -mr-12 -mt-12" />
+            <div className="relative flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center shadow-md shadow-red-500/20 flex-shrink-0">
+                <AlertTriangle className="h-5 w-5 text-white" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-2xl font-bold text-gray-900 leading-tight">
+                  {(summary?.critical_count || 0) + (summary?.high_count || 0)}
                 </div>
+                <div className="text-xs text-gray-500 font-medium">High/Critical</div>
               </div>
-              <div className="text-3xl font-bold text-gray-900 mb-1">
-                {(summary?.critical_count || 0) + (summary?.high_count || 0)}
-              </div>
-              <div className="text-sm text-gray-500 font-medium">High/Critical</div>
             </div>
           </div>
 
           {/* Financial Risk */}
-          <div className="relative overflow-hidden bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition-all group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-amber-500/5 to-yellow-500/5 rounded-full -mr-16 -mt-16" />
-            <div className="relative">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-yellow-500 flex items-center justify-center shadow-lg shadow-amber-500/20">
-                  <DollarSign className="h-6 w-6 text-white" />
+          <div className="relative overflow-hidden bg-white rounded-xl border border-gray-200 p-4 hover:shadow-lg transition-all group">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-amber-500/5 to-yellow-500/5 rounded-full -mr-12 -mt-12" />
+            <div className="relative flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-500 to-yellow-500 flex items-center justify-center shadow-md shadow-amber-500/20 flex-shrink-0">
+                <DollarSign className="h-5 w-5 text-white" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-xl sm:text-2xl font-bold text-gray-900 leading-tight truncate">
+                  {formatAmount(summary?.total_financial_risk || 0)}
                 </div>
+                <div className="text-xs text-gray-500 font-medium">Total at Risk</div>
               </div>
-              <div className="text-3xl font-bold text-gray-900 mb-1">
-                {formatAmount(summary?.total_financial_risk || 0)}
-              </div>
-              <div className="text-sm text-gray-500 font-medium">Total at Risk</div>
             </div>
           </div>
 
           {/* Mitigated */}
-          <div className="relative overflow-hidden bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition-all group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-green-500/5 to-emerald-500/5 rounded-full -mr-16 -mt-16" />
-            <div className="relative">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-green-500/20">
-                  <ShieldCheck className="h-6 w-6 text-white" />
+          <div className="relative overflow-hidden bg-white rounded-xl border border-gray-200 p-4 hover:shadow-lg transition-all group">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-green-500/5 to-emerald-500/5 rounded-full -mr-12 -mt-12" />
+            <div className="relative flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-md shadow-green-500/20 flex-shrink-0">
+                <ShieldCheck className="h-5 w-5 text-white" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-2xl font-bold text-gray-900 leading-tight">
+                  {alerts.filter(a => a.status === 'applied').length}
                 </div>
+                <div className="text-xs text-gray-500 font-medium">Mitigated</div>
               </div>
-              <div className="text-3xl font-bold text-gray-900 mb-1">
-                {alerts.filter(a => a.status === 'applied').length}
-              </div>
-              <div className="text-sm text-gray-500 font-medium">Mitigated</div>
             </div>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl w-fit mb-6">
-          {[
-            { key: 'active', label: 'Active', count: summary?.active_alerts },
-            { key: 'applied', label: 'Applied', count: alerts.filter(a => a.status === 'applied').length },
-            { key: 'dismissed', label: 'Dismissed' },
-            { key: 'all', label: 'All' }
-          ].map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => setFilter(tab.key as any)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                filter === tab.key
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              {tab.label}
-              {tab.count !== undefined && tab.count > 0 && (
-                <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
-                  filter === tab.key ? 'bg-blue-100 text-blue-700' : 'bg-gray-200 text-gray-600'
-                }`}>
-                  {tab.count}
-                </span>
-              )}
-            </button>
-          ))}
+        {/* Tabs - scrollable on mobile */}
+        <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 mb-6">
+          <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl w-fit min-w-fit">
+            {[
+              { key: 'active', label: 'Active', count: summary?.active_alerts },
+              { key: 'applied', label: 'Applied', count: alerts.filter(a => a.status === 'applied').length },
+              { key: 'dismissed', label: 'Dismissed' },
+              { key: 'all', label: 'All' }
+            ].map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setFilter(tab.key as any)}
+                className={`px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                  filter === tab.key
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                {tab.label}
+                {tab.count !== undefined && tab.count > 0 && (
+                  <span className={`ml-1.5 px-1.5 py-0.5 text-xs rounded-full ${
+                    filter === tab.key ? 'bg-blue-100 text-blue-700' : 'bg-gray-200 text-gray-600'
+                  }`}>
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Alerts List */}
@@ -425,7 +427,7 @@ export default function DelayShieldPage() {
             )}
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {alerts.map(alert => {
               const config = getRiskConfig(alert.risk_level);
               const RiskIcon = config.icon;
@@ -433,65 +435,67 @@ export default function DelayShieldPage() {
               return (
                 <div
                   key={alert.id}
-                  className={`bg-white rounded-2xl border ${
+                  className={`bg-white rounded-xl border ${
                     alert.status === 'active' ? 'border-gray-200 hover:border-blue-300 hover:shadow-lg cursor-pointer' : 'border-gray-100'
                   } overflow-hidden transition-all duration-200`}
                   onClick={() => alert.status === 'active' && setSelectedAlert(alert)}
                 >
-                  <div className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-5">
+                  <div className="p-4">
+                    {/* Mobile: Stack vertically, Desktop: Horizontal */}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                      {/* Top row: Badge + Project name */}
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
                         {/* Risk Level Badge */}
-                        <div className={`px-4 py-2 rounded-xl ${config.bg} ${config.text} flex items-center gap-2 shadow-sm`}>
-                          <RiskIcon className="h-4 w-4" />
-                          <span className="text-sm font-bold uppercase tracking-wide">
+                        <div className={`px-2.5 py-1.5 rounded-lg ${config.bg} ${config.text} flex items-center gap-1.5 shadow-sm flex-shrink-0`}>
+                          <RiskIcon className="h-3.5 w-3.5" />
+                          <span className="text-xs font-bold uppercase tracking-wide">
                             {alert.risk_level}
                           </span>
                         </div>
                         
                         {/* Project Info */}
-                        <div>
-                          <div className="font-semibold text-gray-900 text-lg">
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold text-gray-900 text-sm sm:text-base truncate">
                             {alert.project?.name || 'Unknown Project'}
                           </div>
-                          <div className="text-sm text-gray-500 flex items-center gap-2">
-                            {alert.contributing_factors.length} risk factor{alert.contributing_factors.length !== 1 ? 's' : ''} detected
+                          <div className="text-xs text-gray-500">
+                            {alert.contributing_factors.length} risk factor{alert.contributing_factors.length !== 1 ? 's' : ''}
                           </div>
                         </div>
                       </div>
 
-                      {/* Metrics */}
-                      <div className="flex items-center gap-8">
-                        <div className="text-center">
+                      {/* Metrics - horizontal scroll on tiny screens */}
+                      <div className="flex items-center gap-4 sm:gap-6 overflow-x-auto flex-shrink-0">
+                        <div className="text-center flex-shrink-0">
                           <div className="flex items-center gap-1 justify-center">
-                            <Timer className="h-4 w-4 text-gray-400" />
-                            <span className="text-xl font-bold text-gray-900">
+                            <Timer className="h-3.5 w-3.5 text-gray-400" />
+                            <span className="text-base sm:text-lg font-bold text-gray-900">
                               {alert.predicted_delay_days}d
                             </span>
                           </div>
-                          <div className="text-xs text-gray-500 uppercase tracking-wide">Delay</div>
+                          <div className="text-[10px] text-gray-500 uppercase tracking-wide">Delay</div>
                         </div>
                         
-                        <div className="text-center">
-                          <div className="flex items-center gap-1 justify-center">
-                            <DollarSign className="h-4 w-4 text-gray-400" />
-                            <span className="text-xl font-bold text-gray-900">
+                        <div className="text-center flex-shrink-0">
+                          <div className="flex items-center gap-0.5 justify-center">
+                            <DollarSign className="h-3.5 w-3.5 text-gray-400" />
+                            <span className="text-base sm:text-lg font-bold text-gray-900">
                               {formatAmount(alert.financial_impact)}
                             </span>
                           </div>
-                          <div className="text-xs text-gray-500 uppercase tracking-wide">At Risk</div>
+                          <div className="text-[10px] text-gray-500 uppercase tracking-wide">At Risk</div>
                         </div>
                         
-                        <div className="text-center">
-                          <div className="text-xl font-bold text-gray-900">
+                        <div className="text-center flex-shrink-0">
+                          <div className="text-base sm:text-lg font-bold text-gray-900">
                             {Math.round(alert.risk_score * 100)}%
                           </div>
-                          <div className="text-xs text-gray-500 uppercase tracking-wide">Score</div>
+                          <div className="text-[10px] text-gray-500 uppercase tracking-wide">Score</div>
                         </div>
 
                         {/* Status or Arrow */}
                         {alert.status !== 'active' ? (
-                          <div className={`px-4 py-2 rounded-xl text-sm font-medium ${
+                          <div className={`px-2.5 py-1.5 rounded-lg text-xs font-medium flex-shrink-0 ${
                             alert.status === 'applied' 
                               ? 'bg-green-100 text-green-700'
                               : 'bg-gray-100 text-gray-600'
@@ -499,8 +503,8 @@ export default function DelayShieldPage() {
                             {alert.status === 'applied' ? '✓ Fixed' : 'Dismissed'}
                           </div>
                         ) : (
-                          <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
-                            <ChevronRight className="h-5 w-5 text-gray-400" />
+                          <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                            <ChevronRight className="h-4 w-4 text-gray-400" />
                           </div>
                         )}
                       </div>
@@ -508,12 +512,12 @@ export default function DelayShieldPage() {
 
                     {/* Risk Factors Preview */}
                     {alert.contributing_factors.length > 0 && (
-                      <div className="mt-4 pt-4 border-t border-gray-100">
-                        <div className="flex flex-wrap gap-2">
-                          {alert.contributing_factors.slice(0, 4).map((factor, i) => (
+                      <div className="mt-3 pt-3 border-t border-gray-100">
+                        <div className="flex flex-wrap gap-1.5">
+                          {alert.contributing_factors.slice(0, 3).map((factor, i) => (
                             <div 
                               key={i} 
-                              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm ${
+                              className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs ${
                                 factor.severity === 'high' 
                                   ? 'bg-red-50 text-red-700' 
                                   : factor.severity === 'medium'
@@ -521,16 +525,16 @@ export default function DelayShieldPage() {
                                   : 'bg-gray-50 text-gray-600'
                               }`}
                             >
-                              <div className={`w-1.5 h-1.5 rounded-full ${
+                              <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
                                 factor.severity === 'high' ? 'bg-red-500' :
                                 factor.severity === 'medium' ? 'bg-amber-500' : 'bg-gray-400'
                               }`} />
-                              {factor.name}
+                              <span className="truncate max-w-[120px] sm:max-w-none">{factor.name}</span>
                             </div>
                           ))}
-                          {alert.contributing_factors.length > 4 && (
-                            <div className="inline-flex items-center px-3 py-1.5 text-sm text-gray-400">
-                              +{alert.contributing_factors.length - 4} more
+                          {alert.contributing_factors.length > 3 && (
+                            <div className="inline-flex items-center px-2 py-1 text-xs text-gray-400">
+                              +{alert.contributing_factors.length - 3} more
                             </div>
                           )}
                         </div>
