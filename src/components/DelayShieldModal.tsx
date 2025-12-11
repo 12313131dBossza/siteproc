@@ -78,7 +78,6 @@ export function DelayShieldModal({ alert, open, onClose, onApply }: DelayShieldM
   const { formatAmount } = useCurrency();
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [applying, setApplying] = useState(false);
-  const [sendEmail, setSendEmail] = useState(true);
   const [result, setResult] = useState<any>(null);
 
   if (!alert) return null;
@@ -159,7 +158,7 @@ export function DelayShieldModal({ alert, open, onClose, onApply }: DelayShieldM
         body: JSON.stringify({
           alert_id: alert.id,
           option_id: selectedOption,
-          send_email: sendEmail
+          send_email: true  // Always send emails - no extra clicks
         })
       });
 
@@ -188,36 +187,123 @@ export function DelayShieldModal({ alert, open, onClose, onApply }: DelayShieldM
       size="xl"
     >
       {result ? (
-        // Success state - Premium version
-        <div className="text-center py-10">
-          <div className="relative inline-block mb-6">
+        // Success state - Shows ALL automated actions completed
+        <div className="text-center py-6 sm:py-10">
+          <div className="relative inline-block mb-4 sm:mb-6">
             <div className="absolute inset-0 bg-gradient-to-br from-green-400 to-emerald-500 rounded-2xl blur-xl opacity-30 animate-pulse" />
-            <div className="relative w-20 h-20 rounded-2xl bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shadow-lg">
-              <CheckCircle className="h-10 w-10 text-white" />
+            <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shadow-lg">
+              <CheckCircle className="h-8 w-8 sm:h-10 sm:w-10 text-white" />
             </div>
           </div>
           
-          <h3 className="text-2xl font-bold text-gray-900 mb-2">
-            Recovery Plan Applied!
+          <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
+            Recovery Plan Applied! ⚡
           </h3>
-          <p className="text-gray-600 mb-8 max-w-sm mx-auto">
-            {result.applied_option?.name} has been activated for {alert.project?.name}.
+          <p className="text-sm sm:text-base text-gray-600 mb-6 sm:mb-8 max-w-sm mx-auto px-4">
+            <span className="font-semibold">{result.applied_option?.name}</span> has been activated for {alert.project?.name}.
+            <span className="block mt-1 text-green-600 font-medium">All actions completed automatically!</span>
           </p>
           
-          <div className="inline-flex flex-col gap-3 text-left mb-8 bg-gray-50 rounded-2xl p-6">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+          {/* Automated Actions Summary */}
+          <div className="inline-flex flex-col gap-2 sm:gap-3 text-left mb-6 sm:mb-8 bg-gray-50 rounded-2xl p-4 sm:p-6 w-full max-w-md mx-auto">
+            {/* Change Order */}
+            <div className="flex items-center gap-3 p-2 sm:p-3 bg-white rounded-xl border border-gray-100">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
                 <FileText className="h-4 w-4 text-white" />
               </div>
-              <span className="text-gray-700">Change order created</span>
-              {result.change_order_id && <CheckCircle className="h-4 w-4 text-green-500" />}
+              <div className="flex-1 min-w-0">
+                <span className="text-sm sm:text-base text-gray-800 font-medium">Change Order Created</span>
+                {result.change_order_id && (
+                  <span className="block text-xs text-gray-500 truncate">ID: {result.change_order_id.slice(0, 8)}...</span>
+                )}
+              </div>
+              {result.change_order_created ? (
+                <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+              ) : (
+                <span className="text-xs text-gray-400">N/A</span>
+              )}
             </div>
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
+
+            {/* In-App Notifications */}
+            <div className="flex items-center gap-3 p-2 sm:p-3 bg-white rounded-xl border border-gray-100">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="h-4 w-4 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="text-sm sm:text-base text-gray-800 font-medium">Team Notified</span>
+                <span className="block text-xs text-gray-500">
+                  {result.notifications_sent || 0} in-app notifications sent
+                </span>
+              </div>
+              {(result.notifications_sent || 0) > 0 ? (
+                <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+              ) : (
+                <span className="text-xs text-gray-400">—</span>
+              )}
+            </div>
+
+            {/* Email Notifications */}
+            <div className="flex items-center gap-3 p-2 sm:p-3 bg-white rounded-xl border border-gray-100">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center flex-shrink-0">
                 <Send className="h-4 w-4 text-white" />
               </div>
-              <span className="text-gray-700">Notification email sent</span>
-              {result.email_sent && <CheckCircle className="h-4 w-4 text-green-500" />}
+              <div className="flex-1 min-w-0">
+                <span className="text-sm sm:text-base text-gray-800 font-medium">Emails Sent</span>
+                <span className="block text-xs text-gray-500">
+                  {result.email_sent ? `${result.email_count || result.email_recipients?.length || 0} stakeholders notified` : (result.email_error || 'Not sent')}
+                </span>
+              </div>
+              {result.email_sent ? (
+                <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+              ) : (
+                <X className="h-5 w-5 text-gray-300 flex-shrink-0" />
+              )}
+            </div>
+
+            {/* Budget Updated */}
+            <div className="flex items-center gap-3 p-2 sm:p-3 bg-white rounded-xl border border-gray-100">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center flex-shrink-0">
+                <DollarSign className="h-4 w-4 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="text-sm sm:text-base text-gray-800 font-medium">Budget Updated</span>
+                <span className="block text-xs text-gray-500">
+                  {result.budget_updated ? `+$${(result.budget_increase || 0).toLocaleString()} added` : 'No cost impact'}
+                </span>
+              </div>
+              {result.budget_updated ? (
+                <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+              ) : (
+                <span className="text-xs text-gray-400">—</span>
+              )}
+            </div>
+
+            {/* Alert Status */}
+            <div className="flex items-center gap-3 p-2 sm:p-3 bg-white rounded-xl border border-gray-100">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-br from-purple-500 to-violet-500 flex items-center justify-center flex-shrink-0">
+                <Shield className="h-4 w-4 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="text-sm sm:text-base text-gray-800 font-medium">Alert Resolved</span>
+                <span className="block text-xs text-gray-500">Marked as applied & logged</span>
+              </div>
+              <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+            </div>
+          </div>
+
+          {/* Impact Summary */}
+          <div className="flex justify-center gap-4 sm:gap-8 mb-6 sm:mb-8 px-4">
+            <div className="text-center">
+              <div className="text-xl sm:text-2xl font-bold text-green-600">
+                {result.applied_option?.time_saved_days || 0}
+              </div>
+              <div className="text-xs text-gray-500">Days Saved</div>
+            </div>
+            <div className="text-center">
+              <div className="text-xl sm:text-2xl font-bold text-amber-600">
+                ${(result.applied_option?.cost || 0).toLocaleString()}
+              </div>
+              <div className="text-xs text-gray-500">Cost</div>
             </div>
           </div>
 
@@ -391,23 +477,29 @@ export function DelayShieldModal({ alert, open, onClose, onApply }: DelayShieldM
             </div>
           </div>
 
-          {/* Email Option */}
-          <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white border-2 border-gray-200 rounded-xl">
-            <input
-              type="checkbox"
-              id="sendEmail"
-              checked={sendEmail}
-              onChange={(e) => setSendEmail(e.target.checked)}
-              className="h-5 w-5 sm:h-6 sm:w-6 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
-            <label htmlFor="sendEmail" className="flex-1 cursor-pointer min-w-0">
-              <div className="font-semibold text-gray-900 text-sm sm:text-base">Send notification email</div>
-              <div className="text-xs sm:text-sm text-gray-500">
-                Auto-draft email will be sent to stakeholders
+          {/* Automatic Actions Info */}
+          <div className="p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-100 rounded-xl">
+            <div className="flex items-center gap-2 mb-2">
+              <Zap className="h-4 w-4 text-blue-600" />
+              <span className="font-semibold text-blue-900 text-sm sm:text-base">One Click = Everything Done</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs sm:text-sm text-blue-800">
+              <div className="flex items-center gap-1.5">
+                <CheckCircle className="h-3.5 w-3.5 text-blue-500" />
+                <span>Change order created</span>
               </div>
-            </label>
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center flex-shrink-0">
-              <Send className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+              <div className="flex items-center gap-1.5">
+                <CheckCircle className="h-3.5 w-3.5 text-blue-500" />
+                <span>Team notified</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <CheckCircle className="h-3.5 w-3.5 text-blue-500" />
+                <span>Emails sent</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <CheckCircle className="h-3.5 w-3.5 text-blue-500" />
+                <span>Budget updated</span>
+              </div>
             </div>
           </div>
 
@@ -421,19 +513,19 @@ export function DelayShieldModal({ alert, open, onClose, onApply }: DelayShieldM
               size="lg"
               disabled={!selectedOption || applying}
               onClick={handleApply}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg shadow-blue-500/20 px-4 sm:px-6 flex-1 sm:flex-none"
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg shadow-blue-500/20 px-4 sm:px-6 flex-1 sm:flex-none min-h-[48px]"
             >
               {applying ? (
                 <>
                   <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2 animate-spin" />
-                  <span className="hidden sm:inline">Applying...</span>
-                  <span className="sm:hidden">...</span>
+                  <span className="hidden sm:inline">Executing All Actions...</span>
+                  <span className="sm:hidden">Applying...</span>
                 </>
               ) : (
                 <>
                   <Zap className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2" />
-                  <span className="hidden sm:inline">Apply Recovery Plan</span>
-                  <span className="sm:hidden">Apply Plan</span>
+                  <span className="hidden sm:inline">Apply & Execute All</span>
+                  <span className="sm:hidden">Apply All</span>
                   <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 ml-1 sm:ml-2" />
                 </>
               )}
