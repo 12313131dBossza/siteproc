@@ -118,6 +118,16 @@ export async function POST(request: NextRequest) {
       contributing_factors: alert.contributing_factors
     }, selectedOption);
 
+    // Add current user's email if available (so they can see the notification)
+    const userEmail = session.user?.email;
+    if (userEmail && !emailDraft.to.includes(userEmail)) {
+      emailDraft.to = [userEmail, ...emailDraft.to.filter(e => e !== 'team@example.com')];
+    }
+    // Remove placeholder email
+    emailDraft.to = emailDraft.to.filter(e => e !== 'team@example.com');
+
+    console.log('[DelayShield Apply] Email recipients:', emailDraft.to);
+
     // Update alert status
     const { error: updateError } = await db
       .from('delay_shield_alerts')
@@ -138,19 +148,33 @@ export async function POST(request: NextRequest) {
 
     // Send email if requested
     let emailSent = false;
+    let emailError: string | null = null;
     if (send_email && emailDraft.to.length > 0) {
       try {
-        await sendEmail({
+        console.log('[DelayShield Apply] Attempting to send email to:', emailDraft.to);
+        const result = await sendEmail({
           to: emailDraft.to,
           subject: emailDraft.subject,
           text: emailDraft.body,
           html: `<pre style="font-family: Arial, sans-serif; white-space: pre-wrap;">${emailDraft.body}</pre>`
         });
-        emailSent = true;
-        console.log('[DelayShield Apply] Email sent to:', emailDraft.to);
-      } catch (emailError) {
-        console.error('[DelayShield Apply] Email send failed:', emailError);
+        console.log('[DelayShield Apply] Email result:', result);
+        if (result && !result.skipped && result.ok !== false) {
+          emailSent = true;
+          console.log('[DelayShield Apply] Email sent successfully to:', emailDraft.to);
+        } else if (result?.skipped) {
+          console.log('[DelayShield Apply] Email skipped - provider not configured');
+          emailError = 'Email provider not configured';
+        } else {
+          emailError = result?.error || 'Unknown error';
+        }
+      } catch (err: any) {
+        console.error('[DelayShield Apply] Email send failed:', err);
+        emailError = err?.message || 'Failed to send';
       }
+    } else if (send_email) {
+      console.log('[DelayShield Apply] No recipients for email');
+      emailError = 'No valid email recipients';
     }
 
     // Create activity log
@@ -181,6 +205,8 @@ export async function POST(request: NextRequest) {
         applied_option: selectedOption,
         change_order_id: changeOrderId,
         email_sent: emailSent,
+        email_error: emailError,
+        email_recipients: emailDraft.to,
         email_draft: emailDraft
       }
     });
