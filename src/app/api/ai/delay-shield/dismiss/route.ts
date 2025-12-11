@@ -8,6 +8,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionProfile } from '@/lib/auth';
 import { supabaseService } from '@/lib/supabase';
 
+// Helper to get untyped supabase client for custom tables
+function getDb() {
+  return supabaseService() as any;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const session = await getSessionProfile();
@@ -22,11 +27,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing alert_id' }, { status: 400 });
     }
 
-    const supabase = supabaseService();
+    const db = getDb();
 
     // Update alert status to dismissed
-    const { data: alert, error } = await supabase
-      .from('delay_shield_alerts' as any)
+    const { data: alert, error } = await db
+      .from('delay_shield_alerts')
       .update({
         status: 'dismissed',
         updated_at: new Date().toISOString()
@@ -42,11 +47,11 @@ export async function POST(request: NextRequest) {
 
     // Log the dismissal
     try {
-      await supabase.from('activity_logs').insert({
+      await db.from('activity_logs').insert({
         company_id: session.companyId,
         actor_id: session.user.id,
         entity_type: 'project',
-        entity_id: alert?.project_id,
+        entity_id: alert?.project_id || null,
         action: 'delay_shield_dismissed',
         meta: {
           alert_id,

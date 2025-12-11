@@ -11,6 +11,31 @@ import { supabaseService } from '@/lib/supabase';
 import { generateEmailDraft, fetchProjectData, type RecoveryOption } from '@/lib/delay-shield';
 import { sendEmail } from '@/lib/email';
 
+// Type for delay shield alerts (table may not be in generated types)
+interface DelayShieldAlert {
+  id: string;
+  company_id: string;
+  project_id: string;
+  risk_score: number;
+  risk_level: 'low' | 'medium' | 'high' | 'critical';
+  predicted_delay_days: number;
+  financial_impact: number;
+  contributing_factors: any[];
+  recovery_options: RecoveryOption[];
+  email_draft: any;
+  status: string;
+  applied_option_id?: number;
+  applied_at?: string;
+  applied_by?: string;
+  change_order_id?: string;
+  created_at: string;
+}
+
+// Helper to get untyped supabase client for custom tables
+function getDb() {
+  return supabaseService() as any;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const session = await getSessionProfile();
@@ -25,26 +50,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing alert_id or option_id' }, { status: 400 });
     }
 
-    const supabase = supabaseService();
+    const db = getDb();
 
     // Get the alert
-    const { data: alert, error: alertError } = await supabase
-      .from('delay_shield_alerts' as any)
+    const { data: alertData, error: alertError } = await db
+      .from('delay_shield_alerts')
       .select('*')
       .eq('id', alert_id)
       .eq('company_id', session.companyId)
       .single();
 
-    if (alertError || !alert) {
+    if (alertError || !alertData) {
       return NextResponse.json({ error: 'Alert not found' }, { status: 404 });
     }
+
+    const alert = alertData as unknown as DelayShieldAlert;
 
     if (alert.status !== 'active') {
       return NextResponse.json({ error: 'Alert is not active' }, { status: 400 });
     }
 
     // Get the selected recovery option
-    const recoveryOptions = alert.recovery_options as RecoveryOption[];
+    const recoveryOptions = alert.recovery_options;
     const selectedOption = recoveryOptions.find(o => o.id === option_id);
 
     if (!selectedOption) {
@@ -55,30 +82,14 @@ export async function POST(request: NextRequest) {
     const projectData = await fetchProjectData(alert.project_id, session.companyId);
 
     // Create change order if the option has cost
-    let changeOrderId = null;
+    let changeOrderId: string | null = null;
     if (selectedOption.cost > 0) {
-      const { data: changeOrder, error: coError } = await supabase
-        .from('change_orders')
-        .insert({
-          company_id: session.companyId,
-          project_id: alert.project_id,
-          description: `Delay Shield™ Mitigation: ${selectedOption.name}`,
-          reason: `Applied recovery option to mitigate ${alert.predicted_delay_days}-day predicted delay. ${selectedOption.description}`,
-          cost_delta: selectedOption.cost,
-          proposed_qty: selectedOption.cost,
-          status: 'pending',
-          created_by: session.user.id
-        })
-        .select('id')
-        .single();
-
-      if (coError) {
-        console.error('[DelayShield Apply] Change order creation failed:', coError);
-        // Try without project_id if it fails
-        const { data: coRetry, error: coRetryError } = await supabase
+      try {
+        const { data: changeOrder, error: coError } = await db
           .from('change_orders')
           .insert({
             company_id: session.companyId,
+            project_id: alert.project_id,
             description: `Delay Shield™ Mitigation: ${selectedOption.name}`,
             reason: `Applied recovery option to mitigate ${alert.predicted_delay_days}-day predicted delay. ${selectedOption.description}`,
             cost_delta: selectedOption.cost,
@@ -89,11 +100,13 @@ export async function POST(request: NextRequest) {
           .select('id')
           .single();
 
-        if (!coRetryError && coRetry) {
-          changeOrderId = coRetry.id;
+        if (!coError && changeOrder) {
+          changeOrderId = changeOrder.id;
+        } else {
+          console.error('[DelayShield Apply] Change order creation failed:', coError);
         }
-      } else if (changeOrder) {
-        changeOrderId = changeOrder.id;
+      } catch (coErr) {
+        console.error('[DelayShield Apply] Change order exception:', coErr);
       }
     }
 
@@ -106,8 +119,8 @@ export async function POST(request: NextRequest) {
     }, selectedOption);
 
     // Update alert status
-    const { error: updateError } = await supabase
-      .from('delay_shield_alerts' as any)
+    const { error: updateError } = await db
+      .from('delay_shield_alerts')
       .update({
         status: 'applied',
         applied_option_id: option_id,
@@ -142,7 +155,7 @@ export async function POST(request: NextRequest) {
 
     // Create activity log
     try {
-      await supabase.from('activity_logs').insert({
+      await db.from('activity_logs').insert({
         company_id: session.companyId,
         actor_id: session.user.id,
         entity_type: 'project',
