@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useCurrency } from "@/lib/CurrencyContext";
 import Link from "next/link";
+import { DelayShieldBadge } from "@/components/DelayShieldBadge";
 import { 
   LineChart, 
   Line, 
@@ -183,6 +184,9 @@ export default function EnhancedDashboard() {
 
   return (
     <div className="p-2 sm:p-4 md:p-6 space-y-4 sm:space-y-6 max-w-full overflow-hidden">
+      {/* Delay Shield™ AI Banner - Enterprise Only */}
+      <DelayShieldBadge variant="full" showScan={true} />
+
       {/* KPI Cards Grid */}
   <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
         {/* Projects Card */}

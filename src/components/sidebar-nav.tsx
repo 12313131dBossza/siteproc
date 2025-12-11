@@ -34,6 +34,7 @@ import {
   Sparkles,
   Zap,
   Download,
+  Shield,
 } from "lucide-react";
 import { PlanId } from '@/lib/plans';
 
@@ -87,6 +88,7 @@ const navigation: Array<{
 }> = [
   // === INTERNAL ONLY - Full sidebar for company team ===
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, access: 'internal', minPlan: 'starter' },
+  { name: "Delay Shield™", href: "/delay-shield", icon: Shield, access: 'internal', minPlan: 'enterprise' },
   { name: "Analytics", href: "/analytics", icon: BarChart3, access: 'internal', minPlan: 'pro' },
   { name: "Projects", href: "/projects", icon: FolderOpen, access: 'client', minPlan: 'starter' }, // Internal + Clients
   { name: "Orders", href: "/orders", icon: ShoppingCart, access: 'internal', minPlan: 'starter' },

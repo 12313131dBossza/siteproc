@@ -148,6 +148,7 @@ export interface PlanFeatures {
   soc2Compliance: boolean;         // SOC 2 / SLAs / on-premise option
   multiCompany: boolean;           // Multi-company support
   onPremise: boolean;              // On-premise deployment option
+  delayShield: boolean;            // Delay Shield™ AI - proactive delay prediction
 }
 
 export interface Plan {
@@ -202,6 +203,7 @@ export const PLANS: Record<PlanId, Plan> = {
       soc2Compliance: false,
       multiCompany: false,
       onPremise: false,
+      delayShield: false,
     },
     featureList: [
       'Up to 2 users & 3 projects',
@@ -254,6 +256,7 @@ export const PLANS: Record<PlanId, Plan> = {
       soc2Compliance: false,
       multiCompany: false,
       onPremise: false,
+      delayShield: false,
     },
     featureList: [
       'Up to 5 internal users & 10 active projects',
@@ -311,6 +314,7 @@ export const PLANS: Record<PlanId, Plan> = {
       soc2Compliance: false,
       multiCompany: false,
       onPremise: false,
+      delayShield: false,
     },
     featureList: [
       'Unlimited internal users & unlimited projects',
@@ -370,10 +374,12 @@ export const PLANS: Record<PlanId, Plan> = {
       soc2Compliance: true,
       multiCompany: true,
       onPremise: true,
+      delayShield: true,
     },
     featureList: [
       'Unlimited internal users & unlimited projects',
       'Everything in Pro',
+      'Delay Shield™ AI - proactive delay prediction',
       'Unlimited scale & multi-company support',
       'Dedicated onboarding & training',
       'Custom API & integrations (50+ endpoints)',

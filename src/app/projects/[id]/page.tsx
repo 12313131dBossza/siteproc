@@ -6,6 +6,7 @@ import { AddItemModal } from '@/components/AddItemModal'
 import { ProjectAccessModal } from '@/components/ProjectAccessModal'
 import ProjectTimeline from '@/components/ProjectTimeline'
 import ProjectPhotoGallery from '@/components/ProjectPhotoGallery'
+import { DelayShieldPanel } from '@/components/DelayShieldPanel'
 import { hasPermission } from '@/lib/roles'
 import { useCurrency } from '@/lib/CurrencyContext'
 import { usePlan } from '@/hooks/usePlan'
@@ -484,6 +485,12 @@ export default function ProjectDetailPage() {
 
       {tab==='overview' && (
         <div className="space-y-6">
+          {/* Delay Shield™ AI Alert Panel - Enterprise Only */}
+          <DelayShieldPanel 
+            projectId={id} 
+            projectName={project?.name} 
+          />
+          
           {/* Budget Hero Card - Only visible to internal team */}
           {isInternalRole && (
           <div className={`relative overflow-hidden rounded-2xl p-6 ${
