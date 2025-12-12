@@ -55,18 +55,14 @@ export interface ProjectData {
   milestones: any[];
 }
 
-// Weather integration
-const OPENWEATHER_API_KEY = process.env.OPENWEATHER_API_KEY || '';
+// Weather integration using Open-Meteo (FREE, no API key required!)
+// https://open-meteo.com/en/docs
 
 export async function getWeatherForecast(lat: number, lon: number): Promise<any> {
-  if (!OPENWEATHER_API_KEY) {
-    console.log('[DelayShield] No weather API key, using mock data');
-    return mockWeatherData();
-  }
-
   try {
+    // Open-Meteo is free and doesn't require any API key
     const response = await fetch(
-      `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${OPENWEATHER_API_KEY}&units=metric`
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max&timezone=auto&forecast_days=7`
     );
     
     if (!response.ok) {
@@ -75,7 +71,7 @@ export async function getWeatherForecast(lat: number, lon: number): Promise<any>
     }
 
     const data = await response.json();
-    return parseWeatherForecast(data);
+    return parseOpenMeteoForecast(data);
   } catch (error) {
     console.error('[DelayShield] Weather fetch error:', error);
     return mockWeatherData();
@@ -84,25 +80,76 @@ export async function getWeatherForecast(lat: number, lon: number): Promise<any>
 
 function mockWeatherData() {
   return {
-    forecast_days: 5,
-    rain_days: Math.floor(Math.random() * 3),
+    forecast_days: 7,
+    rain_days: 2,
     avg_temp: 22,
     extreme_conditions: false,
-    summary: 'Partly cloudy with chance of light rain'
+    summary: 'Weather data unavailable - using estimate',
+    daily: []
   };
 }
 
-function parseWeatherForecast(data: any) {
-  const rainDays = data.list?.filter((item: any) => 
-    item.weather?.some((w: any) => w.main === 'Rain' || w.main === 'Thunderstorm')
-  ).length || 0;
+// WMO Weather interpretation codes
+// https://open-meteo.com/en/docs
+function getWeatherDescription(code: number): string {
+  const weatherCodes: Record<number, string> = {
+    0: 'Clear sky',
+    1: 'Mainly clear', 2: 'Partly cloudy', 3: 'Overcast',
+    45: 'Foggy', 48: 'Depositing rime fog',
+    51: 'Light drizzle', 53: 'Moderate drizzle', 55: 'Dense drizzle',
+    61: 'Slight rain', 63: 'Moderate rain', 65: 'Heavy rain',
+    71: 'Slight snow', 73: 'Moderate snow', 75: 'Heavy snow',
+    80: 'Slight rain showers', 81: 'Moderate rain showers', 82: 'Violent rain showers',
+    95: 'Thunderstorm', 96: 'Thunderstorm with slight hail', 99: 'Thunderstorm with heavy hail'
+  };
+  return weatherCodes[code] || 'Unknown';
+}
+
+function isRainyWeatherCode(code: number): boolean {
+  // Rain codes: 51-55 (drizzle), 61-65 (rain), 80-82 (showers), 95-99 (thunderstorm)
+  return (code >= 51 && code <= 55) || (code >= 61 && code <= 65) || 
+         (code >= 80 && code <= 82) || (code >= 95 && code <= 99);
+}
+
+function parseOpenMeteoForecast(data: any) {
+  const daily = data.daily || {};
+  const weatherCodes = daily.weather_code || [];
+  const temps = daily.temperature_2m_max || [];
+  const precipitation = daily.precipitation_sum || [];
+  const precipProb = daily.precipitation_probability_max || [];
+  
+  // Count rain days (weather code indicates rain OR high precipitation probability)
+  const rainDays = weatherCodes.filter((code: number, i: number) => 
+    isRainyWeatherCode(code) || (precipProb[i] && precipProb[i] > 60)
+  ).length;
+  
+  // Check for extreme conditions (heavy rain, thunderstorms, heavy snow)
+  const extremeCodes = [65, 75, 82, 95, 96, 99]; // Heavy rain, heavy snow, violent showers, thunderstorms
+  const hasExtreme = weatherCodes.some((code: number) => extremeCodes.includes(code));
+  
+  // Calculate average temperature
+  const avgTemp = temps.length > 0 
+    ? Math.round(temps.reduce((a: number, b: number) => a + b, 0) / temps.length)
+    : 22;
+
+  // Build daily forecast array for detailed display
+  const dailyForecast = weatherCodes.map((code: number, i: number) => ({
+    day: i + 1,
+    weather: getWeatherDescription(code),
+    temp_max: temps[i] || 22,
+    precipitation_mm: precipitation[i] || 0,
+    rain_probability: precipProb[i] || 0,
+    is_rainy: isRainyWeatherCode(code)
+  }));
 
   return {
-    forecast_days: 5,
-    rain_days: Math.min(rainDays, 5),
-    avg_temp: data.list?.[0]?.main?.temp || 22,
-    extreme_conditions: rainDays > 3,
-    summary: data.list?.[0]?.weather?.[0]?.description || 'Unknown'
+    forecast_days: weatherCodes.length,
+    rain_days: rainDays,
+    avg_temp: avgTemp,
+    extreme_conditions: hasExtreme || rainDays >= 4,
+    summary: weatherCodes.length > 0 ? getWeatherDescription(weatherCodes[0]) : 'Unknown',
+    total_precipitation_mm: precipitation.reduce((a: number, b: number) => a + b, 0),
+    daily: dailyForecast
   };
 }
 
