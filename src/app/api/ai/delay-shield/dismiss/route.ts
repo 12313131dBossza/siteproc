@@ -49,11 +49,15 @@ export async function POST(request: NextRequest) {
     try {
       await db.from('activity_logs').insert({
         company_id: session.companyId,
-        actor_id: session.user.id,
+        user_id: session.user.id,
+        type: 'delay_shield',
+        action: 'delay_shield_dismissed',
+        title: 'Delay Shield: Alert Dismissed',
+        description: reason || 'User dismissed the alert',
         entity_type: 'project',
         entity_id: alert?.project_id || null,
-        action: 'delay_shield_dismissed',
-        meta: {
+        status: 'success',
+        metadata: {
           alert_id,
           reason: reason || 'User dismissed'
         }

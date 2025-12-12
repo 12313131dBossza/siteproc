@@ -407,11 +407,15 @@ export async function POST(request: NextRequest) {
     try {
       await db.from('activity_logs').insert({
         company_id: session.companyId,
-        actor_id: session.user.id,
+        user_id: session.user.id,
+        type: 'delay_shield',
+        action: 'delay_shield_applied',
+        title: `Delay Shield: Applied ${selectedOption.name}`,
+        description: `Recovery plan applied to mitigate ${alert.predicted_delay_days}-day delay. Cost: $${selectedOption.cost}, Time saved: ${selectedOption.time_saved_days} days.`,
         entity_type: 'project',
         entity_id: projectId,
-        action: 'delay_shield_applied',
-        meta: {
+        status: 'success',
+        metadata: {
           alert_id: alert_id,
           option_name: selectedOption.name,
           option_type: selectedOption.type,
