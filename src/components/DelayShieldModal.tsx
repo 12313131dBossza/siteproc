@@ -187,135 +187,153 @@ export function DelayShieldModal({ alert, open, onClose, onApply }: DelayShieldM
       size="xl"
     >
       {result ? (
-        // Success state - Shows ALL automated actions completed
-        <div className="text-center py-6 sm:py-10">
-          <div className="relative inline-block mb-4 sm:mb-6">
-            <div className="absolute inset-0 bg-gradient-to-br from-green-400 to-emerald-500 rounded-2xl blur-xl opacity-30 animate-pulse" />
-            <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shadow-lg">
-              <CheckCircle className="h-8 w-8 sm:h-10 sm:w-10 text-white" />
+        // Success state - Shows BEFORE vs AFTER comparison
+        <div className="py-4 sm:py-6">
+          {/* Success Header */}
+          <div className="text-center mb-6">
+            <div className="relative inline-block mb-3">
+              <div className="absolute inset-0 bg-gradient-to-br from-green-400 to-emerald-500 rounded-2xl blur-xl opacity-30 animate-pulse" />
+              <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shadow-lg">
+                <CheckCircle className="h-7 w-7 sm:h-8 sm:w-8 text-white" />
+              </div>
+            </div>
+            <h3 className="text-lg sm:text-xl font-bold text-gray-900">
+              Recovery Plan Applied! ⚡
+            </h3>
+            <p className="text-sm text-gray-500 mt-1">{result.applied_option?.name}</p>
+          </div>
+
+          {/* BEFORE vs AFTER Comparison */}
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6 px-2">
+            {/* BEFORE Column */}
+            <div className="bg-red-50 rounded-xl p-3 sm:p-4 border-2 border-red-200">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center">
+                  <X className="h-3.5 w-3.5 text-white" />
+                </div>
+                <span className="font-bold text-red-700 text-sm sm:text-base">BEFORE</span>
+              </div>
+              <div className="space-y-2 sm:space-y-3">
+                <div>
+                  <div className="text-[10px] sm:text-xs text-red-600 uppercase font-medium">Predicted Delay</div>
+                  <div className="text-xl sm:text-2xl font-bold text-red-700">{alert.predicted_delay_days} days</div>
+                </div>
+                <div>
+                  <div className="text-[10px] sm:text-xs text-red-600 uppercase font-medium">Financial Risk</div>
+                  <div className="text-lg sm:text-xl font-bold text-red-700">{formatAmount(alert.financial_impact)}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] sm:text-xs text-red-600 uppercase font-medium">Risk Level</div>
+                  <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-200 text-red-800 text-xs sm:text-sm font-semibold uppercase">
+                    {alert.risk_level}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[10px] sm:text-xs text-red-600 uppercase font-medium">Status</div>
+                  <div className="text-sm sm:text-base font-medium text-red-700">⚠️ At Risk</div>
+                </div>
+              </div>
+            </div>
+
+            {/* AFTER Column */}
+            <div className="bg-green-50 rounded-xl p-3 sm:p-4 border-2 border-green-200">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
+                  <CheckCircle className="h-3.5 w-3.5 text-white" />
+                </div>
+                <span className="font-bold text-green-700 text-sm sm:text-base">AFTER</span>
+              </div>
+              <div className="space-y-2 sm:space-y-3">
+                <div>
+                  <div className="text-[10px] sm:text-xs text-green-600 uppercase font-medium">New Delay</div>
+                  <div className="text-xl sm:text-2xl font-bold text-green-700">
+                    {Math.max(0, alert.predicted_delay_days - (result.applied_option?.time_saved_days || 0))} days
+                    <span className="text-xs sm:text-sm font-normal text-green-600 ml-1">
+                      (-{result.applied_option?.time_saved_days})
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[10px] sm:text-xs text-green-600 uppercase font-medium">Mitigation Cost</div>
+                  <div className="text-lg sm:text-xl font-bold text-green-700">{formatAmount(result.applied_option?.cost || 0)}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] sm:text-xs text-green-600 uppercase font-medium">Risk Level</div>
+                  <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-200 text-green-800 text-xs sm:text-sm font-semibold">
+                    MITIGATED
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[10px] sm:text-xs text-green-600 uppercase font-medium">Status</div>
+                  <div className="text-sm sm:text-base font-medium text-green-700">✅ Protected</div>
+                </div>
+              </div>
             </div>
           </div>
-          
-          <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
-            Recovery Plan Applied! ⚡
-          </h3>
-          <p className="text-sm sm:text-base text-gray-600 mb-6 sm:mb-8 max-w-sm mx-auto px-4">
-            <span className="font-semibold">{result.applied_option?.name}</span> has been activated for {alert.project?.name}.
-            <span className="block mt-1 text-green-600 font-medium">All actions completed automatically!</span>
-          </p>
-          
-          {/* Automated Actions Summary */}
-          <div className="inline-flex flex-col gap-2 sm:gap-3 text-left mb-6 sm:mb-8 bg-gray-50 rounded-2xl p-4 sm:p-6 w-full max-w-md mx-auto">
-            {/* Change Order */}
-            <div className="flex items-center gap-3 p-2 sm:p-3 bg-white rounded-xl border border-gray-100">
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                <FileText className="h-4 w-4 text-white" />
+
+          {/* Net Savings Summary */}
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 mb-6 mx-2 border border-blue-200">
+            <div className="text-center">
+              <div className="text-xs sm:text-sm text-blue-600 font-medium mb-1">NET SAVINGS</div>
+              <div className="text-2xl sm:text-3xl font-bold text-blue-700">
+                {formatAmount(Math.max(0, alert.financial_impact - (result.applied_option?.cost || 0)))}
               </div>
-              <div className="flex-1 min-w-0">
-                <span className="text-sm sm:text-base text-gray-800 font-medium">Change Order Created</span>
-                {result.change_order_id && (
-                  <span className="block text-xs text-gray-500 truncate">ID: {result.change_order_id.slice(0, 8)}...</span>
+              <div className="text-xs text-blue-600 mt-1">
+                Avoided {formatAmount(alert.financial_impact)} loss for {formatAmount(result.applied_option?.cost || 0)} investment
+              </div>
+            </div>
+          </div>
+
+          {/* Actions Completed */}
+          <div className="bg-gray-50 rounded-xl p-3 sm:p-4 mx-2 mb-6">
+            <div className="text-xs sm:text-sm font-semibold text-gray-700 mb-2">Actions Completed:</div>
+            <div className="grid grid-cols-2 gap-2 text-xs sm:text-sm">
+              <div className="flex items-center gap-1.5">
+                {result.change_order_created ? (
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                ) : (
+                  <div className="h-4 w-4 rounded-full bg-gray-300" />
                 )}
+                <span className="text-gray-700">Change Order</span>
               </div>
-              {result.change_order_created ? (
-                <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
-              ) : (
-                <span className="text-xs text-gray-400">N/A</span>
-              )}
-            </div>
-
-            {/* In-App Notifications */}
-            <div className="flex items-center gap-3 p-2 sm:p-3 bg-white rounded-xl border border-gray-100">
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center flex-shrink-0">
-                <AlertTriangle className="h-4 w-4 text-white" />
+              <div className="flex items-center gap-1.5">
+                {(result.notifications_sent || 0) > 0 ? (
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                ) : (
+                  <div className="h-4 w-4 rounded-full bg-gray-300" />
+                )}
+                <span className="text-gray-700">{result.notifications_sent || 0} Notified</span>
               </div>
-              <div className="flex-1 min-w-0">
-                <span className="text-sm sm:text-base text-gray-800 font-medium">Team Notified</span>
-                <span className="block text-xs text-gray-500">
-                  {result.notifications_sent || 0} in-app notifications sent
-                </span>
+              <div className="flex items-center gap-1.5">
+                {result.email_sent ? (
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                ) : (
+                  <div className="h-4 w-4 rounded-full bg-gray-300" />
+                )}
+                <span className="text-gray-700">Emails Sent</span>
               </div>
-              {(result.notifications_sent || 0) > 0 ? (
-                <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
-              ) : (
-                <span className="text-xs text-gray-400">—</span>
-              )}
-            </div>
-
-            {/* Email Notifications */}
-            <div className="flex items-center gap-3 p-2 sm:p-3 bg-white rounded-xl border border-gray-100">
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center flex-shrink-0">
-                <Send className="h-4 w-4 text-white" />
+              <div className="flex items-center gap-1.5">
+                {result.budget_updated ? (
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                ) : (
+                  <div className="h-4 w-4 rounded-full bg-gray-300" />
+                )}
+                <span className="text-gray-700">Budget Updated</span>
               </div>
-              <div className="flex-1 min-w-0">
-                <span className="text-sm sm:text-base text-gray-800 font-medium">Emails Sent</span>
-                <span className="block text-xs text-gray-500">
-                  {result.email_sent ? `${result.email_count || result.email_recipients?.length || 0} stakeholders notified` : (result.email_error || 'Not sent')}
-                </span>
-              </div>
-              {result.email_sent ? (
-                <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
-              ) : (
-                <X className="h-5 w-5 text-gray-300 flex-shrink-0" />
-              )}
-            </div>
-
-            {/* Budget Updated */}
-            <div className="flex items-center gap-3 p-2 sm:p-3 bg-white rounded-xl border border-gray-100">
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center flex-shrink-0">
-                <DollarSign className="h-4 w-4 text-white" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <span className="text-sm sm:text-base text-gray-800 font-medium">Budget Updated</span>
-                <span className="block text-xs text-gray-500">
-                  {result.budget_updated ? `+$${(result.budget_increase || 0).toLocaleString()} added` : 'No cost impact'}
-                </span>
-              </div>
-              {result.budget_updated ? (
-                <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
-              ) : (
-                <span className="text-xs text-gray-400">—</span>
-              )}
-            </div>
-
-            {/* Alert Status */}
-            <div className="flex items-center gap-3 p-2 sm:p-3 bg-white rounded-xl border border-gray-100">
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-br from-purple-500 to-violet-500 flex items-center justify-center flex-shrink-0">
-                <Shield className="h-4 w-4 text-white" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <span className="text-sm sm:text-base text-gray-800 font-medium">Alert Resolved</span>
-                <span className="block text-xs text-gray-500">Marked as applied & logged</span>
-              </div>
-              <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
             </div>
           </div>
 
-          {/* Impact Summary */}
-          <div className="flex justify-center gap-4 sm:gap-8 mb-6 sm:mb-8 px-4">
-            <div className="text-center">
-              <div className="text-xl sm:text-2xl font-bold text-green-600">
-                {result.applied_option?.time_saved_days || 0}
-              </div>
-              <div className="text-xs text-gray-500">Days Saved</div>
-            </div>
-            <div className="text-center">
-              <div className="text-xl sm:text-2xl font-bold text-amber-600">
-                ${(result.applied_option?.cost || 0).toLocaleString()}
-              </div>
-              <div className="text-xs text-gray-500">Cost</div>
-            </div>
+          <div className="px-2">
+            <Button 
+              variant="primary" 
+              size="lg"
+              onClick={onClose}
+              className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-lg shadow-green-500/20"
+            >
+              <ShieldCheck className="h-5 w-5 mr-2" />
+              Done
+            </Button>
           </div>
-
-          <Button 
-            variant="primary" 
-            size="lg"
-            onClick={onClose}
-            className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-lg shadow-green-500/20"
-          >
-            <ShieldCheck className="h-5 w-5 mr-2" />
-            Done
-          </Button>
         </div>
       ) : (
         <div className="space-y-4 sm:space-y-6">
