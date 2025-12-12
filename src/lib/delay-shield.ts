@@ -3,7 +3,7 @@
  * 
  * Core analysis engine that:
  * 1. Pulls project data (orders, deliveries, expenses, timelines)
- * 2. Fetches weather forecasts
+ * 2. Fetches weather forecasts (using project location or geocoded address)
  * 3. Analyzes historical supplier performance
  * 4. Uses AI to predict delays and calculate $ impact
  * 5. Generates 3 ranked recovery options
@@ -55,8 +55,45 @@ export interface ProjectData {
   milestones: any[];
 }
 
-// Weather integration using Open-Meteo (FREE, no API key required!)
+// ============================================================
+// GEOCODING - Convert address to coordinates
+// Uses Open-Meteo Geocoding API (FREE, no API key required!)
+// ============================================================
+export async function geocodeAddress(address: string, city?: string, state?: string, country?: string): Promise<{ lat: number; lon: number } | null> {
+  try {
+    // Build search query
+    const searchParts = [address, city, state, country].filter(Boolean);
+    const searchQuery = encodeURIComponent(searchParts.join(', '));
+    
+    const response = await fetch(
+      `https://geocoding-api.open-meteo.com/v1/search?name=${searchQuery}&count=1&language=en&format=json`
+    );
+    
+    if (!response.ok) {
+      console.error('[DelayShield] Geocoding API error:', response.status);
+      return null;
+    }
+    
+    const data = await response.json();
+    
+    if (data.results && data.results.length > 0) {
+      const result = data.results[0];
+      console.log(`[DelayShield] Geocoded "${searchParts.join(', ')}" to: ${result.latitude}, ${result.longitude} (${result.name}, ${result.country})`);
+      return { lat: result.latitude, lon: result.longitude };
+    }
+    
+    console.log('[DelayShield] No geocoding results for:', searchParts.join(', '));
+    return null;
+  } catch (error) {
+    console.error('[DelayShield] Geocoding error:', error);
+    return null;
+  }
+}
+
+// ============================================================
+// WEATHER INTEGRATION - Open-Meteo (FREE, no API key required!)
 // https://open-meteo.com/en/docs
+// ============================================================
 
 export async function getWeatherForecast(lat: number, lon: number): Promise<any> {
   try {
@@ -618,10 +655,54 @@ export async function analyzeProjectForDelays(
     throw new Error('Project not found');
   }
 
-  // 2. Get weather forecast (default to generic if no coords)
-  const weather = weatherCoords 
-    ? await getWeatherForecast(weatherCoords.lat, weatherCoords.lon)
-    : mockWeatherData();
+  // 2. Get weather forecast
+  // Priority: 1) Passed coordinates, 2) Project stored lat/lon, 3) Geocode from address, 4) Default
+  let coords = weatherCoords;
+  const project = projectData.project;
+  
+  // Try to get coordinates from project data (stored lat/lon)
+  if (!coords && project.latitude && project.longitude) {
+    coords = {
+      lat: parseFloat(project.latitude),
+      lon: parseFloat(project.longitude)
+    };
+    console.log(`[DelayShield] Using stored project location: ${coords.lat}, ${coords.lon}`);
+  }
+  
+  // Try to geocode from project address/city if available
+  if (!coords && (project.address || project.city)) {
+    console.log(`[DelayShield] Geocoding project address: ${project.address || ''}, ${project.city || ''}`);
+    const geocoded = await geocodeAddress(
+      project.address || project.city || '',
+      project.city,
+      project.state,
+      project.country || 'US'
+    );
+    if (geocoded) {
+      coords = geocoded;
+      
+      // Save geocoded coordinates back to project for future use
+      const supabase = supabaseService();
+      await supabase
+        .from('projects')
+        .update({ latitude: coords.lat, longitude: coords.lon })
+        .eq('id', projectId);
+      console.log(`[DelayShield] Saved geocoded coordinates to project`);
+    }
+  }
+  
+  // Default to a central US location if no coordinates (Oklahoma City - central for US weather)
+  if (!coords) {
+    coords = { lat: 35.4676, lon: -97.5164 }; // Oklahoma City, OK - central US
+    console.log('[DelayShield] No project location, using default central US coordinates');
+  }
+
+  const weather = await getWeatherForecast(coords.lat, coords.lon);
+  console.log(`[DelayShield] Weather forecast:`, {
+    summary: weather.summary,
+    rain_days: weather.rain_days,
+    extreme: weather.extreme_conditions
+  });
 
   // 3. Analyze supplier performance
   const supplierStats = analyzeSupplierPerformance(projectData.orders, projectData.deliveries);
