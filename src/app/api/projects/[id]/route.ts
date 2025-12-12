@@ -207,7 +207,7 @@ export async function PUT(
     }
 
     const body = await request.json()
-    const { name, budget, status, project_number } = body
+    const { name, budget, status, project_number, address, city, state, country } = body
 
     // Validate budget if provided
     if (budget !== undefined && (typeof budget !== 'number' || budget < 0)) {
@@ -226,6 +226,16 @@ export async function PUT(
     if (project_number !== undefined) updates.project_number = project_number?.trim() || null
     if (budget !== undefined) updates.budget = budget
     if (status !== undefined) updates.status = status
+    // Location fields
+    if (address !== undefined) updates.address = address?.trim() || null
+    if (city !== undefined) updates.city = city?.trim() || null
+    if (state !== undefined) updates.state = state?.trim() || null
+    if (country !== undefined) updates.country = country?.trim() || 'US'
+    // Clear cached coordinates if location changed (will be re-geocoded on next Delay Shield scan)
+    if (address !== undefined || city !== undefined || state !== undefined) {
+      updates.latitude = null
+      updates.longitude = null
+    }
     updates.updated_at = new Date().toISOString()
 
     // Update project

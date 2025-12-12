@@ -58,7 +58,7 @@ export default function ProjectDetailPage() {
   const [showAccessModal, setShowAccessModal] = useState(false)
   // Modal state for editing project
   const [showEditModal, setShowEditModal] = useState(false)
-  const [editForm, setEditForm] = useState({ name: '', budget: '', project_number: '' })
+  const [editForm, setEditForm] = useState({ name: '', budget: '', project_number: '', address: '', city: '', state: '', country: 'US' })
   const [currentUserId, setCurrentUserId] = useState<string>('')
   // Assignment textarea state (kept for fallback bulk paste modal later)
   const [assign, setAssign] = useState({ orders: '', expenses: '', deliveries: '' })
@@ -212,7 +212,11 @@ export default function ProjectDetailPage() {
     setEditForm({
       name: project?.name || '',
       budget: project?.budget?.toString() || '',
-      project_number: project?.project_number || project?.code || ''
+      project_number: project?.project_number || project?.code || '',
+      address: project?.address || '',
+      city: project?.city || '',
+      state: project?.state || '',
+      country: project?.country || 'US'
     })
     setShowEditModal(true)
   }
@@ -224,6 +228,11 @@ export default function ProjectDetailPage() {
       if (editForm.name.trim()) updates.name = editForm.name.trim()
       if (editForm.budget) updates.budget = parseFloat(editForm.budget)
       if (editForm.project_number.trim()) updates.project_number = editForm.project_number.trim()
+      // Location fields
+      updates.address = editForm.address.trim() || null
+      updates.city = editForm.city.trim() || null
+      updates.state = editForm.state.trim() || null
+      updates.country = editForm.country.trim() || 'US'
 
       const res = await fetch(`/api/projects/${id}`, {
         method: 'PATCH',
@@ -854,8 +863,8 @@ export default function ProjectDetailPage() {
 
       {/* Edit Project Modal */}
       {showEditModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4 shadow-xl">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-gray-900">Edit Project</h2>
               <button 
@@ -875,7 +884,11 @@ export default function ProjectDetailPage() {
                   body: JSON.stringify({
                     name: editForm.name,
                     budget: editForm.budget ? parseFloat(editForm.budget) : null,
-                    project_number: editForm.project_number || null
+                    project_number: editForm.project_number || null,
+                    address: editForm.address || null,
+                    city: editForm.city || null,
+                    state: editForm.state || null,
+                    country: editForm.country || 'US'
                   })
                 })
                 if (!res.ok) {
@@ -929,6 +942,77 @@ export default function ProjectDetailPage() {
                   min="0"
                 />
               </div>
+              
+              {/* Location Section for Weather */}
+              <div className="border-t pt-4 mt-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-lg">📍</span>
+                  <span className="text-sm font-medium text-gray-700">Project Location</span>
+                  <span className="text-xs text-gray-400">(for weather forecasts)</span>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Address
+                    </label>
+                    <input
+                      type="text"
+                      value={editForm.address}
+                      onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="123 Main Street"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        City
+                      </label>
+                      <input
+                        type="text"
+                        value={editForm.city}
+                        onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Houston"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        State
+                      </label>
+                      <input
+                        type="text"
+                        value={editForm.state}
+                        onChange={(e) => setEditForm({ ...editForm, state: e.target.value })}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="TX"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Country
+                    </label>
+                    <select
+                      value={editForm.country}
+                      onChange={(e) => setEditForm({ ...editForm, country: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="US">United States</option>
+                      <option value="CA">Canada</option>
+                      <option value="MX">Mexico</option>
+                      <option value="GB">United Kingdom</option>
+                      <option value="AU">Australia</option>
+                      <option value="TH">Thailand</option>
+                      <option value="ID">Indonesia</option>
+                      <option value="MY">Malaysia</option>
+                      <option value="SG">Singapore</option>
+                      <option value="PH">Philippines</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"
