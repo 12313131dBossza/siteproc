@@ -93,10 +93,11 @@ WHERE title LIKE '%Delay Shield%';
 SELECT 
   '9️⃣ ACTIVITY LOGS' as check_step,
   action,
+  title,
   metadata->>'option_name' as option_applied,
   created_at
 FROM activity_logs
-WHERE action = 'delay_shield_applied'
+WHERE title LIKE '%Delay Shield%'
 ORDER BY created_at DESC
 LIMIT 3;
 

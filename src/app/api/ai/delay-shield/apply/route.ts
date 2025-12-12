@@ -408,14 +408,15 @@ export async function POST(request: NextRequest) {
       await db.from('activity_logs').insert({
         company_id: session.companyId,
         user_id: session.user.id,
-        type: 'delay_shield',
-        action: 'delay_shield_applied',
+        type: 'system',
+        action: 'processed',  // Using valid enum value
         title: `Delay Shield: Applied ${selectedOption.name}`,
         description: `Recovery plan applied to mitigate ${alert.predicted_delay_days}-day delay. Cost: $${selectedOption.cost}, Time saved: ${selectedOption.time_saved_days} days.`,
         entity_type: 'project',
         entity_id: projectId,
         status: 'success',
         metadata: {
+          delay_shield_action: 'applied',
           alert_id: alert_id,
           option_name: selectedOption.name,
           option_type: selectedOption.type,

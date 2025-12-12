@@ -50,14 +50,15 @@ export async function POST(request: NextRequest) {
       await db.from('activity_logs').insert({
         company_id: session.companyId,
         user_id: session.user.id,
-        type: 'delay_shield',
-        action: 'delay_shield_dismissed',
+        type: 'system',
+        action: 'status_changed',  // Using valid enum value
         title: 'Delay Shield: Alert Dismissed',
         description: reason || 'User dismissed the alert',
         entity_type: 'project',
         entity_id: alert?.project_id || null,
         status: 'success',
         metadata: {
+          delay_shield_action: 'dismissed',
           alert_id,
           reason: reason || 'User dismissed'
         }
